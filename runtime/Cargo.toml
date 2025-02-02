@@ -1,0 +1,15 @@
+[package]
+name = "moduforge-runtime"
+version = "0.1.0"
+edition = "2021"
+description = "插件加载、热更新、依赖管理"
+[lib]
+lib="./src/lib.rs"
+
+[dependencies]
+im= {workspace=true}
+log = {workspace=true}
+serde = {workspace=true}
+serde_json = {workspace=true}
+thiserror= {workspace=true}
+async-trait= {workspace=true}

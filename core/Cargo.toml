@@ -1,0 +1,16 @@
+[package]
+name = "moduforge-core"
+version = "0.1.0"
+edition = "2021"
+description = "不可变数据结构与事务系统基础"
+
+[lib]
+lib="./src/lib.rs"
+
+[dependencies]
+im= {workspace=true}
+log = {workspace=true}
+serde = {workspace=true}
+serde_json = {workspace=true}
+thiserror= {workspace=true}
+async-trait= {workspace=true}
