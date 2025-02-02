@@ -3,19 +3,44 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::model::node_pool::NodePool;
-use crate::transform::transform::Transform;
-
+use crate::model::schema::Schema;
+use crate::transform::step::Step;
+use crate::transform::transform::{Transform, TransformError};
 use super::state::State;
-
-
-
 pub struct Transaction {
     pub meta: HashMap<String, Box<dyn std::any::Any>>,
     pub time: u64,
-    pub transform: Transform,
+    pub steps: Vec<Box<dyn Step>>,
+    pub docs: Vec<Arc<NodePool>>,
+    pub doc: Arc<NodePool>,
+    schema: Arc<Schema>,
 }
 unsafe impl Send for Transaction {}
 unsafe impl Sync for Transaction {}
+impl Transform for Transaction {
+    fn before(&self) -> &NodePool {
+        self.docs.get(0).unwrap_or(&self.doc)
+    }
+
+    fn step(&mut self, step: Box<dyn Step>) -> Result<(), TransformError> {
+        let result = step.apply(self.doc.clone(), self.schema.clone());
+        match result.failed {
+            Some(message) => Err(TransformError::new(message)),
+            None => {
+                self.add_step(step, result.doc.unwrap());
+                Ok(())
+            }
+        }
+    }
+    fn doc_changed(&self) -> bool {
+        !self.steps.is_empty()
+    }
+
+    fn add_step(&mut self, step: Box<dyn Step>, doc: Arc<NodePool>) {
+        self.steps.push(step);
+        self.doc = doc;
+    }
+}
 impl Transaction {
     pub fn new(state: &State) -> Self {
         let now = SystemTime::now()
@@ -25,13 +50,16 @@ impl Transaction {
 
         let node = state.doc();
         Transaction {
-            transform: Transform::new(node, state.schema()),
             meta: HashMap::new(),
             time: now,
+            steps: vec![],
+            docs: vec![],
+            doc:node,
+            schema:state.schema(),
         }
     }
     pub fn doc(&self) -> Arc<NodePool> {
-        self.transform.doc.clone()
+        self.doc.clone()
     }
 
     pub fn set_time(&mut self, time: u64) -> &mut Self {

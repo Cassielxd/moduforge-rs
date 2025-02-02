@@ -23,4 +23,8 @@ impl Step for AttrStep {
     fn to_json(&self) -> serde_json::Value {
         todo!()
     }
+    
+    fn invert(&self) -> Box<(dyn Step + 'static)> {
+        todo!()
+    }
 }

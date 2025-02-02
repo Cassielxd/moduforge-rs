@@ -7,6 +7,8 @@ use crate::model::{node_pool::NodePool, schema::Schema};
 pub trait Step {
     fn apply(&self, doc: Arc<NodePool>, schema: Arc<Schema>) -> StepResult;
     fn to_json(&self) -> serde_json::Value;
+    //翻转
+    fn invert(&self) -> Box<dyn Step>;
 }
 
 pub struct StepResult {

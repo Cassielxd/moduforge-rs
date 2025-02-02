@@ -1,13 +1,15 @@
 use std::sync::Arc;
 
+use bincode::{Decode, Encode};
 use im::HashMap;
+use serde::{Deserialize, Serialize};
 
-use super::{attrs::Attrs, error::PoolError, node::Node, types::NodeId};
-#[derive(Debug, PartialEq, Default)]
+use super::{error::PoolError, node::Node, types::NodeId};
+#[derive(Debug, PartialEq, Default,Encode, Decode,Serialize, Deserialize)]
 pub struct NodePoolInner {
-    nodes: im::HashMap<NodeId, Arc<Node>>,  // 节点数据共享
-    parent_map: im::HashMap<NodeId, NodeId>, 
-    child_map: im::HashMap<NodeId, im::Vector<NodeId>>, // 新增反向索引
+    #[bincode(with_serde)] nodes: im::HashMap<NodeId, Arc<Node>>,  // 节点数据共享
+    #[bincode(with_serde)] parent_map: im::HashMap<NodeId, NodeId>, 
+    #[bincode(with_serde)] child_map: im::HashMap<NodeId, im::Vector<NodeId>>, // 新增反向索引
 }
 impl NodePoolInner {
     pub fn link_child_to_parent(
@@ -46,7 +48,7 @@ impl NodePoolInner {
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct NodePool {
     // 使用 Arc 包裹内部结构，实现快速克隆
-    inner: Arc<NodePoolInner>,
+    pub inner: Arc<NodePoolInner>,
 }
 unsafe impl Send for NodePool {}
 unsafe impl Sync for NodePool {}

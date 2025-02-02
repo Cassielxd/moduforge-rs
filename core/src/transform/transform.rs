@@ -18,48 +18,14 @@ impl fmt::Display for TransformError {
 impl std::error::Error for TransformError {}
 
 impl TransformError {
-    fn new(message: String) -> Self {
+    pub fn new(message: String) -> Self {
         TransformError { message }
     }
 }
 
-pub struct Transform {
-    pub steps: Vec<Box<dyn Step>>,
-    pub docs: Vec<Arc<NodePool>>,
-    pub doc: Arc<NodePool>,
-    schema: Arc<Schema>,
-}
-impl Transform {
-    pub fn new(doc: Arc<NodePool>, schema: Arc<Schema>) -> Transform {
-        Transform {
-            steps: vec![],
-            docs: vec![],
-            doc,
-            schema,
-        }
-    }
-    fn before(&self) -> &NodePool {
-        self.docs.get(0).unwrap_or(&self.doc)
-    }
-
-    fn step(&mut self, step: Box<dyn Step>) -> Result<(), TransformError> {
-        let result = step.apply(self.doc.clone(), self.schema.clone());
-        match result.failed {
-            Some(message) => Err(TransformError::new(message)),
-            None => {
-                self.add_step(step, result.doc.unwrap());
-                Ok(())
-            }
-        }
-    }
-
-    fn doc_changed(&self) -> bool {
-        !self.steps.is_empty()
-    }
-
-    fn add_step(&mut self, step: Box<dyn Step>, doc: Arc<NodePool>) {
-        self.docs.push(self.doc.clone());
-        self.steps.push(step);
-        self.doc = doc;
-    }
+pub trait   Transform {
+    fn before(&self) -> &NodePool;
+    fn step(&mut self, step: Box<dyn Step>) -> Result<(), TransformError>;
+    fn doc_changed(&self) -> bool;
+    fn add_step(&mut self, step: Box<dyn Step>, doc: Arc<NodePool>);
 }
