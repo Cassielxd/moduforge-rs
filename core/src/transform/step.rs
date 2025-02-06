@@ -1,14 +1,13 @@
 use std::sync::Arc;
 
+
 use crate::model::{node_pool::NodePool, schema::Schema};
 
+use super::{transform::TransformError, ConcreteStep};
 
-
-pub trait Step {
-    fn apply(&self, doc: Arc<NodePool>, schema: Arc<Schema>) -> StepResult;
-    fn to_json(&self) -> serde_json::Value;
-    //翻转
-    fn invert(&self) -> Box<dyn Step>;
+pub trait Step: Send + Sync {
+    fn apply(&self, doc: Arc<NodePool>, schema: Arc<Schema>) -> Result<StepResult, TransformError>;
+    fn to_concrete(&self) -> ConcreteStep;
 }
 
 pub struct StepResult {
@@ -31,3 +30,5 @@ impl StepResult {
         }
     }
 }
+
+pub enum Steps {}

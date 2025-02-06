@@ -63,6 +63,13 @@ impl IdGenerator {
 
         unsafe { INSTANCE.as_ref().unwrap() }
     }
+    pub fn get_id() -> String {
+        let id = {
+            let mut id_generator = IdGenerator::get_instance().lock().unwrap();
+            id_generator.get_next_id()
+        };
+        id
+    }
 
     pub fn get_next_id(&mut self) -> String {
         let timestamp = self.get_timestamp();

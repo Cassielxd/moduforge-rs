@@ -7,12 +7,11 @@ description = "差异计算与版本流处理"
 lib="./src/lib.rs"
 
 [dependencies]
+tokio= {workspace=true}
 im= {workspace=true}
 log = {workspace=true}
 serde = {workspace=true}
 serde_json = {workspace=true}
 thiserror= {workspace=true}
 async-trait= {workspace=true}
-bincode= {workspace=true}
-
 moduforge-core= {workspace=true}

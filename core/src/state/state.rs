@@ -1,18 +1,32 @@
-use std::{any::Any, collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
+};
 
-use crate::model::{mark::Mark, node_pool::NodePool, schema::Schema};
+use crate::model::{
+    id_generator::IdGenerator, mark::Mark, node_pool::NodePool, schema::Schema, types::NodeId,
+};
 
 use super::{
     plugin::{Plugin, PluginState, StateField},
     transaction::Transaction,
 };
-use async_trait::async_trait;
 
+static VERSION: AtomicU64 = AtomicU64::new(0);
+pub fn get_state_version() -> u64 {
+    //生成 全局自增的版本号，用于兼容性
+    VERSION.fetch_add(1, Ordering::SeqCst)
+}
 
 #[derive(Clone, Debug)]
 pub struct State {
     pub config: Configuration,
     pub fields_instances: HashMap<String, PluginState>,
+    pub node_pool: Arc<NodePool>,
+    pub version: u64,
 }
 
 impl State {
@@ -21,7 +35,11 @@ impl State {
             Some(schema) => schema.clone(),
             None => state_config.schema.clone().ok_or("Schema is required")?,
         };
-        let config = Configuration::new(schema, state_config.plugins.clone());
+        let config = Configuration::new(
+            schema,
+            state_config.plugins.clone(),
+            state_config.doc.clone(),
+        );
         let mut instance = State::new(config);
         let mut field_values = Vec::new();
         for field in &instance.config.fields {
@@ -36,22 +54,29 @@ impl State {
     }
 
     pub fn new(config: Configuration) -> Self {
+        let doc: Arc<NodePool> = match &config.doc {
+            Some(doc) => doc.clone(),
+            None => {
+                let id = IdGenerator::get_id();
+                let nodes = config
+                    .schema
+                    .top_node_type
+                    .clone()
+                    .unwrap()
+                    .create_and_fill(Some(id.clone()), None, vec![], None, &config.schema);
+                NodePool::from(nodes, id).into()
+            }
+        };
+
         State {
             fields_instances: HashMap::new(),
             config,
+            node_pool: doc,
+            version: get_state_version(), //版本好全局自增
         }
     }
     pub fn doc(&self) -> Arc<NodePool> {
-        match self.get_field("doc") {
-            Some(doc) => {
-                if let Ok(node) = Arc::downcast::<NodePool>(doc) {
-                    node
-                } else {
-                    panic!("doc field is not of type NodePool")
-                }
-            }
-            None => panic!("doc field not found"),
-        }
+        self.node_pool.clone()
     }
     pub fn schema(&self) -> Arc<Schema> {
         self.config.schema.clone()
@@ -154,7 +179,7 @@ impl State {
 
     pub async fn apply_inner(&self, tr: &Transaction) -> Result<State, Box<dyn std::error::Error>> {
         let mut new_instance = State::new(self.config.clone());
-
+        new_instance.node_pool = tr.doc.clone();
         for field in &self.config.fields {
             if let Some(value) = field.apply(tr).await {
                 new_instance.set_field(&field.name, value)?;
@@ -172,7 +197,11 @@ impl State {
         &self,
         state_config: StateConfig,
     ) -> Result<State, Box<dyn std::error::Error>> {
-        let config = Configuration::new(self.schema(), state_config.plugins.clone());
+        let config = Configuration::new(
+            self.schema(),
+            state_config.plugins.clone(),
+            state_config.doc.clone(),
+        );
         let mut instance = State::new(config);
         let mut field_values = Vec::new();
         for field in &instance.config.fields {
@@ -230,13 +259,19 @@ pub struct Configuration {
     fields: Vec<FieldDesc>,
     plugins: Vec<Plugin>,
     plugins_by_key: HashMap<String, Plugin>,
+    pub doc: Option<Arc<NodePool>>,
     schema: Arc<Schema>,
 }
 
 impl Configuration {
-    pub fn new(schema: Arc<Schema>, plugins: Option<Vec<Plugin>>) -> Self {
+    pub fn new(
+        schema: Arc<Schema>,
+        plugins: Option<Vec<Plugin>>,
+        doc: Option<Arc<NodePool>>,
+    ) -> Self {
         let mut config = Configuration {
-            fields: base_fields(),
+            doc,
+            fields: vec![],
             plugins: Vec::new(),
             plugins_by_key: HashMap::new(),
             schema,
@@ -279,52 +314,4 @@ impl FieldDesc {
     async fn apply(&self, tr: &Transaction) -> Option<PluginState> {
         Some(self.field.apply(tr, None, None, None).await)
     }
-}
-#[derive(Debug, Clone)]
-struct DocField;
-
-#[async_trait]
-impl StateField for DocField {
-    async fn init(&self, config: &StateConfig, _: Option<&State>) -> PluginState {
-        match &config.doc {
-            Some(doc) => doc.clone(),
-            None => {
-                let schema = config.schema.clone().unwrap();
-                let top_node_type = schema
-                    .top_node_type
-                    .as_ref()
-                    .expect("Top node type is required");
-
-                let nodes = top_node_type.create_and_fill(None, None, vec![], None, &schema);
-                return Arc::new(NodePool::from(nodes));
-            } // 如果 Node 实现了 Default trait
-        }
-    }
-
-    async fn apply(
-        &self,
-        tr: &Transaction,
-        value: Option<&PluginState>,
-        old_state: Option<&State>,
-        new_state: Option<&State>,
-    ) -> PluginState {
-        tr.doc()
-    }
-
-    fn to_json(&self, value: &PluginState) -> Option<serde_json::Value> {
-        None
-    }
-
-    fn from_json(
-        &self,
-        config: &StateConfig,
-        value: &serde_json::Value,
-        state: &State,
-    ) -> Option<PluginState> {
-        None
-    }
-}
-
-fn base_fields() -> Vec<FieldDesc> {
-    vec![FieldDesc::new(Arc::new(DocField), "doc".to_string())]
 }

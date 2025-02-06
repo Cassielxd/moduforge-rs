@@ -2,18 +2,20 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use super::state::State;
 use crate::model::node_pool::NodePool;
 use crate::model::schema::Schema;
+use crate::transform::attr_step::AttrStep;
 use crate::transform::step::Step;
 use crate::transform::transform::{Transform, TransformError};
-use super::state::State;
+use crate::transform::ConcreteStep;
 pub struct Transaction {
     pub meta: HashMap<String, Box<dyn std::any::Any>>,
     pub time: u64,
     pub steps: Vec<Box<dyn Step>>,
     pub docs: Vec<Arc<NodePool>>,
     pub doc: Arc<NodePool>,
-    schema: Arc<Schema>,
+    pub schema: Arc<Schema>,
 }
 unsafe impl Send for Transaction {}
 unsafe impl Sync for Transaction {}
@@ -23,7 +25,7 @@ impl Transform for Transaction {
     }
 
     fn step(&mut self, step: Box<dyn Step>) -> Result<(), TransformError> {
-        let result = step.apply(self.doc.clone(), self.schema.clone());
+        let result = step.apply(self.doc.clone(), self.schema.clone())?;
         match result.failed {
             Some(message) => Err(TransformError::new(message)),
             None => {
@@ -54,14 +56,23 @@ impl Transaction {
             time: now,
             steps: vec![],
             docs: vec![],
-            doc:node,
-            schema:state.schema(),
+            doc: node,
+            schema: state.schema(),
         }
     }
     pub fn doc(&self) -> Arc<NodePool> {
         self.doc.clone()
     }
-
+    pub fn as_concrete(step: &Box<dyn Step>) -> ConcreteStep {
+        step.to_concrete()
+    }
+    pub fn set_node_attribute(
+        &mut self,
+        id: String,
+        values: im::HashMap<String, serde_json::Value>,
+    ) {
+        let _ = self.step(Box::new(AttrStep::new(id, values)));
+    }
     pub fn set_time(&mut self, time: u64) -> &mut Self {
         self.time = time;
         self

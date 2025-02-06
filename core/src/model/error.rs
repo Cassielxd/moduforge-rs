@@ -1,7 +1,5 @@
 use super::types::NodeId;
 
-
-
 #[derive(Debug, thiserror::Error)]
 pub enum PoolError {
     #[error("重复的节点 ID: {0}")]
@@ -12,9 +10,9 @@ pub enum PoolError {
     ChildNotFound(NodeId),
     #[error("节点不存在: {0}")]
     NodeNotFound(NodeId),
-    #[error("Orphan node detected: {0}")]
+    #[error("检测到孤立节点: {0}")]
     OrphanNode(NodeId),
-    #[error("Invalid parenting: child {child} not found in parent {alleged_parent}'s children")]
+    #[error("无效的:子节点 {child} 没在  {alleged_parent} 找到 's")]
     InvalidParenting {
         child: NodeId,
         alleged_parent: NodeId,

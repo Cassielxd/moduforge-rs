@@ -4,7 +4,6 @@ use crate::model::{node_pool::NodePool, schema::Schema};
 
 use super::step::Step;
 
-
 // 定义 TransformError 结构体
 #[derive(Debug)]
 pub struct TransformError {
@@ -23,7 +22,7 @@ impl TransformError {
     }
 }
 
-pub trait   Transform {
+pub trait Transform {
     fn before(&self) -> &NodePool;
     fn step(&mut self, step: Box<dyn Step>) -> Result<(), TransformError>;
     fn doc_changed(&self) -> bool;

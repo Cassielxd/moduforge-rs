@@ -1,4 +1,4 @@
-use std::sync::Arc;
 
-pub type NodeId = Arc<str>;
+
+pub type NodeId = String;
 pub enum ContentEnum {}

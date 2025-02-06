@@ -1,47 +1,35 @@
-use std::sync::Arc;
-
-use bincode::{Decode, Encode};
+use super::{error::PoolError, node::Node, types::NodeId};
 use im::HashMap;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
-use super::{error::PoolError, node::Node, types::NodeId};
-#[derive(Debug, PartialEq, Default,Encode, Decode,Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct NodePoolInner {
-    #[bincode(with_serde)] nodes: im::HashMap<NodeId, Arc<Node>>,  // 节点数据共享
-    #[bincode(with_serde)] parent_map: im::HashMap<NodeId, NodeId>, 
-    #[bincode(with_serde)] child_map: im::HashMap<NodeId, im::Vector<NodeId>>, // 新增反向索引
+    pub root_id: NodeId,
+    pub nodes: im::HashMap<NodeId, Arc<Node>>, // 节点数据共享
+    pub parent_map: im::HashMap<NodeId, NodeId>,
+    pub child_map: im::HashMap<NodeId, im::Vector<NodeId>>,
 }
 impl NodePoolInner {
-    pub fn link_child_to_parent(
-        mut self,
-        child_id: &NodeId,
-        parent_id: &NodeId,
+    pub fn update_attr(
+        &self,
+        id: &NodeId,
+        values: &HashMap<String, serde_json::Value>,
     ) -> Result<Self, PoolError> {
-        if !self.nodes.contains_key(parent_id) {
-            return Err(PoolError::ParentNotFound(parent_id.clone()));
+        if !self.nodes.contains_key(id) {
+            return Err(PoolError::NodeNotFound(id.clone()));
         }
-        if !self.nodes.contains_key(child_id) {
-            return Err(PoolError::ChildNotFound(child_id.clone()));
-        }
+        let node = self.nodes.get(id).unwrap();
 
-        // 更新父节点内容
-        let parent = self
-            .nodes
-            .get(parent_id)
-            .ok_or_else(|| PoolError::ParentNotFound(parent_id.clone()))?;
-        let mut updated_content = parent.content.clone();
-        updated_content.push_back(child_id.clone());
-        let parent_node = Arc::try_unwrap(parent.clone()).unwrap_or_else(|arc| (*arc).clone());
-        let updated_parent = Node {
-            content: updated_content,
-            ..parent_node
-        };
-
-        // 更新内部状态
-        self.nodes.insert(parent_id.clone(), Arc::new(updated_parent));
-        self.parent_map.insert(child_id.clone(), parent_id.clone());
-
-        Ok(self)
+        let mut cope_node = node.clone().as_ref().clone();
+        cope_node.attrs.extend(values.clone());
+        let nodes = self.nodes.update(id.clone(), Arc::new(cope_node));
+        Ok(NodePoolInner {
+            nodes,
+            parent_map: self.parent_map.clone(),
+            child_map: self.child_map.clone(),
+            root_id: self.root_id.clone(),
+        })
     }
 }
 
@@ -54,19 +42,32 @@ unsafe impl Send for NodePool {}
 unsafe impl Sync for NodePool {}
 
 impl NodePool {
-    pub fn from(nodes: Vec<Node>) -> Self {
+    pub fn update_attr(
+        &self,
+        id: &NodeId,
+        values: &HashMap<String, serde_json::Value>,
+    ) -> Result<Self, PoolError> {
+        Ok(NodePool {
+            inner: Arc::new(self.inner.update_attr(id, values)?),
+        })
+    }
+    pub fn from(nodes: Vec<Node>, root_id: NodeId) -> Self {
         let mut nodes_ref = HashMap::new();
         let mut parent_map_ref = HashMap::new();
-        let mut child_map_ref = HashMap::new();
         for node in nodes.into_iter() {
             for child_id in &node.content {
                 parent_map_ref.insert(child_id.clone(), node.id.clone());
             }
             nodes_ref.insert(node.id.clone(), Arc::new(node));
         }
-        
+
         NodePool {
-            inner: Arc::new(NodePoolInner{ nodes: nodes_ref, parent_map: parent_map_ref, child_map: child_map_ref })
+            inner: Arc::new(NodePoolInner {
+                nodes: nodes_ref,
+                parent_map: parent_map_ref,
+                child_map: HashMap::new(),
+                root_id,
+            }),
         }
     }
 
@@ -76,8 +77,6 @@ impl NodePool {
     pub fn get_node(&self, id: &NodeId) -> Option<&Arc<Node>> {
         self.inner.nodes.get(id)
     }
-
- 
 
     /// 检查节点是否存在
     pub fn contains_node(&self, id: &NodeId) -> bool {
@@ -131,8 +130,6 @@ impl NodePool {
 
     // -- 批量操作 --
 
-   
-
     // -- 结构验证 --
 
     /// 验证父子关系一致性
@@ -174,5 +171,3 @@ impl NodePool {
         self.inner.nodes.values().find(|n| predicate(n))
     }
 }
-
-

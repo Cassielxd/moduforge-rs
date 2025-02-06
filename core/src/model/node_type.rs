@@ -1,13 +1,13 @@
-use std::collections::HashMap;
 use super::content::ContentMatch;
 use super::id_generator::IdGenerator;
 use super::mark::Mark;
 use super::mark_type::MarkType;
 use super::node::Node;
 use super::schema::{compute_attrs, Attribute, AttributeSpec, Schema};
-use super::types::{ NodeId};
+use super::types::NodeId;
 use im::HashMap as ImHashMap;
 use serde_json::Value;
+use std::collections::HashMap;
 
 /**
  * 节点的类型定义
@@ -86,10 +86,7 @@ impl NodeType {
         marks: Option<Vec<Mark>>,
         schema: &Schema,
     ) -> Vec<Node> {
-        let id: String = id.unwrap_or_else(|| {
-            let mut id_generator = IdGenerator::get_instance().lock().unwrap();
-            id_generator.get_next_id()
-        });
+        let id: String = id.unwrap_or_else(|| IdGenerator::get_id());
         let attrs = self.compute_attrs(attrs);
         let mut content_ref = content
             .iter()

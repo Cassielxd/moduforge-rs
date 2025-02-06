@@ -94,7 +94,7 @@ pub trait PluginStateTrait: Any + Serialize + for<'de> Deserialize<'de> {}
 
 impl<T: Any + Serialize + for<'de> Deserialize<'de>> PluginStateTrait for T {}
 
-pub type PluginState = Arc<dyn Any + Send + Sync>;
+pub type PluginState = Arc<serde_json::Value>;
 use std::fmt::{self, Debug};
 #[async_trait]
 pub trait StateField: Send + Sync + Debug {

@@ -8,10 +8,11 @@ description = "不可变数据结构与事务系统基础"
 lib="./src/lib.rs"
 
 [dependencies]
+generational-arena= {workspace=true}
 im= {workspace=true}
 log = {workspace=true}
 serde = {workspace=true}
 serde_json = {workspace=true}
 thiserror= {workspace=true}
 async-trait= {workspace=true}
-bincode= {workspace=true}
+tokio= {workspace=true}

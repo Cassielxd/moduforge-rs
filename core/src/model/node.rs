@@ -1,13 +1,8 @@
-use std::sync::Arc;
-
-use im::HashMap;
 use serde::{Deserialize, Serialize};
-
+use std::sync::Arc;
 use super::attrs::Attrs;
-use super::error::PoolError;
 use super::mark::Mark;
 use super::types::NodeId;
-use bincode::{Decode, Encode};
 /**
  * 基础节点定义 任何数据都可以认为是节点
  * @property id 节点id
@@ -18,7 +13,7 @@ use bincode::{Decode, Encode};
  * @author string<348040933@qq.com>
  */
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq,  Serialize, Deserialize)]
 pub struct Node {
     pub id: NodeId,
     pub r#type: String,
@@ -38,7 +33,7 @@ impl Node {
         marks: Vec<Mark>,
     ) -> Self {
         Node {
-            id: Arc::from(id), // 转换为Arc<str>
+            id: id.into(), // 转换为Arc<str>
             r#type,
             attrs,
             content: content.into(),

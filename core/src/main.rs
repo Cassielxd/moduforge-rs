@@ -1,15 +1,19 @@
 use async_trait::async_trait;
 use log::{error, Level, LevelFilter, Metadata, Record, SetLoggerError};
+use moduforge_core::{
+    model::{
+        attrs,
+        node_type::NodeSpec,
+        schema::{AttributeSpec, Schema, SchemaSpec},
+    },
+    state::{
+        plugin::{Plugin, PluginSpec, PluginState, PluginTrTrait, StateField},
+        state::{State, StateConfig},
+        transaction::Transaction,
+    },
+};
+use serde_json::json;
 use std::{collections::HashMap, sync::Arc};
-use valuation_model::{
-    node_type::NodeSpec,
-    schema::{Schema, SchemaSpec},
-};
-use valuation_state::{
-    plugin::{Plugin, PluginSpec, PluginState, PluginTrTrait, StateField},
-    state::{State, StateConfig},
-    transaction::Transaction,
-};
 #[tokio::main]
 async fn main() {
     let _ = test1().await;
@@ -17,6 +21,14 @@ async fn main() {
 async fn test1() -> Result<(), Box<dyn std::error::Error>> {
     init().expect("");
     let mut nodes = HashMap::new();
+    let mut attrs = HashMap::new();
+    attrs.insert(
+        "name".to_string(),
+        AttributeSpec {
+            default: Some(json!("string")),
+            validate: None,
+        },
+    );
     nodes.insert(
         "doc".to_string(),
         NodeSpec {
@@ -24,7 +36,7 @@ async fn test1() -> Result<(), Box<dyn std::error::Error>> {
             marks: None,
             group: None,
             desc: Some("顶级节点".to_string()),
-            attrs: None,
+            attrs: Some(attrs),
         },
     );
 
@@ -53,8 +65,12 @@ async fn test1() -> Result<(), Box<dyn std::error::Error>> {
         plugins: Some(vec![get_plugin()]),
     })
     .await?;
-
-    state = state.apply(&mut Transaction::new(&state)).await?;
+    dbg!(state.doc());
+    let mut tr: Transaction = Transaction::new(&state);
+    let mut values: im::HashMap<String, serde_json::Value> = im::HashMap::new();
+    values.insert("name".to_string(), json!("李兴栋"));
+    tr.set_node_attribute(state.doc().inner.root_id.to_string(), values);
+    state = state.apply(&mut tr).await?;
     dbg!(state.doc());
     Ok(())
 }
@@ -79,7 +95,7 @@ struct PState {}
 #[async_trait]
 impl StateField for PState {
     async fn init(&self, config: &StateConfig, instance: Option<&State>) -> PluginState {
-        return Arc::new(1);
+        return Arc::new(json!(1));
     }
 
     async fn apply(
@@ -91,14 +107,14 @@ impl StateField for PState {
     ) -> PluginState {
         match value {
             Some(v) => {
-                if let Some(count) = v.downcast_ref::<i32>() {
-                    Arc::new(count + 1)
+                if let Some(count) = v.as_i64() {
+                    Arc::new(json!(count + 1))
                 } else {
                     error!("Unexpected type in PluginState");
-                    Arc::new(1)
+                    Arc::new(json!(1))
                 }
             }
-            None => Arc::new(1),
+            None => Arc::new(json!(1)),
         }
     }
 }
