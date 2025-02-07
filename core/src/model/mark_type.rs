@@ -49,7 +49,7 @@ impl MarkType {
         }
     }
 
-    fn create(&self, attrs: Option<&HashMap<String, serde_json::Value>>) -> Mark {
+    fn create(&self, attrs: Option<&HashMap<String, String>>) -> Mark {
         Mark {
             r#type: self.name.clone(),
             attrs: self.compute_attrs(attrs),
@@ -57,8 +57,8 @@ impl MarkType {
     }
     fn compute_attrs(
         &self,
-        attrs: Option<&HashMap<String, serde_json::Value>>,
-    ) -> ImHashMap<String, serde_json::Value> {
+        attrs: Option<&HashMap<String, String>>,
+    ) -> ImHashMap<String, String> {
         match attrs {
             Some(attr) => compute_attrs(&self.attrs, Some(&attr)),
             None => compute_attrs(&self.attrs, None),

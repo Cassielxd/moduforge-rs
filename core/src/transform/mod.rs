@@ -1,12 +1,12 @@
 use attr_step::AttrStep;
 use serde::{Deserialize, Serialize};
 use step::Step;
-
+use bincode::{Decode, Encode};
 pub mod attr_step;
 pub mod step;
 pub mod transform;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize,Decode, Encode)]
 pub enum ConcreteStep {
     UpdateAttrs(AttrStep),
 }

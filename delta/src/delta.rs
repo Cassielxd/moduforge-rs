@@ -3,9 +3,9 @@ use moduforge_core::{
     transform::{transform::Transform, ConcreteStep},
 };
 use serde::{Deserialize, Serialize};
-
+use bincode::{Decode, Encode};
 use crate::{from_binary, to_binary};
-#[derive(Debug, Clone,Serialize,Deserialize)]
+#[derive(Debug, Clone,Serialize,Deserialize,Decode, Encode)]
 pub struct TransactionDelta {
     parent_version: u64,
     timestamp: u64,

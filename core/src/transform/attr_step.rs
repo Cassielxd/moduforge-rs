@@ -9,14 +9,15 @@ use super::{
 };
 use im::HashMap;
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
+use bincode::{Decode, Encode};
+#[derive(Debug, Serialize, Deserialize, Clone,Decode, Encode)]
 pub struct AttrStep {
     id: NodeId,
-    values: HashMap<String, serde_json::Value>,
+    #[bincode(with_serde)]
+    values: HashMap<String, String>,
 }
 impl AttrStep {
-    pub fn new(id: String, values: HashMap<String, serde_json::Value>) -> Self {
+    pub fn new(id: String, values: HashMap<String, String>) -> Self {
         AttrStep {
             id: id.into(),
             values,

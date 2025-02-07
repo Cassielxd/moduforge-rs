@@ -2,18 +2,20 @@ use super::{error::PoolError, node::Node, types::NodeId};
 use im::HashMap;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+use bincode::{Decode, Encode};
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Decode, Encode)]
 pub struct NodePoolInner {
     pub root_id: NodeId,
+    #[bincode(with_serde)]
     pub nodes: im::HashMap<NodeId, Arc<Node>>, // 节点数据共享
+    #[bincode(with_serde)]
     pub parent_map: im::HashMap<NodeId, NodeId>,
 }
 impl NodePoolInner {
     pub fn update_attr(
         &self,
         id: &NodeId,
-        values: &HashMap<String, serde_json::Value>,
+        values: &HashMap<String, String>,
     ) -> Result<Self, PoolError> {
         if !self.nodes.contains_key(id) {
             return Err(PoolError::NodeNotFound(id.clone()));
@@ -31,7 +33,7 @@ impl NodePoolInner {
     }
 }
 
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug, Decode, Encode, Serialize, Deserialize)]
 pub struct NodePool {
     // 使用 Arc 包裹内部结构，实现快速克隆
     pub inner: Arc<NodePoolInner>,
@@ -43,7 +45,7 @@ impl NodePool {
     pub fn update_attr(
         &self,
         id: &NodeId,
-        values: &HashMap<String, serde_json::Value>,
+        values: &HashMap<String, String>,
     ) -> Result<Self, PoolError> {
         Ok(NodePool {
             inner: Arc::new(self.inner.update_attr(id, values)?),

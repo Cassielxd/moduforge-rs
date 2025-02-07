@@ -27,7 +27,7 @@ pub struct NodeType {
     pub desc: String,
     pub groups: Vec<String>,
     pub attrs: HashMap<String, Attribute>,
-    pub default_attrs: HashMap<String, Value>,
+    pub default_attrs: HashMap<String, String>,
     pub content_match: Option<ContentMatch>,
     pub mark_set: Option<Vec<MarkType>>,
 }
@@ -81,7 +81,7 @@ impl NodeType {
     pub fn create_and_fill(
         &self,
         id: Option<String>,
-        attrs: Option<&HashMap<String, Value>>,
+        attrs: Option<&HashMap<String, String>>,
         content: Vec<Node>,
         marks: Option<Vec<Mark>>,
         schema: &Schema,
@@ -118,7 +118,7 @@ impl NodeType {
     pub fn create(
         &self,
         id: Option<String>,
-        attrs: Option<&HashMap<String, Value>>,
+        attrs: Option<&HashMap<String, String>>,
         content: Vec<NodeId>,
         marks: Option<Vec<Mark>>,
     ) -> Node {
@@ -137,8 +137,8 @@ impl NodeType {
     }
     fn compute_attrs(
         &self,
-        attrs: Option<&HashMap<String, Value>>,
-    ) -> ImHashMap<String, serde_json::Value> {
+        attrs: Option<&HashMap<String, String>>,
+    ) -> ImHashMap<String, String> {
         match attrs {
             Some(attr) => compute_attrs(&self.attrs, Some(&attr)),
             None => compute_attrs(&self.attrs, Some(&self.default_attrs)),

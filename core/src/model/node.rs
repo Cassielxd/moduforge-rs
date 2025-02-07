@@ -3,6 +3,7 @@ use super::mark::Mark;
 use super::types::NodeId;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use bincode::{Decode, Encode};
 /**
  * 基础节点定义 任何数据都可以认为是节点
  * @property id 节点id
@@ -13,12 +14,15 @@ use std::sync::Arc;
  * @author string<348040933@qq.com>
  */
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize,Decode, Encode)]
 pub struct Node {
     pub id: NodeId,
     pub r#type: String,
+    #[bincode(with_serde)]
     pub attrs: Attrs,
+    #[bincode(with_serde)]
     pub content: im::Vector<NodeId>, // 使用im::Vector替代Arc<Vec>
+    #[bincode(with_serde)]
     pub marks: im::Vector<Mark>,
 }
 unsafe impl Send for Node {}

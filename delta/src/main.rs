@@ -1,24 +1,18 @@
+
 use async_trait::async_trait;
-use im::Vector;
-use moduforge_core::model::node::Node;
-use moduforge_core::model::node_pool::NodePoolInner;
 use moduforge_core::{
     model::{
-        attrs::Attrs,
-        mark::Mark,
+
         node_type::NodeSpec,
         schema::{AttributeSpec, Schema, SchemaSpec},
-        types::NodeId,
     },
     state::{
-        plugin::{Plugin, PluginState, },
-        state::{State, StateConfig},
-        transaction::Transaction,
+        plugin::{Plugin, PluginKey}, state::{State, StateConfig}, transaction::Transaction
     },
 };
 use moduforge_delta::snapshot::{create_full_snapshot, create_state_from_snapshot};
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+
+use serde_json::{json};
 use std::{collections::HashMap, sync::Arc};
 use tokio::fs;
 
@@ -26,17 +20,35 @@ async fn from_snapshot() -> Result<(), Box<dyn std::error::Error>> {
     let mut state = get_base().await?;
     let snapshot_data = fs::read("./snapshot_v1.bin").await.unwrap();
     state = create_state_from_snapshot(state.config.clone(), snapshot_data)?;
-    dbg!(state.doc());
+    dbg!(state);
     Ok(())
 }
 
+#[derive(Clone, Debug)]
+struct PluginImpl{
+    key:PluginKey
+}
+impl PluginImpl{
+    pub fn new()->Self{
+        PluginImpl{ key: PluginKey::new(Some("plugin"), Some("plugin")) }
+    }
+}
+#[async_trait]
+impl Plugin for PluginImpl{
+    fn key(&self) -> &PluginKey{
+        return &self.key;
+    }
+    async fn filter_transaction(&self, _tr: &Transaction, _state: &State) -> bool{
+        true
+    }
+}
 async fn get_base() -> Result<State, Box<dyn std::error::Error>> {
     let mut nodes = HashMap::new();
     let mut attrs = HashMap::new();
     attrs.insert(
         "name".to_string(),
         AttributeSpec {
-            default: Some(json!("string")),
+            default: Some("string".to_string()),
             validate: None,
         },
     );
@@ -72,7 +84,7 @@ async fn get_base() -> Result<State, Box<dyn std::error::Error>> {
         schema: Some(Arc::new(schema)),
         doc: None,
         stored_marks: None,
-        plugins: Some(vec![]),
+        plugins: Some(vec![Arc::new(PluginImpl::new())]),
     })
     .await?;
     Ok(state)
@@ -99,5 +111,6 @@ async fn create_all_snapshot() -> Result<(), Box<dyn std::error::Error>> {
 
 #[tokio::main]
 async fn main() {
+    //create_all_snapshot().await.unwrap();
     from_snapshot().await.unwrap();
 }

@@ -1,3 +1,4 @@
+use bincode::{Decode, Encode};
 use moduforge_core::{
     model::node_pool::NodePool,
     state::{
@@ -5,13 +6,11 @@ use moduforge_core::{
         state::{Configuration, State},
     },
 };
-use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, io, sync::Arc};
-use zstd::stream::{decode_all, encode_all};
 
 use crate::{from_binary, to_binary};
 
-#[derive(Deserialize, Serialize, PartialEq, Debug)]
+#[derive(Decode, Encode, PartialEq, Debug)]
 pub struct FullSnapshot {
     pub node_pool: Arc<NodePool>,                   // 节点池完整数据
     pub state_fields: HashMap<String, PluginState>, // State的字段序列化 */

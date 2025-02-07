@@ -69,7 +69,7 @@ impl Transaction {
     pub fn set_node_attribute(
         &mut self,
         id: String,
-        values: im::HashMap<String, serde_json::Value>,
+        values: im::HashMap<String, String>,
     ) {
         let _ = self.step(Box::new(AttrStep::new(id, values)));
     }

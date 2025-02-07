@@ -25,7 +25,7 @@ async fn test1() -> Result<(), Box<dyn std::error::Error>> {
     attrs.insert(
         "name".to_string(),
         AttributeSpec {
-            default: Some(json!("string")),
+            default: Some("string".to_string()),
             validate: None,
         },
     );
@@ -67,8 +67,8 @@ async fn test1() -> Result<(), Box<dyn std::error::Error>> {
     .await?;
     dbg!(state.doc());
     let mut tr: Transaction = Transaction::new(&state);
-    let mut values: im::HashMap<String, serde_json::Value> = im::HashMap::new();
-    values.insert("name".to_string(), json!("李兴栋"));
+    let mut values: im::HashMap<String, String> = im::HashMap::new();
+    values.insert("name".to_string(), "李兴栋".to_string());
     tr.set_node_attribute(state.doc().inner.root_id.to_string(), values);
     let state = state.apply(&mut tr).await?;
     dbg!(state.doc());

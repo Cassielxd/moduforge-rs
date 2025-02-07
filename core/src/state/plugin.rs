@@ -6,7 +6,7 @@ use tokio::io::Join;
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-
+use bincode::{Decode, Encode};
 use crate::model::node::Node;
 
 use super::state::{State, StateConfig};
@@ -37,13 +37,13 @@ pub trait Plugin:Send + Sync+Debug  {
     fn key(&self) -> &PluginKey;
 
     async fn init(&self, config: &StateConfig, instance: Option<&State>) -> PluginState{
-        return PluginState::new(InnerPluginState::JSON(json!({})));
+        return PluginState::new(InnerPluginState::String("".to_string()));
     }
     async fn apply(
         &self,
         tr: &Transaction
     ) -> PluginState{
-        return PluginState::new(InnerPluginState::JSON(json!({})));
+        return PluginState::new(InnerPluginState::String("".to_string()));
     }
 
     async fn filter_transaction(&self, _tr: &Transaction, _state: &State) -> bool{
@@ -68,11 +68,11 @@ pub type PluginState = Arc<InnerPluginState>;
 use std::fmt::{Debug};
 
 
-#[derive(Debug,Deserialize,Serialize,Clone,PartialEq)]
+#[derive(Debug,Deserialize,Serialize,Clone,PartialEq,Decode, Encode)]
 pub enum  InnerPluginState{
-    MAP(im::HashMap<String, Node>),
-    NODES(im::Vector<Node>),
-    JSON(serde_json::Value)
+    MAP(#[bincode(with_serde)] im::HashMap<String, Node>),
+    NODES( #[bincode(with_serde)] im::Vector<Node>),
+    String(String)
 } 
 
 

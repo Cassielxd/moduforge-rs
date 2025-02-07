@@ -11,7 +11,7 @@ use std::error::Error;
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Serialize)]
 pub struct Attribute {
     pub has_default: bool,
-    pub default: Option<Value>,
+    pub default: Option<String>,
 }
 
 impl Attribute {
@@ -128,7 +128,7 @@ pub struct SchemaSpec {
 
 // 其他辅助函数...
 
-pub fn default_attrs(attrs: &HashMap<String, Attribute>) -> Option<HashMap<String, Value>> {
+pub fn default_attrs(attrs: &HashMap<String, Attribute>) -> Option<HashMap<String, String>> {
     let mut defaults = HashMap::new();
 
     for (attr_name, attr) in attrs {
@@ -144,7 +144,7 @@ pub fn default_attrs(attrs: &HashMap<String, Attribute>) -> Option<HashMap<Strin
 
 #[derive(Clone, PartialEq, Debug, Eq, Hash, Serialize)]
 pub struct AttributeSpec {
-    pub default: Option<serde_json::Value>,
+    pub default: Option<String>,
     pub validate: Option<String>,
 }
 
@@ -179,7 +179,7 @@ fn gather_marks<'a>(schema: &'a Schema, marks: Vec<&'a str>) -> Result<Vec<&'a M
 
 pub fn compute_attrs(
     attrs: &HashMap<String, Attribute>,
-    value: Option<&HashMap<String, Value>>,
+    value: Option<&HashMap<String, String>>,
 ) -> Attrs {
     let mut built = ImHashMap::new();
 
@@ -192,7 +192,7 @@ pub fn compute_attrs(
                 if attr.has_default {
                     attr.default
                         .clone()
-                        .unwrap_or_else(|| serde_json::Value::String("".to_string()))
+                        .unwrap_or_else(|| "".to_string())
                 } else {
                     panic!("没有为属性提供值 {}", name);
                 }
