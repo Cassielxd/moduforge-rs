@@ -273,7 +273,7 @@ impl Configuration {
             for plugin in plugin_list {
                 let key = plugin.key().key.clone();
                 if config.plugins_by_key.contains_key(&key) {
-                    panic!("请不要重复添加 ({})", key);
+                    panic!("插件请不要重复添加 ({})", key);
                 }
                 config.plugins.push(plugin.clone());
                 config.plugins_by_key.insert(key, plugin);

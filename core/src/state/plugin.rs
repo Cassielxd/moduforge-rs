@@ -13,22 +13,8 @@ use super::state::{State, StateConfig};
 use super::transaction::Transaction;
 
 
-static mut KEYS: Option<HashMap<String, i32>> = None;
-
 /// Generates a unique plugin key
 fn create_key(name: &str) -> String {
-    unsafe {
-        if KEYS.is_none() {
-            KEYS = Some(HashMap::new());
-        }
-
-        if let Some(keys) = &mut KEYS {
-            if keys.contains_key(name) {
-                panic!("Plugin name ({}) is duplicate, not allowed", name);
-            }
-            keys.insert(name.to_string(), 0);
-        }
-    }
     format!("{}$", name)
 }
 

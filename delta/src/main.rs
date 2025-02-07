@@ -111,6 +111,6 @@ async fn create_all_snapshot() -> Result<(), Box<dyn std::error::Error>> {
 
 #[tokio::main]
 async fn main() {
-    //create_all_snapshot().await.unwrap();
+    create_all_snapshot().await.unwrap();
     from_snapshot().await.unwrap();
 }
