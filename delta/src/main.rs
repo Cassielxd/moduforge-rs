@@ -11,7 +11,7 @@ use moduforge_core::{
         types::NodeId,
     },
     state::{
-        plugin::{Plugin, PluginSpec, PluginState, PluginTrTrait, StateField},
+        plugin::{Plugin, PluginState, },
         state::{State, StateConfig},
         transaction::Transaction,
     },
@@ -72,7 +72,7 @@ async fn get_base() -> Result<State, Box<dyn std::error::Error>> {
         schema: Some(Arc::new(schema)),
         doc: None,
         stored_marks: None,
-        plugins: Some(vec![get_plugin()]),
+        plugins: Some(vec![]),
     })
     .await?;
     Ok(state)
@@ -95,49 +95,6 @@ async fn create_all_snapshot() -> Result<(), Box<dyn std::error::Error>> {
     let full_data = create_full_snapshot(&state)?;
     fs::write("./snapshot_v1.bin", full_data).await?;
     Ok(())
-}
-
-#[derive(Clone, Debug)]
-struct PState {}
-#[async_trait]
-impl StateField for PState {
-    async fn init(&self, config: &StateConfig, instance: Option<&State>) -> PluginState {
-        return Arc::new(json!("1"));
-    }
-
-    async fn apply(
-        &self,
-        tr: &Transaction,
-        value: Option<&PluginState>,
-        old_state: Option<&State>,
-        new_state: Option<&State>,
-    ) -> PluginState {
-        Arc::new(json!("1"))
-    }
-}
-#[derive(Clone, Debug)]
-struct PluginTr {}
-#[async_trait]
-impl PluginTrTrait for PluginTr {
-    async fn append_transaction<'a>(
-        &self,
-        tr: &'a mut Transaction,
-        old_state: &State,
-        new_state: &State,
-    ) -> Option<&'a mut Transaction> {
-        println!("asdasdasdasdas");
-        tr.set_meta("aaa", Box::new("aaa".to_string()));
-        return Some(tr);
-    }
-}
-fn get_plugin() -> Plugin {
-    let plugin = Plugin::new(PluginSpec {
-        state: Some(Arc::new(PState {})),
-        key: None,
-        filter_transaction: None,
-        append_transaction: Some(Arc::new(PluginTr {})),
-    });
-    plugin
 }
 
 #[tokio::main]

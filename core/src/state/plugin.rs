@@ -1,54 +1,17 @@
 use async_trait::async_trait;
+use im::Vector;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
+use tokio::io::Join;
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+use crate::model::node::Node;
+
 use super::state::{State, StateConfig};
 use super::transaction::Transaction;
 
-#[async_trait]
-pub trait PluginTrFilterTrait: Send + Sync + Debug {
-    async fn filter_transaction(&self, tr: &Transaction, state: &State) -> bool;
-}
-#[async_trait]
-pub trait PluginTrTrait: Send + Sync + Debug {
-    async fn append_transaction<'a>(
-        &self,
-        tr: &'a mut Transaction,
-        old_state: &State,
-        new_state: &State,
-    ) -> Option<&'a mut Transaction>;
-}
-
-#[derive(Clone, Debug)]
-pub struct PluginSpec {
-    pub state: Option<Arc<dyn StateField>>,
-    pub key: Option<PluginKey>,
-    pub filter_transaction: Option<Arc<dyn PluginTrFilterTrait>>,
-    pub append_transaction: Option<Arc<dyn PluginTrTrait>>,
-}
-impl PluginSpec {
-    async fn filter_transaction(&self, tr: &Transaction, state: &State) -> bool {
-        if let Some(filter) = self.filter_transaction.clone() {
-            return filter.filter_transaction(tr, state).await;
-        }
-        return false;
-    }
-    async fn append_transaction<'a>(
-        &self,
-        trs: &'a mut Transaction,
-        old_state: &State,
-        new_state: &State,
-    ) -> Option<&'a mut Transaction> {
-        if let Some(transaction) = self.append_transaction.clone() {
-            return transaction
-                .append_transaction(trs, old_state, new_state)
-                .await;
-        }
-        return None;
-    }
-}
 
 static mut KEYS: Option<HashMap<String, i32>> = None;
 
@@ -69,61 +32,52 @@ fn create_key(name: &str) -> String {
     format!("{}$", name)
 }
 
-#[derive(Clone, Debug)]
-pub struct Plugin {
-    pub spec: PluginSpec,
-    pub key: String,
-}
+#[async_trait]
+pub trait Plugin:Send + Sync+Debug  {
+    fn key(&self) -> &PluginKey;
 
-impl Plugin {
-    pub fn new(spec: PluginSpec) -> Self {
-        let key = match &spec.key {
-            Some(plugin_key) => plugin_key.key.clone(),
-            None => create_key("plugin"),
-        };
-
-        Plugin { spec, key }
+    async fn init(&self, config: &StateConfig, instance: Option<&State>) -> PluginState{
+        return PluginState::new(InnerPluginState::JSON(json!({})));
+    }
+    async fn apply(
+        &self,
+        tr: &Transaction
+    ) -> PluginState{
+        return PluginState::new(InnerPluginState::JSON(json!({})));
     }
 
-    /// Gets the plugin's state from the global state
-    pub fn get_state(&self, state: &State) -> Option<PluginState> {
-        state.get_field(&self.key)
+    async fn filter_transaction(&self, _tr: &Transaction, _state: &State) -> bool{
+        false
     }
-}
+     async fn append_transaction<'a>(
+        &self,
+        _trs: &'a mut Transaction,
+        _old_state: &State,
+        _new_state: &State,
+    ) -> Option<&'a mut Transaction>{
+        None
+    }
+} 
 pub trait PluginStateTrait: Any + Serialize + for<'de> Deserialize<'de> {}
 
 impl<T: Any + Serialize + for<'de> Deserialize<'de>> PluginStateTrait for T {}
 
-pub type PluginState = Arc<serde_json::Value>;
-use std::fmt::{self, Debug};
-#[async_trait]
-pub trait StateField: Send + Sync + Debug {
-    async fn init(&self, config: &StateConfig, instance: Option<&State>) -> PluginState;
+pub type PluginState = Arc<InnerPluginState>;
 
-    async fn apply(
-        &self,
-        tr: &Transaction,
-        value: Option<&PluginState>,
-        old_state: Option<&State>,
-        new_state: Option<&State>,
-    ) -> PluginState;
 
-    fn to_json(&self, value: &PluginState) -> Option<serde_json::Value> {
-        None
-    }
+use std::fmt::{Debug};
 
-    fn from_json(
-        &self,
-        config: &StateConfig,
-        value: &serde_json::Value,
-        state: &State,
-    ) -> Option<PluginState> {
-        None
-    }
-}
+
+#[derive(Debug,Deserialize,Serialize,Clone,PartialEq)]
+pub enum  InnerPluginState{
+    MAP(im::HashMap<String, Node>),
+    NODES(im::Vector<Node>),
+    JSON(serde_json::Value)
+} 
+
 
 /// Plugin key instance
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug,Deserialize,Serialize)]
 pub struct PluginKey {
     // Unique identifier
     pub key: String,
@@ -136,15 +90,5 @@ impl PluginKey {
         let key = create_key(name.unwrap_or("key"));
         let desc = desc.unwrap_or("").to_string();
         PluginKey { key, desc }
-    }
-
-    /// Gets the plugin from the given configuration
-    pub fn get<PluginState>(&self, state: &State) -> Option<&Plugin> {
-        todo!()
-    }
-
-    /// Gets the plugin's state from the given editor state
-    pub fn get_state(&self, state: &State) -> Option<PluginState> {
-        state.get_field(&self.key)
     }
 }

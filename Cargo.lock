@@ -224,18 +224,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "moduforge-storage"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "im",
- "log",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
 name = "object"
 version = "0.36.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"

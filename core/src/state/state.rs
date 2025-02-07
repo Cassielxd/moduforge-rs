@@ -11,7 +11,7 @@ use crate::model::{
 };
 
 use super::{
-    plugin::{Plugin, PluginState, StateField},
+    plugin::{Plugin, PluginState},
     transaction::Transaction,
 };
 
@@ -42,10 +42,9 @@ impl State {
         );
         let mut instance = State::new(config);
         let mut field_values = Vec::new();
-        for field in &instance.config.fields {
-            if let Some(value) = field.init(&state_config, Some(&instance)).await {
-                field_values.push((field.name.clone(), value));
-            }
+        for field in &instance.config.plugins {
+           let value = field.init(&state_config, Some(&instance)).await;
+           field_values.push((field.key().key.clone(), value));
         }
         for (name, value) in field_values {
             instance.set_field(&name, value)?;
@@ -82,7 +81,7 @@ impl State {
         self.config.schema.clone()
     }
 
-    pub fn plugins(&self) -> &Vec<Plugin> {
+    pub fn plugins(&self) -> &Vec<Arc<dyn Plugin>> {
         &self.config.plugins
     }
 
@@ -97,10 +96,8 @@ impl State {
     ) -> Result<bool, Box<dyn std::error::Error>> {
         for (i, plugin) in self.config.plugins.iter().enumerate() {
             if Some(i) != ignore {
-                if let Some(filter) = &plugin.spec.filter_transaction {
-                    if !filter.filter_transaction(tr, self).await {
-                        return Ok(false);
-                    }
+                if !plugin.filter_transaction(tr, self).await {
+                    return Ok(false);
                 }
             }
         }
@@ -127,11 +124,10 @@ impl State {
             let mut have_new = false;
 
             for (i, plugin) in self.config.plugins.iter().enumerate() {
-                if let Some(append) = &plugin.spec.append_transaction {
                     let n: usize = seen.as_ref().map(|s| s[i].n).unwrap_or(0);
                     let old_state = seen.as_ref().map(|s| &s[i].state).unwrap_or(self);
                     if n < trs.len() {
-                        if let Some(tr) = append
+                        if let Some(tr) = plugin
                             .append_transaction(root_tr, old_state, &new_state)
                             .await
                         {
@@ -165,7 +161,6 @@ impl State {
                             n: trs.len(),
                         };
                     }
-                }
             }
 
             if !have_new {
@@ -180,10 +175,9 @@ impl State {
     pub async fn apply_inner(&self, tr: &Transaction) -> Result<State, Box<dyn std::error::Error>> {
         let mut new_instance = State::new(self.config.clone());
         new_instance.node_pool = tr.doc.clone();
-        for field in &self.config.fields {
-            if let Some(value) = field.apply(tr).await {
-                new_instance.set_field(&field.name, value)?;
-            }
+        for field in &self.config.plugins {
+            let value = field.apply(tr).await;
+            new_instance.set_field(&field.key().key, value)?;
         }
 
         Ok(new_instance)
@@ -204,15 +198,14 @@ impl State {
         );
         let mut instance = State::new(config);
         let mut field_values = Vec::new();
-        for field in &instance.config.fields {
-            let value = if self.has_field(&field.name) {
-                self.get_field(&field.name)
+        for field in &instance.config.plugins {
+           let key = field.key().key.clone();
+            let value = if self.has_field(&key) {
+                self.get_field(&key).unwrap()
             } else {
                 field.init(&state_config, Some(&instance)).await
             };
-            if let Some(value) = value {
-                field_values.push((field.name.clone(), value));
-            }
+            field_values.push((key.clone(), value));
         }
         for (name, value) in field_values {
             instance.set_field(&name, value)?;
@@ -241,7 +234,7 @@ pub struct StateConfig {
     pub schema: Option<Arc<Schema>>,
     pub doc: Option<Arc<NodePool>>,
     pub stored_marks: Option<Vec<Mark>>,
-    pub plugins: Option<Vec<Plugin>>,
+    pub plugins: Option<Vec<Arc<dyn Plugin>>>,
 }
 
 pub struct SeenState {
@@ -256,9 +249,8 @@ pub struct TransactionResult {
 
 #[derive(Clone, Debug)]
 pub struct Configuration {
-    fields: Vec<FieldDesc>,
-    plugins: Vec<Plugin>,
-    plugins_by_key: HashMap<String, Plugin>,
+    plugins: Vec<Arc<dyn Plugin>>,
+    plugins_by_key: HashMap<String, Arc<dyn Plugin>>,
     pub doc: Option<Arc<NodePool>>,
     schema: Arc<Schema>,
 }
@@ -266,12 +258,11 @@ pub struct Configuration {
 impl Configuration {
     pub fn new(
         schema: Arc<Schema>,
-        plugins: Option<Vec<Plugin>>,
+        plugins: Option<Vec<Arc<dyn Plugin>>>,
         doc: Option<Arc<NodePool>>,
     ) -> Self {
         let mut config = Configuration {
             doc,
-            fields: vec![],
             plugins: Vec::new(),
             plugins_by_key: HashMap::new(),
             schema,
@@ -279,39 +270,15 @@ impl Configuration {
 
         if let Some(plugin_list) = plugins {
             for plugin in plugin_list {
-                let key = plugin.key.clone();
-                if config.plugins_by_key.contains_key(&plugin.key) {
-                    panic!("请不要重复添加 ({})", plugin.key);
+                let key = plugin.key().key.clone();
+                if config.plugins_by_key.contains_key(&key) {
+                    panic!("请不要重复添加 ({})", key);
                 }
                 config.plugins.push(plugin.clone());
-                if let Some(state) = &plugin.spec.state {
-                    config
-                        .fields
-                        .push(FieldDesc::new(state.clone(), key.clone()));
-                }
                 config.plugins_by_key.insert(key, plugin);
             }
         }
 
         config
-    }
-}
-#[derive(Clone, Debug)]
-pub struct FieldDesc {
-    field: Arc<dyn StateField>,
-    name: String,
-}
-
-impl FieldDesc {
-    fn new(field: Arc<dyn StateField>, name: String) -> Self {
-        FieldDesc { field, name }
-    }
-
-    async fn init(&self, config: &StateConfig, instance: Option<&State>) -> Option<PluginState> {
-        Some(self.field.init(config, instance).await)
-    }
-
-    async fn apply(&self, tr: &Transaction) -> Option<PluginState> {
-        Some(self.field.apply(tr, None, None, None).await)
     }
 }

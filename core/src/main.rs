@@ -7,7 +7,7 @@ use moduforge_core::{
         schema::{AttributeSpec, Schema, SchemaSpec},
     },
     state::{
-        plugin::{Plugin, PluginSpec, PluginState, PluginTrTrait, StateField},
+        plugin::{Plugin, PluginKey, PluginState},
         state::{State, StateConfig},
         transaction::Transaction,
     },
@@ -62,7 +62,7 @@ async fn test1() -> Result<(), Box<dyn std::error::Error>> {
         schema: Some(Arc::new(schema)),
         doc: None,
         stored_marks: None,
-        plugins: Some(vec![get_plugin()]),
+        plugins: Some(vec![Arc::new(PluginImpl::new())]),
     })
     .await?;
     dbg!(state.doc());
@@ -70,7 +70,7 @@ async fn test1() -> Result<(), Box<dyn std::error::Error>> {
     let mut values: im::HashMap<String, serde_json::Value> = im::HashMap::new();
     values.insert("name".to_string(), json!("李兴栋"));
     tr.set_node_attribute(state.doc().inner.root_id.to_string(), values);
-    state = state.apply(&mut tr).await?;
+    let state = state.apply(&mut tr).await?;
     dbg!(state.doc());
     Ok(())
 }
@@ -91,54 +91,20 @@ pub fn init() -> Result<(), SetLoggerError> {
     log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Info))
 }
 #[derive(Clone, Debug)]
-struct PState {}
-#[async_trait]
-impl StateField for PState {
-    async fn init(&self, config: &StateConfig, instance: Option<&State>) -> PluginState {
-        return Arc::new(json!(1));
-    }
-
-    async fn apply(
-        &self,
-        tr: &Transaction,
-        value: Option<&PluginState>,
-        old_state: Option<&State>,
-        new_state: Option<&State>,
-    ) -> PluginState {
-        match value {
-            Some(v) => {
-                if let Some(count) = v.as_i64() {
-                    Arc::new(json!(count + 1))
-                } else {
-                    error!("Unexpected type in PluginState");
-                    Arc::new(json!(1))
-                }
-            }
-            None => Arc::new(json!(1)),
-        }
+struct PluginImpl{
+    key:PluginKey
+}
+impl PluginImpl{
+    pub fn new()->Self{
+        PluginImpl{ key: PluginKey::new(Some("plugin"), Some("plugin")) }
     }
 }
-#[derive(Clone, Debug)]
-struct PluginTr {}
 #[async_trait]
-impl PluginTrTrait for PluginTr {
-    async fn append_transaction<'a>(
-        &self,
-        tr: &'a mut Transaction,
-        old_state: &State,
-        new_state: &State,
-    ) -> Option<&'a mut Transaction> {
-        println!("asdasdasdasdas");
-        tr.set_meta("aaa", Box::new("aaa".to_string()));
-        return Some(tr);
+impl Plugin for PluginImpl{
+    fn key(&self) -> &PluginKey{
+        return &self.key;
     }
-}
-fn get_plugin() -> Plugin {
-    let plugin = Plugin::new(PluginSpec {
-        state: Some(Arc::new(PState {})),
-        key: None,
-        filter_transaction: None,
-        append_transaction: Some(Arc::new(PluginTr {})),
-    });
-    plugin
+    async fn filter_transaction(&self, _tr: &Transaction, _state: &State) -> bool{
+        true
+    }
 }
