@@ -1,8 +1,7 @@
-use async_trait::async_trait;
+ use async_trait::async_trait;
 use moduforge_core::{
     model::{
-        node_type::NodeSpec,
-        schema::{AttributeSpec, Schema, SchemaSpec},
+        attrs::Attrs, mark::Mark, node_type::NodeSpec, schema::{AttributeSpec, Schema, SchemaSpec}, types::NodeId
     },
     state::{
         plugin::{Plugin, PluginSpec, PluginState, PluginTrTrait, StateField},
@@ -21,10 +20,6 @@ use moduforge_core::model::node_pool::NodePoolInner;
 
 
 
-#[tokio::main]
-async fn main() {
-    from_snapshot().await;
-}
 
 async fn from_snapshot() -> Result<(), Box<dyn std::error::Error>> {
     let mut state = get_base().await?;
@@ -142,4 +137,11 @@ fn get_plugin() -> Plugin {
         append_transaction: Some(Arc::new(PluginTr {})),
     });
     plugin
+}
+ 
+
+
+ #[tokio::main]
+async fn main() {
+  
 }

@@ -3,7 +3,7 @@ use im::HashMap;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-#[derive(Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug,Serialize,Deserialize)]
 pub struct NodePoolInner {
     pub root_id: NodeId,
     pub nodes: im::HashMap<NodeId, Arc<Node>>, // 节点数据共享
@@ -33,7 +33,7 @@ impl NodePoolInner {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Clone, PartialEq, Debug,Serialize,Deserialize)]
 pub struct NodePool {
     // 使用 Arc 包裹内部结构，实现快速克隆
     pub inner: Arc<NodePoolInner>,

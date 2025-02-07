@@ -13,7 +13,7 @@ use super::types::NodeId;
  * @author string<348040933@qq.com>
  */
 
-#[derive(Debug, Clone, PartialEq,  Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Node {
     pub id: NodeId,
     pub r#type: String,

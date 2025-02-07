@@ -7,7 +7,7 @@ use super::attrs::Attrs;
  * @property attrs 标记属性
  * @author string<348040933@qq.com>
  */
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash,Serialize, Deserialize)]
 pub struct Mark {
     pub r#type: String,
     pub attrs: Attrs,

@@ -23,7 +23,6 @@ lazy_static="1"
 im={ version = "15", features = ["serde"] }
 thiserror="2.0.11"
 async-trait = "0.1"
-
 moduforge-core = { path = "./core" }
 moduforge-delta = { path = "./delta" }
 moduforge-official = { path = "./official" }
