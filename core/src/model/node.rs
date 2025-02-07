@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use super::attrs::Attrs;
 use super::mark::Mark;
 use super::types::NodeId;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 /**
  * 基础节点定义 任何数据都可以认为是节点
  * @property id 节点id

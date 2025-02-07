@@ -1,7 +1,14 @@
- use async_trait::async_trait;
+use async_trait::async_trait;
+use im::Vector;
+use moduforge_core::model::node::Node;
+use moduforge_core::model::node_pool::NodePoolInner;
 use moduforge_core::{
     model::{
-        attrs::Attrs, mark::Mark, node_type::NodeSpec, schema::{AttributeSpec, Schema, SchemaSpec}, types::NodeId
+        attrs::Attrs,
+        mark::Mark,
+        node_type::NodeSpec,
+        schema::{AttributeSpec, Schema, SchemaSpec},
+        types::NodeId,
     },
     state::{
         plugin::{Plugin, PluginSpec, PluginState, PluginTrTrait, StateField},
@@ -10,16 +17,10 @@ use moduforge_core::{
     },
 };
 use moduforge_delta::snapshot::{create_full_snapshot, create_state_from_snapshot};
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{collections::HashMap, sync::Arc};
-use im::Vector;
-use serde::{Deserialize, Serialize};
 use tokio::fs;
-use moduforge_core::model::node::Node;
-use moduforge_core::model::node_pool::NodePoolInner;
-
-
-
 
 async fn from_snapshot() -> Result<(), Box<dyn std::error::Error>> {
     let mut state = get_base().await?;
@@ -101,7 +102,7 @@ struct PState {}
 #[async_trait]
 impl StateField for PState {
     async fn init(&self, config: &StateConfig, instance: Option<&State>) -> PluginState {
-        return Arc::new(json!("1") );
+        return Arc::new(json!("1"));
     }
 
     async fn apply(
@@ -111,7 +112,7 @@ impl StateField for PState {
         old_state: Option<&State>,
         new_state: Option<&State>,
     ) -> PluginState {
-        Arc::new(json!("1") )
+        Arc::new(json!("1"))
     }
 }
 #[derive(Clone, Debug)]
@@ -138,10 +139,8 @@ fn get_plugin() -> Plugin {
     });
     plugin
 }
- 
 
-
- #[tokio::main]
+#[tokio::main]
 async fn main() {
-  
+    from_snapshot().await.unwrap();
 }

@@ -14,15 +14,20 @@ edition = "2021"
 
 
 [workspace.dependencies]
-generational-arena ={ version =  "0.2.9", features = ["serde"] }
 tokio = { version = "1",features = ["full"] }
 log = "0.4.25"
 serde = { version = "1.0", features = ["derive","rc"] }
 serde_json = "1.0"
+# lazy_static 线程安全全局变量
 lazy_static="1"
+# im 不可变数据实现
 im={ version = "15", features = ["serde"] }
 thiserror="2.0.11"
+# 异步 trait
 async-trait = "0.1"
+# zstd 二进制 压缩
+zstd="0.13"
+
 moduforge-core = { path = "./core" }
 moduforge-delta = { path = "./delta" }
 moduforge-official = { path = "./official" }
