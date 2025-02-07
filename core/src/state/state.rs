@@ -47,6 +47,7 @@ impl State {
            field_values.push((field.key().key.clone(), value));
         }
         for (name, value) in field_values {
+            
             instance.set_field(&name, value)?;
         }
         Ok(instance)

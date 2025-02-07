@@ -8,7 +8,6 @@ pub struct NodePoolInner {
     pub root_id: NodeId,
     pub nodes: im::HashMap<NodeId, Arc<Node>>, // 节点数据共享
     pub parent_map: im::HashMap<NodeId, NodeId>,
-    pub child_map: im::HashMap<NodeId, im::Vector<NodeId>>,
 }
 impl NodePoolInner {
     pub fn update_attr(
@@ -27,7 +26,6 @@ impl NodePoolInner {
         Ok(NodePoolInner {
             nodes,
             parent_map: self.parent_map.clone(),
-            child_map: self.child_map.clone(),
             root_id: self.root_id.clone(),
         })
     }
@@ -65,7 +63,6 @@ impl NodePool {
             inner: Arc::new(NodePoolInner {
                 nodes: nodes_ref,
                 parent_map: parent_map_ref,
-                child_map: HashMap::new(),
                 root_id,
             }),
         }
