@@ -26,6 +26,7 @@ thiserror="2.0.11"
 async-trait = "0.1"
 # zstd 二进制 压缩
 zstd="0.13"
+chrono="0.4"
 bincode={ version = "2.0.0-rc.3", features = ["serde"] }
 moduforge-core = { path = "./core" }
 moduforge-delta = { path = "./delta" }

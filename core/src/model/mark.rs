@@ -8,7 +8,7 @@ use super::attrs::Attrs;
  * @property attrs 标记属性
  * @author string<348040933@qq.com>
  */
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize,Decode, Encode)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Decode, Encode)]
 pub struct Mark {
     pub r#type: String,
     #[bincode(with_serde)]

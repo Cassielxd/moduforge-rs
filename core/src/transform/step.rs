@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use serde::{Deserialize, Serialize};
-
 use crate::model::{node_pool::NodePool, schema::Schema};
+use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
 
 use super::{transform::TransformError, ConcreteStep};
 
-pub trait Step: Send + Sync {
+pub trait Step: Send + Sync + Debug {
     fn apply(&self, doc: Arc<NodePool>, schema: Arc<Schema>) -> Result<StepResult, TransformError>;
     fn to_concrete(&self) -> ConcreteStep;
 }

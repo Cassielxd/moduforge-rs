@@ -43,11 +43,10 @@ impl State {
         let mut instance = State::new(config);
         let mut field_values = Vec::new();
         for field in &instance.config.plugins {
-           let value = field.init(&state_config, Some(&instance)).await;
-           field_values.push((field.key().key.clone(), value));
+            let value = field.init(&state_config, Some(&instance)).await;
+            field_values.push((field.key().key.clone(), value));
         }
         for (name, value) in field_values {
-            
             instance.set_field(&name, value)?;
         }
         Ok(instance)
@@ -125,43 +124,43 @@ impl State {
             let mut have_new = false;
 
             for (i, plugin) in self.config.plugins.iter().enumerate() {
-                    let n: usize = seen.as_ref().map(|s| s[i].n).unwrap_or(0);
-                    let old_state = seen.as_ref().map(|s| &s[i].state).unwrap_or(self);
-                    if n < trs.len() {
-                        if let Some(tr) = plugin
-                            .append_transaction(root_tr, old_state, &new_state)
-                            .await
-                        {
-                            if new_state.filter_transaction(tr, Some(i)).await? {
-                                if seen.is_none() {
-                                    let mut s = Vec::new();
-                                    for j in 0..self.config.plugins.len() {
-                                        s.push(if j < i {
-                                            SeenState {
-                                                state: new_state.clone(),
-                                                n: trs.len(),
-                                            }
-                                        } else {
-                                            SeenState {
-                                                state: self.clone(),
-                                                n: 0,
-                                            }
-                                        });
-                                    }
-                                    seen = Some(s);
+                let n: usize = seen.as_ref().map(|s| s[i].n).unwrap_or(0);
+                let old_state = seen.as_ref().map(|s| &s[i].state).unwrap_or(self);
+                if n < trs.len() {
+                    if let Some(tr) = plugin
+                        .append_transaction(root_tr, old_state, &new_state)
+                        .await
+                    {
+                        if new_state.filter_transaction(tr, Some(i)).await? {
+                            if seen.is_none() {
+                                let mut s = Vec::new();
+                                for j in 0..self.config.plugins.len() {
+                                    s.push(if j < i {
+                                        SeenState {
+                                            state: new_state.clone(),
+                                            n: trs.len(),
+                                        }
+                                    } else {
+                                        SeenState {
+                                            state: self.clone(),
+                                            n: 0,
+                                        }
+                                    });
                                 }
-                                new_state = new_state.apply_inner(&tr).await?;
-                                trs.push(1);
-                                have_new = true;
+                                seen = Some(s);
                             }
+                            new_state = new_state.apply_inner(&tr).await?;
+                            trs.push(1);
+                            have_new = true;
                         }
                     }
-                    if let Some(seen) = &mut seen {
-                        seen[i] = SeenState {
-                            state: new_state.clone(),
-                            n: trs.len(),
-                        };
-                    }
+                }
+                if let Some(seen) = &mut seen {
+                    seen[i] = SeenState {
+                        state: new_state.clone(),
+                        n: trs.len(),
+                    };
+                }
             }
 
             if !have_new {
@@ -200,7 +199,7 @@ impl State {
         let mut instance = State::new(config);
         let mut field_values = Vec::new();
         for field in &instance.config.plugins {
-           let key = field.key().key.clone();
+            let key = field.key().key.clone();
             let value = if self.has_field(&key) {
                 self.get_field(&key).unwrap()
             } else {

@@ -1,4 +1,4 @@
-use bincode::{Decode, Encode};
+use bincode::{error::EncodeError, Decode, Encode};
 use moduforge_core::{
     model::node_pool::NodePool,
     state::{
@@ -33,7 +33,7 @@ pub fn create_state_from_snapshot(
 }
 
 //根据状态创建快照
-pub fn create_full_snapshot(state: &State) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+pub fn create_full_snapshot(state: &State) -> Result<Vec<u8>, EncodeError> {
     let snapshot = FullSnapshot {
         node_pool: state.node_pool.clone(),
         state_fields: state.fields_instances.clone(),

@@ -9,6 +9,7 @@ use crate::transform::attr_step::AttrStep;
 use crate::transform::step::Step;
 use crate::transform::transform::{Transform, TransformError};
 use crate::transform::ConcreteStep;
+
 pub struct Transaction {
     pub meta: HashMap<String, Box<dyn std::any::Any>>,
     pub time: u64,
@@ -66,11 +67,7 @@ impl Transaction {
     pub fn as_concrete(step: &Box<dyn Step>) -> ConcreteStep {
         step.to_concrete()
     }
-    pub fn set_node_attribute(
-        &mut self,
-        id: String,
-        values: im::HashMap<String, String>,
-    ) {
+    pub fn set_node_attribute(&mut self, id: String, values: im::HashMap<String, String>) {
         let _ = self.step(Box::new(AttrStep::new(id, values)));
     }
     pub fn set_time(&mut self, time: u64) -> &mut Self {

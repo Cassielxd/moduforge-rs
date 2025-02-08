@@ -91,20 +91,22 @@ pub fn init() -> Result<(), SetLoggerError> {
     log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Info))
 }
 #[derive(Clone, Debug)]
-struct PluginImpl{
-    key:PluginKey
+struct PluginImpl {
+    key: PluginKey,
 }
-impl PluginImpl{
-    pub fn new()->Self{
-        PluginImpl{ key: PluginKey::new(Some("plugin"), Some("plugin")) }
+impl PluginImpl {
+    pub fn new() -> Self {
+        PluginImpl {
+            key: PluginKey::new(Some("plugin"), Some("plugin")),
+        }
     }
 }
 #[async_trait]
-impl Plugin for PluginImpl{
-    fn key(&self) -> &PluginKey{
+impl Plugin for PluginImpl {
+    fn key(&self) -> &PluginKey {
         return &self.key;
     }
-    async fn filter_transaction(&self, _tr: &Transaction, _state: &State) -> bool{
+    async fn filter_transaction(&self, _tr: &Transaction, _state: &State) -> bool {
         true
     }
 }

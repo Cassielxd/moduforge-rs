@@ -1,8 +1,8 @@
 use super::{error::PoolError, node::Node, types::NodeId};
+use bincode::{Decode, Encode};
 use im::HashMap;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use bincode::{Decode, Encode};
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Decode, Encode)]
 pub struct NodePoolInner {
     pub root_id: NodeId,

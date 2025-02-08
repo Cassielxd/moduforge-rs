@@ -1,9 +1,9 @@
 use super::attrs::Attrs;
 use super::mark::Mark;
 use super::types::NodeId;
+use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use bincode::{Decode, Encode};
 /**
  * 基础节点定义 任何数据都可以认为是节点
  * @property id 节点id
@@ -14,7 +14,7 @@ use bincode::{Decode, Encode};
  * @author string<348040933@qq.com>
  */
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize,Decode, Encode)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Decode, Encode)]
 pub struct Node {
     pub id: NodeId,
     pub r#type: String,

@@ -7,9 +7,13 @@ description = "插件加载、热更新、依赖管理"
 lib="./src/lib.rs"
 
 [dependencies]
+tokio = {workspace=true}
 im= {workspace=true}
+chrono= {workspace=true}
 log = {workspace=true}
 serde = {workspace=true}
 serde_json = {workspace=true}
 thiserror= {workspace=true}
 async-trait= {workspace=true}
+moduforge-core= {workspace=true}
+moduforge-delta= {workspace=true}

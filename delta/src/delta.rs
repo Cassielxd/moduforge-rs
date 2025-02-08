@@ -1,11 +1,11 @@
+use crate::{from_binary, to_binary};
+use bincode::{error::{DecodeError, EncodeError}, Decode, Encode};
 use moduforge_core::{
     state::{state::State, transaction::Transaction},
     transform::{transform::Transform, ConcreteStep},
 };
 use serde::{Deserialize, Serialize};
-use bincode::{Decode, Encode};
-use crate::{from_binary, to_binary};
-#[derive(Debug, Clone,Serialize,Deserialize,Decode, Encode)]
+#[derive(Debug, Clone, Serialize, Deserialize, Decode, Encode)]
 pub struct TransactionDelta {
     parent_version: u64,
     timestamp: u64,
@@ -30,7 +30,7 @@ pub fn apply_delta(state: &State, delta: TransactionDelta) -> Transaction {
     let mut tr = Transaction::new(state);
     tr.time = delta.timestamp;
     for s in delta.steps.into_iter() {
-        let  _ =tr.step(Box::new(s));
+        let _ = tr.step(Box::new(s));
     }
     tr
 }
@@ -46,17 +46,16 @@ pub async fn apply_state_delta(state: &State, delta: TransactionDelta) -> State 
     }
 }
 
-
 // 从一个快照数据创建一个TransactionDelta
 pub fn create_tr_from_snapshot(
     snapshot_data: Vec<u8>,
-) -> Result<TransactionDelta, Box<dyn std::error::Error>> {
+) -> Result<TransactionDelta, DecodeError> {
     let f = from_binary::<TransactionDelta>(snapshot_data)?;
-    Ok( f)
+    Ok(f)
 }
 // 创建 一个事务快照
-pub fn create_tr_snapshot(tr_data: TransactionDelta) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+pub fn create_tr_snapshot(
+    tr_data: TransactionDelta,
+) -> Result<Vec<u8>, EncodeError> {
     to_binary::<TransactionDelta>(tr_data)
 }
-
-

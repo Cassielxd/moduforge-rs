@@ -190,9 +190,7 @@ pub fn compute_attrs(
             Some(val) => val.clone(),
             None => {
                 if attr.has_default {
-                    attr.default
-                        .clone()
-                        .unwrap_or_else(|| "".to_string())
+                    attr.default.clone().unwrap_or_else(|| "".to_string())
                 } else {
                     panic!("没有为属性提供值 {}", name);
                 }
