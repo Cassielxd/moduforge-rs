@@ -6,7 +6,6 @@ use tokio::sync::broadcast::{self, Receiver, Sender};
 #[derive(Clone)]
 pub enum Event {
     Apply(Arc<Transaction>, Arc<State>), // 事务应用后 + 是否成功
-
 }
 
 #[derive(Clone)]

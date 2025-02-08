@@ -1,4 +1,8 @@
-use bincode::{config, error::{DecodeError, EncodeError}, Decode, Encode};
+use bincode::{
+    config,
+    error::{DecodeError, EncodeError},
+    Decode, Encode,
+};
 
 pub mod delta;
 pub mod snapshot;

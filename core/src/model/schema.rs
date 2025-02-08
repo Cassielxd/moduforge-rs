@@ -145,7 +145,6 @@ pub fn default_attrs(attrs: &HashMap<String, Attribute>) -> Option<HashMap<Strin
 #[derive(Clone, PartialEq, Debug, Eq, Hash, Serialize)]
 pub struct AttributeSpec {
     pub default: Option<String>,
-    pub validate: Option<String>,
 }
 
 fn gather_marks<'a>(schema: &'a Schema, marks: Vec<&'a str>) -> Result<Vec<&'a MarkType>, String> {

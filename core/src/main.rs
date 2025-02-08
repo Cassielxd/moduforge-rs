@@ -1,18 +1,16 @@
 use async_trait::async_trait;
-use log::{error, Level, LevelFilter, Metadata, Record, SetLoggerError};
+use log::{Level, LevelFilter, Metadata, Record, SetLoggerError};
 use moduforge_core::{
     model::{
-        attrs,
         node_type::NodeSpec,
         schema::{AttributeSpec, Schema, SchemaSpec},
     },
     state::{
-        plugin::{Plugin, PluginKey, PluginState},
+        plugin::{Plugin, PluginKey},
         state::{State, StateConfig},
         transaction::Transaction,
     },
 };
-use serde_json::json;
 use std::{collections::HashMap, sync::Arc};
 #[tokio::main]
 async fn main() {
@@ -25,8 +23,7 @@ async fn test1() -> Result<(), Box<dyn std::error::Error>> {
     attrs.insert(
         "name".to_string(),
         AttributeSpec {
-            default: Some("string".to_string()),
-            validate: None,
+            default: Some("string".to_string())
         },
     );
     nodes.insert(
@@ -58,7 +55,7 @@ async fn test1() -> Result<(), Box<dyn std::error::Error>> {
         top_node: Some("doc".to_string()),
     };
     let schema = Schema::compile(instance_spec)?;
-    let mut state = State::create(StateConfig {
+    let  state = State::create(StateConfig {
         schema: Some(Arc::new(schema)),
         doc: None,
         stored_marks: None,

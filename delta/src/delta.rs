@@ -1,5 +1,8 @@
 use crate::{from_binary, to_binary};
-use bincode::{error::{DecodeError, EncodeError}, Decode, Encode};
+use bincode::{
+    error::{DecodeError, EncodeError},
+    Decode, Encode,
+};
 use moduforge_core::{
     state::{state::State, transaction::Transaction},
     transform::{transform::Transform, ConcreteStep},
@@ -47,15 +50,11 @@ pub async fn apply_state_delta(state: &State, delta: TransactionDelta) -> State 
 }
 
 // 从一个快照数据创建一个TransactionDelta
-pub fn create_tr_from_snapshot(
-    snapshot_data: Vec<u8>,
-) -> Result<TransactionDelta, DecodeError> {
+pub fn create_tr_from_snapshot(snapshot_data: Vec<u8>) -> Result<TransactionDelta, DecodeError> {
     let f = from_binary::<TransactionDelta>(snapshot_data)?;
     Ok(f)
 }
 // 创建 一个事务快照
-pub fn create_tr_snapshot(
-    tr_data: TransactionDelta,
-) -> Result<Vec<u8>, EncodeError> {
+pub fn create_tr_snapshot(tr_data: TransactionDelta) -> Result<Vec<u8>, EncodeError> {
     to_binary::<TransactionDelta>(tr_data)
 }

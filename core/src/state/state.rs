@@ -11,7 +11,7 @@ use crate::model::{
 };
 
 use super::{
-    plugin::{Plugin, PluginState},
+    plugin::{Plugin, PluginState, Reset},
     transaction::Transaction,
 };
 
@@ -77,6 +77,7 @@ impl State {
     pub fn doc(&self) -> Arc<NodePool> {
         self.node_pool.clone()
     }
+
     pub fn schema(&self) -> Arc<Schema> {
         self.config.schema.clone()
     }
@@ -176,10 +177,11 @@ impl State {
         let mut new_instance = State::new(self.config.clone());
         new_instance.node_pool = tr.doc.clone();
         for field in &self.config.plugins {
-            let value = field.apply(tr).await;
+            //如果有插件的情况下是一定存在的
+            let old_plugin_state = self.get_field(&field.key().key).expect("不存在");
+            let value = field.apply(tr, old_plugin_state, self, &new_instance).await;
             new_instance.set_field(&field.key().key, value)?;
         }
-
         Ok(new_instance)
     }
 

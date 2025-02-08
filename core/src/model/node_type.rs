@@ -1,3 +1,4 @@
+use super::attrs::Attrs;
 use super::content::ContentMatch;
 use super::id_generator::IdGenerator;
 use super::mark::Mark;
@@ -70,6 +71,19 @@ impl NodeType {
             content_match: None,
             mark_set: None,
         }
+    }
+
+    pub fn  check_attrs(&self,values: Attrs){
+       for (key,_value) in &values {
+        if !self.attrs.contains_key(key){
+             panic!("节点 {} 属性 {}没有定义", self.name, key);
+        }  
+        }
+        for (key,value) in &self.attrs {
+            if value.is_required()&& !&values.contains_key(key) {
+                 panic!("节点 {} 属性 {} 没有值，这个属性必填", self.name, key);
+            }  
+            }
     }
 
     pub fn has_required_attrs(&self) -> bool {
@@ -155,7 +169,7 @@ impl NodeType {
  * @property {any} [other] 其他属性
  * @author string<348040933@qq.com>
  */
-#[derive(Clone, PartialEq, Debug, Eq)]
+#[derive(Clone, PartialEq, Debug, Eq, Default)]
 pub struct NodeSpec {
     pub content: Option<String>,
     pub marks: Option<String>,

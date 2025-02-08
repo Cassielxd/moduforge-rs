@@ -1,13 +1,9 @@
 use crate::model::node::Node;
 use async_trait::async_trait;
 use bincode::{Decode, Encode};
-use im::Vector;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::any::Any;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use tokio::io::Join;
+use std::sync::Arc;
 
 use super::state::{State, StateConfig};
 use super::transaction::Transaction;
@@ -15,6 +11,9 @@ use super::transaction::Transaction;
 /// Generates a unique plugin key
 fn create_key(name: &str) -> String {
     format!("{}$", name)
+}
+pub trait Reset: Send + Sync + Debug {
+    fn reset(&self) -> Self;
 }
 
 #[async_trait]
@@ -24,12 +23,18 @@ pub trait Plugin: Send + Sync + Debug {
     async fn init(&self, config: &StateConfig, instance: Option<&State>) -> PluginState {
         return PluginState::new(InnerPluginState::String("".to_string()));
     }
-    async fn apply(&self, tr: &Transaction) -> PluginState {
+    async fn apply(
+        &self,
+        tr: &Transaction,
+        value: PluginState,
+        _old_state: &State,
+        _new_state: &State,
+    ) -> PluginState {
         return PluginState::new(InnerPluginState::String("".to_string()));
     }
 
     async fn filter_transaction(&self, _tr: &Transaction, _state: &State) -> bool {
-        false
+        true
     }
     async fn append_transaction<'a>(
         &self,
