@@ -27,7 +27,11 @@ async-trait = "0.1"
 # zstd 二进制 压缩
 zstd="0.13"
 chrono="0.4"
+async-broadcast = "0.7.2"
 bincode={ version = "2.0.0-rc.3", features = ["serde"] }
+# metrics 监控
+metrics = "0.24.1"
+metrics-exporter-prometheus = "0.16.2"
 moduforge-core = { path = "./core" }
 moduforge-delta = { path = "./delta" }
 moduforge-official = { path = "./official" }

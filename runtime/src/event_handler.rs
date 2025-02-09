@@ -26,9 +26,9 @@ pub fn create_delta_handler(storage_path: PathBuf) -> DeltaHandler {
 pub struct DeltaHandler {
     storage_path: PathBuf,
 }
-
+#[async_trait::async_trait]
 impl EventHandler for DeltaHandler {
-    fn handle(&self, event: &Event) {
+    async fn handle(&self, event: &Event) {
         match event {
             Event::Apply(tx, state) => {
                 let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
@@ -69,9 +69,9 @@ pub struct SnapshotHandler {
     snapshot_interval: usize,
     counter: AtomicUsize,
 }
-
+#[async_trait::async_trait]
 impl EventHandler for SnapshotHandler {
-    fn handle(&self, event: &Event) {
+   async fn handle(&self, event: &Event) {
         match event {
             Event::Apply(_, state) => {
                 let count = self.counter.fetch_add(1, Ordering::SeqCst) + 1;

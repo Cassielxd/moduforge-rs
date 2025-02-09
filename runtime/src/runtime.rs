@@ -67,7 +67,7 @@ impl Runtime {
         self.state = Arc::new(self.state.apply(&mut transaction).await?);
         if transaction.doc_changed() {
             let event_bus = self.get_event_bus();
-            event_bus.publish(Event::Apply(Arc::new(transaction), self.state.clone()));
+            event_bus.broadcast(Event::Apply(Arc::new(transaction), self.state.clone())).await?;
         }
         Ok(())
     }
