@@ -35,7 +35,7 @@ impl MarkType {
         let attrs = spec.attrs.as_ref().map_or_else(HashMap::new, |attrs| {
             attrs
                 .iter()
-                .map(|(name, spec)| (name.clone(), Attribute::new(&name, &name, spec.clone())))
+                .map(|(name, spec)| (name.clone(), Attribute::new(spec.clone())))
                 .collect()
         });
 

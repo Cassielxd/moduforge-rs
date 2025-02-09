@@ -15,7 +15,7 @@ pub struct Attribute {
 }
 
 impl Attribute {
-    pub(crate) fn new(type_name: &str, attr_name: &str, options: AttributeSpec) -> Self {
+    pub(crate) fn new(options: AttributeSpec) -> Self {
         Attribute {
             has_default: options.default.is_some(),
             default: options.default,
