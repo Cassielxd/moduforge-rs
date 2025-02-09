@@ -6,7 +6,7 @@ use crate::{
     helpers::get_schema_by_resolved_extensions::get_schema_by_resolved_extensions,
     types::Extensions,
 };
-
+/// 扩展管理器
 pub struct ExtensionManager {
     extensions: Vec<Extensions>,
     schema: Arc<Schema>,
