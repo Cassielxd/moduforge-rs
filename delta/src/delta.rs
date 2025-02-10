@@ -50,8 +50,8 @@ pub async fn apply_state_delta(state: &State, delta: TransactionDelta) -> State 
 }
 
 // 从一个快照数据创建一个TransactionDelta
-pub fn create_tr_from_snapshot(snapshot_data: Vec<u8>) -> Result<TransactionDelta, DecodeError> {
-    let f = from_binary::<TransactionDelta>(snapshot_data)?;
+pub fn create_tr_from_snapshot(snapshot_data: &Vec<u8>) -> Result<TransactionDelta, DecodeError> {
+    let f = from_binary::<TransactionDelta>(&snapshot_data)?;
     Ok(f)
 }
 // 创建 一个事务快照

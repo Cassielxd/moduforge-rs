@@ -41,7 +41,7 @@ async fn get_base() -> Result<State, Box<dyn std::error::Error>> {
     attrs.insert(
         "name".to_string(),
         AttributeSpec {
-            default: Some("string".to_string())
+            default: Some("string".to_string()),
         },
     );
     nodes.insert(

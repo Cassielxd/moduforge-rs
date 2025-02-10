@@ -22,7 +22,7 @@ pub fn create_state_from_snapshot(
     config: Configuration,
     snapshot_data: Vec<u8>,
 ) -> Result<State, Box<dyn std::error::Error>> {
-    let f = from_binary::<FullSnapshot>(snapshot_data)?;
+    let f = from_binary::<FullSnapshot>(&snapshot_data)?;
     let mut config = config;
     config.doc = Some(f.node_pool.clone());
     let mut state = State::new(config);

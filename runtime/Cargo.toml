@@ -9,8 +9,9 @@ lib="./src/lib.rs"
 [dependencies]
 tokio = {workspace=true}
 metrics= {workspace=true}
+lazy_static= {workspace=true}
 metrics-exporter-prometheus= {workspace=true}
-async-broadcast= {workspace=true}
+async-channel= {workspace=true}
 im= {workspace=true}
 chrono= {workspace=true}
 log = {workspace=true}

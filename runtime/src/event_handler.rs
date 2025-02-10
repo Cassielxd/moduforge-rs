@@ -1,12 +1,15 @@
 use std::{
-    path::PathBuf,
-    sync::atomic::{AtomicUsize, Ordering},
+    fs::{self}, path::PathBuf, sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    }
 };
 
 use moduforge_delta::{
-    delta::{create_tr_snapshot, to_delta},
+    delta::{create_tr_snapshot, to_delta, TransactionDelta},
     snapshot::create_full_snapshot,
 };
+use tokio::{fs::File, io::AsyncWriteExt, signal};
 
 use crate::event::{Event, EventHandler};
 
@@ -20,27 +23,63 @@ use crate::event::{Event, EventHandler};
 ///
 /// 返回一个DeltaHandler实例
 ///
-pub fn create_delta_handler(storage_path: PathBuf) -> DeltaHandler {
-    DeltaHandler { storage_path }
+pub fn create_delta_handler(storage_path: PathBuf) -> Arc<DeltaHandler> {
+    let (tx,rx) = async_channel::bounded::<(TransactionDelta,PathBuf)>(100);
+    tokio::spawn(async move{
+          loop {
+            tokio::select! {
+                event = rx.recv() => match event {
+                    Ok((data,path)) => {
+                        if let Ok(data) = create_tr_snapshot(data) {
+                            match File::create(&path).await {
+                                Ok(mut file) => { 
+                                    file.write_all(&data).await.unwrap();
+                                   
+                                },
+                                Err(e) => {
+                                    println!("write file error:{}",e);
+                                },
+                            }       
+                        }
+                    },
+                    Err(_) => {
+                        println!("跳出了");
+                        break;
+                    },
+                },
+                shutdown_signal = Box::pin(signal::ctrl_c()) => {
+                    match shutdown_signal {
+                        Ok(()) => {
+                            println!("增量事务服务 接收到关闭信号，正在退出...");
+                            break;
+                        },
+                        Err(e) => {
+                            eprintln!("增量事务服务 处理关闭信号时出错: {}", e);
+                            break;
+                        }
+                    }
+                },
+            }
+          }
+    });
+    Arc::new(DeltaHandler { storage_path,tx })
 }
+#[derive(Debug)]
 pub struct DeltaHandler {
     storage_path: PathBuf,
+    tx:async_channel::Sender<(TransactionDelta,PathBuf)>,
 }
 #[async_trait::async_trait]
 impl EventHandler for DeltaHandler {
     async fn handle(&self, event: &Event) {
         match event {
             Event::Apply(tx, state) => {
-                let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
-                let path = self.storage_path.join(format!("delta_{}.bin", timestamp));
+                let path = self.storage_path.join(format!("delta_{}.bin", tx.time));
                 let tx_clone = tx.clone();
                 let state_version = state.version.clone();
                 let path_clone = path.clone();
-                tokio::spawn(async move {
-                    if let Ok(data) = create_tr_snapshot(to_delta(&tx_clone, state_version)) {
-                        let _ = tokio::fs::write(path_clone, data).await;
-                    }
-                });
+                let _= self.tx.send((to_delta(&tx_clone, state_version),path_clone)).await;
+               
             }
             _ => {}
         }
@@ -57,13 +96,17 @@ impl EventHandler for DeltaHandler {
 /// # Returns
 ///
 /// 返回一个SnapshotHandler实例
-pub fn create_snapshot_handler(storage_path: PathBuf, snapshot_interval: usize) -> SnapshotHandler {
-    SnapshotHandler {
+pub fn create_snapshot_handler(
+    storage_path: PathBuf,
+    snapshot_interval: usize,
+) -> Arc<SnapshotHandler> {
+    Arc::new(SnapshotHandler {
         storage_path,
         snapshot_interval,
         counter: AtomicUsize::new(0),
-    }
+    })
 }
+#[derive(Debug)]
 pub struct SnapshotHandler {
     storage_path: PathBuf,
     snapshot_interval: usize,
@@ -71,19 +114,29 @@ pub struct SnapshotHandler {
 }
 #[async_trait::async_trait]
 impl EventHandler for SnapshotHandler {
-   async fn handle(&self, event: &Event) {
+    async fn handle(&self, event: &Event) {
         match event {
             Event::Apply(_, state) => {
                 let count = self.counter.fetch_add(1, Ordering::SeqCst) + 1;
                 if count % self.snapshot_interval == 0 {
+                  
                     let state_clone = state.clone();
                     let path = self.storage_path.join(format!("snapshot_v{}.bin", count));
                     tokio::spawn(async move {
                         match create_full_snapshot(&state_clone) {
                             Ok(data) => {
-                                let _ = tokio::fs::write(path, data).await;
+                                match File::create(&path).await {
+                                    Ok(mut file) => { 
+                                        file.write_all(&data).await.unwrap();
+                                    },
+                                    Err(e) => {
+                                        println!("write file error:{}",e);
+                                    },
+                                } 
                             }
-                            Err(_) => {}
+                            Err(error) => {
+                                println!("Error creating snapshot: {}", error);
+                            }
                         }
                     });
                 }

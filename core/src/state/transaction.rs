@@ -3,13 +3,15 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::state::State;
+use crate::model::node::Node;
 use crate::model::node_pool::NodePool;
 use crate::model::schema::Schema;
+use crate::transform::add_node_step::AddNodeStep;
 use crate::transform::attr_step::AttrStep;
 use crate::transform::step::Step;
 use crate::transform::transform::{Transform, TransformError};
 use crate::transform::ConcreteStep;
-
+#[derive(Debug)]
 pub struct Transaction {
     pub meta: HashMap<String, Box<dyn std::any::Any>>,
     pub time: u64,
@@ -49,7 +51,7 @@ impl Transaction {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
-            .as_millis() as u64;
+            .as_nanos() as u64;
 
         let node = state.doc();
         Transaction {
@@ -69,6 +71,9 @@ impl Transaction {
     }
     pub fn set_node_attribute(&mut self, id: String, values: im::HashMap<String, String>) {
         let _ = self.step(Box::new(AttrStep::new(id, values)));
+    }
+    pub fn add_node(&mut self, parent_id: String, node: Node) {
+        let _ = self.step(Box::new(AddNodeStep::new(parent_id, node)));
     }
     pub fn set_time(&mut self, time: u64) -> &mut Self {
         self.time = time;

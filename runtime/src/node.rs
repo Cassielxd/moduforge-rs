@@ -10,15 +10,19 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(name: &str, spec: NodeSpec) -> Node {
+    pub fn create(name: &str, spec: NodeSpec) -> Node {
         Node {
             name: name.to_string(),
             r#type: spec,
             top_node: false,
         }
     }
-    pub fn set_top_node(&mut self, top_node: bool) -> &mut Self {
-        self.top_node = top_node;
+    pub fn set_name(&mut self, name: &str) -> &mut Self {
+        self.name = name.to_string();
+        self
+    }
+    pub fn set_top_node(&mut self) -> &mut Self {
+        self.top_node = true;
         self
     }
     pub fn is_top_node(&self) -> bool {
@@ -39,6 +43,33 @@ impl Node {
 
     pub fn set_attrs(&mut self, attrs: HashMap<String, AttributeSpec>) -> &mut Self {
         self.r#type.attrs = Some(attrs);
+        self
+    }
+    pub fn set_attr(&mut self, name: &str, default: Option<String>) -> &mut Self {
+        match &mut self.r#type.attrs {
+            Some(map) => {
+                map.insert(
+                    name.to_string(),
+                    AttributeSpec {
+                        default,
+                    },
+                );
+            }
+            None => {
+                let mut new_map = HashMap::new();
+                new_map.insert(
+                    name.to_string(),
+                    AttributeSpec {
+                        default,
+                    },
+                );
+                self.r#type.attrs = Some(new_map);
+            }
+        }
+        self
+    }
+    pub fn set_desc(&mut self, desc: &str) -> &mut Self {
+        self.r#type.desc = Some(desc.to_string());
         self
     }
 }

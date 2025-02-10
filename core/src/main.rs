@@ -23,7 +23,7 @@ async fn test1() -> Result<(), Box<dyn std::error::Error>> {
     attrs.insert(
         "name".to_string(),
         AttributeSpec {
-            default: Some("string".to_string())
+            default: Some("string".to_string()),
         },
     );
     nodes.insert(
@@ -55,7 +55,7 @@ async fn test1() -> Result<(), Box<dyn std::error::Error>> {
         top_node: Some("doc".to_string()),
     };
     let schema = Schema::compile(instance_spec)?;
-    let  state = State::create(StateConfig {
+    let state = State::create(StateConfig {
         schema: Some(Arc::new(schema)),
         doc: None,
         stored_marks: None,

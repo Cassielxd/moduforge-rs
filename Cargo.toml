@@ -24,10 +24,9 @@ im={ version = "15", features = ["serde"] }
 thiserror="2.0.11"
 # 异步 trait
 async-trait = "0.1"
-# zstd 二进制 压缩
-zstd="0.13"
+flate2 = { version = "1.0", features = ["zlib"] }
 chrono="0.4"
-async-broadcast = "0.7.2"
+async-channel = "2.3.1"
 bincode={ version = "2.0.0-rc.3", features = ["serde"] }
 # metrics 监控
 metrics = "0.24.1"

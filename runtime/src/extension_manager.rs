@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use moduforge_core::model::schema::Schema;
+use moduforge_core::{model::schema::Schema, state::plugin::Plugin};
 
 use crate::{
     helpers::get_schema_by_resolved_extensions::get_schema_by_resolved_extensions,
@@ -8,6 +8,7 @@ use crate::{
 };
 /// 扩展管理器
 pub struct ExtensionManager {
+    plugins: Vec<Arc<dyn Plugin>>,
     extensions: Vec<Extensions>,
     schema: Arc<Schema>,
 }
@@ -18,10 +19,28 @@ impl ExtensionManager {
                 panic!("schema 构建失败: {}", e);
             }),
         );
-        ExtensionManager { extensions, schema }
+        let mut plugins = vec![];
+        for extension in &extensions {
+            match extension {
+                Extensions::E(extension) => {
+                    for plugin in extension.get_plugins() {
+                        plugins.push(plugin.clone());
+                    }
+                }
+                _ => {}
+            }
+        }
+        ExtensionManager {
+            extensions,
+            schema,
+            plugins,
+        }
     }
 
     pub fn get_schema(&self) -> Arc<Schema> {
         self.schema.clone()
+    }
+    pub fn get_plugins(&self) -> &Vec<Arc<dyn Plugin>> {
+        &self.plugins
     }
 }

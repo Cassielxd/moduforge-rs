@@ -27,4 +27,7 @@ impl Extension {
         self.plugins.push(plugin);
         self
     }
+    pub fn get_plugins(&self) -> &Vec<Arc<dyn Plugin>> {
+        &self.plugins
+    }
 }

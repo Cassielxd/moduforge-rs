@@ -73,17 +73,17 @@ impl NodeType {
         }
     }
 
-    pub fn  check_attrs(&self,values: Attrs){
-       for (key,_value) in &values {
-        if !self.attrs.contains_key(key){
-             panic!("节点 {} 属性 {}没有定义", self.name, key);
-        }  
-        }
-        for (key,value) in &self.attrs {
-            if value.is_required()&& !&values.contains_key(key) {
-                 panic!("节点 {} 属性 {} 没有值，这个属性必填", self.name, key);
-            }  
+    pub fn check_attrs(&self, values: Attrs) {
+        for (key, _value) in &values {
+            if !self.attrs.contains_key(key) {
+                panic!("节点 {} 属性 {}没有定义", self.name, key);
             }
+        }
+        for (key, value) in &self.attrs {
+            if value.is_required() && !&values.contains_key(key) {
+                panic!("节点 {} 属性 {} 没有值，这个属性必填", self.name, key);
+            }
+        }
     }
 
     pub fn has_required_attrs(&self) -> bool {
