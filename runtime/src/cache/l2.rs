@@ -38,7 +38,7 @@ impl L2Cache {
     pub fn put(&self, key: String, value: Arc<NodePool>) {
         let data = to_binary(value).unwrap();
         let compressed = zstd::encode_all(&data[..], self.compression_level).unwrap();
-        self.db.put(key, compressed);
+        let _ = self.db.put(key, compressed);
     }
 
     /// 批量写入优化
@@ -49,6 +49,6 @@ impl L2Cache {
             let compressed = zstd::encode_all(&data[..], self.compression_level).unwrap();
             wb.put(k, compressed);
         }
-        self.db.write(wb);
+        let _ = self.db.write(wb);
     }
 }

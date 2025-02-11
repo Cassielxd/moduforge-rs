@@ -16,17 +16,12 @@ pub struct Transaction {
     pub meta: HashMap<String, Box<dyn std::any::Any>>,
     pub time: u64,
     pub steps: Vec<Box<dyn Step>>,
-    pub docs: Vec<Arc<NodePool>>,
     pub doc: Arc<NodePool>,
     pub schema: Arc<Schema>,
 }
 unsafe impl Send for Transaction {}
 unsafe impl Sync for Transaction {}
 impl Transform for Transaction {
-    fn before(&self) -> &NodePool {
-        self.docs.get(0).unwrap_or(&self.doc)
-    }
-
     fn step(&mut self, step: Box<dyn Step>) -> Result<(), TransformError> {
         let result = step.apply(self.doc.clone(), self.schema.clone())?;
         match result.failed {
@@ -58,7 +53,6 @@ impl Transaction {
             meta: HashMap::new(),
             time: now,
             steps: vec![],
-            docs: vec![],
             doc: node,
             schema: state.schema(),
         }

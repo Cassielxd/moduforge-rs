@@ -23,7 +23,6 @@ impl TransformError {
 }
 
 pub trait Transform {
-    fn before(&self) -> &NodePool;
     fn step(&mut self, step: Box<dyn Step>) -> Result<(), TransformError>;
     fn doc_changed(&self) -> bool;
     fn add_step(&mut self, step: Box<dyn Step>, doc: Arc<NodePool>);
