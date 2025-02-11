@@ -8,6 +8,7 @@ description = "不可变数据结构与事务系统基础"
 lib="./src/lib.rs"
 
 [dependencies]
+serde_closure = "0.3.3"
 im= {workspace=true}
 log = {workspace=true}
 serde = {workspace=true}

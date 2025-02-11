@@ -9,7 +9,9 @@ pub mod mark_step;
 pub mod node_step;
 pub mod step;
 pub mod transform;
+use serde_closure::{traits::Fn, Fn};
 
+use crate::model::node_pool::NodePool;
 #[derive(Debug, Clone, Serialize, Deserialize, Decode, Encode)]
 pub enum ConcreteStep {
     UpdateAttrs(AttrStep),
