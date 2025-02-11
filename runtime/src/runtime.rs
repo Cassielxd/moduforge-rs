@@ -1,15 +1,17 @@
 use std::{
-    env::current_dir, path::{Path, PathBuf}, sync::Arc
+    env::current_dir,
+    path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use crate::{
-    cache::cache::DocumentCache,
+    cache::{cache::DocumentCache, CacheKey},
     event::{Event, EventBus, EventHandler},
     event_handler::{create_delta_handler, create_snapshot_handler},
     extension_manager::ExtensionManager,
     history_manager::HistoryManager,
     snapshot_manager::SnapshotManager,
-    types::{Content, Extensions},
+    types::{Content, Extensions, StorageOptions},
 };
 use moduforge_core::{
     model::{
@@ -25,13 +27,14 @@ use moduforge_core::{
 use moduforge_delta::from_binary;
 use moduforge_delta::snapshot::FullSnapshot;
 use tokio::{select, signal};
+
 #[derive(Clone, Debug)]
 pub struct RuntimeOptions {
     pub content: Content,
     pub extensions: Vec<Extensions>,
     pub history_limit: Option<usize>,
     pub event_handlers: Vec<Arc<dyn EventHandler>>,
-    pub storage_path: Option<PathBuf>,
+    pub storage_option: Option<StorageOptions>,
 }
 
 pub struct Runtime {
@@ -66,15 +69,15 @@ impl Runtime {
             }
             Content::None => None,
         };
-        let path = options
-            .storage_path
-            .clone()
-            .unwrap_or_else(|| current_dir().unwrap().join("./data"));
-        let cache: Arc<DocumentCache> = DocumentCache::new(&path);
-        let snapshot_manager =SnapshotManager::create(cache);
+        let storage = match &options.storage_option {
+            Some(o) => o.clone(),
+            None => StorageOptions::default(),
+        };
+        let cache: Arc<DocumentCache> = DocumentCache::new(&storage);
+        let snapshot_manager = SnapshotManager::create(cache);
         let mut default_event_handlers: Vec<Arc<dyn EventHandler>> = vec![
-            create_delta_handler(path.join("delta")),
-            create_snapshot_handler(path.join("snapshot"), 900, snapshot_manager.clone()),
+            create_delta_handler(storage.clone()),
+            create_snapshot_handler(storage.clone(), 900, snapshot_manager.clone()),
         ];
         default_event_handlers.append(&mut options.event_handlers.clone());
         let state: State = State::create(StateConfig {
@@ -98,6 +101,9 @@ impl Runtime {
     }
     pub fn doc(&self) -> Arc<NodePool> {
         self.get_state().doc()
+    }
+    pub fn get_snapshot(&self, key: &CacheKey) -> Option<Arc<NodePool>> {
+        self.snapshot_manager.get_snapshot(key)
     }
     pub fn get_state(&self) -> &Arc<State> {
         &self.state

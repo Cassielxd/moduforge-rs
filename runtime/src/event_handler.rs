@@ -15,7 +15,9 @@ use tokio::{fs::File, io::AsyncWriteExt, signal};
 
 use crate::{
     cache::{cache::DocumentCache, l2, CacheKey},
-    event::{Event, EventHandler}, snapshot_manager::SnapshotManager,
+    event::{Event, EventHandler},
+    snapshot_manager::SnapshotManager,
+    types::StorageOptions,
 };
 
 /// 创建一个DeltaHandler，用于处理事务事件，并生成增量记录。
@@ -28,7 +30,7 @@ use crate::{
 ///
 /// 返回一个DeltaHandler实例
 ///
-pub fn create_delta_handler(storage_path: PathBuf) -> Arc<DeltaHandler> {
+pub fn create_delta_handler(storage_option: StorageOptions) -> Arc<DeltaHandler> {
     let (tx, rx) = async_channel::bounded::<(TransactionDelta, PathBuf)>(100);
     tokio::spawn(async move {
         loop {
@@ -67,11 +69,11 @@ pub fn create_delta_handler(storage_path: PathBuf) -> Arc<DeltaHandler> {
             }
         }
     });
-    Arc::new(DeltaHandler { storage_path, tx })
+    Arc::new(DeltaHandler { storage_option, tx })
 }
 #[derive(Debug)]
 pub struct DeltaHandler {
-    storage_path: PathBuf,
+    pub storage_option: StorageOptions,
     tx: async_channel::Sender<(TransactionDelta, PathBuf)>,
 }
 #[async_trait::async_trait]
@@ -80,9 +82,11 @@ impl EventHandler for DeltaHandler {
         match event {
             Event::Apply(tx, state) => {
                 let base_path = self
-                        .storage_path.join(state.doc().inner.root_id.clone());
-                    let path =  base_path .join(format!("delta_{}_{}.bin", tx.time, state.version));
-                    fs::create_dir_all(base_path).unwrap();
+                    .storage_option
+                    .delta_path
+                    .join(state.doc().inner.root_id.clone());
+                let path = base_path.join(format!("delta_{}_{}.bin", tx.time, state.version));
+                fs::create_dir_all(base_path).unwrap();
                 let tx_clone = tx.clone();
                 let state_version = state.version.clone();
                 let path_clone = path.clone();
@@ -107,12 +111,12 @@ impl EventHandler for DeltaHandler {
 ///
 /// 返回一个SnapshotHandler实例
 pub fn create_snapshot_handler(
-    storage_path: PathBuf,
+    storage_option: StorageOptions,
     snapshot_interval: usize,
     snapshot_manager: Arc<SnapshotManager>,
 ) -> Arc<SnapshotHandler> {
     Arc::new(SnapshotHandler {
-        storage_path,
+        storage_option,
         snapshot_interval,
         counter: AtomicUsize::new(0),
         snapshot_manager,
@@ -120,7 +124,7 @@ pub fn create_snapshot_handler(
 }
 #[derive(Debug)]
 pub struct SnapshotHandler {
-    storage_path: PathBuf,
+    storage_option: StorageOptions,
     snapshot_interval: usize,
     counter: AtomicUsize,
     snapshot_manager: Arc<SnapshotManager>,
@@ -134,12 +138,14 @@ impl EventHandler for SnapshotHandler {
                 if count % self.snapshot_interval == 0 {
                     let state_clone = state.clone();
                     let base_path = self
-                        .storage_path.join(state_clone.doc().inner.root_id.clone());
-                    let path =  base_path .join(format!("snapshot_v{}.bin", state_clone.version));
-                    let _=fs::create_dir_all(base_path);
+                        .storage_option
+                        .snapshot_path
+                        .join(state_clone.doc().inner.root_id.clone());
+                    let path = base_path.join(format!("snapshot_v{}.bin", state_clone.version));
+                    let _ = fs::create_dir_all(base_path);
                     let cache_ref: Arc<SnapshotManager> = self.snapshot_manager.clone();
                     tokio::spawn(async move {
-                        cache_ref.put(&path,&state_clone);
+                        cache_ref.put(&state_clone);
                         match create_full_snapshot(&state_clone) {
                             Ok(data) => match File::create(&path).await {
                                 Ok(mut file) => {

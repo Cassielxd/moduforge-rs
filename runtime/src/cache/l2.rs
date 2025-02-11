@@ -20,7 +20,7 @@ impl L2Cache {
         let mut opts = Options::default();
         opts.set_compression_type(rocksdb::DBCompressionType::Lz4);
         opts.create_if_missing(true);
-        let _=fs::create_dir_all(path);
+        let _ = fs::create_dir_all(path);
         Ok(Self {
             db: DB::open(&opts, path).unwrap(),
             compression_level: 3,
@@ -28,14 +28,14 @@ impl L2Cache {
     }
 
     /// 读取数据（自动解压）
-    pub fn get(&self, key: &[u8]) -> Result<Arc<NodePool>, Error> {
+    pub fn get(&self, key: String) -> Result<Arc<NodePool>, Error> {
         let compressed = self.db.get(key).unwrap().unwrap();
         let data = decode_all(&compressed[..])?;
         Ok(from_binary::<Arc<NodePool>>(&data).unwrap())
     }
 
     /// 写入数据（自动压缩）
-    pub fn put(&self, key: &[u8], value: Arc<NodePool>) {
+    pub fn put(&self, key: String, value: Arc<NodePool>) {
         let data = to_binary(value).unwrap();
         let compressed = zstd::encode_all(&data[..], self.compression_level).unwrap();
         self.db.put(key, compressed);
