@@ -189,7 +189,9 @@ pub fn compute_attrs(
             Some(val) => val.clone(),
             None => {
                 if attr.has_default {
-                    attr.default.clone().unwrap_or_else(|| panic!("没有为属性提供默认值 {}", name))
+                    attr.default
+                        .clone()
+                        .unwrap_or_else(|| panic!("没有为属性提供默认值 {}", name))
                 } else {
                     "".to_string()
                 }

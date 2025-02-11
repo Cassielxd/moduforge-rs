@@ -13,13 +13,13 @@ pub enum Event {
 #[derive(Clone)]
 pub struct EventBus {
     tx: Sender<Event>,
-    rt:Receiver<Event>
+    rt: Receiver<Event>,
 }
 
 impl EventBus {
     pub fn new() -> Self {
         let (tx, rt) = async_channel::bounded(100);
-        Self { tx ,rt}
+        Self { tx, rt }
     }
 
     pub fn subscribe(&self) -> Receiver<Event> {

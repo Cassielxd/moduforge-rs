@@ -138,7 +138,7 @@ impl NodeType {
     ) -> Node {
         // 实现...
         let id: String = id.unwrap_or_else(|| {
-            let mut id_generator = IdGenerator::get_instance().lock().unwrap();
+            let mut id_generator: std::sync::MutexGuard<'_, IdGenerator> = IdGenerator::get_instance().lock().unwrap();
             id_generator.get_next_id()
         });
         Node::new(

@@ -48,21 +48,11 @@ impl Node {
     pub fn set_attr(&mut self, name: &str, default: Option<String>) -> &mut Self {
         match &mut self.r#type.attrs {
             Some(map) => {
-                map.insert(
-                    name.to_string(),
-                    AttributeSpec {
-                        default,
-                    },
-                );
+                map.insert(name.to_string(), AttributeSpec { default });
             }
             None => {
                 let mut new_map = HashMap::new();
-                new_map.insert(
-                    name.to_string(),
-                    AttributeSpec {
-                        default,
-                    },
-                );
+                new_map.insert(name.to_string(), AttributeSpec { default });
                 self.r#type.attrs = Some(new_map);
             }
         }

@@ -1,9 +1,14 @@
-use std::sync::Arc;
+use std::{
+    env::current_dir, path::{Path, PathBuf}, sync::Arc
+};
 
 use crate::{
+    cache::cache::DocumentCache,
     event::{Event, EventBus, EventHandler},
+    event_handler::{create_delta_handler, create_snapshot_handler},
     extension_manager::ExtensionManager,
     history_manager::HistoryManager,
+    snapshot_manager::SnapshotManager,
     types::{Content, Extensions},
 };
 use moduforge_core::{
@@ -26,15 +31,17 @@ pub struct RuntimeOptions {
     pub extensions: Vec<Extensions>,
     pub history_limit: Option<usize>,
     pub event_handlers: Vec<Arc<dyn EventHandler>>,
+    pub storage_path: Option<PathBuf>,
 }
 
 pub struct Runtime {
     event_bus: EventBus,
-
     state: Arc<State>,
     extension_manager: ExtensionManager,
+    snapshot_manager: Arc<SnapshotManager>,
     history_manager: HistoryManager<Arc<State>>,
     options: RuntimeOptions,
+    pub event_handlers: Vec<Arc<dyn EventHandler>>,
 }
 
 impl Runtime {
@@ -59,7 +66,17 @@ impl Runtime {
             }
             Content::None => None,
         };
-
+        let path = options
+            .storage_path
+            .clone()
+            .unwrap_or_else(|| current_dir().unwrap().join("./data"));
+        let cache: Arc<DocumentCache> = DocumentCache::new(&path);
+        let snapshot_manager =SnapshotManager::create(cache);
+        let mut default_event_handlers: Vec<Arc<dyn EventHandler>> = vec![
+            create_delta_handler(path.join("delta")),
+            create_snapshot_handler(path.join("snapshot"), 900, snapshot_manager.clone()),
+        ];
+        default_event_handlers.append(&mut options.event_handlers.clone());
         let state: State = State::create(StateConfig {
             schema: Some(extension_manager.get_schema()),
             doc,
@@ -72,12 +89,14 @@ impl Runtime {
         Runtime {
             event_bus,
             history_manager: HistoryManager::new(state.clone(), options.history_limit.clone()),
+            snapshot_manager,
             options,
             extension_manager,
             state,
+            event_handlers: default_event_handlers,
         }
     }
-    pub fn doc(&self)-> Arc<NodePool>{
+    pub fn doc(&self) -> Arc<NodePool> {
         self.get_state().doc()
     }
     pub fn get_state(&self) -> &Arc<State> {
@@ -96,13 +115,13 @@ impl Runtime {
     /// 启动事件循环
     pub fn start_event_loop(&self) {
         let rx = self.event_bus.subscribe();
-        let handlers = self.options.clone();
+        let handlers = self.event_handlers.clone();
         tokio::spawn(async move {
             loop {
                 tokio::select! {
                     event = rx.recv() => match event {
                         Ok(event) => {
-                            for handler in &handlers.event_handlers {
+                            for handler in &handlers {
                                 handler.handle(&event).await;
                             }
                         },

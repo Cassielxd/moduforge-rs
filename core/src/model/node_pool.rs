@@ -42,32 +42,33 @@ unsafe impl Send for NodePool {}
 unsafe impl Sync for NodePool {}
 
 impl NodePool {
-    pub fn size(&self)->usize{
+    pub fn size(&self) -> usize {
         self.inner.nodes.len()
     }
-    pub fn add_node(
-        &self,
-        parent_id: &NodeId,
-        node: Node,
-    ) -> Result<Self, PoolError> {
-       let parent = self.get_node(parent_id).ok_or_else(|| PoolError::ParentNotFound(parent_id.clone()))?;
-    
-    // 这里的逻辑需要进一步完善，例如如何处理新节点的添加
-    // 以下是示例代码，实际逻辑可能需要根据需求调整
-    let mut nodes = self.inner.nodes.clone();
-    let mut parent_node =parent.as_ref().clone();
-    parent_node.content.push_back(node.id.clone());
-    nodes.insert(parent_id.clone(), Arc::new(parent_node));
-    let parent_map =self.inner.parent_map.update(node.id.clone(), parent_id.clone());
-    nodes.insert(node.id.clone(), Arc::new(node));
+    pub fn add_node(&self, parent_id: &NodeId, node: Node) -> Result<Self, PoolError> {
+        let parent = self
+            .get_node(parent_id)
+            .ok_or_else(|| PoolError::ParentNotFound(parent_id.clone()))?;
 
-    Ok(NodePool {
-        inner: Arc::new(NodePoolInner {
-            nodes,
-            parent_map: parent_map,
-            root_id: self.inner.root_id.clone(),
-        }),
-    })
+        // 这里的逻辑需要进一步完善，例如如何处理新节点的添加
+        // 以下是示例代码，实际逻辑可能需要根据需求调整
+        let mut nodes = self.inner.nodes.clone();
+        let mut parent_node = parent.as_ref().clone();
+        parent_node.content.push_back(node.id.clone());
+        nodes.insert(parent_id.clone(), Arc::new(parent_node));
+        let parent_map = self
+            .inner
+            .parent_map
+            .update(node.id.clone(), parent_id.clone());
+        nodes.insert(node.id.clone(), Arc::new(node));
+
+        Ok(NodePool {
+            inner: Arc::new(NodePoolInner {
+                nodes,
+                parent_map: parent_map,
+                root_id: self.inner.root_id.clone(),
+            }),
+        })
     }
     pub fn update_attr(
         &self,

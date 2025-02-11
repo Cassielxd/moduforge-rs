@@ -1,3 +1,4 @@
+pub mod cache;
 pub mod event;
 pub mod event_handler;
 pub mod extension;
@@ -8,4 +9,5 @@ pub mod mark;
 pub mod metrics;
 pub mod node;
 pub mod runtime;
+pub mod snapshot_manager;
 pub mod types;

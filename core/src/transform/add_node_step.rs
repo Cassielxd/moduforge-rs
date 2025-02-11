@@ -12,12 +12,12 @@ use im::HashMap;
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Clone, Decode, Encode)]
 pub struct AddNodeStep {
-    parent_id:NodeId,
-    node:Node,
+    parent_id: NodeId,
+    node: Node,
 }
 impl AddNodeStep {
-    pub fn new(parent_id:NodeId,node:Node) -> Self {
-        AddNodeStep {parent_id,node,}
+    pub fn new(parent_id: NodeId, node: Node) -> Self {
+        AddNodeStep { parent_id, node }
     }
 }
 impl Step for AddNodeStep {
@@ -27,7 +27,7 @@ impl Step for AddNodeStep {
         schema: Arc<Schema>,
     ) -> Result<StepResult, TransformError> {
         let _ = schema;
-    
+
         match node_pool.add_node(&self.parent_id, self.node.clone()) {
             Ok(node_pool) => Ok(StepResult::ok(Arc::new(node_pool))),
             Err(err) => Err(TransformError::new(err.to_string())),
