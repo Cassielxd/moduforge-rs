@@ -3,6 +3,7 @@ members = [
    "core",
    "delta",
    "official",
+   "engine",
    "runtime"
 
 ]
@@ -29,10 +30,16 @@ lru="0.13"
 chrono="0.4"
 async-channel = "2.3.1"
 bincode={ version = "2.0.0-rc.3", features = ["serde"] }
+
+zen-engine = "0"
 # metrics 监控
 metrics = "0.24.1"
 metrics-exporter-prometheus = "0.16.2"
+# 业务核心
 moduforge-core = { path = "./core" }
+# 增量 全量快照
 moduforge-delta = { path = "./delta" }
 moduforge-official = { path = "./official" }
 moduforge-runtime = { path = "./runtime" }
+# 规则引擎
+moduforge-engine = { path = "./engine" }
