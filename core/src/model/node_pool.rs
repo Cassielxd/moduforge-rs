@@ -1,4 +1,4 @@
-use super::{error::PoolError, node::Node, types::NodeId};
+use super::{error::PoolError, mark::Mark, node::Node, types::NodeId};
 use bincode::{Decode, Encode};
 use im::HashMap;
 use serde::{Deserialize, Serialize};
@@ -44,6 +44,23 @@ unsafe impl Sync for NodePool {}
 impl NodePool {
     pub fn size(&self) -> usize {
         self.inner.nodes.len()
+    }
+    pub fn add_mark(&self, id: &NodeId, mark: Mark) -> Result<Self, PoolError> {
+        let mut node = self
+            .get_node(id)
+            .ok_or_else(|| PoolError::ParentNotFound(id.clone()))?
+            .as_ref()
+            .clone();
+        node.marks.push_back(mark);
+        let mut nodes = self.inner.nodes.clone();
+        nodes.insert(node.id.clone(), Arc::new(node));
+        Ok(NodePool {
+            inner: Arc::new(NodePoolInner {
+                nodes,
+                parent_map: self.inner.parent_map.clone(),
+                root_id: self.inner.root_id.clone(),
+            }),
+        })
     }
     pub fn add_node(&self, parent_id: &NodeId, node: Node) -> Result<Self, PoolError> {
         let parent = self

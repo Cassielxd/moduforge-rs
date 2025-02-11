@@ -10,7 +10,7 @@ use moduforge_runtime::{
 async fn main() {
     //test().await;
     //test_from_snapshot().await;
-    let mut runtime = Runtime::create(RuntimeOptions {
+    let runtime = Runtime::create(RuntimeOptions {
         content: Content::None,
         extensions: get_base(),
         history_limit: Some(10),
@@ -23,13 +23,13 @@ async fn main() {
     let node_type = binding.nodes.get("DW").unwrap();
     let state = runtime.get_state();
     dbg!(state.doc());
-        let mut tr: Transaction = Transaction::new(state);
-        tr.add_node(
-            state.doc().inner.root_id.to_string(),
-            node_type.create(None, None, vec![], None),
-        );
-    
-        dbg!(tr.doc);
+    let mut tr: Transaction = Transaction::new(state);
+    tr.add_node(
+        state.doc().inner.root_id.to_string(),
+        node_type.create(None, None, vec![], None),
+    );
+
+    dbg!(tr.doc);
 }
 #[allow(dead_code)]
 async fn test_from_snapshot() {

@@ -1,10 +1,12 @@
-use add_node_step::AddNodeStep;
 use attr_step::AttrStep;
 use bincode::{Decode, Encode};
+use mark_step::AddMarkStep;
+use node_step::AddNodeStep;
 use serde::{Deserialize, Serialize};
 use step::Step;
-pub mod add_node_step;
 pub mod attr_step;
+pub mod mark_step;
+pub mod node_step;
 pub mod step;
 pub mod transform;
 
@@ -12,6 +14,7 @@ pub mod transform;
 pub enum ConcreteStep {
     UpdateAttrs(AttrStep),
     AddNodeStep(AddNodeStep),
+    AddMarkStep(AddMarkStep)
 }
 impl Step for ConcreteStep {
     fn apply(
@@ -22,6 +25,7 @@ impl Step for ConcreteStep {
         match self {
             ConcreteStep::UpdateAttrs(attr_step) => attr_step.apply(doc, schema),
             ConcreteStep::AddNodeStep(add_node_step) => add_node_step.apply(doc, schema),
+            ConcreteStep::AddMarkStep(add_mark_step) => add_mark_step.apply(doc, schema),
         }
     }
     fn to_concrete(&self) -> ConcreteStep {
