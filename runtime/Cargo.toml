@@ -16,6 +16,7 @@ im= {workspace=true}
 rocksdb = "0.23.0"
 zstd="0.13"
 chrono= {workspace=true}
+zen-engine= {workspace=true}
 log = {workspace=true}
 lru = {workspace=true}
 serde = {workspace=true}
@@ -24,3 +25,4 @@ thiserror= {workspace=true}
 async-trait= {workspace=true}
 moduforge-core= {workspace=true}
 moduforge-delta= {workspace=true}
+moduforge-engine ={workspace=true}

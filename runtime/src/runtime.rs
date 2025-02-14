@@ -5,13 +5,7 @@ use std::{
 };
 
 use crate::{
-    cache::{cache::DocumentCache, CacheKey},
-    event::{Event, EventBus, EventHandler},
-    event_handler::{create_delta_handler, create_snapshot_handler},
-    extension_manager::ExtensionManager,
-    history_manager::HistoryManager,
-    snapshot_manager::SnapshotManager,
-    types::{Content, Extensions, StorageOptions},
+    cache::{cache::DocumentCache, CacheKey}, engine_manager::EngineManager, event::{Event, EventBus, EventHandler}, event_handler::{create_delta_handler, create_snapshot_handler}, extension_manager::ExtensionManager, history_manager::HistoryManager, snapshot_manager::SnapshotManager, types::{Content, Extensions, StorageOptions}
 };
 use moduforge_core::{
     model::{
@@ -42,6 +36,7 @@ pub struct Runtime {
     state: Arc<State>,
     extension_manager: ExtensionManager,
     snapshot_manager: Arc<SnapshotManager>,
+    engine_manager: EngineManager,
     history_manager: HistoryManager<Arc<State>>,
     options: RuntimeOptions,
     pub event_handlers: Vec<Arc<dyn EventHandler>>,
@@ -97,6 +92,7 @@ impl Runtime {
             extension_manager,
             state,
             event_handlers: default_event_handlers,
+            engine_manager: EngineManager::create(),
         }
     }
     pub fn doc(&self) -> Arc<NodePool> {
