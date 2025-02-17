@@ -9,6 +9,7 @@ use super::types::NodeId;
 use im::HashMap as ImHashMap;
 use serde_json::Value;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /**
  * 节点的类型定义
@@ -72,9 +73,19 @@ impl NodeType {
             mark_set: None,
         }
     }
-
-    pub fn check_attrs(&self, values: Attrs) {
-        for (key, _value) in &values {
+  
+    pub fn check_content(&self,content: &Vec<Node>,schema:&Schema) -> bool {
+        if let Some(content_match) = &self.content_match{
+           if let Some(result) = content_match.match_fragment(content, schema){
+            if !result.valid_end{
+                return false;
+            }
+           }
+        }
+        return true;
+    }
+    pub fn check_attrs(&self, values: &Attrs) {
+        for (key, _value) in values {
             if !self.attrs.contains_key(key) {
                 panic!("节点 {} 属性 {}没有定义", self.name, key);
             }

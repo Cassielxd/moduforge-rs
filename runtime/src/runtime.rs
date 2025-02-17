@@ -1,14 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    cache::{cache::DocumentCache, CacheKey},
-    engine_manager::EngineManager,
-    event::{Event, EventBus, EventHandler},
-    event_handler::{create_delta_handler, create_snapshot_handler},
-    extension_manager::ExtensionManager,
-    history_manager::HistoryManager,
-    snapshot_manager::SnapshotManager,
-    types::{Content, EditorOptions, StorageOptions},
+    cache::{cache::DocumentCache, CacheKey}, engine_manager::EngineManager, event::{Event, EventBus, EventHandler}, event_handler::{create_delta_handler, create_snapshot_handler}, extension_manager::ExtensionManager, helpers::create_doc, history_manager::HistoryManager, snapshot_manager::SnapshotManager, types::{Content, EditorOptions, StorageOptions}
 };
 use moduforge_core::{
     model::{node_pool::NodePool, schema::Schema},
@@ -18,8 +11,6 @@ use moduforge_core::{
     },
     transform::transform::Transform,
 };
-use moduforge_delta::from_binary;
-use moduforge_delta::snapshot::FullSnapshot;
 
 /// 编辑器
 
@@ -37,7 +28,7 @@ pub struct Editor {
 impl Editor {
     pub async fn create(options: EditorOptions) -> Self {
         let extension_manager = ExtensionManager::new(options.get_extensions());
-        let doc = create_doc(&options.get_content());
+        let doc = create_doc::create_doc(&options.get_content());
         let storage = match &options.get_storage_option() {
             Some(o) => o.clone(),
             None => StorageOptions::default(),
@@ -195,26 +186,3 @@ pub fn init_event_handler(
     default_event_handlers
 }
 
-/// 创建文档
-pub fn create_doc(content: &Content) -> Option<Arc<NodePool>> {
-    let doc = match content {
-        Content::NodePoolBinary(items) => {
-            if let Ok(node_pool) = from_binary::<NodePool>(items) {
-                Some(Arc::new(node_pool))
-            } else {
-                panic!("NodePoolBinary二进制格式数据异常");
-            }
-        }
-        Content::NodePool(node_pool) => Some(Arc::new(node_pool.clone())),
-        Content::Snapshot(items) => {
-            if let Ok(full_snapshot) = from_binary::<FullSnapshot>(&items) {
-                // TODO: 优化 需要判断是否有增量事务 并加载应用
-                Some(full_snapshot.node_pool.clone())
-            } else {
-                panic!("Snapshot二进制格式数据异常");
-            }
-        }
-        Content::None => None,
-    };
-    doc
-}

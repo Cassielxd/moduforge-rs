@@ -37,6 +37,7 @@ async fn test_from_snapshot() {
     let data = runtime.get_snapshot(&CacheKey {
         doc_id: "7294968876259868672".to_string(),
         version: 900,
+        time: 1,
     });
     dbg!(data);
     tokio::time::sleep(std::time::Duration::from_secs(100)).await;

@@ -135,7 +135,7 @@ pub struct SnapshotHandler {
 impl EventHandler for SnapshotHandler {
     async fn handle(&self, event: &Event) {
         match event {
-            Event::TrApply(_, state) => {
+            Event::TrApply(tr, state) => {
                 let count = self.counter.fetch_add(1, Ordering::SeqCst) + 1;
                 if count % self.snapshot_interval == 0 {
                     let state_clone = state.clone();
@@ -151,8 +151,9 @@ impl EventHandler for SnapshotHandler {
                     let max_version = state_clone.version;
                     let _ = fs::create_dir_all(base_path).await;
                     let cache_ref: Arc<SnapshotManager> = self.snapshot_manager.clone();
+                    let time =tr.time;
                     tokio::spawn(async move {
-                        cache_ref.put(&state_clone);
+                        cache_ref.put(&state_clone,time);
                         match create_full_snapshot(&state_clone) {
                             Ok(data) => match File::create(&path).await {
                                 Ok(mut file) => {
