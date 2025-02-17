@@ -19,7 +19,7 @@ static JS_BUNDLE: Bundle = embed! {
     "big.js": "js/big.mjs",
     "zod": "js/zod.mjs"
 };
-
+/// js  基础模块加载器实现
 #[derive(Clone)]
 pub struct ModuleLoader(Rc<RefCell<BaseModuleLoader>>);
 
