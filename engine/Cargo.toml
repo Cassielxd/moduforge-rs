@@ -7,13 +7,25 @@ description = "规则引擎实现"
 lib="./src/lib.rs"
 
 [dependencies]
-tokio= {workspace=true}
-anyhow= {workspace=true}
-log = {workspace=true}
-serde = {workspace=true}
-serde_json = {workspace=true}
-thiserror= {workspace=true}
-async-trait= {workspace=true}
-zen-engine= {workspace=true}
-zen-expression= {workspace=true}
-moduforge-core= {workspace=true}
+
+ahash = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+petgraph = { workspace = true }
+serde_json = { workspace = true, features = ["arbitrary_precision"] }
+serde = { workspace = true, features = ["derive", "rc"] }
+once_cell = { workspace = true }
+json_dotpath = { workspace = true }
+rust_decimal = { workspace = true, features = ["maths-nopanic"] }
+fixedbitset = "0.5.7"
+tokio = { workspace = true, features = ["sync", "time"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+rquickjs = { version = "0.8.1", features = ["macro", "loader", "rust-alloc", "futures", "either", "properties"] }
+itertools = { workspace = true }
+jsonschema = "0.26.2"
+zen-expression =  { workspace = true }
+zen-tmpl =  { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+criterion = { workspace = true, features = ["async_tokio"] }
