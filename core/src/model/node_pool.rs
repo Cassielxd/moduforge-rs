@@ -62,6 +62,42 @@ impl NodePool {
             }),
         })
     }
+
+    pub fn remove_node(&self, parent_id: &NodeId, nodes: Vec<NodeId>) -> Result<Self, PoolError> {
+        let parent = self
+            .get_node(parent_id)
+            .ok_or_else(|| PoolError::ParentNotFound(parent_id.clone()))?;
+
+        // 过滤掉不在节点池中的子节点
+        let filtered_children: im::Vector<NodeId> = parent
+            .as_ref()
+            .content
+            .iter()
+            .cloned()
+            .filter(|id| !nodes.contains(id))
+            .collect();
+
+        // 这里的逻辑需要进一步完善，例如如何处理新节点的添加
+        // 以下是示例代码，实际逻辑可能需要根据需求调整
+        let mut parent_node = parent.as_ref().clone();
+        parent_node.content = filtered_children;
+        // 更新节点池和父节点映射
+        let mut new_nodes = self.inner.nodes.clone();
+        new_nodes.insert(parent_id.clone(), Arc::new(parent_node));
+        // 移除指定的节点
+        for node_id in nodes {
+            if self.inner.nodes.contains_key(&node_id) {
+                new_nodes.remove(&node_id);
+            }
+        }
+        Ok(NodePool {
+            inner: Arc::new(NodePoolInner {
+                nodes: new_nodes,
+                parent_map: self.inner.parent_map.clone(),
+                root_id: self.inner.root_id.clone(),
+            }),
+        })
+    }
     pub fn add_node(&self, parent_id: &NodeId, node: Node) -> Result<Self, PoolError> {
         let parent = self
             .get_node(parent_id)

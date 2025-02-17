@@ -1,10 +1,10 @@
 use std::{collections::HashMap, env::current_dir, path::PathBuf, sync::Arc};
 
+use crate::{event::EventHandler, extension::Extension, mark::Mark, node::Node};
 use moduforge_core::model::{
     node_pool::NodePool,
     schema::{Attribute, AttributeSpec},
 };
-use crate::{event::EventHandler, extension::Extension, mark::Mark, node::Node};
 
 pub type GlobalAttributes = Vec<GlobalAttributeItem>;
 #[derive(Clone, PartialEq, Debug, Eq, Default)]
@@ -50,9 +50,6 @@ impl Default for StorageOptions {
         }
     }
 }
-
-
-
 
 #[derive(Clone, Debug, Default)]
 pub struct EditorOptions {

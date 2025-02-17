@@ -9,7 +9,7 @@ use tokio::{signal, sync::RwLock};
 pub enum Event {
     Create(Arc<State>),
     TrApply(Arc<Transaction>, Arc<State>), // 事务应用后 + 是否成功
-    Stop,// 停止后需要重启
+    Stop,                                  // 停止后需要重启
 }
 /// 事件总线
 #[derive(Clone)]
@@ -20,8 +20,8 @@ pub struct EventBus {
 }
 
 impl EventBus {
-    pub async fn restart(&self){
-        let _= self.broadcast(Event::Stop).await;
+    pub async fn restart(&self) {
+        let _ = self.broadcast(Event::Stop).await;
         //由于是异步的 延迟50毫秒启动
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         self.start_event_loop();

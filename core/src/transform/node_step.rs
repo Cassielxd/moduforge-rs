@@ -8,7 +8,6 @@ use super::{
     ConcreteStep,
 };
 use bincode::{Decode, Encode};
-use im::HashMap;
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Clone, Decode, Encode)]
 pub struct AddNodeStep {
@@ -36,5 +35,37 @@ impl Step for AddNodeStep {
 
     fn to_concrete(&self) -> super::ConcreteStep {
         ConcreteStep::AddNodeStep(self.clone())
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Decode, Encode)]
+pub struct RemoveNodeStep {
+    parent_id: NodeId,
+    node_ids: Vec<NodeId>,
+}
+impl RemoveNodeStep {
+    pub fn new(parent_id: NodeId, node_ids: Vec<NodeId>) -> Self {
+        RemoveNodeStep {
+            parent_id,
+            node_ids,
+        }
+    }
+}
+impl Step for RemoveNodeStep {
+    fn apply(
+        &self,
+        node_pool: Arc<NodePool>,
+        schema: Arc<Schema>,
+    ) -> Result<StepResult, TransformError> {
+        let _ = schema;
+
+        match node_pool.remove_node(&self.parent_id, self.node_ids.clone()) {
+            Ok(node_pool) => Ok(StepResult::ok(Arc::new(node_pool))),
+            Err(err) => Err(TransformError::new(err.to_string())),
+        }
+    }
+
+    fn to_concrete(&self) -> super::ConcreteStep {
+        ConcreteStep::RemoveNodeStep(self.clone())
     }
 }
