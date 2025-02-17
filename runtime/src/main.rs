@@ -2,8 +2,8 @@ use moduforge_core::state::transaction::Transaction;
 use moduforge_runtime::{
     cache::CacheKey,
     node::Node,
-    runtime::{Editor, EditorOptions},
-    types::{Content, Extensions},
+    runtime::Editor,
+    types::{EditorOptions, Extensions},
 };
 
 #[tokio::main]

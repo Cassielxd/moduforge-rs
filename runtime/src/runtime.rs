@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{sync::Arc};
 
 use crate::{
     cache::{cache::DocumentCache, CacheKey},
@@ -8,7 +8,7 @@ use crate::{
     extension_manager::ExtensionManager,
     history_manager::HistoryManager,
     snapshot_manager::SnapshotManager,
-    types::{Content, Extensions, StorageOptions},
+    types::{Content, EditorOptions, StorageOptions},
 };
 use moduforge_core::{
     model::{node_pool::NodePool, schema::Schema},
@@ -21,46 +21,6 @@ use moduforge_core::{
 use moduforge_delta::from_binary;
 use moduforge_delta::snapshot::FullSnapshot;
 
-#[derive(Clone, Debug, Default)]
-pub struct EditorOptions {
-    content: Content,
-    extensions: Vec<Extensions>,
-    history_limit: Option<usize>,
-    snapshot_interval: Option<usize>,
-    rules_path: Option<PathBuf>,
-    event_handlers: Vec<Arc<dyn EventHandler>>,
-    storage_option: Option<StorageOptions>,
-}
-impl EditorOptions {
-    pub fn set_content(mut self, content: Content) -> Self {
-        self.content = content;
-        self
-    }
-    pub fn set_extensions(mut self, extensions: Vec<Extensions>) -> Self {
-        self.extensions = extensions;
-        self
-    }
-    pub fn set_history_limit(mut self, history_limit: usize) -> Self {
-        self.history_limit = Some(history_limit);
-        self
-    }
-    pub fn set_snapshot_interval(mut self, snapshot_interval: usize) -> Self {
-        self.snapshot_interval = Some(snapshot_interval);
-        self
-    }
-    pub fn set_rules_path(mut self, rules_path: PathBuf) -> Self {
-        self.rules_path = Some(rules_path);
-        self
-    }
-    pub fn set_event_handlers(mut self, event_handlers: Vec<Arc<dyn EventHandler>>) -> Self {
-        self.event_handlers = event_handlers;
-        self
-    }
-    pub fn set_storage_option(mut self, storage_option: StorageOptions) -> Self {
-        self.storage_option = Some(storage_option);
-        self
-    }
-}
 /// 编辑器
 
 pub struct Editor {
@@ -76,9 +36,9 @@ pub struct Editor {
 
 impl Editor {
     pub async fn create(options: EditorOptions) -> Self {
-        let extension_manager = ExtensionManager::new(options.extensions.clone());
-        let doc = create_doc(&options.content);
-        let storage = match &options.storage_option {
+        let extension_manager = ExtensionManager::new(options.get_extensions());
+        let doc = create_doc(&options.get_content());
+        let storage = match &options.get_storage_option() {
             Some(o) => o.clone(),
             None => StorageOptions::default(),
         };
@@ -97,7 +57,7 @@ impl Editor {
 
         let mut runtime = Editor {
             event_bus,
-            history_manager: HistoryManager::new(state.clone(), options.history_limit.clone()),
+            history_manager: HistoryManager::new(state.clone(), options.get_history_limit()),
             snapshot_manager,
             engine_manager: EngineManager::create(),
             options,
@@ -111,9 +71,9 @@ impl Editor {
     pub async fn init(&mut self) {
         let default_event_handlers = init_event_handler(
             &self.snapshot_manager,
-            self.options.event_handlers.clone(),
+            self.options.get_event_handlers(),
             self.storage.clone(),
-            self.options.snapshot_interval,
+            self.options.get_history_limit(),
         );
         self.event_bus
             .add_event_handlers(default_event_handlers)
