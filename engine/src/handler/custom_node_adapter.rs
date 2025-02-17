@@ -8,17 +8,17 @@ use std::ops::Deref;
 use std::sync::Arc;
 use zen_expression::variable::Variable;
 use zen_tmpl::TemplateRenderError;
-
+/// 自定义节点适配器 如果添加自定义节点类型，则需要实现此 trait
 pub trait CustomNodeAdapter {
     fn handle(&self, request: CustomNodeRequest) -> impl std::future::Future<Output = NodeResult>;
 }
-
+/// 默认的实现，如果未提供自定义节点处理程序，则使用此适配器
 #[derive(Default, Debug)]
 pub struct NoopCustomNode;
 
 impl CustomNodeAdapter for NoopCustomNode {
     async fn handle(&self, _: CustomNodeRequest) -> NodeResult {
-        Err(anyhow!("Custom node handler not provided"))
+        Err(anyhow!("没有提供自定义节点的处理程序"))
     }
 }
 

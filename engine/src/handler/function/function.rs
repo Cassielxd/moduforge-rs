@@ -14,7 +14,7 @@ use zen_expression::variable::Variable;
 pub struct FunctionConfig {
     pub(crate) listeners: Option<Vec<Box<dyn RuntimeListener>>>,
 }
-
+/// js 函数封装 rquickjs 实现
 pub struct Function {
     rt: Arc<AsyncRuntime>,
     ctx: AsyncContext,

@@ -2,7 +2,7 @@ use std::future::Future;
 
 use crate::loader::{DecisionLoader, LoaderResponse};
 
-/// Loads decisions using an async closure
+/// 使用异步闭包加载决策
 #[derive(Debug)]
 pub struct ClosureLoader<F>
 where

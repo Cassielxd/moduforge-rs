@@ -4,7 +4,7 @@ use anyhow::anyhow;
 
 use crate::loader::{DecisionLoader, LoaderError, LoaderResponse};
 
-/// Default loader which always fails
+/// 默认加载器总是失败
 #[derive(Default, Debug)]
 pub struct NoopLoader;
 
@@ -13,7 +13,7 @@ impl DecisionLoader for NoopLoader {
         async move {
             Err(LoaderError::Internal {
                 key: key.to_string(),
-                source: anyhow!("Loader is no-op"),
+                source: anyhow!("没有提供默认加载器"),
             }
             .into())
         }

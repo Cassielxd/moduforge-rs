@@ -141,7 +141,7 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
             .filter(|weight| matches!(weight.kind, DecisionNodeKind::InputNode { content: _ }))
             .count()
     }
-
+    /// 用给定的输入上下文评估决策图。
     pub async fn evaluate(
         &mut self,
         context: Variable,
@@ -164,7 +164,7 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
 
         let mut walker = GraphWalker::new(&self.graph);
         let mut node_traces = self.trace.then(|| HashMap::default());
-
+        // 循环执行节点
         while let Some(nid) = walker.next(
             &mut self.graph,
             self.trace.then_some(|mut trace: DecisionGraphTrace| {

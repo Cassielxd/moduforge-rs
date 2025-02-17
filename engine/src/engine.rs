@@ -23,7 +23,7 @@ where
 #[derive(Debug, Default)]
 pub struct EvaluationOptions {
     pub trace: Option<bool>,
-    pub max_depth: Option<u8>,
+    pub max_depth: Option<u8>,// 决策图的最大深度
 }
 
 impl Default for DecisionEngine<NoopLoader, NoopCustomNode> {
@@ -71,7 +71,7 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionEngine
         }
     }
 
-    /// Evaluates a decision through loader using a key
+    /// 使用键通过加载程序计算一个决策
     pub async fn evaluate<K>(
         &self,
         key: K,
@@ -84,7 +84,7 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionEngine
             .await
     }
 
-    /// Evaluates a decision through loader using a key with advanced options
+    /// 使用带有高级选项的键通过加载器评估决策
     pub async fn evaluate_with_opts<K>(
         &self,
         key: K,
@@ -99,14 +99,14 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionEngine
         decision.evaluate_with_opts(context, options).await
     }
 
-    /// Creates a decision from DecisionContent, exists for easier binding creation
+    /// 从DecisionContent创建一个决策，它的存在是为了更容易地创建绑定
     pub fn create_decision(&self, content: Arc<DecisionContent>) -> Decision<L, A> {
         Decision::from(content)
             .with_loader(self.loader.clone())
             .with_adapter(self.adapter.clone())
     }
 
-    /// Retrieves a decision based on the loader
+    /// 从加载器重获取并创建一个决策
     pub async fn get_decision(&self, key: &str) -> LoaderResult<Decision<L, A>> {
         let content = self.loader.load(key).await?;
         Ok(self.create_decision(content))

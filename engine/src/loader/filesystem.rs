@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 use crate::loader::{DecisionLoader, LoaderError, LoaderResponse};
 use crate::model::DecisionContent;
 
-/// Loads decisions based on filesystem root
+/// 基于文件系统根加载决策
 #[derive(Debug)]
 pub struct FilesystemLoader {
     root: String,

@@ -4,7 +4,7 @@ use ahash::HashMap;
 use std::future::Future;
 use std::sync::{Arc, RwLock};
 
-/// Loads decisions from in-memory hashmap
+/// 从内存哈希映射中加载决策
 #[derive(Debug, Default)]
 pub struct MemoryLoader {
     memory_refs: RwLock<HashMap<String, Arc<DecisionContent>>>,

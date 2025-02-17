@@ -51,7 +51,7 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionHandle
         Box::pin(async move {
             let content = match &request.node.kind {
                 DecisionNodeKind::DecisionNode { content } => Ok(content),
-                _ => Err(anyhow!("Unexpected node type")),
+                _ => Err(anyhow!("不支持的节点类型")),
             }?;
 
             let sub_decision = self.loader.load(&content.key).await?;

@@ -21,7 +21,7 @@ mod noop;
 pub type LoaderResult<T> = Result<T, Box<LoaderError>>;
 pub type LoaderResponse = LoaderResult<Arc<DecisionContent>>;
 
-/// Trait used for implementing a loader for decisions
+/// 用于实现决策加载器的Trait 如果自定义 loader，则需要实现此 Trait
 pub trait DecisionLoader {
     fn load<'a>(&'a self, key: &'a str) -> impl Future<Output = LoaderResponse> + 'a;
 }
