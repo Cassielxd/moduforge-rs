@@ -27,6 +27,11 @@ pub enum Content {
     Snapshot(Vec<u8>),
     None,
 }
+impl Default for Content {
+    fn default() -> Self {
+        Content::None
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct StorageOptions {

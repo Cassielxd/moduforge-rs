@@ -1366,6 +1366,7 @@ dependencies = [
 name = "moduforge-engine"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "log",
  "moduforge-core",
@@ -1374,6 +1375,7 @@ dependencies = [
  "thiserror 2.0.11",
  "tokio",
  "zen-engine",
+ "zen-expression",
 ]
 
 [[package]]
@@ -1410,6 +1412,7 @@ dependencies = [
  "thiserror 2.0.11",
  "tokio",
  "zen-engine",
+ "zen-expression",
  "zstd",
 ]
 

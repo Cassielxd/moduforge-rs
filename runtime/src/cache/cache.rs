@@ -5,8 +5,7 @@ use moduforge_delta::from_binary;
 use moduforge_delta::snapshot::FullSnapshot;
 
 use std::fs;
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use crate::types::StorageOptions;
 

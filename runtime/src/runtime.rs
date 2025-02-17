@@ -1,17 +1,17 @@
-use std::{
-    env::current_dir,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{path::PathBuf, sync::Arc};
 
 use crate::{
-    cache::{cache::DocumentCache, CacheKey}, engine_manager::EngineManager, event::{Event, EventBus, EventHandler}, event_handler::{create_delta_handler, create_snapshot_handler}, extension_manager::ExtensionManager, history_manager::HistoryManager, snapshot_manager::SnapshotManager, types::{Content, Extensions, StorageOptions}
+    cache::{cache::DocumentCache, CacheKey},
+    engine_manager::EngineManager,
+    event::{Event, EventBus, EventHandler},
+    event_handler::{create_delta_handler, create_snapshot_handler},
+    extension_manager::ExtensionManager,
+    history_manager::HistoryManager,
+    snapshot_manager::SnapshotManager,
+    types::{Content, Extensions, StorageOptions},
 };
 use moduforge_core::{
-    model::{
-        node_pool::{self, NodePool},
-        schema::Schema,
-    },
+    model::{node_pool::NodePool, schema::Schema},
     state::{
         state::{State, StateConfig},
         transaction::Transaction,
@@ -20,61 +20,71 @@ use moduforge_core::{
 };
 use moduforge_delta::from_binary;
 use moduforge_delta::snapshot::FullSnapshot;
-use tokio::{select, signal};
 
-#[derive(Clone, Debug)]
-pub struct RuntimeOptions {
-    pub content: Content,
-    pub extensions: Vec<Extensions>,
-    pub history_limit: Option<usize>,
-    pub event_handlers: Vec<Arc<dyn EventHandler>>,
-    pub storage_option: Option<StorageOptions>,
+#[derive(Clone, Debug, Default)]
+pub struct EditorOptions {
+    content: Content,
+    extensions: Vec<Extensions>,
+    history_limit: Option<usize>,
+    snapshot_interval: Option<usize>,
+    rules_path: Option<PathBuf>,
+    event_handlers: Vec<Arc<dyn EventHandler>>,
+    storage_option: Option<StorageOptions>,
 }
+impl EditorOptions {
+    pub fn set_content(mut self, content: Content) -> Self {
+        self.content = content;
+        self
+    }
+    pub fn set_extensions(mut self, extensions: Vec<Extensions>) -> Self {
+        self.extensions = extensions;
+        self
+    }
+    pub fn set_history_limit(mut self, history_limit: usize) -> Self {
+        self.history_limit = Some(history_limit);
+        self
+    }
+    pub fn set_snapshot_interval(mut self, snapshot_interval: usize) -> Self {
+        self.snapshot_interval = Some(snapshot_interval);
+        self
+    }
+    pub fn set_rules_path(mut self, rules_path: PathBuf) -> Self {
+        self.rules_path = Some(rules_path);
+        self
+    }
+    pub fn set_event_handlers(mut self, event_handlers: Vec<Arc<dyn EventHandler>>) -> Self {
+        self.event_handlers = event_handlers;
+        self
+    }
+    pub fn set_storage_option(mut self, storage_option: StorageOptions) -> Self {
+        self.storage_option = Some(storage_option);
+        self
+    }
+}
+/// 编辑器
 
-pub struct Runtime {
+pub struct Editor {
     event_bus: EventBus,
     state: Arc<State>,
     extension_manager: ExtensionManager,
     snapshot_manager: Arc<SnapshotManager>,
     engine_manager: EngineManager,
     history_manager: HistoryManager<Arc<State>>,
-    options: RuntimeOptions,
-    pub event_handlers: Vec<Arc<dyn EventHandler>>,
+    options: EditorOptions,
+    storage: StorageOptions,
 }
 
-impl Runtime {
-    pub async fn create(options: RuntimeOptions) -> Self {
-        let event_bus = EventBus::new();
+impl Editor {
+    pub async fn create(options: EditorOptions) -> Self {
         let extension_manager = ExtensionManager::new(options.extensions.clone());
-        let doc = match &options.content {
-            Content::NodePoolBinary(items) => {
-                if let Ok(node_pool) = from_binary::<NodePool>(items) {
-                    Some(Arc::new(node_pool))
-                } else {
-                    panic!("NodePoolBinary二进制格式数据异常");
-                }
-            }
-            Content::NodePool(node_pool) => Some(Arc::new(node_pool.clone())),
-            Content::Snapshot(items) => {
-                if let Ok(full_snapshot) = from_binary::<FullSnapshot>(&items) {
-                    Some(full_snapshot.node_pool.clone())
-                } else {
-                    panic!("Snapshot二进制格式数据异常");
-                }
-            }
-            Content::None => None,
-        };
+        let doc = create_doc(&options.content);
         let storage = match &options.storage_option {
             Some(o) => o.clone(),
             None => StorageOptions::default(),
         };
         let cache: Arc<DocumentCache> = DocumentCache::new(&storage);
         let snapshot_manager = SnapshotManager::create(cache);
-        let mut default_event_handlers: Vec<Arc<dyn EventHandler>> = vec![
-            create_delta_handler(storage.clone()),
-            create_snapshot_handler(storage.clone(), 900, snapshot_manager.clone()),
-        ];
-        default_event_handlers.append(&mut options.event_handlers.clone());
+        let event_bus = EventBus::new();
         let state: State = State::create(StateConfig {
             schema: Some(extension_manager.get_schema()),
             doc,
@@ -84,19 +94,44 @@ impl Runtime {
         .await
         .unwrap();
         let state: Arc<State> = Arc::new(state);
-        Runtime {
+
+        let mut runtime = Editor {
             event_bus,
             history_manager: HistoryManager::new(state.clone(), options.history_limit.clone()),
             snapshot_manager,
+            engine_manager: EngineManager::create(),
             options,
             extension_manager,
             state,
-            event_handlers: default_event_handlers,
-            engine_manager: EngineManager::create(),
-        }
+            storage,
+        };
+        runtime.init().await;
+        runtime
     }
+    pub async fn init(&mut self) {
+        let default_event_handlers = init_event_handler(
+            &self.snapshot_manager,
+            self.options.event_handlers.clone(),
+            self.storage.clone(),
+            self.options.snapshot_interval,
+        );
+        self.event_bus
+            .add_event_handlers(default_event_handlers)
+            .await;
+        self.event_bus.start_event_loop();
+        let _ = self
+            .event_bus
+            .broadcast_blocking(Event::Create(self.state.clone()));
+    }
+
     pub fn doc(&self) -> Arc<NodePool> {
         self.get_state().doc()
+    }
+    pub fn get_options(&self) -> &EditorOptions {
+        &self.options
+    }
+    pub fn get_engine_manager(&self) -> &EngineManager {
+        &self.engine_manager
     }
     pub fn get_snapshot(&self, key: &CacheKey) -> Option<Arc<NodePool>> {
         self.snapshot_manager.get_snapshot(key)
@@ -114,40 +149,7 @@ impl Runtime {
     pub fn get_event_bus(&self) -> &EventBus {
         &self.event_bus
     }
-    /// 启动事件循环
-    pub fn start_event_loop(&self) {
-        let rx = self.event_bus.subscribe();
-        let handlers = self.event_handlers.clone();
-        tokio::spawn(async move {
-            loop {
-                tokio::select! {
-                    event = rx.recv() => match event {
-                        Ok(event) => {
-                            for handler in &handlers {
-                                handler.handle(&event).await;
-                            }
-                        },
-                        Err(_) => {
-                            println!("跳出了");
-                            break;
-                        },
-                    },
-                    shutdown_signal = Box::pin(signal::ctrl_c()) => {
-                        match shutdown_signal {
-                            Ok(()) => {
-                                println!("事件管理器,接收到关闭信号，正在退出...");
-                                break;
-                            },
-                            Err(e) => {
-                                eprintln!("事件管理器,处理关闭信号时出错: {}", e);
-                                break;
-                            }
-                        }
-                    },
-                }
-            }
-        });
-    }
+
     /// 处理事务事件，并生成增量记录。
     pub async fn dispatch(
         &mut self,
@@ -158,10 +160,9 @@ impl Runtime {
         if !transaction.doc_changed() {
             return Ok(());
         }
-
         let event_bus = self.get_event_bus();
         event_bus
-            .broadcast(Event::Apply(Arc::new(transaction), self.state.clone()))
+            .broadcast(Event::TrApply(Arc::new(transaction), self.state.clone()))
             .await?;
         Ok(())
     }
@@ -214,4 +215,46 @@ impl Runtime {
         self.history_manager.jump(1);
         self.state = self.history_manager.get_present();
     }
+}
+
+pub fn init_event_handler(
+    snapshot_manager: &Arc<SnapshotManager>,
+    event_handlers: Vec<Arc<dyn EventHandler>>,
+    storage: StorageOptions,
+    snapshot_interval: Option<usize>,
+) -> Vec<Arc<dyn EventHandler>> {
+    let mut default_event_handlers: Vec<Arc<dyn EventHandler>> = vec![
+        create_delta_handler(storage.clone()),
+        create_snapshot_handler(
+            storage.clone(),
+            snapshot_interval.unwrap_or(100),
+            snapshot_manager.clone(),
+        ),
+    ];
+    default_event_handlers.append(&mut event_handlers.clone());
+    default_event_handlers
+}
+
+/// 创建文档
+pub fn create_doc(content: &Content) -> Option<Arc<NodePool>> {
+    let doc = match content {
+        Content::NodePoolBinary(items) => {
+            if let Ok(node_pool) = from_binary::<NodePool>(items) {
+                Some(Arc::new(node_pool))
+            } else {
+                panic!("NodePoolBinary二进制格式数据异常");
+            }
+        }
+        Content::NodePool(node_pool) => Some(Arc::new(node_pool.clone())),
+        Content::Snapshot(items) => {
+            if let Ok(full_snapshot) = from_binary::<FullSnapshot>(&items) {
+                // TODO: 优化 需要判断是否有增量事务 并加载应用
+                Some(full_snapshot.node_pool.clone())
+            } else {
+                panic!("Snapshot二进制格式数据异常");
+            }
+        }
+        Content::None => None,
+    };
+    doc
 }

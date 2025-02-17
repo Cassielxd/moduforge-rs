@@ -17,6 +17,7 @@ rocksdb = "0.23.0"
 zstd="0.13"
 chrono= {workspace=true}
 zen-engine= {workspace=true}
+zen-expression= {workspace=true}
 log = {workspace=true}
 lru = {workspace=true}
 serde = {workspace=true}

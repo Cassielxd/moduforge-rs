@@ -6,7 +6,7 @@ use moduforge_core::{
         state::{Configuration, State},
     },
 };
-use std::{collections::HashMap, io, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{from_binary, to_binary};
 

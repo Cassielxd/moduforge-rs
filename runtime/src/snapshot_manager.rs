@@ -10,18 +10,21 @@ use moduforge_core::{
 };
 
 use crate::cache::{cache::DocumentCache, CacheKey};
+/// 快照管理器
 #[derive(Debug)]
 pub struct SnapshotManager {
     document_cache: Arc<DocumentCache>,
     list: Arc<Mutex<Vec<CacheKey>>>,
 }
 impl SnapshotManager {
+    /// 创建快照管理器
     pub fn create(document_cache: Arc<DocumentCache>) -> Arc<SnapshotManager> {
         Arc::new(SnapshotManager {
             document_cache,
             list: Arc::new(Mutex::new(vec![])),
         })
     }
+    /// 获取全量
     pub fn get_snapshot(&self, key: &CacheKey) -> Option<Arc<NodePool>> {
         self.document_cache.get(key)
     }

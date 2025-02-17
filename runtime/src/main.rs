@@ -2,23 +2,23 @@ use moduforge_core::state::transaction::Transaction;
 use moduforge_runtime::{
     cache::CacheKey,
     node::Node,
-    runtime::{Runtime, RuntimeOptions},
+    runtime::{Editor, EditorOptions},
     types::{Content, Extensions},
 };
 
 #[tokio::main]
 async fn main() {
-    //test().await;
+    test_create_snapshot().await;
     //test_from_snapshot().await;
-    let runtime = Runtime::create(RuntimeOptions {
+    /*  let runtime = Runtime::create(RuntimeOptions {
         content: Content::None,
         extensions: get_base(),
         history_limit: Some(10),
         event_handlers: vec![],
         storage_option: None,
+        rules_path: None,
     })
     .await;
-    runtime.start_event_loop();
     let binding = runtime.get_schema();
     let node_type = binding.nodes.get("DW").unwrap();
     let state = runtime.get_state();
@@ -29,19 +29,11 @@ async fn main() {
         node_type.create(None, None, vec![], None),
     );
 
-    dbg!(tr.doc);
+    dbg!(tr.doc); */
 }
 #[allow(dead_code)]
 async fn test_from_snapshot() {
-    let runtime = Runtime::create(RuntimeOptions {
-        content: Content::None,
-        extensions: get_base(),
-        history_limit: Some(10),
-        event_handlers: vec![],
-        storage_option: None,
-    })
-    .await;
-    runtime.start_event_loop();
+    let runtime = Editor::create(EditorOptions::default().set_extensions(get_base())).await;
     let data = runtime.get_snapshot(&CacheKey {
         doc_id: "7294968876259868672".to_string(),
         version: 900,
@@ -51,15 +43,7 @@ async fn test_from_snapshot() {
 }
 #[allow(dead_code)]
 async fn test_create_snapshot() {
-    let mut runtime = Runtime::create(RuntimeOptions {
-        content: Content::None,
-        extensions: get_base(),
-        history_limit: Some(10),
-        event_handlers: vec![],
-        storage_option: None,
-    })
-    .await;
-    runtime.start_event_loop();
+    let mut runtime = Editor::create(EditorOptions::default().set_extensions(get_base())).await;
     let binding = runtime.get_schema();
     let node_type = binding.nodes.get("DW").unwrap();
 

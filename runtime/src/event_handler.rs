@@ -1,5 +1,4 @@
 use std::{
-    fs::{self},
     path::PathBuf,
     sync::{
         atomic::{AtomicUsize, Ordering},
@@ -11,10 +10,13 @@ use moduforge_delta::{
     delta::{create_tr_snapshot, to_delta, TransactionDelta},
     snapshot::create_full_snapshot,
 };
-use tokio::{fs::File, io::AsyncWriteExt, signal};
+use tokio::{
+    fs::{self, File},
+    io::AsyncWriteExt,
+    signal,
+};
 
 use crate::{
-    cache::{cache::DocumentCache, l2, CacheKey},
     event::{Event, EventHandler},
     snapshot_manager::SnapshotManager,
     types::StorageOptions,
@@ -80,13 +82,13 @@ pub struct DeltaHandler {
 impl EventHandler for DeltaHandler {
     async fn handle(&self, event: &Event) {
         match event {
-            Event::Apply(tx, state) => {
+            Event::TrApply(tx, state) => {
                 let base_path = self
                     .storage_option
                     .delta_path
                     .join(state.doc().inner.root_id.clone());
                 let path = base_path.join(format!("delta_{}_{}.bin", tx.time, state.version));
-                fs::create_dir_all(base_path).unwrap();
+                let _ = fs::create_dir_all(base_path).await;
                 let tx_clone = tx.clone();
                 let state_version = state.version.clone();
                 let path_clone = path.clone();
@@ -133,7 +135,7 @@ pub struct SnapshotHandler {
 impl EventHandler for SnapshotHandler {
     async fn handle(&self, event: &Event) {
         match event {
-            Event::Apply(_, state) => {
+            Event::TrApply(_, state) => {
                 let count = self.counter.fetch_add(1, Ordering::SeqCst) + 1;
                 if count % self.snapshot_interval == 0 {
                     let state_clone = state.clone();
@@ -142,7 +144,12 @@ impl EventHandler for SnapshotHandler {
                         .snapshot_path
                         .join(state_clone.doc().inner.root_id.clone());
                     let path = base_path.join(format!("snapshot_v{}.bin", state_clone.version));
-                    let _ = fs::create_dir_all(base_path);
+                    let delta_path = self
+                        .storage_option
+                        .delta_path
+                        .join(state_clone.doc().inner.root_id.clone());
+                    let max_version = state_clone.version;
+                    let _ = fs::create_dir_all(base_path).await;
                     let cache_ref: Arc<SnapshotManager> = self.snapshot_manager.clone();
                     tokio::spawn(async move {
                         cache_ref.put(&state_clone);
@@ -150,6 +157,7 @@ impl EventHandler for SnapshotHandler {
                             Ok(data) => match File::create(&path).await {
                                 Ok(mut file) => {
                                     file.write_all(&data).await.unwrap();
+                                    cleanup_old_deltas(&delta_path, max_version).await;
                                 }
                                 Err(e) => {
                                     println!("write file error:{}", e);
@@ -164,5 +172,43 @@ impl EventHandler for SnapshotHandler {
             }
             _ => {}
         }
+    }
+}
+
+/// 清理旧的事务增量文件
+async fn cleanup_old_deltas(delta_dir: &PathBuf, max_version: u64) {
+    match fs::read_dir(delta_dir).await {
+        Ok(mut entries) => {
+            while let Ok(Some(entry)) = entries.next_entry().await {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                        if let Some(version) = extract_version(file_name) {
+                            if version <= max_version {
+                                if let Err(e) = fs::remove_file(&path).await {
+                                    println!("删除文件失败 {}: {}", path.display(), e);
+                                } else {
+                                    println!("已清理冗余事务文件: {}", path.display());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            println!("无法读取增量目录 {}: {}", delta_dir.display(), e);
+        }
+    }
+}
+
+/// 从文件名中提取版本号
+fn extract_version(file_name: &str) -> Option<u64> {
+    // 文件名格式: delta_{timestamp}_{version}.bin
+    let parts: Vec<&str> = file_name.split('_').collect();
+    if parts.len() >= 3 && parts[0] == "delta" {
+        parts[2].split('.').next().and_then(|v| v.parse().ok())
+    } else {
+        None
     }
 }
