@@ -3,6 +3,7 @@ name = "engine-dev-tools"
 version = "0.1.0"
 edition = "2021"
 publish = false
+description = "规则流程配置编辑器"
 
 [dependencies]
 axum = { version = "0.7", features = ["macros"] }
