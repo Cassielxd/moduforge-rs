@@ -10,7 +10,9 @@ use super::attrs::Attrs;
  */
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Decode, Encode)]
 pub struct Mark {
+    #[serde(rename = "t")]
     pub r#type: String,
+    #[serde(rename = "a")]
     #[bincode(with_serde)]
     pub attrs: Attrs,
 }

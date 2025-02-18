@@ -8,7 +8,7 @@ use moduforge_runtime::{
 
 #[tokio::main]
 async fn main() {
-    test_create_snapshot().await;
+    test_from_snapshot().await;
     //test_from_snapshot().await;
     /*  let runtime = Runtime::create(RuntimeOptions {
         content: Content::None,
@@ -35,7 +35,7 @@ async fn main() {
 async fn test_from_snapshot() {
     let runtime = Editor::create(EditorOptions::default().set_extensions(get_base())).await;
     let data = runtime.get_snapshot(&CacheKey {
-        doc_id: "7294968876259868672".to_string(),
+        doc_id: "7297544091158446080".to_string(),
         version: 900,
         time: 1,
     });

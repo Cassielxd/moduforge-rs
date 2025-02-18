@@ -16,5 +16,5 @@ thiserror= {workspace=true}
 async-trait= {workspace=true}
 flate2 ={workspace=true}
 bincode= {workspace=true}
-
+zstd="0"
 moduforge-core= {workspace=true}

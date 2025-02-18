@@ -29,16 +29,14 @@ impl L2Cache {
 
     /// 读取数据（自动解压）
     pub fn get(&self, key: String) -> Result<Arc<NodePool>, Error> {
-        let compressed = self.db.get(key).unwrap().unwrap();
-        let data = decode_all(&compressed[..])?;
+        let data = self.db.get(key).unwrap().unwrap();
         Ok(from_binary::<Arc<NodePool>>(&data).unwrap())
     }
 
     /// 写入数据（自动压缩）
     pub fn put(&self, key: String, value: Arc<NodePool>) {
         let data = to_binary(value).unwrap();
-        let compressed = zstd::encode_all(&data[..], self.compression_level).unwrap();
-        let _ = self.db.put(key, compressed);
+        let _ = self.db.put(key, data);
     }
 
     /// 批量写入优化
@@ -46,8 +44,7 @@ impl L2Cache {
         let mut wb = rocksdb::WriteBatch::default();
         for (k, v) in batch {
             let data = to_binary(v).unwrap();
-            let compressed = zstd::encode_all(&data[..], self.compression_level).unwrap();
-            wb.put(k, compressed);
+            wb.put(k, data);
         }
         let _ = self.db.write(wb);
     }
