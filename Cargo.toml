@@ -4,7 +4,8 @@ members = [
    "delta",
    "official",
    "engine",
-   "runtime"
+   "runtime",
+   "engine-dev-tools"
 
 ]
 [workspace.package]
