@@ -2,7 +2,7 @@ use std::{fmt, sync::Arc};
 
 use crate::model::node_pool::NodePool;
 
-use super::step::Step;
+use super::step::{Step, StepResult};
 
 // 定义 TransformError 结构体
 #[derive(Debug)]
@@ -25,5 +25,5 @@ impl TransformError {
 pub trait Transform {
     fn step(&mut self, step: Box<dyn Step>) -> Result<(), TransformError>;
     fn doc_changed(&self) -> bool;
-    fn add_step(&mut self, step: Box<dyn Step>, doc: Arc<NodePool>);
+    fn add_step(&mut self, step: Box<dyn Step>,  result: StepResult);
 }

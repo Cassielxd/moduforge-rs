@@ -7,6 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use super::state::State;
 use crate::model::node::Node;
 use crate::model::node_pool::{Draft, NodePool};
+use crate::model::patch::Patch;
 use crate::model::schema::Schema;
 use crate::transform::attr_step::AttrStep;
 use crate::transform::node_step::AddNodeStep;
@@ -19,6 +20,7 @@ pub struct Transaction {
     pub meta: HashMap<String, Box<dyn std::any::Any>>,
     pub time: u64,
     pub steps: Vec<Box<dyn Step>>,
+    pub patches: Vec<Vec<Patch>>,
     pub doc: Arc<NodePool>,
     pub draft: Draft,
     pub schema: Arc<Schema>,
@@ -31,7 +33,7 @@ impl Transform for Transaction {
         match result.failed {
             Some(message) => Err(TransformError::new(message)),
             None => {
-                self.add_step(step, result.doc.unwrap());
+                self.add_step(step, result);
                 Ok(())
             }
         }
@@ -39,10 +41,11 @@ impl Transform for Transaction {
     fn doc_changed(&self) -> bool {
         !self.steps.is_empty()
     }
-
-    fn add_step(&mut self, step: Box<dyn Step>, doc: Arc<NodePool>) {
+    /// 添加一个步骤 steps 和patches 一 一对应
+    fn add_step(&mut self, step: Box<dyn Step>, result: StepResult) {
         self.steps.push(step);
-        self.doc = doc;
+        self.patches.push(result.patches);
+        self.doc = result.doc.unwrap();
     }
 }
 impl Transaction {
@@ -56,7 +59,7 @@ impl Transaction {
         match result {
             Ok(mut tr) => {
                 let (node_pool, patches) = tr.draft.commit();
-                tr.add_step(Box::new(PatchStep { patches }), node_pool);
+                tr.add_step(Box::new(PatchStep { patches:patches.clone() }),StepResult::ok(node_pool, patches));
                return tr;
             }
             Err(_) => {}
@@ -78,6 +81,7 @@ impl Transaction {
             doc: node,
             schema: state.schema(),
             draft: Draft::new(state.doc()),
+            patches: vec![],
         }
     }
     pub fn doc(&self) -> Arc<NodePool> {

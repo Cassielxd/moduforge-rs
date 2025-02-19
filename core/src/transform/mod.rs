@@ -52,7 +52,7 @@ impl Step for PatchStep {
         match dart.apply_patches(&self.patches) {
             Ok(()) => {
                 let (node_pool, _patches) = dart.commit();
-                Ok(StepResult::ok(node_pool))
+                Ok(StepResult::ok(node_pool,_patches))
             }
             Err(err) => Err(TransformError::new(err.to_string())),
         }

@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use crate::model::{
-    node_pool::{Draft, NodePool},
-    schema::Schema,
+    node_pool::{Draft, NodePool}, patch::Patch, schema::Schema
 };
 use std::fmt::Debug;
 
@@ -16,13 +15,15 @@ pub trait Step: Send + Sync + Debug {
 pub struct StepResult {
     pub doc: Option<Arc<NodePool>>,
     pub failed: Option<String>,
+    pub patches: Vec<Patch>,
 }
 
 impl StepResult {
-    pub fn ok(doc: Arc<NodePool>) -> Self {
+    pub fn ok(doc: Arc<NodePool>,patches: Vec<Patch>) -> Self {
         StepResult {
             doc: Some(doc),
             failed: None,
+            patches,
         }
     }
 
@@ -30,6 +31,7 @@ impl StepResult {
         StepResult {
             doc: None,
             failed: Some(message),
+            patches:vec![]
         }
     }
 }
