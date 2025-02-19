@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::model::{node_pool::NodePool, schema::Schema, types::NodeId};
+use crate::model::{node_pool::Draft, schema::Schema, types::NodeId};
 
 use super::{
     step::{Step, StepResult},
@@ -25,14 +25,13 @@ impl AttrStep {
     }
 }
 impl Step for AttrStep {
-    fn apply(
-        &self,
-        node_pool: Arc<NodePool>,
-        schema: Arc<Schema>,
-    ) -> Result<StepResult, TransformError> {
+    fn apply(&self, dart: &mut Draft, schema: Arc<Schema>) -> Result<StepResult, TransformError> {
         let _ = schema;
-        match node_pool.update_attr(&self.id, &self.values) {
-            Ok(node_pool) => Ok(StepResult::ok(Arc::new(node_pool))),
+        match dart.update_attr(&self.id, self.values.clone()) {
+            Ok(_) => {
+                let (node_pool, _patches) = dart.commit();
+                Ok(StepResult::ok(node_pool))
+            }
             Err(err) => Err(TransformError::new(err.to_string())),
         }
     }

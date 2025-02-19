@@ -1,29 +1,33 @@
 use std::collections::HashMap;
+
+use std::future::Future;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::state::State;
 use crate::model::node::Node;
-use crate::model::node_pool::NodePool;
+use crate::model::node_pool::{Draft, NodePool};
 use crate::model::schema::Schema;
 use crate::transform::attr_step::AttrStep;
 use crate::transform::node_step::AddNodeStep;
-use crate::transform::step::Step;
+use crate::transform::step::{Step, StepResult};
 use crate::transform::transform::{Transform, TransformError};
-use crate::transform::ConcreteStep;
+use crate::transform::{ConcreteStep, PatchStep};
+
 #[derive(Debug)]
 pub struct Transaction {
     pub meta: HashMap<String, Box<dyn std::any::Any>>,
     pub time: u64,
     pub steps: Vec<Box<dyn Step>>,
     pub doc: Arc<NodePool>,
+    pub draft: Draft,
     pub schema: Arc<Schema>,
 }
 unsafe impl Send for Transaction {}
 unsafe impl Sync for Transaction {}
 impl Transform for Transaction {
     fn step(&mut self, step: Box<dyn Step>) -> Result<(), TransformError> {
-        let result = step.apply(self.doc.clone(), self.schema.clone())?;
+        let result = step.apply(&mut self.draft, self.schema.clone())?;
         match result.failed {
             Some(message) => Err(TransformError::new(message)),
             None => {
@@ -42,6 +46,23 @@ impl Transform for Transaction {
     }
 }
 impl Transaction {
+    pub async fn transaction<F, O>(&mut self,call_back:F)
+    where
+    F: Fn(&mut Draft)-> O + Sync + Send,
+    O: Future<Output =Result<StepResult, TransformError> > + Send,
+    {
+        let result: Result<StepResult, TransformError> = call_back(&mut self.draft).await;
+        match result {
+            Ok(_) => {
+             let (node_pool,patches) =   self.draft.commit();
+                self.add_step(Box::new(PatchStep{ patches }), node_pool);
+            },
+            Err(_) => {
+              
+            },
+        }
+    }
+
     pub fn new(state: &State) -> Self {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -55,6 +76,7 @@ impl Transaction {
             steps: vec![],
             doc: node,
             schema: state.schema(),
+            draft: Draft::new(state.doc()),
         }
     }
     pub fn doc(&self) -> Arc<NodePool> {

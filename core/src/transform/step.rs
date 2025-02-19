@@ -1,12 +1,15 @@
 use std::sync::Arc;
 
-use crate::model::{node_pool::NodePool, schema::Schema};
+use crate::model::{
+    node_pool::{Draft, NodePool},
+    schema::Schema,
+};
 use std::fmt::Debug;
 
 use super::{transform::TransformError, ConcreteStep};
 
 pub trait Step: Send + Sync + Debug {
-    fn apply(&self, doc: Arc<NodePool>, schema: Arc<Schema>) -> Result<StepResult, TransformError>;
+    fn apply(&self, doc: &mut Draft, schema: Arc<Schema>) -> Result<StepResult, TransformError>;
     fn to_concrete(&self) -> ConcreteStep;
 }
 
