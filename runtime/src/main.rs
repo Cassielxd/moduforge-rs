@@ -8,7 +8,7 @@ use moduforge_runtime::{
 
 #[tokio::main]
 async fn main() {
-    test_from_snapshot().await;
+    test_create_snapshot().await;
     //test_from_snapshot().await;
     /*  let runtime = Runtime::create(RuntimeOptions {
         content: Content::None,

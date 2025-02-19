@@ -15,7 +15,7 @@ pub enum ConcreteStep {
     UpdateAttrs(AttrStep),
     AddNodeStep(AddNodeStep),
     AddMarkStep(AddMarkStep),
-    RemoveNodeStep(RemoveNodeStep),
+    RemoveNodeStep(RemoveNodeStep)
 }
 impl Step for ConcreteStep {
     fn apply(
@@ -27,7 +27,7 @@ impl Step for ConcreteStep {
             ConcreteStep::UpdateAttrs(attr_step) => attr_step.apply(doc, schema),
             ConcreteStep::AddNodeStep(add_node_step) => add_node_step.apply(doc, schema),
             ConcreteStep::AddMarkStep(add_mark_step) => add_mark_step.apply(doc, schema),
-            ConcreteStep::RemoveNodeStep(remove_node_step) => remove_node_step.apply(doc, schema),
+            ConcreteStep::RemoveNodeStep(remove_node_step) => remove_node_step.apply(doc, schema)
         }
     }
     fn to_concrete(&self) -> ConcreteStep {

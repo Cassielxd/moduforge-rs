@@ -51,29 +51,17 @@ pub enum DecisionNodeKind {
         content: OutputNodeContent,
     },
     /// 函数节点 (v2) js 实现
-    FunctionNode {
-        content: FunctionNodeContent,
-    },
+    FunctionNode { content: FunctionNodeContent },
     /// 决策节点
-    DecisionNode {
-        content: DecisionNodeContent,
-    },
+    DecisionNode { content: DecisionNodeContent },
     /// 决策表节点
-    DecisionTableNode {
-        content: DecisionTableContent,
-    },
+    DecisionTableNode { content: DecisionTableContent },
     /// 表达式节点
-    ExpressionNode {
-        content: ExpressionNodeContent,
-    },
+    ExpressionNode { content: ExpressionNodeContent },
     /// 选择节点
-    SwitchNode {
-        content: SwitchNodeContent,
-    },
+    SwitchNode { content: SwitchNodeContent },
     /// 自定义节点 需要自定义适配器
-    CustomNode {
-        content: CustomNodeContent,
-    },
+    CustomNode { content: CustomNodeContent },
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Default)]

@@ -6,9 +6,7 @@ use std::{
     },
 };
 
-use crate::model::{
-    id_generator::IdGenerator, mark::Mark, node_pool::NodePool, schema::Schema, types::NodeId,
-};
+use crate::model::{id_generator::IdGenerator, mark::Mark, node_pool::NodePool, schema::Schema};
 
 use super::{
     plugin::{Plugin, PluginState, Reset},
@@ -42,9 +40,11 @@ impl State {
         );
         let mut instance = State::new(config);
         let mut field_values = Vec::new();
-        for field in &instance.config.plugins {
-            let value = field.init(&state_config, Some(&instance)).await;
-            field_values.push((field.key().key.clone(), value));
+        for plugin in &instance.config.plugins {
+            if let Some(field) = &plugin.spec.state {
+                let value = field.init(&state_config, Some(&instance)).await;
+                field_values.push((plugin.key.clone(), value));
+            }
         }
         for (name, value) in field_values {
             instance.set_field(&name, value)?;
@@ -82,7 +82,7 @@ impl State {
         self.config.schema.clone()
     }
 
-    pub fn plugins(&self) -> &Vec<Arc<dyn Plugin>> {
+    pub fn plugins(&self) -> &Vec<Arc<Plugin>> {
         &self.config.plugins
     }
 
@@ -97,8 +97,10 @@ impl State {
     ) -> Result<bool, Box<dyn std::error::Error>> {
         for (i, plugin) in self.config.plugins.iter().enumerate() {
             if Some(i) != ignore {
-                if !plugin.filter_transaction(tr, self).await {
-                    return Ok(false);
+                if let Some(filter) = &plugin.spec.filter_transaction {
+                    if !filter.filter_transaction(tr, self).await {
+                        return Ok(false);
+                    }
                 }
             }
         }
@@ -128,31 +130,33 @@ impl State {
                 let n: usize = seen.as_ref().map(|s| s[i].n).unwrap_or(0);
                 let old_state = seen.as_ref().map(|s| &s[i].state).unwrap_or(self);
                 if n < trs.len() {
-                    if let Some(tr) = plugin
-                        .append_transaction(root_tr, old_state, &new_state)
-                        .await
-                    {
-                        if new_state.filter_transaction(tr, Some(i)).await? {
-                            if seen.is_none() {
-                                let mut s = Vec::new();
-                                for j in 0..self.config.plugins.len() {
-                                    s.push(if j < i {
-                                        SeenState {
-                                            state: new_state.clone(),
-                                            n: trs.len(),
-                                        }
-                                    } else {
-                                        SeenState {
-                                            state: self.clone(),
-                                            n: 0,
-                                        }
-                                    });
+                    if let Some(trappend) = &plugin.spec.append_transaction {
+                        if let Some(tr) = trappend
+                            .append_transaction(root_tr, old_state, &new_state)
+                            .await
+                        {
+                            if new_state.filter_transaction(tr, Some(i)).await? {
+                                if seen.is_none() {
+                                    let mut s = Vec::new();
+                                    for j in 0..self.config.plugins.len() {
+                                        s.push(if j < i {
+                                            SeenState {
+                                                state: new_state.clone(),
+                                                n: trs.len(),
+                                            }
+                                        } else {
+                                            SeenState {
+                                                state: self.clone(),
+                                                n: 0,
+                                            }
+                                        });
+                                    }
+                                    seen = Some(s);
                                 }
-                                seen = Some(s);
+                                new_state = new_state.apply_inner(&tr).await?;
+                                trs.push(1);
+                                have_new = true;
                             }
-                            new_state = new_state.apply_inner(&tr).await?;
-                            trs.push(1);
-                            have_new = true;
                         }
                     }
                 }
@@ -176,11 +180,13 @@ impl State {
     pub async fn apply_inner(&self, tr: &Transaction) -> Result<State, Box<dyn std::error::Error>> {
         let mut new_instance = State::new(self.config.clone());
         new_instance.node_pool = tr.doc.clone();
-        for field in &self.config.plugins {
-            //如果有插件的情况下是一定存在的
-            let old_plugin_state = self.get_field(&field.key().key).expect("不存在");
-            let value = field.apply(tr, old_plugin_state, self, &new_instance).await;
-            new_instance.set_field(&field.key().key, value)?;
+        for plugin in &self.config.plugins {
+            if let Some(field) = &plugin.spec.state {
+                //如果有插件的情况下是一定存在的
+                let old_plugin_state = self.get_field(&plugin.key).expect("不存在");
+                let value = field.apply(tr, old_plugin_state, self, &new_instance).await;
+                new_instance.set_field(&plugin.key, value)?;
+            }
         }
         Ok(new_instance)
     }
@@ -200,14 +206,16 @@ impl State {
         );
         let mut instance = State::new(config);
         let mut field_values = Vec::new();
-        for field in &instance.config.plugins {
-            let key = field.key().key.clone();
-            let value = if self.has_field(&key) {
-                self.get_field(&key).unwrap()
-            } else {
-                field.init(&state_config, Some(&instance)).await
-            };
-            field_values.push((key.clone(), value));
+        for plugin in &instance.config.plugins {
+            if let Some(field) = &plugin.spec.state {
+                let key = plugin.key.clone();
+                let value = if self.has_field(&key) {
+                    self.get_field(&key).unwrap()
+                } else {
+                    field.init(&state_config, Some(&instance)).await
+                };
+                field_values.push((key.clone(), value));
+            }
         }
         for (name, value) in field_values {
             instance.set_field(&name, value)?;
@@ -236,7 +244,7 @@ pub struct StateConfig {
     pub schema: Option<Arc<Schema>>,
     pub doc: Option<Arc<NodePool>>,
     pub stored_marks: Option<Vec<Mark>>,
-    pub plugins: Option<Vec<Arc<dyn Plugin>>>,
+    pub plugins: Option<Vec<Arc<Plugin>>>,
 }
 
 pub struct SeenState {
@@ -251,8 +259,8 @@ pub struct TransactionResult {
 
 #[derive(Clone, Debug)]
 pub struct Configuration {
-    plugins: Vec<Arc<dyn Plugin>>,
-    plugins_by_key: HashMap<String, Arc<dyn Plugin>>,
+    plugins: Vec<Arc<Plugin>>,
+    plugins_by_key: HashMap<String, Arc<Plugin>>,
     pub doc: Option<Arc<NodePool>>,
     schema: Arc<Schema>,
 }
@@ -260,7 +268,7 @@ pub struct Configuration {
 impl Configuration {
     pub fn new(
         schema: Arc<Schema>,
-        plugins: Option<Vec<Arc<dyn Plugin>>>,
+        plugins: Option<Vec<Arc<Plugin>>>,
         doc: Option<Arc<NodePool>>,
     ) -> Self {
         let mut config = Configuration {
@@ -272,7 +280,7 @@ impl Configuration {
 
         if let Some(plugin_list) = plugins {
             for plugin in plugin_list {
-                let key = plugin.key().key.clone();
+                let key = plugin.key.clone();
                 if config.plugins_by_key.contains_key(&key) {
                     panic!("插件请不要重复添加 ({})", key);
                 }
@@ -280,7 +288,6 @@ impl Configuration {
                 config.plugins_by_key.insert(key, plugin);
             }
         }
-
         config
     }
 }

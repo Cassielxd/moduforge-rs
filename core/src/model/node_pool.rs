@@ -208,10 +208,6 @@ impl NodePool {
         chain
     }
 
-    // -- 批量操作 --
-
-    // -- 结构验证 --
-
     /// 验证父子关系一致性
     pub fn validate_hierarchy(&self) -> Result<(), PoolError> {
         for (child_id, parent_id) in &self.inner.parent_map {

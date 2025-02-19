@@ -1,7 +1,15 @@
 use std::sync::Arc;
 
 use crate::{
-    cache::{cache::DocumentCache, CacheKey}, engine_manager::EngineManager, event::{Event, EventBus, EventHandler}, event_handler::{create_delta_handler, create_snapshot_handler}, extension_manager::ExtensionManager, helpers::create_doc, history_manager::HistoryManager, snapshot_manager::SnapshotManager, types::{Content, EditorOptions, StorageOptions}
+    cache::{cache::DocumentCache, CacheKey},
+    engine_manager::EngineManager,
+    event::{Event, EventBus, EventHandler},
+    event_handler::{create_delta_handler, create_snapshot_handler},
+    extension_manager::ExtensionManager,
+    helpers::create_doc,
+    history_manager::HistoryManager,
+    snapshot_manager::SnapshotManager,
+    types::{Content, EditorOptions, StorageOptions},
 };
 use moduforge_core::{
     model::{node_pool::NodePool, schema::Schema},
@@ -142,7 +150,7 @@ impl Editor {
             .get_state()
             .plugins()
             .iter()
-            .filter(|p| p.key().key != plugin_key)
+            .filter(|p| p.key != plugin_key)
             .cloned()
             .collect();
         let state = self
@@ -185,4 +193,3 @@ pub fn init_event_handler(
     default_event_handlers.append(&mut event_handlers.clone());
     default_event_handlers
 }
-

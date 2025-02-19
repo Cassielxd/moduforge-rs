@@ -1,4 +1,5 @@
 pub mod cache;
+pub mod delta;
 pub mod engine_manager;
 pub mod event;
 pub mod event_handler;
@@ -11,4 +12,5 @@ pub mod metrics;
 pub mod node;
 pub mod runtime;
 pub mod snapshot_manager;
+pub mod tr;
 pub mod types;

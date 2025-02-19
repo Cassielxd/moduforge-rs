@@ -1,10 +1,15 @@
 use std::{collections::HashMap, env::current_dir, path::PathBuf, sync::Arc};
 
 use crate::{event::EventHandler, extension::Extension, mark::Mark, node::Node};
-use moduforge_core::model::{
-    node_pool::NodePool,
-    schema::{Attribute, AttributeSpec},
+use bincode::{Decode, Encode};
+use moduforge_core::{
+    model::{
+        node_pool::NodePool,
+        schema::{Attribute, AttributeSpec},
+    },
+    transform::ConcreteStep,
 };
+use serde::{Deserialize, Serialize};
 
 pub type GlobalAttributes = Vec<GlobalAttributeItem>;
 #[derive(Clone, PartialEq, Debug, Eq, Default)]
@@ -111,4 +116,9 @@ impl EditorOptions {
         self.storage_option = Some(storage_option);
         self
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Decode, Encode)]
+pub enum StepExt {
+    ConcreteStep(ConcreteStep),
 }

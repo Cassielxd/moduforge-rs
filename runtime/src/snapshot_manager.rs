@@ -1,6 +1,4 @@
-use std::{
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 use moduforge_core::{
     model::node_pool::NodePool,
@@ -17,7 +15,7 @@ pub struct SnapshotManager {
 impl SnapshotManager {
     pub fn get_snapshot_list(&self) -> Vec<CacheKey> {
         let mut list = self.list.lock().unwrap().clone();
-        list.sort_by(|a,b| b.time.cmp(&a.time));
+        list.sort_by(|a, b| b.time.cmp(&a.time));
         list
     }
     /// 创建快照管理器
@@ -32,11 +30,11 @@ impl SnapshotManager {
         self.document_cache.get(key)
     }
 
-    pub fn put(&self, state: &Arc<State>,time: u64) {
+    pub fn put(&self, state: &Arc<State>, time: u64) {
         let key = CacheKey {
             doc_id: state.doc().inner.root_id.clone(),
             version: state.version,
-            time
+            time,
         };
         {
             self.list.lock().unwrap().push(key.clone());

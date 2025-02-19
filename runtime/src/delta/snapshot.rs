@@ -8,7 +8,7 @@ use moduforge_core::{
 };
 use std::{collections::HashMap, sync::Arc};
 
-use crate::{from_binary, to_binary};
+use super::{from_binary, to_binary};
 
 #[derive(Decode, Encode, PartialEq, Debug)]
 pub struct FullSnapshot {

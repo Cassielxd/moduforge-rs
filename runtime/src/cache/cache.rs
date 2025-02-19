@@ -1,12 +1,12 @@
 // cache.rs
 
 use moduforge_core::model::node_pool::NodePool;
-use moduforge_delta::from_binary;
-use moduforge_delta::snapshot::FullSnapshot;
 
 use std::fs;
 use std::sync::Arc;
 
+use crate::delta::from_binary;
+use crate::delta::snapshot::FullSnapshot;
 use crate::types::StorageOptions;
 
 use super::l1::L1Cache;

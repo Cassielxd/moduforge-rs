@@ -1,4 +1,5 @@
 use crate::model::node::Node;
+use crate::transform::transform::Transform;
 use async_trait::async_trait;
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
@@ -17,32 +18,93 @@ pub trait Reset: Send + Sync + Debug {
 }
 
 #[async_trait]
-pub trait Plugin: Send + Sync + Debug {
-    fn key(&self) -> &PluginKey;
+pub trait PluginTrFilterTrait: Send + Sync + Debug {
+    async fn filter_transaction(&self, tr: &Transaction, state: &State) -> bool;
+}
+#[async_trait]
+pub trait PluginTrTrait: Send + Sync + Debug {
+    async fn append_transaction<'a>(
+        &self,
+        tr: &'a mut Transaction,
+        old_state: &State,
+        new_state: &State,
+    ) -> Option<&'a mut Transaction>;
+}
 
-    async fn init(&self, config: &StateConfig, instance: Option<&State>) -> PluginState {
-        return PluginState::new(InnerPluginState::String("".to_string()));
-    }
+#[async_trait]
+pub trait StateField: Send + Sync + Debug {
+    async fn init(&self, config: &StateConfig, instance: Option<&State>) -> PluginState;
+
     async fn apply(
         &self,
         tr: &Transaction,
         value: PluginState,
-        _old_state: &State,
-        _new_state: &State,
-    ) -> PluginState {
-        return PluginState::new(InnerPluginState::String("".to_string()));
+        old_state: &State,
+        new_state: &State,
+    ) -> PluginState;
+
+    fn to_json(&self, value: &PluginState) -> Option<serde_json::Value> {
+        None
     }
 
-    async fn filter_transaction(&self, _tr: &Transaction, _state: &State) -> bool {
-        true
+    fn from_json(
+        &self,
+        config: &StateConfig,
+        value: &serde_json::Value,
+        state: &State,
+    ) -> Option<PluginState> {
+        None
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct PluginSpec {
+    pub state: Option<Arc<dyn StateField>>,
+    pub key: Option<PluginKey>,
+    pub filter_transaction: Option<Arc<dyn PluginTrFilterTrait>>,
+    pub append_transaction: Option<Arc<dyn PluginTrTrait>>,
+}
+impl PluginSpec {
+    async fn filter_transaction(&self, tr: &Transaction, state: &State) -> bool {
+        if let Some(filter) = self.filter_transaction.clone() {
+            return filter.filter_transaction(tr, state).await;
+        }
+        return false;
     }
     async fn append_transaction<'a>(
         &self,
-        _trs: &'a mut Transaction,
-        _old_state: &State,
-        _new_state: &State,
+        trs: &'a mut Transaction,
+        old_state: &State,
+        new_state: &State,
     ) -> Option<&'a mut Transaction> {
-        None
+        if let Some(transaction) = self.append_transaction.clone() {
+            return transaction
+                .append_transaction(trs, old_state, new_state)
+                .await;
+        }
+        return None;
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Plugin {
+    pub spec: PluginSpec,
+    pub key: String,
+}
+
+impl Plugin {
+    pub fn new(spec: PluginSpec) -> Self {
+        let key = match &spec.key {
+            Some(plugin_key) => plugin_key.key.clone(),
+            None => create_key("plugin"),
+        };
+
+        Plugin { spec, key }
+    }
+
+    /// Gets the plugin's state from the global state
+    pub fn get_state(&self, state: &State) -> Option<PluginState> {
+        state.get_field(&self.key)
     }
 }
 pub trait PluginStateTrait: Any + Serialize + for<'de> Deserialize<'de> {}

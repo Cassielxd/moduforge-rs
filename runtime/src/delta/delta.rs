@@ -1,4 +1,3 @@
-use crate::{from_binary, to_binary};
 use bincode::{
     error::{DecodeError, EncodeError},
     Decode, Encode,
@@ -8,6 +7,8 @@ use moduforge_core::{
     transform::{transform::Transform, ConcreteStep},
 };
 use serde::{Deserialize, Serialize};
+
+use super::{from_binary, to_binary};
 #[derive(Debug, Clone, Serialize, Deserialize, Decode, Encode)]
 pub struct TransactionDelta {
     parent_version: u64,

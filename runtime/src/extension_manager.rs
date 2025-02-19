@@ -8,7 +8,7 @@ use crate::{
 };
 /// 扩展管理器
 pub struct ExtensionManager {
-    plugins: Vec<Arc<dyn Plugin>>,
+    plugins: Vec<Arc<Plugin>>,
     extensions: Vec<Extensions>,
     schema: Arc<Schema>,
 }
@@ -40,7 +40,7 @@ impl ExtensionManager {
     pub fn get_schema(&self) -> Arc<Schema> {
         self.schema.clone()
     }
-    pub fn get_plugins(&self) -> &Vec<Arc<dyn Plugin>> {
+    pub fn get_plugins(&self) -> &Vec<Arc<Plugin>> {
         &self.plugins
     }
 }

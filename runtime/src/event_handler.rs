@@ -6,10 +6,6 @@ use std::{
     },
 };
 
-use moduforge_delta::{
-    delta::{create_tr_snapshot, to_delta, TransactionDelta},
-    snapshot::create_full_snapshot,
-};
 use tokio::{
     fs::{self, File},
     io::AsyncWriteExt,
@@ -17,6 +13,10 @@ use tokio::{
 };
 
 use crate::{
+    delta::{
+        delta::{create_tr_snapshot, to_delta, TransactionDelta},
+        snapshot::create_full_snapshot,
+    },
     event::{Event, EventHandler},
     snapshot_manager::SnapshotManager,
     types::StorageOptions,
@@ -151,9 +151,9 @@ impl EventHandler for SnapshotHandler {
                     let max_version = state_clone.version;
                     let _ = fs::create_dir_all(base_path).await;
                     let cache_ref: Arc<SnapshotManager> = self.snapshot_manager.clone();
-                    let time =tr.time;
+                    let time = tr.time;
                     tokio::spawn(async move {
-                        cache_ref.put(&state_clone,time);
+                        cache_ref.put(&state_clone, time);
                         match create_full_snapshot(&state_clone) {
                             Ok(data) => match File::create(&path).await {
                                 Ok(mut file) => {

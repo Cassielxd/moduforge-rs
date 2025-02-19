@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use serde_json::Error;
 use moduforge_engine::{
     handler::custom_node_adapter::NoopCustomNode, loader::MemoryLoader, model::DecisionContent,
     DecisionEngine, Variable,
 };
+use serde_json::Error;
 
 /// 规则引擎管理器
 pub struct EngineManager {

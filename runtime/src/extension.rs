@@ -7,7 +7,7 @@ use crate::types::GlobalAttributeItem;
 #[derive(Clone, Debug, Default)]
 pub struct Extension {
     global_attributes: Vec<GlobalAttributeItem>,
-    plugins: Vec<Arc<dyn Plugin>>,
+    plugins: Vec<Arc<Plugin>>,
 }
 impl Extension {
     pub fn new() -> Self {
@@ -23,11 +23,11 @@ impl Extension {
     pub fn get_global_attributes(&self) -> &Vec<GlobalAttributeItem> {
         &self.global_attributes
     }
-    pub fn add_plugin(&mut self, plugin: Arc<dyn Plugin>) -> &mut Self {
+    pub fn add_plugin(&mut self, plugin: Arc<Plugin>) -> &mut Self {
         self.plugins.push(plugin);
         self
     }
-    pub fn get_plugins(&self) -> &Vec<Arc<dyn Plugin>> {
+    pub fn get_plugins(&self) -> &Vec<Arc<Plugin>> {
         &self.plugins
     }
 }

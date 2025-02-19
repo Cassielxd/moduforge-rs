@@ -830,7 +830,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c936bfdafb507ebbf50b8074c54fa31c5be9a1e7e5f467dd659697041407d07c"
 dependencies = [
  "crc32fast",
- "libz-sys",
  "miniz_oxide",
 ]
 
@@ -1707,23 +1706,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "moduforge-delta"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "bincode",
- "flate2",
- "im",
- "log",
- "moduforge-core",
- "serde",
- "serde_json",
- "thiserror 2.0.11",
- "tokio",
- "zstd",
-]
-
-[[package]]
 name = "moduforge-engine"
 version = "0.1.0"
 dependencies = [
@@ -1765,6 +1747,7 @@ version = "0.1.0"
 dependencies = [
  "async-channel",
  "async-trait",
+ "bincode",
  "chrono",
  "im",
  "lazy_static",
@@ -1773,7 +1756,6 @@ dependencies = [
  "metrics",
  "metrics-exporter-prometheus",
  "moduforge-core",
- "moduforge-delta",
  "moduforge-engine",
  "rocksdb",
  "serde",

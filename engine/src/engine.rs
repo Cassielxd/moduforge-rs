@@ -23,7 +23,7 @@ where
 #[derive(Debug, Default)]
 pub struct EvaluationOptions {
     pub trace: Option<bool>,
-    pub max_depth: Option<u8>,// 决策图的最大深度
+    pub max_depth: Option<u8>, // 决策图的最大深度
 }
 
 impl Default for DecisionEngine<NoopLoader, NoopCustomNode> {
