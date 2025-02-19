@@ -163,11 +163,11 @@ impl NodePool {
 
 #[derive(Debug, Clone)]
 pub struct Draft {
-    base: Arc<NodePool>,
-    inner: NodePoolInner,
-    patches: Vec<Patch>,
-    current_path: Vec<String>,
-    skip_record: bool,
+    pub base: Arc<NodePool>,
+    pub inner: NodePoolInner,
+    pub patches: Vec<Patch>,
+    pub current_path: Vec<String>,
+    pub skip_record: bool,
 }
 
 impl Draft {

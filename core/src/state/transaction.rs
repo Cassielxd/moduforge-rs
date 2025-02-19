@@ -46,19 +46,22 @@ impl Transform for Transaction {
     }
 }
 impl Transaction {
-    pub async fn transaction<F, O>(&mut self, call_back: F)
+    pub async fn transaction<F, O>(state: &State,call_back: F) -> Self
     where
-        F: Fn(&mut Transaction) -> O + Sync + Send,
-        O: Future<Output = Result<(), TransformError>> + Send,
+        F: Fn(Transaction) -> O + Sync + Send+'static,
+        O: Future<Output = Result<Transaction, TransformError>> + Send,
     {
-        let result = call_back(self).await;
+        let  tr =Transaction::new(state);
+        let result = call_back(tr).await;
         match result {
-            Ok(_) => {
-                let (node_pool, patches) = self.draft.commit();
-                self.add_step(Box::new(PatchStep { patches }), node_pool);
+            Ok(mut tr) => {
+                let (node_pool, patches) = tr.draft.commit();
+                tr.add_step(Box::new(PatchStep { patches }), node_pool);
+               return tr;
             }
             Err(_) => {}
         }
+        Transaction::new(state)
     }
 
     pub fn new(state: &State) -> Self {
