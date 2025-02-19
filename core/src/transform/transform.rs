@@ -25,5 +25,5 @@ impl TransformError {
 pub trait Transform {
     fn step(&mut self, step: Box<dyn Step>) -> Result<(), TransformError>;
     fn doc_changed(&self) -> bool;
-    fn add_step(&mut self, step: Box<dyn Step>,  result: StepResult);
+    fn add_step(&mut self, step: Box<dyn Step>, result: StepResult);
 }

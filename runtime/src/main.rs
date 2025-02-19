@@ -1,4 +1,6 @@
-use moduforge_core::{model::node_pool::Draft, state::transaction::Transaction, transform::transform::TransformError};
+use moduforge_core::{
+    model::node_pool::Draft, state::transaction::Transaction, transform::transform::TransformError,
+};
 use moduforge_runtime::{
     cache::CacheKey,
     node::Node,
@@ -48,16 +50,21 @@ async fn test_create_snapshot() {
 
     let state = runtime.get_state();
 
-    let tr: Transaction =Transaction::transaction(state, |mut tr: Transaction|async{
+    let tr: Transaction = Transaction::transaction(state, |mut tr: Transaction| async {
         for _i in 1..1000 {
             tr.add_node(
                 tr.doc().inner.root_id.to_string(),
-                tr.schema.nodes.get("DW").unwrap().create(None, None, vec![], None),
+                tr.schema
+                    .nodes
+                    .get("DW")
+                    .unwrap()
+                    .create(None, None, vec![], None),
             );
         }
-        
+
         Ok(tr)
-    }).await;
+    })
+    .await;
     let _ = runtime.dispatch(tr).await;
 
     tokio::time::sleep(std::time::Duration::from_secs(100)).await;

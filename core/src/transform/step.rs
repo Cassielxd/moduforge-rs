@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use crate::model::{
-    node_pool::{Draft, NodePool}, patch::Patch, schema::Schema
+    node_pool::{Draft, NodePool},
+    patch::Patch,
+    schema::Schema,
 };
 use std::fmt::Debug;
 
@@ -19,7 +21,7 @@ pub struct StepResult {
 }
 
 impl StepResult {
-    pub fn ok(doc: Arc<NodePool>,patches: Vec<Patch>) -> Self {
+    pub fn ok(doc: Arc<NodePool>, patches: Vec<Patch>) -> Self {
         StepResult {
             doc: Some(doc),
             failed: None,
@@ -31,7 +33,7 @@ impl StepResult {
         StepResult {
             doc: None,
             failed: Some(message),
-            patches:vec![]
+            patches: vec![],
         }
     }
 }

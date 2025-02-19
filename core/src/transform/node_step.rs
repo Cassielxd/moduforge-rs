@@ -31,7 +31,7 @@ impl Step for AddNodeStep {
         match dart.add_node(&self.parent_id, self.node.clone()) {
             Ok(()) => {
                 let (node_pool, _patches) = dart.commit();
-                Ok(StepResult::ok(node_pool,_patches))
+                Ok(StepResult::ok(node_pool, _patches))
             }
             Err(err) => Err(TransformError::new(err.to_string())),
         }
@@ -62,7 +62,7 @@ impl Step for RemoveNodeStep {
         match dart.remove_node(&self.parent_id, self.node_ids.clone()) {
             Ok(()) => {
                 let (node_pool, _patches) = dart.commit();
-                Ok(StepResult::ok(node_pool,_patches))
+                Ok(StepResult::ok(node_pool, _patches))
             }
             Err(err) => Err(TransformError::new(err.to_string())),
         }

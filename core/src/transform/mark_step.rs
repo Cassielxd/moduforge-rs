@@ -31,7 +31,7 @@ impl Step for AddMarkStep {
         match dart.add_mark(&self.id, self.mark.clone()) {
             Ok(_) => {
                 let (node_pool, patches) = dart.commit();
-                Ok(StepResult::ok(node_pool,patches))
+                Ok(StepResult::ok(node_pool, patches))
             }
             Err(err) => Err(TransformError::new(err.to_string())),
         }
