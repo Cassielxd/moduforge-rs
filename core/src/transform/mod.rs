@@ -41,7 +41,7 @@ impl Step for ConcreteStep {
 }
 #[derive(Debug, Clone, Serialize, Deserialize, Decode, Encode)]
 pub struct PatchStep {
-   pub  patches: Vec<Patch>,
+    pub patches: Vec<Patch>,
 }
 impl Step for PatchStep {
     fn apply(
