@@ -6,9 +6,11 @@ use moduforge_engine::{
 };
 use serde_json::Error;
 
+use crate::types::Engine;
+
 /// 规则引擎管理器
 pub struct EngineManager {
-    pub engine: Arc<DecisionEngine<MemoryLoader, NoopCustomNode>>,
+    pub engine: Engine,
     pub loader: Arc<MemoryLoader>,
 }
 impl EngineManager {

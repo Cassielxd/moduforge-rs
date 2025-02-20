@@ -1,14 +1,16 @@
 use std::sync::Arc;
 
-use moduforge_core::state::plugin::Plugin;
+use moduforge_core::state::{plugin::Plugin, transaction::Command};
 
 use crate::types::GlobalAttributeItem;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Extension {
     global_attributes: Vec<GlobalAttributeItem>,
     plugins: Vec<Arc<Plugin>>,
 }
+unsafe impl Send for Extension {}
+unsafe impl Sync for Extension {}
 impl Extension {
     pub fn new() -> Self {
         Extension {

@@ -1,6 +1,9 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
-use moduforge_core::{model::schema::Schema, state::plugin::Plugin};
+use moduforge_core::{
+    model::schema::Schema,
+    state::{plugin::Plugin, transaction::Command},
+};
 
 use crate::{
     helpers::get_schema_by_resolved_extensions::get_schema_by_resolved_extensions,

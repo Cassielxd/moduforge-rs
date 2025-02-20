@@ -9,8 +9,11 @@ use moduforge_core::{
     },
     transform::ConcreteStep,
 };
+use moduforge_engine::{
+    handler::custom_node_adapter::NoopCustomNode, loader::MemoryLoader, DecisionEngine,
+};
 use serde::{Deserialize, Serialize};
-
+pub type Engine = Arc<DecisionEngine<MemoryLoader, NoopCustomNode>>;
 pub type GlobalAttributes = Vec<GlobalAttributeItem>;
 #[derive(Clone, PartialEq, Debug, Eq, Default)]
 pub struct GlobalAttributeItem {

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use bincode::{
     error::{DecodeError, EncodeError},
     Decode, Encode,
@@ -34,7 +36,7 @@ pub fn apply_delta(state: &State, delta: TransactionDelta) -> Transaction {
     let mut tr = Transaction::new(state);
     tr.time = delta.timestamp;
     for s in delta.steps.into_iter() {
-        let _ = tr.step(Box::new(s));
+        let _ = tr.step(Arc::new(s));
     }
     tr
 }

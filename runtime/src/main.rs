@@ -1,5 +1,9 @@
+use std::{any::TypeId, sync::Arc};
+
+use async_trait::async_trait;
 use moduforge_core::{
-    model::node_pool::Draft, state::transaction::Transaction, transform::transform::TransformError,
+    state::transaction::{Command, Transaction},
+    transform::transform::TransformError,
 };
 use moduforge_runtime::{
     cache::CacheKey,
@@ -11,27 +15,6 @@ use moduforge_runtime::{
 #[tokio::main]
 async fn main() {
     test_create_snapshot().await;
-    //test_from_snapshot().await;
-    /*  let runtime = Runtime::create(RuntimeOptions {
-        content: Content::None,
-        extensions: get_base(),
-        history_limit: Some(10),
-        event_handlers: vec![],
-        storage_option: None,
-        rules_path: None,
-    })
-    .await;
-    let binding = runtime.get_schema();
-    let node_type = binding.nodes.get("DW").unwrap();
-    let state = runtime.get_state();
-    dbg!(state.doc());
-    let mut tr: Transaction = Transaction::new(state);
-    tr.add_node(
-        state.doc().inner.root_id.to_string(),
-        node_type.create(None, None, vec![], None),
-    );
-
-    dbg!(tr.doc); */
 }
 #[allow(dead_code)]
 async fn test_from_snapshot() {
@@ -44,13 +27,20 @@ async fn test_from_snapshot() {
     dbg!(data);
     tokio::time::sleep(std::time::Duration::from_secs(100)).await;
 }
-#[allow(dead_code)]
-async fn test_create_snapshot() {
-    let mut runtime = Editor::create(EditorOptions::default().set_extensions(get_base())).await;
+#[derive(Clone, Default, Debug)]
+struct MyCommand;
+impl MyCommand {
+    pub fn new() -> Arc<MyCommand> {
+        Arc::new(MyCommand)
+    }
+}
 
-    let state = runtime.get_state();
-
-    let tr: Transaction = Transaction::transaction(state, |mut tr: Transaction| async {
+#[async_trait]
+impl Command for MyCommand {
+    fn name(&self) -> String {
+        "cassie".to_string()
+    }
+    async fn execute(&self, tr: &mut Transaction) -> Result<(), TransformError> {
         for _i in 1..1000 {
             tr.add_node(
                 tr.doc().inner.root_id.to_string(),
@@ -61,10 +51,14 @@ async fn test_create_snapshot() {
                     .create(None, None, vec![], None),
             );
         }
-
-        Ok(tr)
-    })
-    .await;
+        Ok(())
+    }
+}
+#[allow(dead_code)]
+async fn test_create_snapshot() {
+    let mut runtime = Editor::create(EditorOptions::default().set_extensions(get_base())).await;
+    let mut tr: Transaction = runtime.get_tr();
+    tr.transaction(MyCommand::new()).await;
     let _ = runtime.dispatch(tr).await;
 
     tokio::time::sleep(std::time::Duration::from_secs(100)).await;

@@ -15,7 +15,7 @@ use moduforge_core::{
     model::{node_pool::NodePool, schema::Schema},
     state::{
         state::{State, StateConfig},
-        transaction::Transaction,
+        transaction::{Command, Transaction},
     },
     transform::transform::Transform,
 };
@@ -36,6 +36,7 @@ pub struct Editor {
 impl Editor {
     pub async fn create(options: EditorOptions) -> Self {
         let extension_manager = ExtensionManager::new(options.get_extensions());
+
         let doc = create_doc::create_doc(&options.get_content());
         let storage = match &options.get_storage_option() {
             Some(o) => o.clone(),
@@ -101,10 +102,23 @@ impl Editor {
     pub fn get_schema(&self) -> Arc<Schema> {
         self.extension_manager.get_schema()
     }
+    /// 获取新的事物
     pub fn get_tr(&self) -> Transaction {
-        self.get_state().tr()
+        let mut tr = self.get_state().tr();
+        let engine = self.engine_manager.engine.clone();
+        tr.set_meta("engine", engine);
+        tr
     }
-
+    /// 执行自定义命令
+    pub async fn command(
+        &mut self,
+        command: Arc<dyn Command>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut tr = self.get_tr();
+        tr.transaction(command).await;
+        self.dispatch(tr).await?;
+        Ok(())
+    }
     pub fn get_event_bus(&self) -> &EventBus {
         &self.event_bus
     }
