@@ -1,8 +1,8 @@
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use moduforge_core::{
     model::schema::Schema,
-    state::{plugin::Plugin, transaction::Command},
+    state::plugin::Plugin,
 };
 
 use crate::{
