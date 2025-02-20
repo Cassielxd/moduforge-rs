@@ -218,14 +218,12 @@ impl Draft {
         new_node.attrs = new_values.clone();
         self.inner.nodes.insert(id.clone(), Arc::new(new_node));
         // 记录补丁
-        if !self.skip_record {
-            self.patches.push(Patch::UpdateAttr {
-                path: self.current_path.clone(),
-                id: id.clone(),
-                old: old_values.into_iter().collect(),
-                new: new_values.into_iter().collect(),
-            });
-        }
+        self.record_patch(Patch::UpdateAttr {
+            path: self.current_path.clone(),
+            id: id.clone(),
+            old: old_values.into_iter().collect(),
+            new: new_values.into_iter().collect(),
+        });
         Ok(())
     }
     pub fn remove_mark(&mut self, id: &NodeId, mark: Mark) -> Result<(), PoolError> {
@@ -244,13 +242,11 @@ impl Draft {
             .collect();
         self.inner.nodes.insert(id.clone(), Arc::new(node));
         // 记录补丁
-        if !self.skip_record {
-            self.patches.push(Patch::RemoveMark {
-                path: self.current_path.clone(),
-                parent_id: id.clone(),
-                marks: vec![Arc::new(mark)],
-            });
-        }
+        self.record_patch(Patch::RemoveMark {
+            path: self.current_path.clone(),
+            parent_id: id.clone(),
+            marks: vec![Arc::new(mark)],
+        });
         Ok(())
     }
     pub fn add_mark(&mut self, id: &NodeId, mark: Mark) -> Result<(), PoolError> {
@@ -264,13 +260,11 @@ impl Draft {
         node.marks.push_back(mark.clone());
         self.inner.nodes.insert(id.clone(), Arc::new(node));
         // 记录补丁
-        if !self.skip_record {
-            self.patches.push(Patch::AddMark {
-                path: self.current_path.clone(),
-                node_id: id.clone(),
-                mark,
-            });
-        }
+        self.record_patch(Patch::AddMark {
+            path: self.current_path.clone(),
+            node_id: id.clone(),
+            mark,
+        });
 
         Ok(())
     }
@@ -292,13 +286,11 @@ impl Draft {
         self.inner.nodes.insert(node.id.clone(), node.clone());
         self.inner.parent_map.insert(id.clone(), parent_id.clone());
         // 记录补丁
-        if !self.skip_record {
-            self.patches.push(Patch::AddNode {
-                path: self.current_path.clone(),
-                parent_id: parent_id.clone(),
-                node: node.clone(),
-            });
-        }
+        self.record_patch(Patch::AddNode {
+            path: self.current_path.clone(),
+            parent_id: parent_id.clone(),
+            node: node.clone(),
+        });
 
         Ok(())
     }
@@ -308,14 +300,20 @@ impl Draft {
     pub fn children(&self, parent_id: &NodeId) -> Option<&im::Vector<NodeId>> {
         self.get_node(parent_id).map(|n| &n.content)
     }
-    fn remove_subtree(&mut self, node_id: &NodeId) {
+    fn remove_subtree(&mut self, parent_id: &NodeId, node_id: &NodeId) {
         if let Some(children) = self.children(node_id).cloned() {
             for child_id in children {
-                self.remove_subtree(&child_id);
+                self.remove_subtree(&node_id, &child_id);
             }
         }
-        self.inner.nodes.remove(node_id);
         self.inner.parent_map.remove(node_id);
+        if let Some(romove_node) = self.inner.nodes.remove(node_id) {
+            self.record_patch(Patch::RemoveNode {
+                path: self.current_path.clone(),
+                parent_id: parent_id.clone(),
+                nodes: vec![romove_node],
+            });
+        }
     }
     pub fn remove_node(&mut self, parent_id: &NodeId, nodes: Vec<NodeId>) -> Result<(), PoolError> {
         let parent = self
@@ -345,22 +343,19 @@ impl Draft {
         let mut renoved_nodes = vec![];
         for node_id in nodes {
             if self.inner.nodes.contains_key(&node_id) {
-                self.remove_subtree(&node_id);
+                self.remove_subtree(&parent_id, &node_id);
                 self.inner.parent_map.remove(&node_id);
                 if let Some(romove_node) = self.inner.nodes.remove(&node_id) {
                     renoved_nodes.push(romove_node);
                 }
             }
         }
-
         // 记录补丁
-        if !self.skip_record {
-            self.patches.push(Patch::RemoveNode {
-                path: self.current_path.clone(),
-                parent_id: parent_id.clone(),
-                nodes: renoved_nodes,
-            });
-        }
+        self.record_patch(Patch::RemoveNode {
+            path: self.current_path.clone(),
+            parent_id: parent_id.clone(),
+            nodes: renoved_nodes,
+        });
 
         Ok(())
     }
@@ -468,6 +463,11 @@ impl Draft {
         Ok(())
     }
 
+    fn record_patch(&mut self, patch: Patch) {
+        if !self.skip_record {
+            self.patches.push(patch);
+        }
+    }
     /// 提交修改，生成新 NodePool 和补丁列表
     pub fn commit(&self) -> (Arc<NodePool>, Vec<Patch>) {
         let new_pool = NodePool {
