@@ -9,7 +9,7 @@ use crate::{
     helpers::create_doc,
     history_manager::HistoryManager,
     snapshot_manager::SnapshotManager,
-    types::{Content, EditorOptions, StorageOptions},
+    types::{EditorOptions, StorageOptions},
 };
 use moduforge_core::{
     model::{node_pool::NodePool, schema::Schema},
