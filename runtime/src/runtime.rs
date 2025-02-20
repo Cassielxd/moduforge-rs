@@ -35,7 +35,7 @@ pub struct Editor {
 
 impl Editor {
     pub async fn create(options: EditorOptions) -> Self {
-        let extension_manager = ExtensionManager::new(options.get_extensions());
+        let extension_manager = ExtensionManager::new(&options.get_extensions());
 
         let doc = create_doc::create_doc(&options.get_content());
         let storage = match &options.get_storage_option() {
