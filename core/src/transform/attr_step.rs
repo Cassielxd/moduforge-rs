@@ -18,10 +18,7 @@ pub struct AttrStep {
 }
 impl AttrStep {
     pub fn new(id: String, values: HashMap<String, String>) -> Self {
-        AttrStep {
-            id,
-            values,
-        }
+        AttrStep { id, values }
     }
 }
 impl Step for AttrStep {

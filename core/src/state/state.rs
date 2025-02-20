@@ -116,7 +116,7 @@ impl State {
 
         let mut trs = Vec::new();
         trs.push(1);
-        let mut new_state:State = self.apply_inner(root_tr).await?;
+        let mut new_state: State = self.apply_inner(root_tr).await?;
         let mut seen: Option<Vec<SeenState>> = None;
 
         loop {
@@ -126,34 +126,33 @@ impl State {
                 let n: usize = seen.as_ref().map(|s| s[i].n).unwrap_or(0);
                 let old_state = seen.as_ref().map(|s| &s[i].state).unwrap_or(self);
                 if n < trs.len() {
-                        if let Some(tr) = plugin
-                            .apply_append_transaction(root_tr, old_state, &new_state)
-                            .await
-                        {
-                            if new_state.filter_transaction(tr, Some(i)).await? {
-                                if seen.is_none() {
-                                    let mut s = Vec::new();
-                                    for j in 0..self.config.plugins.len() {
-                                        s.push(if j < i {
-                                            SeenState {
-                                                state: new_state.clone(),
-                                                n: trs.len(),
-                                            }
-                                        } else {
-                                            SeenState {
-                                                state: self.clone(),
-                                                n: 0,
-                                            }
-                                        });
-                                    }
-                                    seen = Some(s);
+                    if let Some(tr) = plugin
+                        .apply_append_transaction(root_tr, old_state, &new_state)
+                        .await
+                    {
+                        if new_state.filter_transaction(tr, Some(i)).await? {
+                            if seen.is_none() {
+                                let mut s = Vec::new();
+                                for j in 0..self.config.plugins.len() {
+                                    s.push(if j < i {
+                                        SeenState {
+                                            state: new_state.clone(),
+                                            n: trs.len(),
+                                        }
+                                    } else {
+                                        SeenState {
+                                            state: self.clone(),
+                                            n: 0,
+                                        }
+                                    });
                                 }
-                                new_state = new_state.apply_inner(tr).await?;
-                                trs.push(1);
-                                have_new = true;
+                                seen = Some(s);
                             }
+                            new_state = new_state.apply_inner(tr).await?;
+                            trs.push(1);
+                            have_new = true;
                         }
-                    
+                    }
                 }
                 if let Some(seen) = &mut seen {
                     seen[i] = SeenState {

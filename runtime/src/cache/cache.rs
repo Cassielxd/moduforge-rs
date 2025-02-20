@@ -46,7 +46,7 @@ impl DocumentCache {
         }
 
         // 4. 回源加载
-        
+
         self.load_from_storage(key)
     }
 

@@ -11,7 +11,7 @@ use crate::delta::{from_binary, to_binary};
 /// 基于RocksDB的磁盘缓存
 #[derive(Debug)]
 pub struct L2Cache {
-    db: DB
+    db: DB,
 }
 
 impl L2Cache {
@@ -21,7 +21,7 @@ impl L2Cache {
         opts.create_if_missing(true);
         let _ = fs::create_dir_all(path);
         Ok(Self {
-            db: DB::open(&opts, path).unwrap()
+            db: DB::open(&opts, path).unwrap(),
         })
     }
 

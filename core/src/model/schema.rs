@@ -159,7 +159,8 @@ fn gather_marks<'a>(schema: &'a Schema, marks: Vec<&'a str>) -> Result<Vec<&'a M
                     || mark_ref
                         .spec
                         .group
-                        .as_ref().is_some_and(|group| group.split_whitespace().any(|g| g == name))
+                        .as_ref()
+                        .is_some_and(|group| group.split_whitespace().any(|g| g == name))
                 {
                     found.push(mark_ref);
                     ok = Some(mark_ref);

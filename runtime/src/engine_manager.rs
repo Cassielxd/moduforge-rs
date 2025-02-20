@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
-use zen_engine::{
-    loader::MemoryLoader, model::DecisionContent,
-    DecisionEngine, Variable,
-};
 use serde_json::Error;
+use zen_engine::{loader::MemoryLoader, model::DecisionContent, DecisionEngine, Variable};
 
 use crate::types::Engine;
 
@@ -36,7 +33,7 @@ impl EngineManager {
         T: serde::de::DeserializeOwned,
     {
         let response = self.engine.evaluate(key, context).await.unwrap();
-        
+
         serde_json::from_value::<T>(response.result.to_value())
     }
 }

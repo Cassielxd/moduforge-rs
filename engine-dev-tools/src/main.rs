@@ -3,8 +3,6 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Extension, Json, Router};
-use zen_engine::model::DecisionContent;
-use zen_engine::{DecisionEngine, EvaluationError, EvaluationOptions};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;
@@ -18,6 +16,8 @@ use tower_http::set_status::SetStatus;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
+use zen_engine::model::DecisionContent;
+use zen_engine::{DecisionEngine, EvaluationError, EvaluationOptions};
 
 const IS_DEVELOPMENT: bool = cfg!(debug_assertions);
 
@@ -33,7 +33,11 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let host_address = if IS_DEVELOPMENT { "127.0.0.1" } else { "0.0.0.0" };
+    let host_address = if IS_DEVELOPMENT {
+        "127.0.0.1"
+    } else {
+        "0.0.0.0"
+    };
     let listener_address = format!("{host_address}:3000");
 
     let app = Router::new()

@@ -97,13 +97,11 @@ impl<T: Clone> HistoryManager<T> {
                 if target >= 0 {
                     self.jump_to_past(target as usize);
                 }
-            },
-            std::cmp::Ordering::Equal => {
-
-            },
+            }
+            std::cmp::Ordering::Equal => {}
             std::cmp::Ordering::Greater => {
                 self.jump_to_future((n - 1) as usize);
-            },
+            }
         }
     }
 

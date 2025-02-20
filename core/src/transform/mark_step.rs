@@ -1,11 +1,6 @@
 use std::sync::Arc;
 
-use crate::model::{
-    mark::Mark,
-    node_pool::Draft,
-    schema::Schema,
-    types::NodeId,
-};
+use crate::model::{mark::Mark, node_pool::Draft, schema::Schema, types::NodeId};
 
 use super::{
     step::{Step, StepResult},

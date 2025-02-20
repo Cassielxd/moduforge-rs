@@ -19,11 +19,7 @@ pub struct TransactionDelta {
 }
 /// 将Transaction转换为TransactionDelta
 pub fn to_delta(tr: &Transaction, base_version: u64) -> TransactionDelta {
-    let steps = tr
-        .steps
-        .iter()
-        .map(Transaction::as_concrete)
-        .collect();
+    let steps = tr.steps.iter().map(Transaction::as_concrete).collect();
     TransactionDelta {
         parent_version: base_version,
         timestamp: tr.time,

@@ -3,16 +3,13 @@ use std::{collections::HashMap, env::current_dir, path::PathBuf, sync::Arc};
 use crate::{event::EventHandler, extension::Extension, mark::Mark, node::Node};
 use bincode::{Decode, Encode};
 use moduforge_core::{
-    model::{
-        node_pool::NodePool,
-        schema::AttributeSpec,
-    },
+    model::{node_pool::NodePool, schema::AttributeSpec},
     transform::ConcreteStep,
 };
+use serde::{Deserialize, Serialize};
 use zen_engine::{
     handler::custom_node_adapter::NoopCustomNode, loader::MemoryLoader, DecisionEngine,
 };
-use serde::{Deserialize, Serialize};
 pub type Engine = Arc<DecisionEngine<MemoryLoader, NoopCustomNode>>;
 pub type GlobalAttributes = Vec<GlobalAttributeItem>;
 #[derive(Clone, PartialEq, Debug, Eq, Default)]
@@ -27,8 +24,7 @@ pub enum Extensions {
     E(Extension),
 }
 
-#[derive(Clone, Debug)]
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub enum Content {
     NodePoolBinary(Vec<u8>),
     NodePool(NodePool),

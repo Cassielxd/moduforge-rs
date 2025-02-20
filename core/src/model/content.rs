@@ -12,8 +12,7 @@ pub struct MatchEdge {
     pub next: ContentMatch,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-#[derive(Default)]
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct ContentMatch {
     pub next: Vec<MatchEdge>,
     pub wrap_cache: Vec<Option<NodeType>>,
@@ -40,7 +39,7 @@ impl ContentMatch {
         let expr = parse_expr(&mut stream);
 
         let arr = nfa(expr);
-        
+
         dfa(arr)
     }
     pub fn empty() -> Self {
@@ -103,7 +102,6 @@ impl ContentMatch {
             None
         }
 
-        
         search(&mut seen, to_end, after, self, &mut Vec::new(), schema)
     }
 
@@ -137,9 +135,8 @@ impl ContentMatch {
         }
     }
 }
-impl  fmt::Display for ContentMatch{
+impl fmt::Display for ContentMatch {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        
         let mut seen = Vec::new();
         fn scan(m: &ContentMatch, seen: &mut Vec<ContentMatch>) {
             seen.push(m.clone());
@@ -151,7 +148,8 @@ impl  fmt::Display for ContentMatch{
         }
         scan(self, &mut seen);
 
-        let str =seen.iter()
+        let str = seen
+            .iter()
             .enumerate()
             .map(|(i, m)| {
                 let mut out = format!("{} ", if m.valid_end { i + 1 } else { i });
@@ -169,7 +167,7 @@ impl  fmt::Display for ContentMatch{
             })
             .collect::<Vec<_>>()
             .join("\n");
-    
+
         write!(f, "{}", str)
     }
 }

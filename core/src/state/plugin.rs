@@ -116,7 +116,9 @@ impl Plugin {
         old_state: &State,
         new_state: &State,
     ) -> Option<&'a mut Transaction> {
-        self.spec.append_transaction(trs, old_state, new_state).await
+        self.spec
+            .append_transaction(trs, old_state, new_state)
+            .await
     }
 }
 pub trait PluginStateTrait: Any + Serialize + for<'de> Deserialize<'de> {}

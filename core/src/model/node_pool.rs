@@ -216,7 +216,7 @@ impl Draft {
         // 更新节点属性
         let mut new_node = node.as_ref().clone();
         new_node.attrs = new_values.clone();
-        self.inner.nodes = self.inner.nodes.update(id.clone(), Arc::new(new_node));
+        self.inner.nodes.insert(id.clone(), Arc::new(new_node));
         // 记录补丁
         if !self.skip_record {
             self.patches.push(Patch::UpdateAttr {
@@ -238,10 +238,11 @@ impl Draft {
             .clone();
         node.marks = node
             .marks
-            .iter().filter(|&m| !m.eq(&mark)).cloned()
+            .iter()
+            .filter(|&m| !m.eq(&mark))
+            .cloned()
             .collect();
-
-        self.inner.nodes = self.inner.nodes.update(id.clone(), Arc::new(node));
+        self.inner.nodes.insert(id.clone(), Arc::new(node));
         // 记录补丁
         if !self.skip_record {
             self.patches.push(Patch::RemoveMark {
@@ -261,7 +262,7 @@ impl Draft {
             .as_ref()
             .clone();
         node.marks.push_back(mark.clone());
-        self.inner.nodes = self.inner.nodes.update(id.clone(), Arc::new(node));
+        self.inner.nodes.insert(id.clone(), Arc::new(node));
         // 记录补丁
         if !self.skip_record {
             self.patches.push(Patch::AddMark {
@@ -284,17 +285,12 @@ impl Draft {
         let mut new_parent = parent.as_ref().clone();
         new_parent.content.push_back(node.id.clone());
 
-        // 更新父节点
-        let mut updated_nodes = self
-            .inner
-            .nodes
-            .update(parent_id.clone(), Arc::new(new_parent));
         let id = node.id.clone();
-        updated_nodes.insert(node.id.clone(), node.clone());
-
-        // 更新内部状态
-        self.inner.nodes = updated_nodes;
-        self.inner.parent_map = self.inner.parent_map.update(id.clone(), parent_id.clone());
+        self.inner
+            .nodes
+            .insert(parent_id.clone(), Arc::new(new_parent));
+        self.inner.nodes.insert(node.id.clone(), node.clone());
+        self.inner.parent_map.insert(id.clone(), parent_id.clone());
         // 记录补丁
         if !self.skip_record {
             self.patches.push(Patch::AddNode {
@@ -306,7 +302,21 @@ impl Draft {
 
         Ok(())
     }
-
+    pub fn get_node(&self, id: &NodeId) -> Option<&Arc<Node>> {
+        self.inner.nodes.get(id)
+    }
+    pub fn children(&self, parent_id: &NodeId) -> Option<&im::Vector<NodeId>> {
+        self.get_node(parent_id).map(|n| &n.content)
+    }
+    fn remove_subtree(&mut self, node_id: &NodeId) {
+        if let Some(children) = self.children(node_id).cloned() {
+            for child_id in children {
+                self.remove_subtree(&child_id);
+            }
+        }
+        self.inner.nodes.remove(node_id);
+        self.inner.parent_map.remove(node_id);
+    }
     pub fn remove_node(&mut self, parent_id: &NodeId, nodes: Vec<NodeId>) -> Result<(), PoolError> {
         let parent = self
             .inner
@@ -318,7 +328,9 @@ impl Draft {
         let filtered_children: im::Vector<NodeId> = parent
             .as_ref()
             .content
-            .iter().filter(|&id| !nodes.contains(id)).cloned()
+            .iter()
+            .filter(|&id| !nodes.contains(id))
+            .cloned()
             .collect();
 
         // 这里的逻辑需要进一步完善，例如如何处理新节点的添加
@@ -326,23 +338,21 @@ impl Draft {
         let mut parent_node = parent.as_ref().clone();
         parent_node.content = filtered_children;
         // 更新节点池和父节点映射
-        let mut new_nodes = self.inner.nodes.clone();
-        new_nodes.insert(parent_id.clone(), Arc::new(parent_node));
-
-        let mut parent_map = self.inner.parent_map.clone();
+        self.inner
+            .nodes
+            .insert(parent_id.clone(), Arc::new(parent_node));
         // 移除指定的节点
         let mut renoved_nodes = vec![];
         for node_id in nodes {
             if self.inner.nodes.contains_key(&node_id) {
-                parent_map.remove(&node_id);
-                if let Some(romove_node) = new_nodes.remove(&node_id) {
+                self.remove_subtree(&node_id);
+                self.inner.parent_map.remove(&node_id);
+                if let Some(romove_node) = self.inner.nodes.remove(&node_id) {
                     renoved_nodes.push(romove_node);
                 }
             }
         }
-        // 更新内部状态
-        self.inner.nodes = new_nodes;
-        self.inner.parent_map = parent_map;
+
         // 记录补丁
         if !self.skip_record {
             self.patches.push(Patch::RemoveNode {
@@ -439,10 +449,9 @@ impl Draft {
                     parent_id,
                     nodes,
                 } => {
-                    self.remove_node(
-                        &parent_id,
-                        nodes.iter().map(|n: &Arc<Node>| n.id.clone()).collect(),
-                    )?;
+                    for node in nodes {
+                        self.add_node(&parent_id, node.as_ref().clone())?;
+                    }
                 }
                 Patch::RemoveMark {
                     path: _,
