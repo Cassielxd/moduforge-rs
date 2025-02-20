@@ -1,3 +1,4 @@
+use std::fmt;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use std::cmp::Ordering;
@@ -57,7 +58,7 @@ impl ContentMatch {
             .map(|edge| &edge.next)
     }
 
-    pub fn match_fragment(&self, frag: &Vec<Node>, schema: &Schema) -> Option<&ContentMatch> {
+    pub fn match_fragment(&self, frag: &[Node], schema: &Schema) -> Option<&ContentMatch> {
         let mut current: &ContentMatch = self;
 
         for content in frag.iter() {
@@ -135,8 +136,10 @@ impl ContentMatch {
             Ok(&self.next[n])
         }
     }
-
-    pub fn to_string(&self) -> String {
+}
+impl  fmt::Display for ContentMatch{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        
         let mut seen = Vec::new();
         fn scan(m: &ContentMatch, seen: &mut Vec<ContentMatch>) {
             seen.push(m.clone());
@@ -148,7 +151,7 @@ impl ContentMatch {
         }
         scan(self, &mut seen);
 
-        seen.iter()
+        let str =seen.iter()
             .enumerate()
             .map(|(i, m)| {
                 let mut out = format!("{} ", if m.valid_end { i + 1 } else { i });
@@ -165,7 +168,9 @@ impl ContentMatch {
                 out
             })
             .collect::<Vec<_>>()
-            .join("\n")
+            .join("\n");
+    
+        write!(f, "{}", str)
     }
 }
 
@@ -350,7 +355,7 @@ fn resolve_name(stream: &TokenStream, name: &str) -> Vec<NodeType> {
     }
     let mut result = Vec::new();
 
-    for (type_name, type_) in types {
+    for type_ in types.values() {
         if type_.groups.contains(&name.to_string()) {
             result.push(type_.clone());
         }
@@ -489,10 +494,6 @@ pub fn null_from(nfa: &[Vec<Rc<RefCell<Edge>>>], node: usize) -> Vec<usize> {
     result.sort();
     result
 }
-fn cmp(a: &usize, b: &usize) -> std::cmp::Ordering {
-    a.cmp(b)
-}
-
 fn nfa(expr: Expr) -> Vec<Vec<Rc<RefCell<Edge>>>> {
     let mut nfa: Vec<Vec<Rc<RefCell<Edge>>>> = vec![vec![]];
     connect(&mut compile(expr, 0, &mut nfa), node(&mut nfa));
@@ -507,7 +508,7 @@ fn edge(
     from: usize,
     to: Option<usize>,
     term: Option<NodeType>,
-    nfa: &mut Vec<Vec<Rc<RefCell<Edge>>>>,
+    nfa: &mut [Vec<Rc<RefCell<Edge>>>],
 ) -> Rc<RefCell<Edge>> {
     let edge = Rc::new(RefCell::new(Edge {
         term,

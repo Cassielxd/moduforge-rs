@@ -18,14 +18,13 @@ pub struct MarkType {
 impl MarkType {
     pub(crate) fn compile(marks: HashMap<String, MarkSpec>) -> HashMap<String, MarkType> {
         let mut result = HashMap::new();
-        let mut rank = 0;
+      
 
-        for (name, spec) in marks {
+        for (rank, (name, spec)) in marks.into_iter().enumerate() {
             result.insert(
                 name.clone(),
                 MarkType::new(name.clone(), rank, None, spec.clone()),
             );
-            rank += 1;
         }
 
         result

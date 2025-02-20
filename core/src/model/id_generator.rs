@@ -119,17 +119,4 @@ impl IdGenerator {
     fn max_sequence(&self) -> u64 {
         !((-1_i64 << self.options.sequence_bits) as u64)
     }
-
-    fn validate_options(&self) {
-        if self.options.worker_id < 0 || self.options.worker_id > self.max_worker_id {
-            panic!("Worker ID must be between 0 and {}", self.max_worker_id);
-        }
-        if self.options.data_center_id < 0 || self.options.data_center_id > self.max_data_center_id
-        {
-            panic!(
-                "Data center ID must be between 0 and {}",
-                self.max_data_center_id
-            );
-        }
-    }
 }

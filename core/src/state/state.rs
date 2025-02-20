@@ -96,12 +96,8 @@ impl State {
         ignore: Option<usize>,
     ) -> Result<bool, Box<dyn std::error::Error>> {
         for (i, plugin) in self.config.plugins.iter().enumerate() {
-            if Some(i) != ignore {
-                if let Some(filter) = &plugin.spec.filter_transaction {
-                    if !filter.filter_transaction(tr, self).await {
-                        return Ok(false);
-                    }
-                }
+            if Some(i) != ignore && !plugin.apply_filter_transaction(tr, self).await {
+                return Ok(false);
             }
         }
         Ok(true)
@@ -120,7 +116,7 @@ impl State {
 
         let mut trs = Vec::new();
         trs.push(1);
-        let mut new_state = self.apply_inner(root_tr).await?;
+        let mut new_state:State = self.apply_inner(root_tr).await?;
         let mut seen: Option<Vec<SeenState>> = None;
 
         loop {
@@ -130,9 +126,8 @@ impl State {
                 let n: usize = seen.as_ref().map(|s| s[i].n).unwrap_or(0);
                 let old_state = seen.as_ref().map(|s| &s[i].state).unwrap_or(self);
                 if n < trs.len() {
-                    if let Some(trappend) = &plugin.spec.append_transaction {
-                        if let Some(tr) = trappend
-                            .append_transaction(root_tr, old_state, &new_state)
+                        if let Some(tr) = plugin
+                            .apply_append_transaction(root_tr, old_state, &new_state)
                             .await
                         {
                             if new_state.filter_transaction(tr, Some(i)).await? {
@@ -158,7 +153,7 @@ impl State {
                                 have_new = true;
                             }
                         }
-                    }
+                    
                 }
                 if let Some(seen) = &mut seen {
                     seen[i] = SeenState {

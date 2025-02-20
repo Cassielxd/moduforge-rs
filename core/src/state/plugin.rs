@@ -42,15 +42,15 @@ pub trait StateField: Send + Sync + Debug {
         new_state: &State,
     ) -> PluginState;
 
-    fn to_json(&self, value: &PluginState) -> Option<serde_json::Value> {
+    fn to_json(&self, _value: &PluginState) -> Option<serde_json::Value> {
         None
     }
 
     fn from_json(
         &self,
-        config: &StateConfig,
-        value: &serde_json::Value,
-        state: &State,
+        _config: &StateConfig,
+        _value: &serde_json::Value,
+        _state: &State,
     ) -> Option<PluginState> {
         None
     }
@@ -104,6 +104,19 @@ impl Plugin {
     /// Gets the plugin's state from the global state
     pub fn get_state(&self, state: &State) -> Option<PluginState> {
         state.get_field(&self.key)
+    }
+    pub async fn apply_filter_transaction(&self, tr: &Transaction, state: &State) -> bool {
+        self.spec.filter_transaction(tr, state).await
+    }
+
+    /// Apply append transaction logic if available
+    pub async fn apply_append_transaction<'a>(
+        &self,
+        trs: &'a mut Transaction,
+        old_state: &State,
+        new_state: &State,
+    ) -> Option<&'a mut Transaction> {
+        self.spec.append_transaction(trs, old_state, new_state).await
     }
 }
 pub trait PluginStateTrait: Any + Serialize + for<'de> Deserialize<'de> {}

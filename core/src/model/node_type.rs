@@ -72,7 +72,7 @@ impl NodeType {
         }
     }
 
-    pub fn check_content(&self, content: &Vec<Node>, schema: &Schema) -> bool {
+    pub fn check_content(&self, content: &[Node], schema: &Schema) -> bool {
         if let Some(content_match) = &self.content_match {
             if let Some(result) = content_match.match_fragment(content, schema) {
                 if !result.valid_end {
