@@ -143,7 +143,6 @@ impl NodePool {
     }
 
     // -- 高级查询 --
-
     /// 根据类型筛选节点
     pub fn filter_nodes<P>(&self, predicate: P) -> Vec<&Arc<Node>>
     where
@@ -151,7 +150,6 @@ impl NodePool {
     {
         self.inner.nodes.values().filter(|n| predicate(n)).collect()
     }
-
     /// 查找第一个匹配节点
     pub fn find_node<P>(&self, predicate: P) -> Option<&Arc<Node>>
     where
@@ -207,9 +205,7 @@ impl Draft {
         new_values: HashMap<String, String>,
     ) -> Result<(), PoolError> {
         let node = self
-            .inner
-            .nodes
-            .get(id)
+            .get_node(id)
             .ok_or(PoolError::NodeNotFound(id.clone()))?;
         let old_values = node.attrs.clone();
 
@@ -227,10 +223,7 @@ impl Draft {
         Ok(())
     }
     pub fn remove_mark(&mut self, id: &NodeId, mark: Mark) -> Result<(), PoolError> {
-        let mut node = self
-            .inner
-            .nodes
-            .get(id)
+        let mut node = self.get_node(id)
             .ok_or(PoolError::NodeNotFound(id.clone()))?
             .as_ref()
             .clone();
@@ -250,10 +243,7 @@ impl Draft {
         Ok(())
     }
     pub fn add_mark(&mut self, id: &NodeId, mark: Mark) -> Result<(), PoolError> {
-        let mut node = self
-            .inner
-            .nodes
-            .get(id)
+        let mut node = self.get_node(id)
             .ok_or(PoolError::NodeNotFound(id.clone()))?
             .as_ref()
             .clone();
@@ -271,10 +261,7 @@ impl Draft {
     /// 添加子节点
     pub fn add_node(&mut self, parent_id: &NodeId, node: Node) -> Result<(), PoolError> {
         let node = Arc::new(node);
-        let parent = self
-            .inner
-            .nodes
-            .get(parent_id)
+        let parent = self.get_node(parent_id)
             .ok_or(PoolError::ParentNotFound(parent_id.clone()))?;
         let mut new_parent = parent.as_ref().clone();
         new_parent.content.push_back(node.id.clone());
@@ -316,10 +303,7 @@ impl Draft {
         }
     }
     pub fn remove_node(&mut self, parent_id: &NodeId, nodes: Vec<NodeId>) -> Result<(), PoolError> {
-        let parent = self
-            .inner
-            .nodes
-            .get(parent_id)
+        let parent = self.get_node(parent_id)
             .ok_or(PoolError::ParentNotFound(parent_id.clone()))?;
 
         // 过滤掉不在节点池中的子节点
