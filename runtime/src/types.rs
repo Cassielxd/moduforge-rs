@@ -5,11 +5,11 @@ use bincode::{Decode, Encode};
 use moduforge_core::{
     model::{
         node_pool::NodePool,
-        schema::{Attribute, AttributeSpec},
+        schema::AttributeSpec,
     },
     transform::ConcreteStep,
 };
-use moduforge_engine::{
+use zen_engine::{
     handler::custom_node_adapter::NoopCustomNode, loader::MemoryLoader, DecisionEngine,
 };
 use serde::{Deserialize, Serialize};
@@ -28,16 +28,13 @@ pub enum Extensions {
 }
 
 #[derive(Clone, Debug)]
+#[derive(Default)]
 pub enum Content {
     NodePoolBinary(Vec<u8>),
     NodePool(NodePool),
     Snapshot(Vec<u8>),
+    #[default]
     None,
-}
-impl Default for Content {
-    fn default() -> Self {
-        Content::None
-    }
 }
 
 #[derive(Clone, Debug)]

@@ -215,7 +215,7 @@ impl Draft {
 
         // 更新节点属性
         let mut new_node = node.as_ref().clone();
-        new_node.attrs = new_values.clone().into();
+        new_node.attrs = new_values.clone();
         self.inner.nodes = self.inner.nodes.update(id.clone(), Arc::new(new_node));
         // 记录补丁
         if !self.skip_record {
@@ -238,9 +238,7 @@ impl Draft {
             .clone();
         node.marks = node
             .marks
-            .iter()
-            .cloned()
-            .filter(|m| !m.eq(&&mark))
+            .iter().filter(|&m| !m.eq(&mark)).cloned()
             .collect();
 
         self.inner.nodes = self.inner.nodes.update(id.clone(), Arc::new(node));
@@ -320,9 +318,7 @@ impl Draft {
         let filtered_children: im::Vector<NodeId> = parent
             .as_ref()
             .content
-            .iter()
-            .cloned()
-            .filter(|id| !nodes.contains(id))
+            .iter().filter(|&id| !nodes.contains(id)).cloned()
             .collect();
 
         // 这里的逻辑需要进一步完善，例如如何处理新节点的添加
@@ -370,21 +366,21 @@ impl Draft {
                     old: _,
                     new,
                 } => {
-                    self.update_attr(&id, new.clone().into())?;
+                    self.update_attr(id, new.clone().into())?;
                 }
                 Patch::AddNode {
                     path: _,
                     parent_id,
                     node,
                 } => {
-                    self.add_node(&parent_id, node.as_ref().clone())?;
+                    self.add_node(parent_id, node.as_ref().clone())?;
                 }
                 Patch::AddMark {
                     path: _,
                     node_id,
                     mark,
                 } => {
-                    self.add_mark(&node_id, mark.clone())?;
+                    self.add_mark(node_id, mark.clone())?;
                 }
                 Patch::RemoveNode {
                     path: _,
@@ -392,7 +388,7 @@ impl Draft {
                     nodes,
                 } => {
                     self.remove_node(
-                        &parent_id,
+                        parent_id,
                         nodes.iter().map(|n: &Arc<Node>| n.id.clone()).collect(),
                     )?;
                 }
@@ -402,7 +398,7 @@ impl Draft {
                     marks,
                 } => {
                     for mark in marks {
-                        self.remove_mark(&parent_id, mark.as_ref().clone())?;
+                        self.remove_mark(parent_id, mark.as_ref().clone())?;
                     }
                 }
             }

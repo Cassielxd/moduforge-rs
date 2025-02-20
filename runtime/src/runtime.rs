@@ -21,7 +21,6 @@ use moduforge_core::{
 };
 
 /// 编辑器
-
 pub struct Editor {
     event_bus: EventBus,
     state: Arc<State>,

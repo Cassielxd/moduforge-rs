@@ -81,23 +81,20 @@ pub struct DeltaHandler {
 #[async_trait::async_trait]
 impl EventHandler for DeltaHandler {
     async fn handle(&self, event: &Event) {
-        match event {
-            Event::TrApply(tx, state) => {
-                let base_path = self
-                    .storage_option
-                    .delta_path
-                    .join(state.doc().inner.root_id.clone());
-                let path = base_path.join(format!("delta_{}_{}.bin", tx.time, state.version));
-                let _ = fs::create_dir_all(base_path).await;
-                let tx_clone = tx.clone();
-                let state_version = state.version.clone();
-                let path_clone = path.clone();
-                let _ = self
-                    .tx
-                    .send((to_delta(&tx_clone, state_version), path_clone))
-                    .await;
-            }
-            _ => {}
+        if let Event::TrApply(tx, state) = event {
+            let base_path = self
+                .storage_option
+                .delta_path
+                .join(state.doc().inner.root_id.clone());
+            let path = base_path.join(format!("delta_{}_{}.bin", tx.time, state.version));
+            let _ = fs::create_dir_all(base_path).await;
+            let tx_clone = tx.clone();
+            let state_version = state.version;
+            let path_clone = path.clone();
+            let _ = self
+                .tx
+                .send((to_delta(&tx_clone, state_version), path_clone))
+                .await;
         }
     }
 }
@@ -134,44 +131,41 @@ pub struct SnapshotHandler {
 #[async_trait::async_trait]
 impl EventHandler for SnapshotHandler {
     async fn handle(&self, event: &Event) {
-        match event {
-            Event::TrApply(tr, state) => {
-                let count = self.counter.fetch_add(1, Ordering::SeqCst) + 1;
-                if count % self.snapshot_interval == 0 {
-                    let state_clone = state.clone();
-                    let base_path = self
-                        .storage_option
-                        .snapshot_path
-                        .join(state_clone.doc().inner.root_id.clone());
-                    let path = base_path.join(format!("snapshot_v{}.bin", state_clone.version));
-                    let delta_path = self
-                        .storage_option
-                        .delta_path
-                        .join(state_clone.doc().inner.root_id.clone());
-                    let max_version = state_clone.version;
-                    let _ = fs::create_dir_all(base_path).await;
-                    let cache_ref: Arc<SnapshotManager> = self.snapshot_manager.clone();
-                    let time = tr.time;
-                    tokio::spawn(async move {
-                        cache_ref.put(&state_clone, time);
-                        match create_full_snapshot(&state_clone) {
-                            Ok(data) => match File::create(&path).await {
-                                Ok(mut file) => {
-                                    file.write_all(&data).await.unwrap();
-                                    cleanup_old_deltas(&delta_path, max_version).await;
-                                }
-                                Err(e) => {
-                                    println!("write file error:{}", e);
-                                }
-                            },
-                            Err(error) => {
-                                println!("Error creating snapshot: {}", error);
+        if let Event::TrApply(tr, state) = event {
+            let count = self.counter.fetch_add(1, Ordering::SeqCst) + 1;
+            if count % self.snapshot_interval == 0 {
+                let state_clone = state.clone();
+                let base_path = self
+                    .storage_option
+                    .snapshot_path
+                    .join(state_clone.doc().inner.root_id.clone());
+                let path = base_path.join(format!("snapshot_v{}.bin", state_clone.version));
+                let delta_path = self
+                    .storage_option
+                    .delta_path
+                    .join(state_clone.doc().inner.root_id.clone());
+                let max_version = state_clone.version;
+                let _ = fs::create_dir_all(base_path).await;
+                let cache_ref: Arc<SnapshotManager> = self.snapshot_manager.clone();
+                let time = tr.time;
+                tokio::spawn(async move {
+                    cache_ref.put(&state_clone, time);
+                    match create_full_snapshot(&state_clone) {
+                        Ok(data) => match File::create(&path).await {
+                            Ok(mut file) => {
+                                file.write_all(&data).await.unwrap();
+                                cleanup_old_deltas(&delta_path, max_version).await;
                             }
+                            Err(e) => {
+                                println!("write file error:{}", e);
+                            }
+                        },
+                        Err(error) => {
+                            println!("Error creating snapshot: {}", error);
                         }
-                    });
-                }
+                    }
+                });
             }
-            _ => {}
         }
     }
 }

@@ -26,4 +26,4 @@ async-trait= {workspace=true}
 bincode= {workspace=true}
 
 moduforge-core= {workspace=true}
-moduforge-engine ={workspace=true}
+zen-engine= {workspace=true}

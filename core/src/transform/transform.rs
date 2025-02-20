@@ -1,6 +1,5 @@
 use std::{fmt, sync::Arc};
 
-use crate::model::node_pool::NodePool;
 
 use super::step::{Step, StepResult};
 

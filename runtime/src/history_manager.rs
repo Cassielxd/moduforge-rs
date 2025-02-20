@@ -35,7 +35,7 @@ impl<T: Clone> HistoryManager<T> {
     }
 
     pub fn get_present(&self) -> T {
-        return self.history.present.clone();
+        self.history.present.clone()
     }
 
     /// 插入新状态
@@ -90,14 +90,20 @@ impl<T: Clone> HistoryManager<T> {
 
     /// 通用跳转方法
     pub fn jump(&mut self, n: isize) {
-        if n > 0 {
-            self.jump_to_future((n - 1) as usize);
-        } else if n < 0 {
-            let past_len = self.history.past.len() as isize;
-            let target = past_len + n;
-            if target >= 0 {
-                self.jump_to_past(target as usize);
-            }
+        match n.cmp(&0) {
+            std::cmp::Ordering::Less => {
+                let past_len = self.history.past.len() as isize;
+                let target = past_len + n;
+                if target >= 0 {
+                    self.jump_to_past(target as usize);
+                }
+            },
+            std::cmp::Ordering::Equal => {
+
+            },
+            std::cmp::Ordering::Greater => {
+                self.jump_to_future((n - 1) as usize);
+            },
         }
     }
 

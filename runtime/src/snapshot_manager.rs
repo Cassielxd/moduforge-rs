@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use moduforge_core::{
     model::node_pool::NodePool,
-    state::{self, state::State},
+    state::{state::State},
 };
 
 use crate::cache::{cache::DocumentCache, CacheKey};

@@ -1,4 +1,3 @@
-use std::{path::PathBuf, sync::Arc};
 
 pub mod cache;
 pub mod l1;

@@ -7,9 +7,7 @@ use super::node::Node;
 use super::schema::{compute_attrs, Attribute, AttributeSpec, Schema};
 use super::types::NodeId;
 use im::HashMap as ImHashMap;
-use serde_json::Value;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 /**
  * 节点的类型定义
@@ -82,7 +80,7 @@ impl NodeType {
                 }
             }
         }
-        return true;
+        true
     }
     pub fn check_attrs(&self, values: &Attrs) {
         for (key, _value) in values {
@@ -111,7 +109,7 @@ impl NodeType {
         marks: Option<Vec<Mark>>,
         schema: &Schema,
     ) -> Vec<Node> {
-        let id: String = id.unwrap_or_else(|| IdGenerator::get_id());
+        let id: String = id.unwrap_or_else(IdGenerator::get_id);
         let attrs = self.compute_attrs(attrs);
         let mut content_ref = content
             .iter()
@@ -163,7 +161,7 @@ impl NodeType {
     }
     fn compute_attrs(&self, attrs: Option<&HashMap<String, String>>) -> ImHashMap<String, String> {
         match attrs {
-            Some(attr) => compute_attrs(&self.attrs, Some(&attr)),
+            Some(attr) => compute_attrs(&self.attrs, Some(attr)),
             None => compute_attrs(&self.attrs, Some(&self.default_attrs)),
         }
     }

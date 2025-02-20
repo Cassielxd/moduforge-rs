@@ -17,4 +17,4 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 serde =  {workspace=true}
 serde_json =  {workspace=true}
-moduforge-engine =  {workspace=true}
+zen-engine= {workspace=true}

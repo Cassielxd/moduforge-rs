@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use moduforge_core::model::{node_pool::NodePool, schema::Schema};
+use moduforge_core::model::node_pool::NodePool;
 
 use crate::{
     delta::{from_binary, snapshot::FullSnapshot},
@@ -19,7 +19,7 @@ pub fn create_doc(content: &Content) -> Option<Arc<NodePool>> {
         }
         Content::NodePool(node_pool) => Some(Arc::new(node_pool.clone())),
         Content::Snapshot(items) => {
-            if let Ok(full_snapshot) = from_binary::<FullSnapshot>(&items) {
+            if let Ok(full_snapshot) = from_binary::<FullSnapshot>(items) {
                 // TODO: 优化 需要判断是否有增量事务 并加载应用
                 Some(full_snapshot.node_pool.clone())
             } else {

@@ -1,5 +1,4 @@
 use crate::model::node::Node;
-use crate::transform::transform::Transform;
 use async_trait::async_trait;
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
@@ -69,7 +68,7 @@ impl PluginSpec {
         if let Some(filter) = self.filter_transaction.clone() {
             return filter.filter_transaction(tr, state).await;
         }
-        return false;
+        false
     }
     async fn append_transaction<'a>(
         &self,
@@ -82,7 +81,7 @@ impl PluginSpec {
                 .append_transaction(trs, old_state, new_state)
                 .await;
         }
-        return None;
+        None
     }
 }
 

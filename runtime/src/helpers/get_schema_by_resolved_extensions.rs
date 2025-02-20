@@ -9,13 +9,10 @@ pub fn get_schema_by_resolved_extensions(
 ) -> Result<Schema, Box<dyn std::error::Error>> {
     let mut extension_attributes = vec![];
     for extension in extensions {
-        match extension {
-            Extensions::E(extension) => {
-                for item in extension.get_global_attributes().iter() {
-                    extension_attributes.push(item);
-                }
+        if let Extensions::E(extension) = extension {
+            for item in extension.get_global_attributes().iter() {
+                extension_attributes.push(item);
             }
-            _ => {}
         }
     }
     let mut nodes = HashMap::new();

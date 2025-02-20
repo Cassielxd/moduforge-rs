@@ -19,6 +19,12 @@ pub struct EventBus {
     event_handlers: Arc<RwLock<Vec<Arc<dyn EventHandler>>>>,
 }
 
+impl Default for EventBus {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EventBus {
     pub async fn restart(&self) {
         let _ = self.broadcast(Event::Stop).await;

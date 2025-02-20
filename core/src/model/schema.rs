@@ -4,7 +4,6 @@ use super::mark_type::{MarkSpec, MarkType};
 use super::node_type::{NodeSpec, NodeType};
 use im::HashMap as ImHashMap;
 use serde::Serialize;
-use serde_json::Value;
 use std::collections::HashMap;
 use std::error::Error;
 

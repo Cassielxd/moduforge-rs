@@ -24,7 +24,7 @@ impl DocumentCache {
         Arc::new(DocumentCache {
             storage_option: path.clone(),
             l1: Arc::new(L1Cache::new(10)),
-            l2: Arc::new(L2Cache::open(&path.l2_path.as_path()).unwrap()),
+            l2: Arc::new(L2Cache::open(path.l2_path.as_path()).unwrap()),
         })
     }
 
@@ -46,8 +46,8 @@ impl DocumentCache {
         }
 
         // 4. 回源加载
-        let value = self.load_from_storage(&key);
-        value
+        
+        self.load_from_storage(key)
     }
 
     fn load_from_storage(&self, key: &CacheKey) -> Option<Arc<NodePool>> {

@@ -17,19 +17,16 @@ pub struct ExtensionManager {
 impl ExtensionManager {
     pub fn new(extensions: &Vec<Extensions>) -> Self {
         let schema = Arc::new(
-            get_schema_by_resolved_extensions(&extensions).unwrap_or_else(|e| {
+            get_schema_by_resolved_extensions(extensions).unwrap_or_else(|e| {
                 panic!("schema 构建失败: {}", e);
             }),
         );
         let mut plugins = vec![];
         for extension in extensions {
-            match extension {
-                Extensions::E(extension) => {
-                    for plugin in extension.get_plugins() {
-                        plugins.push(plugin.clone());
-                    }
+            if let Extensions::E(extension) = extension {
+                for plugin in extension.get_plugins() {
+                    plugins.push(plugin.clone());
                 }
-                _ => {}
             }
         }
         ExtensionManager {

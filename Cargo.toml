@@ -3,7 +3,6 @@ resolver = "2"
 members = [
    "core",
    "official",
-   "engine",
    "runtime",
    "engine-dev-tools"
 
@@ -32,7 +31,7 @@ lru="0.13"
 chrono="0.4"
 async-channel = "2.3.1"
 bincode={ version = "2.0.0-rc.3", features = ["serde"] }
-
+zen-engine= "0"
 zen-expression= "0"
 zen-tmpl  = "0"
 
@@ -52,5 +51,3 @@ metrics-exporter-prometheus = "0.16.2"
 moduforge-core = { path = "./core" }
 moduforge-official = { path = "./official" }
 moduforge-runtime = { path = "./runtime" }
-# 规则引擎
-moduforge-engine = { path = "./engine" }

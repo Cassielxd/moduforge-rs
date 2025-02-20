@@ -19,7 +19,7 @@ pub struct AttrStep {
 impl AttrStep {
     pub fn new(id: String, values: HashMap<String, String>) -> Self {
         AttrStep {
-            id: id.into(),
+            id,
             values,
         }
     }

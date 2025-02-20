@@ -9,7 +9,7 @@ use std::{
 use crate::model::{id_generator::IdGenerator, mark::Mark, node_pool::NodePool, schema::Schema};
 
 use super::{
-    plugin::{Plugin, PluginState, Reset},
+    plugin::{Plugin, PluginState},
     transaction::Transaction,
 };
 
@@ -111,7 +111,7 @@ impl State {
         &self,
         root_tr: &mut Transaction,
     ) -> Result<TransactionResult, Box<dyn std::error::Error>> {
-        if !self.filter_transaction(&root_tr, None).await? {
+        if !self.filter_transaction(root_tr, None).await? {
             return Ok(TransactionResult {
                 state: self.clone(),
                 transactions: vec![],
@@ -120,7 +120,7 @@ impl State {
 
         let mut trs = Vec::new();
         trs.push(1);
-        let mut new_state = self.apply_inner(&root_tr).await?;
+        let mut new_state = self.apply_inner(root_tr).await?;
         let mut seen: Option<Vec<SeenState>> = None;
 
         loop {
@@ -153,7 +153,7 @@ impl State {
                                     }
                                     seen = Some(s);
                                 }
-                                new_state = new_state.apply_inner(&tr).await?;
+                                new_state = new_state.apply_inner(tr).await?;
                                 trs.push(1);
                                 have_new = true;
                             }

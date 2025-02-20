@@ -57,7 +57,7 @@ impl MarkType {
     }
     fn compute_attrs(&self, attrs: Option<&HashMap<String, String>>) -> ImHashMap<String, String> {
         match attrs {
-            Some(attr) => compute_attrs(&self.attrs, Some(&attr)),
+            Some(attr) => compute_attrs(&self.attrs, Some(attr)),
             None => compute_attrs(&self.attrs, None),
         }
     }

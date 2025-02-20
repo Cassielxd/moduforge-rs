@@ -3,8 +3,8 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Extension, Json, Router};
-use moduforge_engine::model::DecisionContent;
-use moduforge_engine::{DecisionEngine, EvaluationError, EvaluationOptions};
+use zen_engine::model::DecisionContent;
+use zen_engine::{DecisionEngine, EvaluationError, EvaluationOptions};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;
@@ -33,7 +33,7 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let host_address = IS_DEVELOPMENT.then_some("127.0.0.1").unwrap_or("0.0.0.0");
+    let host_address = if IS_DEVELOPMENT { "127.0.0.1" } else { "0.0.0.0" };
     let listener_address = format!("{host_address}:3000");
 
     let app = Router::new()
@@ -55,7 +55,7 @@ async fn main() {
     let mut app_with_layers = app
         .layer(TraceLayer::new_for_http())
         .layer(compression_layer);
-    if let Ok(_) = env::var("CORS_PERMISSIVE") {
+    if env::var("CORS_PERMISSIVE").is_ok() {
         app_with_layers = app_with_layers.layer(CorsLayer::permissive())
     }
 

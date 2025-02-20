@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::model::{
     node::Node,
-    node_pool::{Draft, NodePool},
+    node_pool::Draft,
     schema::Schema,
     types::NodeId,
 };

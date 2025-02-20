@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use moduforge_engine::{
-    handler::custom_node_adapter::NoopCustomNode, loader::MemoryLoader, model::DecisionContent,
+use zen_engine::{
+    loader::MemoryLoader, model::DecisionContent,
     DecisionEngine, Variable,
 };
 use serde_json::Error;
@@ -36,7 +36,7 @@ impl EngineManager {
         T: serde::de::DeserializeOwned,
     {
         let response = self.engine.evaluate(key, context).await.unwrap();
-        let result = serde_json::from_value::<T>(response.result.to_value());
-        result
+        
+        serde_json::from_value::<T>(response.result.to_value())
     }
 }

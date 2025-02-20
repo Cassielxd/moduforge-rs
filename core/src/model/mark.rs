@@ -19,9 +19,6 @@ pub struct Mark {
 
 impl Mark {
     pub fn set_from(marks: Option<Vec<Mark>>) -> Vec<Mark> {
-        match marks {
-            Some(markss) => markss,
-            None => Vec::new(),
-        }
+        marks.unwrap_or_default()
     }
 }

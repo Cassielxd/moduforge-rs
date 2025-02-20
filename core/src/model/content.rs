@@ -1,5 +1,4 @@
-use serde::Serialize;
-use std::{cell::RefCell, collections::HashMap, rc::Rc, sync::Arc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use std::cmp::Ordering;
 
@@ -13,19 +12,11 @@ pub struct MatchEdge {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Default)]
 pub struct ContentMatch {
     pub next: Vec<MatchEdge>,
     pub wrap_cache: Vec<Option<NodeType>>,
     pub valid_end: bool,
-}
-impl Default for ContentMatch {
-    fn default() -> Self {
-        ContentMatch {
-            next: Vec::new(),
-            wrap_cache: Vec::new(),
-            valid_end: false,
-        }
-    }
 }
 impl Ord for ContentMatch {
     fn cmp(&self, other: &Self) -> Ordering {
@@ -48,8 +39,8 @@ impl ContentMatch {
         let expr = parse_expr(&mut stream);
 
         let arr = nfa(expr);
-        let matched = dfa(arr);
-        return matched;
+        
+        dfa(arr)
     }
     pub fn empty() -> Self {
         ContentMatch {
@@ -70,7 +61,7 @@ impl ContentMatch {
         let mut current: &ContentMatch = self;
 
         for content in frag.iter() {
-            if let Some(next) = current.match_type(&schema.nodes.get(&content.r#type).unwrap()) {
+            if let Some(next) = current.match_type(schema.nodes.get(&content.r#type).unwrap()) {
                 current = next;
             }
         }
@@ -111,8 +102,8 @@ impl ContentMatch {
             None
         }
 
-        let f = search(&mut seen, to_end, after, self, &mut Vec::new(), schema);
-        return f;
+        
+        search(&mut seen, to_end, after, self, &mut Vec::new(), schema)
     }
 
     pub fn default_type(&self) -> Option<&NodeType> {
@@ -324,7 +315,7 @@ fn parse_expr_subscript(stream: &mut TokenStream) -> Expr {
 
 fn parse_num(stream: &mut TokenStream) -> usize {
     let next = stream.next().unwrap();
-    if !next.chars().all(|c| c.is_digit(10)) {
+    if !next.chars().all(|c| c.is_ascii_digit()) {
         stream.err(&format!("Expected number, got '{}'", next));
     }
     let result = next.parse().unwrap();

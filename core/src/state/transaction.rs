@@ -57,17 +57,14 @@ impl Transform for Transaction {
 impl Transaction {
     pub async fn transaction(&mut self, call_back: Arc<dyn Command>) {
         let result = call_back.execute(self).await;
-        match result {
-            Ok(_) => {
-                let (node_pool, patches) = self.draft.commit();
-                self.add_step(
-                    Arc::new(PatchStep {
-                        patches: patches.clone(),
-                    }),
-                    StepResult::ok(node_pool, patches),
-                );
-            }
-            Err(_) => {}
+        if result.is_ok() {
+            let (node_pool, patches) = self.draft.commit();
+            self.add_step(
+                Arc::new(PatchStep {
+                    patches: patches.clone(),
+                }),
+                StepResult::ok(node_pool, patches),
+            );
         }
     }
 
