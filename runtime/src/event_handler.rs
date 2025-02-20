@@ -1,5 +1,5 @@
 use std::{
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -87,7 +87,9 @@ impl EventHandler for DeltaHandler {
                 .delta_path
                 .join(state.doc().inner.root_id.clone());
             let path = base_path.join(format!("delta_{}_{}.bin", tx.time, state.version));
-            let _ = fs::create_dir_all(base_path).await;
+            if !Path::exists(&base_path) {
+                let _ = fs::create_dir_all(base_path).await;
+            }
             let tx_clone = tx.clone();
             let state_version = state.version;
             let path_clone = path.clone();
@@ -145,7 +147,10 @@ impl EventHandler for SnapshotHandler {
                     .delta_path
                     .join(state_clone.doc().inner.root_id.clone());
                 let max_version = state_clone.version;
-                let _ = fs::create_dir_all(base_path).await;
+                if !Path::exists(&base_path) {
+                    let _ = fs::create_dir_all(base_path).await;
+                }
+                
                 let cache_ref: Arc<SnapshotManager> = self.snapshot_manager.clone();
                 let time = tr.time;
                 tokio::spawn(async move {
