@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use bincode::{
-    error::{DecodeError, EncodeError},
     Decode, Encode,
+    error::{DecodeError, EncodeError},
 };
 use moduforge_core::{
     state::{state::State, transaction::Transaction},
-    transform::{transform::Transform, ConcreteStep},
+    transform::{ConcreteStep, transform::Transform},
 };
 use serde::{Deserialize, Serialize};
 

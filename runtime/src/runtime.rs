@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    cache::{cache::DocumentCache, CacheKey},
+    cache::{CacheKey, cache::DocumentCache},
     engine_manager::EngineManager,
     event::{Event, EventBus, EventHandler},
     event_handler::{create_delta_handler, create_snapshot_handler},
@@ -58,7 +58,7 @@ impl Editor {
             event_bus,
             history_manager: HistoryManager::new(state.clone(), options.get_history_limit()),
             snapshot_manager,
-            engine_manager: EngineManager::create(),
+            engine_manager: EngineManager::create(options.get_rules_path()),
             options,
             extension_manager,
             state,

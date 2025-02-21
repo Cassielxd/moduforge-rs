@@ -1,7 +1,6 @@
 use bincode::{
-    config,
+    Decode, Encode, config,
     error::{DecodeError, EncodeError},
-    Decode, Encode,
 };
 
 pub mod delta;

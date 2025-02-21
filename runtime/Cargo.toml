@@ -1,7 +1,7 @@
 [package]
 name = "moduforge-runtime"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "插件加载、热更新、依赖管理"
 [lib]
 lib="./src/lib.rs"

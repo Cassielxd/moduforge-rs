@@ -3,7 +3,7 @@ use std::path::Path;
 
 // cache/l2.rs
 use moduforge_core::model::node_pool::NodePool;
-use rocksdb::{Options, DB};
+use rocksdb::{DB, Options};
 use std::io::Error;
 use std::sync::Arc;
 

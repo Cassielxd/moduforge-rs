@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use super::mark::Mark;
-use super::schema::{compute_attrs, Attribute, AttributeSpec, Schema};
+use super::schema::{Attribute, AttributeSpec, Schema, compute_attrs};
 use im::HashMap as ImHashMap;
 #[derive(Clone, PartialEq, Debug, Eq)]
 pub struct MarkType {

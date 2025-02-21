@@ -9,9 +9,9 @@ use crate::delta::from_binary;
 use crate::delta::snapshot::FullSnapshot;
 use crate::types::StorageOptions;
 
+use super::CacheKey;
 use super::l1::L1Cache;
 use super::l2::L2Cache;
-use super::CacheKey;
 
 #[derive(Clone, Debug)]
 pub struct DocumentCache {

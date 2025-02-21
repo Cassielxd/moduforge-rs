@@ -1,7 +1,7 @@
 [package]
 name = "moduforge-offcial"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "公共插件集合"
 [lib]
 lib="./src/lib.rs"

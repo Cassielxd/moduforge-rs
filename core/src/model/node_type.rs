@@ -4,7 +4,7 @@ use super::id_generator::IdGenerator;
 use super::mark::Mark;
 use super::mark_type::MarkType;
 use super::node::Node;
-use super::schema::{compute_attrs, Attribute, AttributeSpec, Schema};
+use super::schema::{Attribute, AttributeSpec, Schema, compute_attrs};
 use super::types::NodeId;
 use im::HashMap as ImHashMap;
 use std::collections::HashMap;

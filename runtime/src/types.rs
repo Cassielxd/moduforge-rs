@@ -8,9 +8,9 @@ use moduforge_core::{
 };
 use serde::{Deserialize, Serialize};
 use zen_engine::{
-    handler::custom_node_adapter::NoopCustomNode, loader::MemoryLoader, DecisionEngine,
+    DecisionEngine, handler::custom_node_adapter::NoopCustomNode, loader::FilesystemLoader,
 };
-pub type Engine = Arc<DecisionEngine<MemoryLoader, NoopCustomNode>>;
+pub type Engine = Arc<DecisionEngine<FilesystemLoader, NoopCustomNode>>;
 pub type GlobalAttributes = Vec<GlobalAttributeItem>;
 #[derive(Clone, PartialEq, Debug, Eq, Default)]
 pub struct GlobalAttributeItem {

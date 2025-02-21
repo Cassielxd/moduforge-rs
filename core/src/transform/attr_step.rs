@@ -3,9 +3,9 @@ use std::sync::Arc;
 use crate::model::{node_pool::Draft, schema::Schema, types::NodeId};
 
 use super::{
+    ConcreteStep,
     step::{Step, StepResult},
     transform::TransformError,
-    ConcreteStep,
 };
 use bincode::{Decode, Encode};
 use im::HashMap;

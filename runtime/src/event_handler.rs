@@ -1,8 +1,8 @@
 use std::{
     path::{Path, PathBuf},
     sync::{
-        atomic::{AtomicUsize, Ordering},
         Arc,
+        atomic::{AtomicUsize, Ordering},
     },
 };
 
@@ -14,7 +14,7 @@ use tokio::{
 
 use crate::{
     delta::{
-        delta::{create_tr_snapshot, to_delta, TransactionDelta},
+        delta::{TransactionDelta, create_tr_snapshot, to_delta},
         snapshot::create_full_snapshot,
     },
     event::{Event, EventHandler},
@@ -150,7 +150,7 @@ impl EventHandler for SnapshotHandler {
                 if !Path::exists(&base_path) {
                     let _ = fs::create_dir_all(base_path).await;
                 }
-                
+
                 let cache_ref: Arc<SnapshotManager> = self.snapshot_manager.clone();
                 let time = tr.time;
                 tokio::spawn(async move {

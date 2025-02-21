@@ -1,4 +1,4 @@
-use bincode::{error::EncodeError, Decode, Encode};
+use bincode::{Decode, Encode, error::EncodeError};
 use moduforge_core::{
     model::node_pool::NodePool,
     state::{

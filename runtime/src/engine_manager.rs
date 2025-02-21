@@ -1,39 +1,43 @@
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    env::current_dir,
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 
 use serde_json::Error;
-use zen_engine::{loader::MemoryLoader, model::DecisionContent, DecisionEngine, Variable};
+use zen_engine::{
+    DecisionEngine, Variable,
+    loader::{FilesystemLoader, FilesystemLoaderOptions},
+    model::DecisionContent,
+};
 
 use crate::types::Engine;
 
 /// 规则引擎管理器
 pub struct EngineManager {
     pub engine: Engine,
-    pub loader: Arc<MemoryLoader>,
 }
 impl EngineManager {
-    pub fn create() -> EngineManager {
-        let memory_loader = Arc::new(MemoryLoader::default());
+    pub fn create(root: Option<PathBuf>) -> EngineManager {
+        let loader = FilesystemLoader::new(FilesystemLoaderOptions {
+            keep_in_memory: true,
+            root: root
+                .unwrap_or(current_dir().unwrap())
+                .as_path()
+                .to_string_lossy()
+                .to_string(),
+        });
         EngineManager {
-            engine: Arc::new(DecisionEngine::default().with_loader(memory_loader.clone())),
-            loader: memory_loader,
+            engine: Arc::new(DecisionEngine::default().with_loader(Arc::new(loader))),
         }
     }
-    /// 添加决策
-    pub fn add_decision(&self, key: &str, content: DecisionContent) {
-        self.loader.add(key, content);
-    }
-    /// 删除决策
-    pub fn remove_decision(&self, key: &str) -> bool {
-        self.loader.remove(key)
-    }
-
     pub async fn evaluate<K, T>(&self, key: K, context: Variable) -> Result<T, Error>
     where
         K: AsRef<str>,
         T: serde::de::DeserializeOwned,
     {
         let response = self.engine.evaluate(key, context).await.unwrap();
-
         serde_json::from_value::<T>(response.result.to_value())
     }
 }

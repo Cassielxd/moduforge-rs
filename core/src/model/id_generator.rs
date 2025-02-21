@@ -1,16 +1,13 @@
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct IdGenerator {
     data_center_id_shift: u64,
     worker_id_shift: u64,
     timestamp_left_shift: u64,
-    max_data_center_id: u64,
-    max_worker_id: u64,
     sequence: u64,
     last_timestamp: i64,
     options: Options,
-    current_id: u64,
 }
 
 struct Options {
@@ -37,31 +34,20 @@ impl IdGenerator {
         let worker_id_shift = options.sequence_bits;
         let timestamp_left_shift =
             options.worker_id_bits + options.sequence_bits + options.data_center_id_bits;
-        let max_data_center_id = !((-1_i64 << options.data_center_id_bits) as u64);
-        let max_worker_id = !((-1_i64 << options.worker_id_bits) as u64);
-
         IdGenerator {
             data_center_id_shift,
             worker_id_shift,
             timestamp_left_shift,
-            max_data_center_id,
-            max_worker_id,
             sequence: 0,
             last_timestamp: -1,
             options,
-            current_id: 0,
         }
     }
 
     pub fn get_instance() -> &'static Mutex<IdGenerator> {
-        static mut INSTANCE: Option<Mutex<IdGenerator>> = None;
-        static ONCE: std::sync::Once = std::sync::Once::new();
+        static INSTANCE: OnceLock<Mutex<IdGenerator>> = OnceLock::new();
 
-        ONCE.call_once(|| unsafe {
-            INSTANCE = Some(Mutex::new(IdGenerator::new()));
-        });
-
-        unsafe { INSTANCE.as_ref().unwrap() }
+        INSTANCE.get_or_init(|| Mutex::new(IdGenerator::new()))
     }
     pub fn get_id() -> String {
         let id = {

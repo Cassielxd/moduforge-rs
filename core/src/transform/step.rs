@@ -7,7 +7,7 @@ use crate::model::{
 };
 use std::fmt::Debug;
 
-use super::{transform::TransformError, ConcreteStep};
+use super::{ConcreteStep, transform::TransformError};
 
 pub trait Step: Send + Sync + Debug {
     fn apply(&self, doc: &mut Draft, schema: Arc<Schema>) -> Result<StepResult, TransformError>;
