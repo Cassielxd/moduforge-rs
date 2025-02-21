@@ -293,7 +293,7 @@ impl Draft {
     fn remove_subtree(&mut self, parent_id: &NodeId, node_id: &NodeId) {
         if let Some(children) = self.children(node_id).cloned() {
             for child_id in children {
-                self.remove_subtree(&node_id, &child_id);
+                self.remove_subtree(node_id, &child_id);
             }
         }
         self.inner.parent_map.remove(node_id);
@@ -331,7 +331,7 @@ impl Draft {
         let mut renoved_nodes = vec![];
         for node_id in nodes {
             if self.inner.nodes.contains_key(&node_id) {
-                self.remove_subtree(&parent_id, &node_id);
+                self.remove_subtree(parent_id, &node_id);
                 self.inner.parent_map.remove(&node_id);
                 if let Some(romove_node) = self.inner.nodes.remove(&node_id) {
                     renoved_nodes.push(romove_node);

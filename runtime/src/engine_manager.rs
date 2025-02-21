@@ -1,15 +1,13 @@
 use std::{
-    collections::HashMap,
     env::current_dir,
     path::PathBuf,
-    sync::{Arc, RwLock},
+    sync::Arc,
 };
 
 use serde_json::Error;
 use zen_engine::{
     DecisionEngine, Variable,
     loader::{FilesystemLoader, FilesystemLoaderOptions},
-    model::DecisionContent,
 };
 
 use crate::types::Engine;
