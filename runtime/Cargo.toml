@@ -14,7 +14,7 @@ metrics-exporter-prometheus= {workspace=true}
 async-channel= {workspace=true}
 im= {workspace=true}
 rocksdb = "0.23.0"
-zstd="0.13"
+zstd= {workspace=true}
 chrono= {workspace=true}
 zen-expression= {workspace=true}
 log = {workspace=true}
@@ -24,6 +24,6 @@ serde_json = {workspace=true}
 thiserror= {workspace=true}
 async-trait= {workspace=true}
 bincode= {workspace=true}
-
+moduforge-delta = {workspace=true}
 moduforge-core= {workspace=true}
 zen-engine= {workspace=true}

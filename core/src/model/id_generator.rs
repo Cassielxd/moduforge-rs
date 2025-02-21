@@ -13,7 +13,7 @@ pub struct IdGenerator {
 struct Options {
     start_time: i64,
     data_center_id_bits: u64,
-    worker_id_bits: u64,
+    worker_id_bits: u64, 
     sequence_bits: u64,
     worker_id: u64,
     data_center_id: u64,

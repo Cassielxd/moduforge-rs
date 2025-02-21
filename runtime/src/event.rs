@@ -62,7 +62,6 @@ impl EventBus {
                             }
                         },
                         Err(_) => {
-                            println!("跳出了");
                             break;
                         },
                     },

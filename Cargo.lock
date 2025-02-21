@@ -1532,6 +1532,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "moduforge-delta"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bincode",
+ "im",
+ "log",
+ "moduforge-core",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.11",
+ "tokio",
+ "zstd",
+]
+
+[[package]]
 name = "moduforge-offcial"
 version = "0.1.0"
 dependencies = [
@@ -1558,6 +1574,7 @@ dependencies = [
  "metrics",
  "metrics-exporter-prometheus",
  "moduforge-core",
+ "moduforge-delta",
  "rocksdb",
  "serde",
  "serde_json",

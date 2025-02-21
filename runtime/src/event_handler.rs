@@ -12,11 +12,12 @@ use tokio::{
     signal,
 };
 
+use moduforge_delta::{
+    delta::{TransactionDelta, create_tr_snapshot, to_delta},
+    snapshot::create_full_snapshot,
+};
 use crate::{
-    delta::{
-        delta::{TransactionDelta, create_tr_snapshot, to_delta},
-        snapshot::create_full_snapshot,
-    },
+
     event::{Event, EventHandler},
     snapshot_manager::SnapshotManager,
     types::StorageOptions,
@@ -52,7 +53,6 @@ pub fn create_delta_handler(storage_option: StorageOptions) -> Arc<DeltaHandler>
                         }
                     },
                     Err(_) => {
-                        println!("跳出了");
                         break;
                     },
                 },
