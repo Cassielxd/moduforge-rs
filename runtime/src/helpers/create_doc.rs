@@ -3,9 +3,7 @@ use std::sync::Arc;
 use moduforge_core::model::node_pool::NodePool;
 use moduforge_delta::{from_binary, snapshot::FullSnapshot};
 
-use crate::{
-    types::Content,
-};
+use crate::types::Content;
 
 /// 创建文档
 pub fn create_doc(content: &Content) -> Option<Arc<NodePool>> {

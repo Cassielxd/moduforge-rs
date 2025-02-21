@@ -1,8 +1,4 @@
-use std::{
-    env::current_dir,
-    path::PathBuf,
-    sync::Arc,
-};
+use std::{env::current_dir, path::PathBuf, sync::Arc};
 
 use serde_json::Error;
 use zen_engine::{

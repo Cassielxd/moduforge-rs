@@ -4,7 +4,7 @@ use crate::{
     cache::{CacheKey, cache::DocumentCache},
     engine_manager::EngineManager,
     event::{Event, EventBus, EventHandler},
-    event_handler::{create_delta_handler, create_snapshot_handler},
+    event_handler::SnapshotHandler,
     extension_manager::ExtensionManager,
     helpers::create_doc,
     history_manager::HistoryManager,
@@ -195,14 +195,11 @@ pub fn init_event_handler(
     storage: StorageOptions,
     snapshot_interval: Option<usize>,
 ) -> Vec<Arc<dyn EventHandler>> {
-    let mut default_event_handlers: Vec<Arc<dyn EventHandler>> = vec![
-        create_delta_handler(storage.clone()),
-        create_snapshot_handler(
-            storage.clone(),
-            snapshot_interval.unwrap_or(100),
-            snapshot_manager.clone(),
-        ),
-    ];
+    let mut default_event_handlers: Vec<Arc<dyn EventHandler>> = vec![SnapshotHandler::new(
+        storage.clone(),
+        snapshot_interval.unwrap_or(50),
+        snapshot_manager.clone(),
+    )];
     default_event_handlers.append(&mut event_handlers.clone());
     default_event_handlers
 }

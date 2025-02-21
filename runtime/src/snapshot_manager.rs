@@ -36,10 +36,6 @@ impl SnapshotManager {
         {
             self.list.lock().unwrap().push(key.clone());
         }
-        self.document_cache.l1.put(key.clone(), state.doc());
-        self.document_cache.l2.put(
-            format!("{}{}", key.doc_id.clone(), state.version),
-            state.doc(),
-        );
+        self.document_cache.put(state, &key);
     }
 }

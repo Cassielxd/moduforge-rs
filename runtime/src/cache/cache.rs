@@ -1,10 +1,7 @@
 // cache.rs
 
 use moduforge_core::model::node_pool::NodePool;
-use moduforge_delta::from_binary;
-use moduforge_delta::snapshot::FullSnapshot;
-
-use std::fs;
+use moduforge_core::state::state::State;
 use std::sync::Arc;
 
 use crate::types::StorageOptions;
@@ -44,21 +41,14 @@ impl DocumentCache {
             self.l1.put(key.clone(), v.clone());
             return Some(v);
         }
-
-        // 4. 回源加载
-
-        self.load_from_storage(key)
+        None
     }
 
-    fn load_from_storage(&self, key: &CacheKey) -> Option<Arc<NodePool>> {
-        // 从全量快照+增量日志重构文档
-        let base_path = self
-            .storage_option
-            .snapshot_path
-            .join(key.clone().doc_id.as_str());
-        let path = base_path.join(format!("snapshot_v{}.bin", key.version));
-        let snapshot_data = fs::read(path).unwrap();
-        let f = from_binary::<FullSnapshot>(&snapshot_data).unwrap();
-        Some(f.node_pool)
+    pub fn put(&self, state: &Arc<State>, key: &CacheKey) {
+        self.l1.put(key.clone(), state.doc());
+        self.l2.put(
+            format!("{}{}", key.doc_id.clone(), state.version),
+            state.doc(),
+        );
     }
 }

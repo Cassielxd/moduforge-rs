@@ -1,0 +1,19 @@
+[package]
+name = "moduforge-storage"
+version = "0.1.0"
+edition = "2024"
+description = "存储层"
+
+[lib]
+lib="./src/lib.rs"
+
+[dependencies]
+log = {workspace=true}
+serde = {workspace=true}
+serde_json = {workspace=true}
+thiserror= {workspace=true}
+async-trait= {workspace=true}
+tokio= {workspace=true}
+bincode= {workspace=true}
+moduforge-core= {workspace=true}
+zstd= {workspace=true}
