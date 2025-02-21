@@ -67,6 +67,7 @@ impl SnapshotHandler {
                                             Ok(mut file) => {
                                                 file.write_all(&data).await.unwrap();
                                                 cleanup_old(&tr_path, state.version).await;
+                                                cleanup_old(&all_path, state.version).await;
                                             }
                                             Err(e) => {
                                                 println!("write file error:{}", e);
