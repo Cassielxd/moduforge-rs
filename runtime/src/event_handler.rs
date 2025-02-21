@@ -107,21 +107,31 @@ impl SnapshotHandler {
             tx,
         })
     }
-    /// 处理全量快照
-    pub async fn handle_full_snapshot(&self, tr: &Arc<Transaction>, state: &Arc<State>) {
-        let state_clone = state.clone();
-        let base_path = self
-            .storage_option
-            .snapshot_path
-            .join(state_clone.doc().inner.root_id.clone());
-        let path = base_path.join(format!("snapshot_v_{}.bin", state_clone.version));
-        let delta_path = self
-            .storage_option
-            .delta_path
-            .join(state_clone.doc().inner.root_id.clone());
+    async fn get_delta_path(&self, id: String) -> PathBuf {
+        let base_path = self.storage_option.storage_path.join(id).join("delta");
         if !Path::exists(&base_path) {
             let _ = fs::create_dir_all(base_path.clone()).await;
         }
+        base_path
+    }
+    async fn get_snapshot_path(&self, id: String) -> PathBuf {
+        let base_path = self.storage_option.storage_path.join(id).join("snapshot");
+        if !Path::exists(&base_path) {
+            let _ = fs::create_dir_all(base_path.clone()).await;
+        }
+        base_path
+    }
+    /// 处理全量快照
+    pub async fn handle_full_snapshot(&self, tr: &Arc<Transaction>, state: &Arc<State>) {
+        let state_clone = state.clone();
+
+        let id: String = state_clone.doc().inner.root_id.clone();
+
+        let snapshot_path = self.get_snapshot_path(id.clone()).await;
+        let delta_path = self.get_delta_path(id.clone()).await;
+
+        let path = snapshot_path.join(format!("snapshot_v_{}.bin", state_clone.version));
+
         let cache_ref: Arc<SnapshotManager> = self.snapshot_manager.clone();
         let time: u64 = tr.time;
         cache_ref.put(&state_clone, time);
@@ -132,21 +142,16 @@ impl SnapshotHandler {
     }
     ///处理增量事务
     pub async fn handle_tr_snapshot(&self, tr: &Arc<Transaction>, state: &Arc<State>) {
-        let base_path = self
-            .storage_option
-            .delta_path
-            .join(state.doc().inner.root_id.clone());
-        let path = base_path.join(format!("delta_{}_{}.bin", tr.time, state.version));
-        if !Path::exists(&base_path) {
-            let _ = fs::create_dir_all(base_path).await;
-        }
+        let id: String = state.doc().inner.root_id.clone();
+        let delta_path = self.get_delta_path(id.clone()).await;
+        let path = delta_path.join(format!("delta_{}_{}.bin", tr.time, state.version));
+
         let tr_clone = tr.clone();
-        let state_version = state.version;
         let path_clone = path.clone();
         let _ = self
             .tx
             .send((
-                SnapshotData::Tr(to_delta(&tr_clone, state_version)),
+                SnapshotData::Tr(to_delta(&tr_clone, state.version)),
                 path_clone.clone(),
                 path_clone,
             ))

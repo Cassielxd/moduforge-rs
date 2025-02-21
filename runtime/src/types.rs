@@ -36,16 +36,13 @@ pub enum Content {
 #[derive(Clone, Debug)]
 pub struct StorageOptions {
     pub storage_path: PathBuf,
-    pub snapshot_path: PathBuf,
-    pub delta_path: PathBuf,
+
     pub l2_path: PathBuf,
 }
 impl Default for StorageOptions {
     fn default() -> Self {
         let path = current_dir().unwrap().join("./data");
         Self {
-            snapshot_path: path.join("snapshot"),
-            delta_path: path.join("delta"),
             l2_path: path.join("db"),
             storage_path: path,
         }
