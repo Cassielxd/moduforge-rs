@@ -10,6 +10,6 @@ pub mod mark;
 pub mod metrics;
 pub mod node;
 pub mod runtime;
-pub mod snapshot_manager;
+pub mod storage_manager;
 pub mod tr;
 pub mod types;

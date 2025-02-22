@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{env::current_dir, sync::Arc};
 
 use async_trait::async_trait;
 use moduforge_core::{
@@ -14,7 +14,7 @@ use moduforge_runtime::{
 
 #[tokio::main]
 async fn main() {
-    test_create_snapshot().await;
+    test_export_zip().await;
 }
 #[allow(dead_code)]
 async fn test_from_snapshot() {
@@ -64,6 +64,13 @@ async fn test_create_snapshot() {
     tokio::time::sleep(std::time::Duration::from_secs(100)).await;
 }
 
+async fn test_export_zip() {
+    let mut runtime = Editor::create(EditorOptions::default().set_extensions(get_base())).await;
+    let mut tr: Transaction = runtime.get_tr();
+    tr.transaction(MyCommand::new()).await;
+    let _ = runtime.dispatch(tr).await;
+    runtime.export_zip(current_dir().unwrap().join("test.zip").as_path()).await;
+}
 fn get_base() -> Vec<Extensions> {
     let mut extensions = vec![];
 

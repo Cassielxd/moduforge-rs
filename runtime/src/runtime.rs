@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 use crate::{
     cache::{CacheKey, cache::DocumentCache},
@@ -8,7 +8,7 @@ use crate::{
     extension_manager::ExtensionManager,
     helpers::create_doc,
     history_manager::HistoryManager,
-    snapshot_manager::SnapshotManager,
+    storage_manager::StorageManager,
     types::{EditorOptions, StorageOptions},
 };
 use moduforge_core::{
@@ -25,7 +25,7 @@ pub struct Editor {
     event_bus: EventBus,
     state: Arc<State>,
     extension_manager: ExtensionManager,
-    snapshot_manager: Arc<SnapshotManager>,
+    storage_manager: Arc<StorageManager>,
     engine_manager: EngineManager,
     history_manager: HistoryManager<Arc<State>>,
     options: EditorOptions,
@@ -42,7 +42,7 @@ impl Editor {
             None => StorageOptions::default(),
         };
         let cache: Arc<DocumentCache> = DocumentCache::new(&storage);
-        let snapshot_manager = SnapshotManager::create(cache);
+        let storage_manager = StorageManager::create(cache);
         let event_bus = EventBus::new();
         let state: State = State::create(StateConfig {
             schema: Some(extension_manager.get_schema()),
@@ -57,7 +57,7 @@ impl Editor {
         let mut runtime = Editor {
             event_bus,
             history_manager: HistoryManager::new(state.clone(), options.get_history_limit()),
-            snapshot_manager,
+            storage_manager,
             engine_manager: EngineManager::create(options.get_rules_path()),
             options,
             extension_manager,
@@ -69,7 +69,7 @@ impl Editor {
     }
     pub async fn init(&mut self) {
         let default_event_handlers = init_event_handler(
-            &self.snapshot_manager,
+            &self.storage_manager,
             self.options.get_event_handlers(),
             self.storage.clone(),
             self.options.get_history_limit(),
@@ -93,13 +93,18 @@ impl Editor {
         &self.engine_manager
     }
     pub fn get_snapshot(&self, key: &CacheKey) -> Option<Arc<NodePool>> {
-        self.snapshot_manager.get_snapshot(key)
+        self.storage_manager.get_snapshot(key)
     }
     pub fn get_state(&self) -> &Arc<State> {
         &self.state
     }
     pub fn get_schema(&self) -> Arc<Schema> {
         self.extension_manager.get_schema()
+    }
+    pub async  fn export_zip(&self,output_path: &Path){
+        if let Err(err) =self.storage_manager.export_zip(&self.state,output_path).await{
+            eprintln!("导出zip文件失败:{}",err);
+        }
     }
     /// 获取新的事物
     pub fn get_tr(&self) -> Transaction {
@@ -190,7 +195,7 @@ impl Editor {
 }
 
 pub fn init_event_handler(
-    snapshot_manager: &Arc<SnapshotManager>,
+    storage_manager: &Arc<StorageManager>,
     event_handlers: Vec<Arc<dyn EventHandler>>,
     storage: StorageOptions,
     snapshot_interval: Option<usize>,
@@ -198,7 +203,7 @@ pub fn init_event_handler(
     let mut default_event_handlers: Vec<Arc<dyn EventHandler>> = vec![SnapshotHandler::new(
         storage.clone(),
         snapshot_interval.unwrap_or(50),
-        snapshot_manager.clone(),
+        storage_manager.clone(),
     )];
     default_event_handlers.append(&mut event_handlers.clone());
     default_event_handlers

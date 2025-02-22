@@ -15,7 +15,7 @@ use tokio::{
 
 use crate::{
     event::{Event, EventHandler},
-    snapshot_manager::SnapshotManager,
+    storage_manager::StorageManager,
     types::StorageOptions,
 };
 use moduforge_delta::{
@@ -32,14 +32,14 @@ pub struct SnapshotHandler {
     storage_option: StorageOptions,
     snapshot_interval: usize,
     counter: AtomicUsize,
-    snapshot_manager: Arc<SnapshotManager>,
+    storage_manager: Arc<StorageManager>,
     tx: async_channel::Sender<(SnapshotData, PathBuf, PathBuf)>,
 }
 impl SnapshotHandler {
     pub fn new(
         storage_option: StorageOptions,
         snapshot_interval: usize,
-        snapshot_manager: Arc<SnapshotManager>,
+        storage_manager: Arc<StorageManager>,
     ) -> Arc<SnapshotHandler> {
         let (tx, rx) = async_channel::bounded::<(SnapshotData, PathBuf, PathBuf)>(100);
         tokio::spawn(async move {
@@ -49,6 +49,7 @@ impl SnapshotHandler {
                         Ok((data,tr_path,all_path)) => {
                             match data {
                                 SnapshotData::Tr(transaction_delta) => {
+                                    // 创建增量快照
                                     if let Ok(data) = create_tr_snapshot(transaction_delta) {
                                         match File::create(&tr_path).await {
                                             Ok(mut file) => {
@@ -62,12 +63,13 @@ impl SnapshotHandler {
                                     }
                                 },
                                 SnapshotData::State(state) => {
+                                    // 创建全量快照
                                     match create_full_snapshot(&state) {
                                         Ok(data) => match File::create(&all_path).await {
                                             Ok(mut file) => {
                                                 file.write_all(&data).await.unwrap();
+                                                //清除冗余增量快照
                                                 cleanup_old(&tr_path, state.version).await;
-                                                cleanup_old(&all_path, state.version).await;
                                             }
                                             Err(e) => {
                                                 println!("write file error:{}", e);
@@ -85,17 +87,9 @@ impl SnapshotHandler {
                             break;
                         },
                     },
-                    shutdown_signal = Box::pin(signal::ctrl_c()) => {
-                        match shutdown_signal {
-                            Ok(()) => {
-                                println!("增量事务服务 接收到关闭信号，正在退出...");
-                                break;
-                            },
-                            Err(e) => {
-                                eprintln!("增量事务服务 处理关闭信号时出错: {}", e);
-                                break;
-                            }
-                        }
+                    _ = Box::pin(signal::ctrl_c()) => {
+                        eprintln!("快照服务正在退出");
+                        break;
                     },
                 }
             }
@@ -104,7 +98,7 @@ impl SnapshotHandler {
             storage_option,
             snapshot_interval,
             counter: AtomicUsize::new(0),
-            snapshot_manager,
+            storage_manager,
             tx,
         })
     }
@@ -133,7 +127,7 @@ impl SnapshotHandler {
 
         let path = snapshot_path.join(format!("snapshot_v_{}.bin", state_clone.version));
 
-        let cache_ref: Arc<SnapshotManager> = self.snapshot_manager.clone();
+        let cache_ref: Arc<StorageManager> = self.storage_manager.clone();
         let time: u64 = tr.time;
         cache_ref.put(&state_clone, time);
         let _ = self
