@@ -101,9 +101,13 @@ impl Editor {
     pub fn get_schema(&self) -> Arc<Schema> {
         self.extension_manager.get_schema()
     }
-    pub async  fn export_zip(&self,output_path: &Path){
-        if let Err(err) =self.storage_manager.export_zip(&self.state,output_path).await{
-            eprintln!("导出zip文件失败:{}",err);
+    pub async fn export_zip(&self, output_path: &Path) {
+        if let Err(err) = self
+            .storage_manager
+            .export_zip(&self.state, output_path)
+            .await
+        {
+            eprintln!("导出zip文件失败:{}", err);
         }
     }
     /// 获取新的事物

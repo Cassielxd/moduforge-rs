@@ -13,9 +13,9 @@ lazy_static= {workspace=true}
 metrics-exporter-prometheus= {workspace=true}
 async-channel= {workspace=true}
 im= {workspace=true}
-rocksdb = "0.23.0"
-tempfile="3"
-zip="2"
+rocksdb = {workspace=true}
+tempfile={workspace=true}
+zip={workspace=true}
 zstd= {workspace=true}
 chrono= {workspace=true}
 zen-expression= {workspace=true}

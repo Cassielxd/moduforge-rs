@@ -33,6 +33,7 @@ pub struct Transaction {
 }
 unsafe impl Send for Transaction {}
 unsafe impl Sync for Transaction {}
+
 impl Transform for Transaction {
     fn step(&mut self, step: Arc<dyn Step>) -> Result<(), TransformError> {
         let result = step.apply(&mut self.draft, self.schema.clone())?;

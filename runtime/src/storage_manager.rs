@@ -1,9 +1,11 @@
 use std::{
-    io::{Error, Write}, path::Path, sync::{Arc, Mutex}
+    io::{Error, Write},
+    path::Path,
+    sync::{Arc, Mutex},
 };
 
 use moduforge_core::{model::node_pool::NodePool, state::state::State};
-use moduforge_delta::snapshot::{create_full_snapshot};
+use moduforge_delta::snapshot::create_full_snapshot;
 use zip::write::SimpleFileOptions;
 
 use crate::cache::{CacheKey, cache::DocumentCache};
@@ -44,8 +46,7 @@ impl StorageManager {
         self.document_cache.put(state, &key);
     }
     // 导出zip 文件使用
-    pub async fn  export_zip(&self, state: &Arc<State>, output_path: &Path) -> Result<(), Error> {
-        
+    pub async fn export_zip(&self, state: &Arc<State>, output_path: &Path) -> Result<(), Error> {
         if let Ok(buf) = create_full_snapshot(state) {
             let file = std::fs::File::create(output_path)?;
             let mut zip = zip::ZipWriter::new(file);
@@ -62,7 +63,7 @@ impl StorageManager {
             // 写入更新后的manifest（仅包含保留的快照）
             // 3. 完成并重命名
             zip.finish()?;
-            println!("{:?}",output_path.display());
+            println!("{:?}", output_path.display());
         }
 
         Ok(())
