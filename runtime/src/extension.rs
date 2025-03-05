@@ -3,7 +3,8 @@ use std::sync::Arc;
 use moduforge_core::state::plugin::Plugin;
 
 use crate::types::GlobalAttributeItem;
-
+///扩展实现
+/// 组装全局属性和插件
 #[derive(Clone, Default, Debug)]
 pub struct Extension {
     global_attributes: Vec<GlobalAttributeItem>,

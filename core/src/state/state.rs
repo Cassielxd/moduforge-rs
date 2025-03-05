@@ -1,3 +1,5 @@
+use crate::model::{id_generator::IdGenerator, mark::Mark, node_pool::NodePool, schema::Schema};
+use im::HashMap as ImHashMap;
 use std::{
     collections::HashMap,
     sync::{
@@ -5,8 +7,6 @@ use std::{
         atomic::{AtomicU64, Ordering},
     },
 };
-
-use crate::model::{id_generator::IdGenerator, mark::Mark, node_pool::NodePool, schema::Schema};
 
 use super::{
     plugin::{Plugin, PluginState},
@@ -21,8 +21,8 @@ pub fn get_state_version() -> u64 {
 
 #[derive(Clone, Debug)]
 pub struct State {
-    pub config: Configuration,
-    pub fields_instances: HashMap<String, PluginState>,
+    pub config: Arc<Configuration>,
+    pub fields_instances: ImHashMap<String, PluginState>,
     pub node_pool: Arc<NodePool>,
     pub version: u64,
 }
@@ -38,7 +38,7 @@ impl State {
             state_config.plugins.clone(),
             state_config.doc.clone(),
         );
-        let mut instance = State::new(config);
+        let mut instance = State::new(Arc::new(config));
         let mut field_values = Vec::new();
         for plugin in &instance.config.plugins {
             if let Some(field) = &plugin.spec.state {
@@ -52,7 +52,7 @@ impl State {
         Ok(instance)
     }
 
-    pub fn new(config: Configuration) -> Self {
+    pub fn new(config: Arc<Configuration>) -> Self {
         let doc: Arc<NodePool> = match &config.doc {
             Some(doc) => doc.clone(),
             None => {
@@ -68,7 +68,7 @@ impl State {
         };
 
         State {
-            fields_instances: HashMap::new(),
+            fields_instances: ImHashMap::new(),
             config,
             node_pool: doc,
             version: get_state_version(), //版本好全局自增
@@ -102,26 +102,38 @@ impl State {
         }
         Ok(true)
     }
-
+    /*
+    - 插件链处理 ：该方法实现了一个插件链机制，每个插件都有机会在事务应用过程中添加自己的事务。
+    - 状态隔离 ：通过 seen 数组，确保每个插件看到的是正确的状态快照，避免插件之间的相互干扰。
+    - 事务累积 ：所有插件添加的事务都会被累积应用，形成最终的状态。
+    - 循环终止条件 ：只有当所有插件都不再添加新事务时，循环才会终止。
+     */
     pub async fn apply_transaction(
         &self,
         root_tr: &mut Transaction,
     ) -> Result<TransactionResult, Box<dyn std::error::Error>> {
+        /*
+        首先检查事务是否通过所有插件的过滤条件。如果任何插件拒绝这个事务，则直接返回原始状态，不做任何修改。
+         */
         if !self.filter_transaction(root_tr, None).await? {
             return Ok(TransactionResult {
                 state: self.clone(),
                 transactions: vec![],
             });
         }
-
+        /*
+        - 创建一个事务计数器数组 trs
+        - 应用初始事务到当前状态，得到新状态 new_state
+        - 初始化 seen 为 None，它将用于跟踪每个插件看到的状态
+         */
         let mut trs = Vec::new();
         trs.push(1);
         let mut new_state: State = self.apply_inner(root_tr).await?;
         let mut seen: Option<Vec<SeenState>> = None;
-
+        //整个方法的核心是一个无限循环，直到没有新的事务被添加
         loop {
             let mut have_new = false;
-
+            //循环遍历每个插件，让它们有机会添加新的事务
             for (i, plugin) in self.config.plugins.iter().enumerate() {
                 let n: usize = seen.as_ref().map(|s| s[i].n).unwrap_or(0);
                 let old_state = seen.as_ref().map(|s| &s[i].state).unwrap_or(self);
@@ -198,7 +210,7 @@ impl State {
             state_config.plugins.clone(),
             state_config.doc.clone(),
         );
-        let mut instance = State::new(config);
+        let mut instance = State::new(Arc::new(config));
         let mut field_values = Vec::new();
         for plugin in &instance.config.plugins {
             if let Some(field) = &plugin.spec.state {

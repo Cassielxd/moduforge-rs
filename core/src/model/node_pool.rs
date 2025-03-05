@@ -3,6 +3,13 @@ use bincode::{Decode, Encode};
 use im::HashMap;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+/// 节点池内部数据结构，实现结构共享和高效克隆
+///
+/// # 字段
+///
+/// * `root_id` - 根节点标识符
+/// * `nodes` - 节点存储的不可变哈希表（使用结构共享）
+/// * `parent_map` - 父子关系映射表
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Decode, Encode)]
 pub struct NodePoolInner {
     pub root_id: NodeId,
@@ -12,6 +19,20 @@ pub struct NodePoolInner {
     pub parent_map: im::HashMap<NodeId, NodeId>,
 }
 impl NodePoolInner {
+    /// 更新节点属性（创建新版本的数据结构）
+    ///
+    /// # 参数
+    ///
+    /// * `id` - 目标节点ID
+    /// * `values` - 要更新的属性键值对
+    ///
+    /// # 返回值
+    ///
+    /// 返回包含新节点属性的新版本 `NodePoolInner`
+    ///
+    /// # 错误
+    ///
+    /// 当节点不存在时返回 [`PoolError::NodeNotFound`]
     pub fn update_attr(
         &self,
         id: &NodeId,
@@ -32,7 +53,9 @@ impl NodePoolInner {
         })
     }
 }
-
+/// 线程安全的节点池封装
+///
+/// 使用 [`Arc`] 实现快速克隆，内部使用不可变数据结构保证线程安全
 #[derive(Clone, PartialEq, Debug, Decode, Encode, Serialize, Deserialize)]
 pub struct NodePool {
     // 使用 Arc 包裹内部结构，实现快速克隆
@@ -42,9 +65,21 @@ unsafe impl Send for NodePool {}
 unsafe impl Sync for NodePool {}
 
 impl NodePool {
+    /// 获取节点池中节点总数
     pub fn size(&self) -> usize {
         self.inner.nodes.len()
     }
+
+    /// 从节点列表构建节点池
+    ///
+    /// # 参数
+    ///
+    /// * `nodes` - 初始节点列表
+    /// * `root_id` - 指定根节点ID
+    ///
+    /// # 注意
+    ///
+    /// 会自动构建父子关系映射表
     pub fn from(nodes: Vec<Node>, root_id: NodeId) -> Self {
         let mut nodes_ref = HashMap::new();
         let mut parent_map_ref = HashMap::new();
@@ -158,7 +193,14 @@ impl NodePool {
         self.inner.nodes.values().find(|n| predicate(n))
     }
 }
-
+/// 草稿修改上下文，用于安全地修改节点池
+///
+/// 跟踪以下信息：
+///
+/// * 基础版本节点池
+/// * 当前修改的中间状态
+/// * 生成的修改补丁
+/// * 当前操作路径（用于嵌套数据结构）
 #[derive(Debug, Clone)]
 pub struct Draft {
     pub base: Arc<NodePool>,
@@ -169,7 +211,11 @@ pub struct Draft {
 }
 
 impl Draft {
-    /// 基于现有 NodePool 创建 Draft
+    /// 创建基于现有节点池的草稿
+    ///
+    /// # 参数
+    ///
+    /// * `base` - 基础版本节点池的引用
     pub fn new(base: Arc<NodePool>) -> Self {
         Draft {
             inner: base.inner.as_ref().clone(),
@@ -180,7 +226,17 @@ impl Draft {
         }
     }
 
-    /// 进入嵌套路径（Map类型字段）
+    /// 进入嵌套路径（用于记录结构化修改）
+    ///
+    /// # 参数
+    ///
+    /// * `key` - Map 类型的字段名称
+    ///
+    /// # 示例
+    ///
+    /// ```
+    /// draft.enter_map("content").enter_list(0);
+    /// ```
     pub fn enter_map(&mut self, key: &str) -> &mut Self {
         self.current_path.push(key.to_string());
         self
@@ -198,7 +254,16 @@ impl Draft {
         self
     }
 
-    /// 更新节点属性（记录旧值和新值）
+    /// 提交属性修改并记录补丁
+    ///
+    /// # 参数
+    ///
+    /// * `id` - 目标节点ID
+    /// * `new_values` - 新属性集合
+    ///
+    /// # 错误
+    ///
+    /// 当节点不存在时返回 [`PoolError::NodeNotFound`]
     pub fn update_attr(
         &mut self,
         id: &NodeId,
@@ -222,6 +287,16 @@ impl Draft {
         });
         Ok(())
     }
+    /// 从节点中移除指定标记
+    ///
+    /// # 参数
+    ///
+    /// * `id` - 目标节点ID
+    /// * `mark` - 要移除的标记
+    ///
+    /// # 错误
+    ///
+    /// 当节点不存在时返回 [`PoolError::NodeNotFound`]
     pub fn remove_mark(&mut self, id: &NodeId, mark: Mark) -> Result<(), PoolError> {
         let mut node = self
             .get_node(id)
@@ -243,6 +318,16 @@ impl Draft {
         });
         Ok(())
     }
+    /// 为节点添加标记
+    ///
+    /// # 参数
+    ///
+    /// * `id` - 目标节点ID
+    /// * `mark` - 要添加的标记
+    ///
+    /// # 错误
+    ///
+    /// 当节点不存在时返回 [`PoolError::NodeNotFound`]
     pub fn add_mark(&mut self, id: &NodeId, mark: Mark) -> Result<(), PoolError> {
         let mut node = self
             .get_node(id)
@@ -305,6 +390,16 @@ impl Draft {
             });
         }
     }
+    /// 移除子节点    
+    ///
+    /// # 参数
+    ///
+    /// * `parent_id` - 父节点ID
+    /// * `nodes` - 要移除的子节点ID列表
+    ///
+    /// # 错误
+    ///
+    /// 当父节点不存在时返回 [`PoolError::ParentNotFound`]
     pub fn remove_node(&mut self, parent_id: &NodeId, nodes: Vec<NodeId>) -> Result<(), PoolError> {
         let parent = self
             .get_node(parent_id)
@@ -347,7 +442,15 @@ impl Draft {
 
         Ok(())
     }
-
+    /// 应用补丁集合并更新节点池
+    ///
+    /// # 参数
+    ///
+    /// * `patches` - 要应用的补丁集合
+    ///
+    /// # 注意
+    ///
+    /// 应用过程中会临时禁用补丁记录
     pub fn apply_patches(&mut self, patches: &Vec<Patch>) -> Result<(), PoolError> {
         //跳过记录
         self.skip_record = true;
@@ -399,7 +502,7 @@ impl Draft {
         self.skip_record = false;
         Ok(())
     }
-    // 翻转
+    /// 翻转补丁集合并应用到节点池
     pub fn reverse_patches(&mut self, patches: Vec<Patch>) -> Result<(), PoolError> {
         //跳过记录
         self.skip_record = true;

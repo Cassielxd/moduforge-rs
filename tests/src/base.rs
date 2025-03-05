@@ -7,6 +7,8 @@ use moduforge_core::{
 };
 use moduforge_runtime::{node::Node, types::Extensions};
 
+use crate::ext::get_extension;
+
 pub fn get_base() -> Vec<Extensions> {
     let mut extensions = vec![];
 
@@ -21,33 +23,6 @@ pub fn get_base() -> Vec<Extensions> {
     let mut dw = Node::default();
     dw.set_name("DW").set_desc("页面");
     extensions.push(Extensions::N(dw));
+    extensions.push(Extensions::E(get_extension()));
     extensions
-}
-
-#[derive(Clone, Default, Debug)]
-pub struct MyCommand;
-impl MyCommand {
-    pub fn new() -> Arc<MyCommand> {
-        Arc::new(MyCommand)
-    }
-}
-
-#[async_trait]
-impl Command for MyCommand {
-    fn name(&self) -> String {
-        "cassie".to_string()
-    }
-    async fn execute(&self, tr: &mut Transaction) -> Result<(), TransformError> {
-        for _i in 1..1000 {
-            tr.add_node(
-                tr.doc().inner.root_id.to_string(),
-                tr.schema
-                    .nodes
-                    .get("DW")
-                    .unwrap()
-                    .create(None, None, vec![], None),
-            );
-        }
-        Ok(())
-    }
 }

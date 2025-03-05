@@ -103,12 +103,12 @@ impl Transaction {
         self
     }
 
-    pub fn set_meta<K>(&mut self, key: K, value: Arc<dyn std::any::Any>) -> &mut Self
+    pub fn set_meta<K, T: std::any::Any>(&mut self, key: K, value: T) -> &mut Self
     where
         K: Into<String>,
     {
         let key_str = key.into();
-        self.meta.insert(key_str, value);
+        self.meta.insert(key_str, Arc::new(value));
         self
     }
 

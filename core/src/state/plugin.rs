@@ -17,17 +17,14 @@ pub trait Reset: Send + Sync + Debug {
 }
 
 #[async_trait]
-pub trait PluginTrFilterTrait: Send + Sync + Debug {
-    async fn filter_transaction(&self, tr: &Transaction, state: &State) -> bool;
-}
-#[async_trait]
-pub trait PluginTrTrait: Send + Sync + Debug {
+pub trait PluginTrait: Send + Sync + Debug {
     async fn append_transaction<'a>(
         &self,
         tr: &'a mut Transaction,
         old_state: &State,
         new_state: &State,
     ) -> Option<&'a mut Transaction>;
+    async fn filter_transaction(&self, tr: &Transaction, state: &State) -> bool;
 }
 
 #[async_trait]
@@ -42,16 +39,11 @@ pub trait StateField: Send + Sync + Debug {
         new_state: &State,
     ) -> PluginState;
 
-    fn to_json(&self, _value: &PluginState) -> Option<serde_json::Value> {
+    fn serialize(&self, _value: PluginState) -> Option<Vec<u8>> {
         None
     }
 
-    fn from_json(
-        &self,
-        _config: &StateConfig,
-        _value: &serde_json::Value,
-        _state: &State,
-    ) -> Option<PluginState> {
+    fn deserialize(&self, _value: &Vec<u8>) -> Option<PluginState> {
         None
     }
 }
@@ -59,13 +51,12 @@ pub trait StateField: Send + Sync + Debug {
 #[derive(Clone, Debug)]
 pub struct PluginSpec {
     pub state: Option<Arc<dyn StateField>>,
-    pub key: Option<PluginKey>,
-    pub filter_transaction: Option<Arc<dyn PluginTrFilterTrait>>,
-    pub append_transaction: Option<Arc<dyn PluginTrTrait>>,
+    pub key: PluginKey,
+    pub transaction: Option<Arc<dyn PluginTrait>>,
 }
 impl PluginSpec {
     async fn filter_transaction(&self, tr: &Transaction, state: &State) -> bool {
-        if let Some(filter) = self.filter_transaction.clone() {
+        if let Some(filter) = self.transaction.clone() {
             return filter.filter_transaction(tr, state).await;
         }
         false
@@ -76,7 +67,7 @@ impl PluginSpec {
         old_state: &State,
         new_state: &State,
     ) -> Option<&'a mut Transaction> {
-        if let Some(transaction) = self.append_transaction.clone() {
+        if let Some(transaction) = self.transaction.clone() {
             return transaction
                 .append_transaction(trs, old_state, new_state)
                 .await;
@@ -93,10 +84,7 @@ pub struct Plugin {
 
 impl Plugin {
     pub fn new(spec: PluginSpec) -> Self {
-        let key = match &spec.key {
-            Some(plugin_key) => plugin_key.key.clone(),
-            None => create_key("plugin"),
-        };
+        let key = spec.key.0.clone();
 
         Plugin { spec, key }
     }
@@ -125,30 +113,9 @@ pub trait PluginStateTrait: Any + Serialize + for<'de> Deserialize<'de> {}
 
 impl<T: Any + Serialize + for<'de> Deserialize<'de>> PluginStateTrait for T {}
 
-pub type PluginState = Arc<InnerPluginState>;
+pub type PluginState = Arc<dyn std::any::Any + Send + Sync>;
 
 use std::fmt::Debug;
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Decode, Encode)]
-pub enum InnerPluginState {
-    MAP(#[bincode(with_serde)] im::HashMap<String, Node>),
-    NODES(#[bincode(with_serde)] im::Vector<Node>),
-    String(String),
-}
-
 /// Plugin key instance
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct PluginKey {
-    // Unique identifier
-    pub key: String,
-    // Plugin description
-    pub desc: String,
-}
-
-impl PluginKey {
-    pub fn new(name: Option<&str>, desc: Option<&str>) -> Self {
-        let key = create_key(name.unwrap_or("key"));
-        let desc = desc.unwrap_or("").to_string();
-        PluginKey { key, desc }
-    }
-}
+pub type PluginKey = (String, String);

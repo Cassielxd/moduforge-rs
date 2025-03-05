@@ -1,7 +1,7 @@
 use moduforge_core::state::transaction::Transaction;
 use moduforge_runtime::{cache::CacheKey, runtime::Editor, types::EditorOptions};
 
-use crate::base::{MyCommand, get_base};
+use crate::{base::get_base, commands::MyCommand};
 
 #[allow(dead_code)]
 async fn from_snapshot() {

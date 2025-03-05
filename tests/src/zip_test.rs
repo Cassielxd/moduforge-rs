@@ -3,7 +3,7 @@ use std::env::current_dir;
 use moduforge_core::state::transaction::Transaction;
 use moduforge_runtime::{runtime::Editor, types::EditorOptions};
 
-use crate::base::{MyCommand, get_base};
+use crate::{base::get_base, commands::MyCommand};
 
 pub async fn export_zip() {
     let mut runtime = Editor::create(EditorOptions::default().set_extensions(get_base())).await;
