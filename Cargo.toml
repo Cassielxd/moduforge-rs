@@ -7,10 +7,6 @@ members = [
    "engine-dev-tools",
    "tests"
 ]
-exclude = [
-   "tests",
-   "engine-dev-tools",
-]
 [workspace.package]
 name = "moduforge"
 version = "0.1.0"
@@ -59,3 +55,4 @@ moduforge-core = { path = "./core" }
 moduforge-delta = { path = "./delta" }
 moduforge-runtime = { path = "./runtime" }
 moduforge-tests = { path = "./tests" }
+
