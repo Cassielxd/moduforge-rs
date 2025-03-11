@@ -59,8 +59,7 @@ impl Step for PatchStep {
     ) -> Result<step::StepResult, transform::TransformError> {
         match dart.apply_patches(&self.patches) {
             Ok(()) => {
-                let (node_pool, _patches) = dart.commit();
-                Ok(StepResult::ok(node_pool, _patches))
+                Ok(dart.commit())
             },
             Err(err) => Err(TransformError::new(err.to_string())),
         }
@@ -113,8 +112,7 @@ impl Step for BatchStep {
         }
 
         // 所有步骤执行成功，提交更改
-        let (node_pool, patches) = dart.commit();
-        Ok(StepResult::ok(node_pool, patches))
+        Ok(dart.commit())
     }
 
     fn to_concrete(&self) -> ConcreteStep {

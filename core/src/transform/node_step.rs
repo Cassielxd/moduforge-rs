@@ -33,8 +33,7 @@ impl Step for AddNodeStep {
 
         match dart.add_node(&self.parent_id, self.node.clone()) {
             Ok(()) => {
-                let (node_pool, _patches) = dart.commit();
-                Ok(StepResult::ok(node_pool, _patches))
+                Ok(dart.commit())
             },
             Err(err) => Err(TransformError::new(err.to_string())),
         }
@@ -68,8 +67,7 @@ impl Step for RemoveNodeStep {
 
         match dart.remove_node(&self.parent_id, self.node_ids.clone()) {
             Ok(()) => {
-                let (node_pool, _patches) = dart.commit();
-                Ok(StepResult::ok(node_pool, _patches))
+                Ok(dart.commit())
             },
             Err(err) => Err(TransformError::new(err.to_string())),
         }
@@ -109,8 +107,7 @@ impl Step for MoveNodeStep {
 
         match dart.move_node(&self.source_parent_id, &self.target_parent_id, &self.node_id, self.position) {
             Ok(()) => {
-                let (node_pool, patches) = dart.commit();
-                Ok(StepResult::ok(node_pool, patches))
+                Ok(dart.commit())
             },
             Err(err) => Err(TransformError::new(err.to_string())),
         }
@@ -145,8 +142,7 @@ impl Step for ReplaceNodeStep {
 
         match dart.replace_node(self.node_id.clone(), Arc::new(self.node.clone())) {
             Ok(()) => {
-                let (node_pool, _patches) = dart.commit();
-                Ok(StepResult::ok(node_pool, _patches))
+                Ok(dart.commit())
             },
             Err(err) => Err(TransformError::new(err.to_string())),
         }

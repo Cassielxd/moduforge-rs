@@ -88,12 +88,14 @@ impl Transaction {
         &mut self,
         call_back: Arc<dyn Command>,
     ) {
+        self.draft.begin=true;
         let result = call_back.execute(self).await;
+        self.draft.begin=false;
         if result.is_ok() {
-            let (node_pool, patches) = self.draft.commit();
+            let result = self.draft.commit();
             self.add_step(
-                Arc::new(PatchStep { patches: patches.clone() }),
-                StepResult::ok(node_pool, patches),
+                Arc::new(PatchStep { patches: result.patches.clone() }),
+                result,
             );
         }
     }

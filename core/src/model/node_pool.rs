@@ -1,3 +1,5 @@
+use crate::transform::step::StepResult;
+
 use super::{error::PoolError, mark::Mark, node::Node, patch::Patch, types::NodeId};
 use bincode::{Decode, Encode};
 use im::HashMap;
@@ -229,6 +231,8 @@ pub struct Draft {
     pub patches: Vec<Patch>,
     pub current_path: Vec<String>,
     pub skip_record: bool,
+    pub begin:bool
+        
 }
 
 impl Draft {
@@ -244,6 +248,7 @@ impl Draft {
             patches: Vec::new(),
             current_path: Vec::new(),
             skip_record: false,
+            begin:false
         }
     }
 
@@ -676,8 +681,17 @@ impl Draft {
         }
     }
     /// 提交修改，生成新 NodePool 和补丁列表
-    pub fn commit(&self) -> (Arc<NodePool>, Vec<Patch>) {
+    pub fn commit(&self) -> StepResult {
         let new_pool = NodePool { inner: Arc::new(self.inner.clone()) };
-        (Arc::new(new_pool), self.patches.clone())
+        match self.begin {
+            true => {
+                StepResult{ doc: None, failed: None, patches: Vec::new() }
+            },
+            false => {
+                StepResult::ok(Arc::new(new_pool),  self.patches.clone())
+               
+            },
+        }
+       
     }
 }

@@ -33,8 +33,7 @@ impl Step for AttrStep {
         let _ = schema;
         match dart.update_attr(&self.id, self.values.clone()) {
             Ok(_) => {
-                let (node_pool, patches) = dart.commit();
-                Ok(StepResult::ok(node_pool, patches))
+                Ok(dart.commit())
             },
             Err(err) => Err(TransformError::new(err.to_string())),
         }
