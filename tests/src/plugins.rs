@@ -22,7 +22,7 @@ impl StateField for P1State {
 
     async fn apply(
         &self,
-        tr: &Transaction,
+        _tr: &Transaction,
         value: PluginState,
         _old_state: &State,
         _new_state: &State,
