@@ -16,5 +16,4 @@ bincode= {workspace=true}
 zstd= {workspace=true}
 moduforge-core = {workspace=true}
 moduforge-delta = {workspace=true}
-moduforge-official = {workspace=true}
 moduforge-runtime = {workspace=true}

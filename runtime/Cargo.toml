@@ -6,6 +6,7 @@ description = "插件加载、热更新、依赖管理"
 [lib]
 lib="./src/lib.rs"
 
+
 [dependencies]
 tokio = {workspace=true}
 metrics= {workspace=true}

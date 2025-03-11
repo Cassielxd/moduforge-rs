@@ -1730,18 +1730,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "moduforge-official"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "im",
- "log",
- "serde",
- "serde_json",
- "thiserror 2.0.11",
-]
-
-[[package]]
 name = "moduforge-runtime"
 version = "0.1.0"
 dependencies = [
@@ -1778,7 +1766,6 @@ dependencies = [
  "log",
  "moduforge-core",
  "moduforge-delta",
- "moduforge-official",
  "moduforge-runtime",
  "serde",
  "serde_json",

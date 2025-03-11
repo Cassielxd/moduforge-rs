@@ -3,11 +3,9 @@ resolver = "2"
 members = [
    "core",
    "delta",
-   "official",
    "runtime",
    "engine-dev-tools",
    "tests"
-
 ]
 exclude = [
    "tests",
@@ -59,7 +57,5 @@ metrics-exporter-prometheus = "0.16.2"
 # 业务核心
 moduforge-core = { path = "./core" }
 moduforge-delta = { path = "./delta" }
-moduforge-official = { path = "./official" }
 moduforge-runtime = { path = "./runtime" }
 moduforge-tests = { path = "./tests" }
-

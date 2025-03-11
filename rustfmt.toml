@@ -1,0 +1,8 @@
+edition="2021"
+# 最大行宽
+max_width = 150
+# 硬性限制行宽
+hard_tabs = false
+# 缩进宽度
+tab_spaces = 2
+fn_params_layout="Vertical"
