@@ -1,12 +1,14 @@
+use std::sync::Arc;
+
 use attr_step::AttrStep;
 use bincode::{Decode, Encode};
 use mark_step::AddMarkStep;
-use node_step::{AddNodeStep, RemoveNodeStep};
+use node_step::{AddNodeStep, MoveNodeStep, RemoveNodeStep};
 use serde::{Deserialize, Serialize};
 use step::{Step, StepResult};
 use transform::TransformError;
 
-use crate::model::{node_pool::Draft, patch::Patch};
+use crate::model::{node_pool::Draft, patch::Patch, schema::Schema};
 pub mod attr_step;
 pub mod mark_step;
 pub mod node_step;
@@ -20,6 +22,8 @@ pub enum ConcreteStep {
     AddMarkStep(AddMarkStep),
     RemoveNodeStep(RemoveNodeStep),
     PatchStep(PatchStep),
+    MoveNodeStep(MoveNodeStep),
+    BatchStep(BatchStep),
 }
 impl Step for ConcreteStep {
     fn apply(
@@ -33,6 +37,8 @@ impl Step for ConcreteStep {
             ConcreteStep::AddMarkStep(add_mark_step) => add_mark_step.apply(dart, schema),
             ConcreteStep::RemoveNodeStep(remove_node_step) => remove_node_step.apply(dart, schema),
             ConcreteStep::PatchStep(patch_step) => patch_step.apply(dart, schema),
+            ConcreteStep::MoveNodeStep(move_node_step) => move_node_step.apply(dart, schema),
+            ConcreteStep::BatchStep(batch_step) => batch_step.apply(dart, schema),
         }
     }
     fn to_concrete(&self) -> ConcreteStep {
@@ -60,5 +66,55 @@ impl Step for PatchStep {
 
     fn to_concrete(&self) -> ConcreteStep {
         ConcreteStep::PatchStep(self.clone())
+    }
+}
+/// 批量操作步骤
+#[derive(Debug, Serialize, Deserialize, Clone, Decode, Encode)]
+pub struct BatchStep {
+    steps: Vec<ConcreteStep>,
+}
+
+impl BatchStep {
+    pub fn new(steps: Vec<ConcreteStep>) -> Self {
+        BatchStep { steps }
+    }
+}
+impl Step for BatchStep {
+    fn apply(
+        &self,
+        dart: &mut Draft,
+        schema: Arc<Schema>,
+    ) -> Result<StepResult, TransformError> {
+        for step in &self.steps {
+            let schema = schema.clone();
+            let result = match step {
+                ConcreteStep::UpdateAttrs(attr_step) => attr_step.apply(dart, schema),
+                ConcreteStep::AddNodeStep(add_node_step) => add_node_step.apply(dart, schema),
+                ConcreteStep::AddMarkStep(add_mark_step) => add_mark_step.apply(dart, schema),
+                ConcreteStep::RemoveNodeStep(remove_node_step) => remove_node_step.apply(dart, schema),
+                ConcreteStep::PatchStep(patch_step) => patch_step.apply(dart, schema),
+                ConcreteStep::MoveNodeStep(move_node_step) => move_node_step.apply(dart, schema),
+                ConcreteStep::BatchStep(_) => {
+                    return Err(TransformError::new("batch_step 禁止套娃".to_string()));
+                },
+            };
+            match result {
+                Ok(result) => {
+                    if let Some(message) = result.failed {
+                        return Ok(StepResult::fail(message));
+                    }
+                    // 继续执行下一个步骤
+                },
+                Err(err) => return Err(err),
+            }
+        }
+
+        // 所有步骤执行成功，提交更改
+        let (node_pool, patches) = dart.commit();
+        Ok(StepResult::ok(node_pool, patches))
+    }
+
+    fn to_concrete(&self) -> ConcreteStep {
+        ConcreteStep::BatchStep(self.clone())
     }
 }

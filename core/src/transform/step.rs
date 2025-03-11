@@ -12,7 +12,7 @@ use super::{ConcreteStep, transform::TransformError};
 pub trait Step: Send + Sync + Debug {
     fn apply(
         &self,
-        doc: &mut Draft,
+        dart: &mut Draft,
         schema: Arc<Schema>,
     ) -> Result<StepResult, TransformError>;
     fn to_concrete(&self) -> ConcreteStep;

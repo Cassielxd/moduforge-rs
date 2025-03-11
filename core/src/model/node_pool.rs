@@ -385,6 +385,74 @@ impl Draft {
 
         Ok(())
     }
+    /// 移动节点
+    pub fn move_node(
+        &mut self,
+        source_parent_id: &NodeId,
+        target_parent_id: &NodeId,
+        node_id: &NodeId,
+        position: Option<usize>,
+    ) -> Result<(), PoolError> {
+        // 检查源父节点是否存在
+        let source_parent =
+            self.get_node(source_parent_id).ok_or(PoolError::ParentNotFound(source_parent_id.clone()))?;
+        // 检查目标父节点是否存在
+        let target_parent =
+            self.get_node(target_parent_id).ok_or(PoolError::ParentNotFound(target_parent_id.clone()))?;
+        // 检查要移动的节点是否存在
+        let node = self.get_node(node_id).ok_or(PoolError::NodeNotFound(node_id.clone()))?;
+        // 检查节点是否是源父节点的子节点
+        if !source_parent.content.contains(node_id) {
+            return Err(PoolError::InvalidParenting {
+                child: node_id.clone(),
+                alleged_parent: source_parent_id.clone(),
+            });
+        }
+        // 从源父节点中移除该节点
+        let mut new_source_parent = source_parent.as_ref().clone();
+        new_source_parent.content = new_source_parent.content.iter().filter(|&id| id != node_id).cloned().collect();
+
+        // 准备将节点添加到目标父节点
+        let mut new_target_parent = target_parent.as_ref().clone();
+        // 根据指定位置插入节点
+        if let Some(pos) = position {
+            if pos <= new_target_parent.content.len() {
+                // 在指定位置插入
+                let mut new_content = im::Vector::new();
+                for (i, child_id) in new_target_parent.content.iter().enumerate() {
+                    if i == pos {
+                        new_content.push_back(node_id.clone());
+                    }
+                    new_content.push_back(child_id.clone());
+                }
+                // 如果位置是在最后，需要额外处理
+                if pos == new_target_parent.content.len() {
+                    new_content.push_back(node_id.clone());
+                }
+                new_target_parent.content = new_content;
+            } else {
+                // 如果位置超出范围，添加到末尾
+                new_target_parent.content.push_back(node_id.clone());
+            }
+        } else {
+            // 默认添加到末尾
+            new_target_parent.content.push_back(node_id.clone());
+        }
+
+        self.inner.nodes.insert(source_parent_id.clone(), Arc::new(new_source_parent));
+        self.inner.nodes.insert(target_parent_id.clone(), Arc::new(new_target_parent));
+        // 更新父子关系映射
+        self.inner.parent_map.insert(node_id.clone(), target_parent_id.clone());
+        // 记录移动节点的补丁
+        self.record_patch(Patch::MoveNode {
+            path: self.current_path.clone(),
+            node_id: node_id.clone(),
+            source_parent_id: source_parent_id.clone(),
+            target_parent_id: target_parent_id.clone(),
+            position,
+        });
+        Ok(())
+    }
     pub fn get_node(
         &self,
         id: &NodeId,
@@ -497,6 +565,9 @@ impl Draft {
                         self.remove_mark(parent_id, mark.as_ref().clone())?;
                     }
                 },
+                Patch::MoveNode { path, node_id, source_parent_id, target_parent_id, position } => {
+                    self.move_node(source_parent_id, target_parent_id, node_id, position.clone())?;
+                },
             }
         }
         self.skip_record = false;
@@ -529,6 +600,9 @@ impl Draft {
                     for mark in marks {
                         self.add_mark(&parent_id, mark.as_ref().clone())?;
                     }
+                },
+                Patch::MoveNode { path, node_id, source_parent_id, target_parent_id, position } => {
+                    self.move_node(&target_parent_id, &source_parent_id, &node_id, position.clone())?;
                 },
             }
         }

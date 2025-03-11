@@ -9,6 +9,7 @@ use super::{
 };
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
+/// 添加节点的步骤
 #[derive(Debug, Serialize, Deserialize, Clone, Decode, Encode)]
 pub struct AddNodeStep {
     parent_id: NodeId,
@@ -43,7 +44,7 @@ impl Step for AddNodeStep {
         ConcreteStep::AddNodeStep(self.clone())
     }
 }
-
+/// 删除节点的步骤
 #[derive(Debug, Serialize, Deserialize, Clone, Decode, Encode)]
 pub struct RemoveNodeStep {
     parent_id: NodeId,
@@ -76,5 +77,46 @@ impl Step for RemoveNodeStep {
 
     fn to_concrete(&self) -> super::ConcreteStep {
         ConcreteStep::RemoveNodeStep(self.clone())
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Decode, Encode)]
+pub struct MoveNodeStep {
+    source_parent_id: NodeId,
+    target_parent_id: NodeId,
+    node_id: NodeId,
+    position: Option<usize>, // 目标位置，None 表示追加到末尾
+}
+
+impl MoveNodeStep {
+    pub fn new(
+        source_parent_id: NodeId,
+        target_parent_id: NodeId,
+        node_id: NodeId,
+        position: Option<usize>,
+    ) -> Self {
+        MoveNodeStep { source_parent_id, target_parent_id, node_id, position }
+    }
+}
+
+impl Step for MoveNodeStep {
+    fn apply(
+        &self,
+        dart: &mut Draft,
+        schema: Arc<Schema>,
+    ) -> Result<StepResult, TransformError> {
+        let _ = schema;
+
+        match dart.move_node(&self.source_parent_id, &self.target_parent_id, &self.node_id, self.position) {
+            Ok(()) => {
+                let (node_pool, patches) = dart.commit();
+                Ok(StepResult::ok(node_pool, patches))
+            },
+            Err(err) => Err(TransformError::new(err.to_string())),
+        }
+    }
+
+    fn to_concrete(&self) -> super::ConcreteStep {
+        ConcreteStep::MoveNodeStep(self.clone())
     }
 }
