@@ -120,3 +120,39 @@ impl Step for MoveNodeStep {
         ConcreteStep::MoveNodeStep(self.clone())
     }
 }
+
+/// 替换节点
+#[derive(Debug, Serialize, Deserialize, Clone, Decode, Encode)]
+pub struct ReplaceNodeStep {
+    node_id: NodeId,
+    node: Node,
+}
+impl ReplaceNodeStep {
+    pub fn new(
+        node_id: NodeId,
+        node: Node,
+    ) -> Self {
+        ReplaceNodeStep { node_id, node }
+    }
+}
+impl Step for ReplaceNodeStep {
+    fn apply(
+        &self,
+        dart: &mut Draft,
+        schema: Arc<Schema>,
+    ) -> Result<StepResult, TransformError> {
+        let _ = schema;
+
+        match dart.replace_node(self.node_id.clone(), Arc::new(self.node.clone())) {
+            Ok(()) => {
+                let (node_pool, _patches) = dart.commit();
+                Ok(StepResult::ok(node_pool, _patches))
+            },
+            Err(err) => Err(TransformError::new(err.to_string())),
+        }
+    }
+
+    fn to_concrete(&self) -> super::ConcreteStep {
+        ConcreteStep::ReplaceNodeStep(self.clone())
+    }
+}

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use attr_step::AttrStep;
 use bincode::{Decode, Encode};
 use mark_step::AddMarkStep;
-use node_step::{AddNodeStep, MoveNodeStep, RemoveNodeStep};
+use node_step::{AddNodeStep, MoveNodeStep, RemoveNodeStep, ReplaceNodeStep};
 use serde::{Deserialize, Serialize};
 use step::{Step, StepResult};
 use transform::TransformError;
@@ -23,6 +23,7 @@ pub enum ConcreteStep {
     RemoveNodeStep(RemoveNodeStep),
     PatchStep(PatchStep),
     MoveNodeStep(MoveNodeStep),
+    ReplaceNodeStep(ReplaceNodeStep),
     BatchStep(BatchStep),
 }
 impl Step for ConcreteStep {
@@ -39,6 +40,7 @@ impl Step for ConcreteStep {
             ConcreteStep::PatchStep(patch_step) => patch_step.apply(dart, schema),
             ConcreteStep::MoveNodeStep(move_node_step) => move_node_step.apply(dart, schema),
             ConcreteStep::BatchStep(batch_step) => batch_step.apply(dart, schema),
+            ConcreteStep::ReplaceNodeStep(replace_node_step) => replace_node_step.apply(dart, schema),
         }
     }
     fn to_concrete(&self) -> ConcreteStep {
@@ -94,6 +96,7 @@ impl Step for BatchStep {
                 ConcreteStep::RemoveNodeStep(remove_node_step) => remove_node_step.apply(dart, schema),
                 ConcreteStep::PatchStep(patch_step) => patch_step.apply(dart, schema),
                 ConcreteStep::MoveNodeStep(move_node_step) => move_node_step.apply(dart, schema),
+                ConcreteStep::ReplaceNodeStep(replace_node_step) => replace_node_step.apply(dart, schema),
                 ConcreteStep::BatchStep(_) => {
                     return Err(TransformError::new("batch_step 禁止套娃".to_string()));
                 },

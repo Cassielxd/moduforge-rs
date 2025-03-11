@@ -32,7 +32,7 @@ pub trait Command: Send + Sync + Debug {
 #[derive(Debug)]
 pub struct Transaction {
     /// 存储元数据的哈希表，支持任意类型数据
-    pub meta: HashMap<String, Box<dyn std::any::Any>>,
+    pub meta: HashMap<String, Arc<dyn std::any::Any>>,
     /// 事务的时间戳
     pub time: u64,
     /// 存储所有操作步骤
@@ -162,7 +162,7 @@ impl Transaction {
         K: Into<String>,
     {
         let key_str = key.into();
-        self.meta.insert(key_str, Box::new(value));
+        self.meta.insert(key_str, Arc::new(value));
         self
     }
     /// 获取元数据
@@ -171,11 +171,11 @@ impl Transaction {
     pub fn get_meta<T: 'static, K>(
         &self,
         key: K,
-    ) -> Option<&Box<T>>
+    ) -> Option<&T>
     where
         K: Into<String>,
     {
         let key_str = key.into();
-        self.meta.get(&key_str)?.downcast_ref::<Box<T>>()
+        self.meta.get(&key_str)?.downcast_ref::<T>()
     }
 }

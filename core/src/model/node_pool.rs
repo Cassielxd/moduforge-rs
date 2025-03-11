@@ -620,7 +620,7 @@ impl Draft {
                     self.move_node(source_parent_id, target_parent_id, node_id, position.clone())?;
                 },
                 Patch::ReplaceNode { path, old, new } => {
-                    self.replace_node(old.id.clone(), new.clone());
+                    self.replace_node(old.id.clone(), new.clone())?;
                 },
             }
         }
@@ -655,11 +655,11 @@ impl Draft {
                         self.add_mark(&parent_id, mark.as_ref().clone())?;
                     }
                 },
-                Patch::MoveNode { path, node_id, source_parent_id, target_parent_id, position } => {
+                Patch::MoveNode { path: _, node_id, source_parent_id, target_parent_id, position } => {
                     self.move_node(&target_parent_id, &source_parent_id, &node_id, position.clone())?;
                 },
-                Patch::ReplaceNode { path, old, new } => {
-                    self.replace_node(new.id.clone(), old.clone());
+                Patch::ReplaceNode { path: _, old, new } => {
+                    self.replace_node(new.id.clone(), old.clone())?;
                 },
             }
         }
