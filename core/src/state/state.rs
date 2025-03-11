@@ -82,11 +82,11 @@ impl State {
         }
     }
     pub fn doc(&self) -> Arc<NodePool> {
-        self.node_pool.clone()
+        Arc::clone(&self.node_pool)
     }
 
     pub fn schema(&self) -> Arc<Schema> {
-        self.config.schema.clone()
+        Arc::clone(&self.config.schema)
     }
 
     pub fn plugins(&self) -> &Vec<Arc<Plugin>> {
@@ -102,11 +102,18 @@ impl State {
 
         // 应用事务
         let result = self.apply_transaction(tr).await?;
-
+        let befor = tr.steps.len();
         // 后置处理器：允许在应用事务后执行自定义逻辑
         self.after_apply_transaction(&result.state, tr).await?;
-
-        Ok(result.state)
+        // 如果事务没有被插件后置处理修改，则直接返回原始状态
+        let after = tr.steps.len();
+        match befor.cmp(&after) {
+            std::cmp::Ordering::Equal => Ok(result.state),
+            _ => {
+                let new_state = result.state.apply_inner(tr).await?;
+                Ok(new_state)
+            },
+        }
     }
     /// 事务应用前的处理器
     async fn before_apply_transaction(
@@ -160,7 +167,7 @@ impl State {
         首先检查事务是否通过所有插件的过滤条件。如果任何插件拒绝这个事务，则直接返回原始状态，不做任何修改。
          */
         if !self.filter_transaction(root_tr, None).await? {
-            return Ok(TransactionResult { state: self.clone(), transactions: vec![] });
+            return Ok(TransactionResult { state: self.clone() });
         }
         /*
         - 创建一个事务计数器数组 trs
@@ -204,7 +211,7 @@ impl State {
             }
 
             if !have_new {
-                return Ok(TransactionResult { state: new_state, transactions: Vec::new() });
+                return Ok(TransactionResult { state: new_state });
             }
         }
     }
@@ -222,14 +229,16 @@ impl State {
         for plugin in &self.config.plugins {
             if let Some(field) = &plugin.spec.state {
                 //如果有插件的情况下是一定存在的
-                let old_plugin_state = self.get_field(&plugin.key).expect("不存在");
-                let value = field.apply(tr, old_plugin_state, self, &new_instance).await;
-                new_instance.set_field(&plugin.key, value)?;
+                if let Some(old_plugin_state) = self.get_field(&plugin.key) {
+                    let value = field.apply(tr, old_plugin_state, self, &new_instance).await;
+                    new_instance.set_field(&plugin.key, value)?;
+                }
             }
         }
         Ok(new_instance)
     }
 
+    #[must_use]
     pub fn tr(&self) -> Transaction {
         Transaction::new(self)
     }
@@ -300,7 +309,6 @@ pub struct SeenState {
 
 pub struct TransactionResult {
     pub state: State,
-    pub transactions: Vec<Transaction>,
 }
 /// 配置结构体，存储编辑器的核心配置信息
 /// - plugins: 已加载的插件列表

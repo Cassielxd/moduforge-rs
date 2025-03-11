@@ -13,11 +13,10 @@ pub struct P1State;
 impl StateField for P1State {
     async fn init(
         &self,
-        config: &StateConfig,
-        instance: Option<&State>,
+        _config: &StateConfig,
+        _instance: Option<&State>,
     ) -> PluginState {
-        let mut map: HashMap<String, String> = HashMap::new();
-        map.insert("k".to_string(), "v".to_string());
+        let map: HashMap<String, String> = HashMap::from([("k".to_string(), "v".to_string())]);
         Arc::new(map)
     }
 
@@ -25,8 +24,8 @@ impl StateField for P1State {
         &self,
         tr: &Transaction,
         value: PluginState,
-        old_state: &State,
-        new_state: &State,
+        _old_state: &State,
+        _new_state: &State,
     ) -> PluginState {
         value
     }
@@ -38,8 +37,8 @@ impl PluginTrait for P1Plugin {
     async fn append_transaction<'a>(
         &self,
         tr: &'a mut Transaction,
-        old_state: &State,
-        new_state: &State,
+        _old_state: &State,
+        _new_state: &State,
     ) -> Option<&'a mut Transaction> {
         let ok: Option<&bool> = tr.get_meta("add_node");
         println!("开始节点个数：{}", tr.doc.size());
@@ -58,8 +57,8 @@ impl PluginTrait for P1Plugin {
     }
     async fn filter_transaction(
         &self,
-        tr: &Transaction,
-        state: &State,
+        _tr: &Transaction,
+        _state: &State,
     ) -> bool {
         true
     }
