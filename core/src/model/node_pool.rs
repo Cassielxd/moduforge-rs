@@ -358,7 +358,39 @@ impl Draft {
         self.inner.nodes.insert(id.clone(), Arc::new(node));
         // 记录补丁
         self.record_patch(Patch::AddMark { path: self.current_path.clone(), node_id: id.clone(), mark });
+        Ok(())
+    }
+    pub fn sort_children<F: FnMut(&(String, &Arc<Node>), &(String, &Arc<Node>)) -> std::cmp::Ordering>(
+        &mut self,
+        parent_id: &NodeId,
+        compare: F,
+    ) -> Result<(), PoolError> {
+        // 检查父节点是否存在
+        let parent = self.get_node(parent_id).ok_or(PoolError::ParentNotFound(parent_id.clone()))?;
 
+        // 获取所有子节点
+        let children_ids = parent.content.clone();
+        if children_ids.is_empty() {
+            return Ok(()); // 没有子节点，无需排序
+        }
+        let mut children: Vec<(NodeId, &Arc<Node>)> = Vec::new();
+        for child_id in &children_ids {
+            if let Some(node) = self.get_node(child_id) {
+                children.push((child_id.clone(), node));
+            }
+        }
+        children.sort_by(compare);
+        // 创建排序后的子节点ID列表
+        let sorted_children: im::Vector<NodeId> = children.into_iter().map(|(id, _)| id).collect();
+        // 更新父节点
+        let mut new_parent = parent.as_ref().clone();
+        new_parent.content = sorted_children;
+        self.record_patch(Patch::ReplaceNode {
+            path: self.current_path.clone(),
+            old: parent.clone(),
+            new: Arc::new(new_parent.clone()),
+        });
+        self.inner.nodes.insert(parent_id.clone(), Arc::new(new_parent));
         Ok(())
     }
     /// 添加子节点
@@ -383,6 +415,25 @@ impl Draft {
             node: node.clone(),
         });
 
+        Ok(())
+    }
+    pub fn replace_node(
+        &mut self,
+        node_id: NodeId,
+        new_node: Arc<Node>,
+    ) -> Result<(), PoolError> {
+        // 检查节点是否存在
+        let old_node = self.get_node(&node_id).ok_or(PoolError::NodeNotFound(node_id.clone()))?;
+        // 确保新节点ID与原节点ID一致
+        if new_node.id != node_id {
+            return Err(PoolError::InvalidNodeId { nodeid: node_id, new_node_id: new_node.id.clone() });
+        }
+        // 保存旧节点用于记录补丁
+        let old_node_clone = old_node.clone();
+        // 更新节点
+        self.inner.nodes.insert(node_id.clone(), new_node.clone());
+        // 记录补丁
+        self.record_patch(Patch::ReplaceNode { path: self.current_path.clone(), old: old_node_clone, new: new_node });
         Ok(())
     }
     /// 移动节点
@@ -568,6 +619,9 @@ impl Draft {
                 Patch::MoveNode { path, node_id, source_parent_id, target_parent_id, position } => {
                     self.move_node(source_parent_id, target_parent_id, node_id, position.clone())?;
                 },
+                Patch::ReplaceNode { path, old, new } => {
+                    self.replace_node(old.id.clone(), new.clone());
+                },
             }
         }
         self.skip_record = false;
@@ -603,6 +657,9 @@ impl Draft {
                 },
                 Patch::MoveNode { path, node_id, source_parent_id, target_parent_id, position } => {
                     self.move_node(&target_parent_id, &source_parent_id, &node_id, position.clone())?;
+                },
+                Patch::ReplaceNode { path, old, new } => {
+                    self.replace_node(new.id.clone(), old.clone());
                 },
             }
         }

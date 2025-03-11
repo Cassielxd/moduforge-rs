@@ -55,11 +55,17 @@ pub enum Patch {
         /// 要移除的节点列表
         nodes: Vec<Arc<Node>>,
     },
+    /// 移动节点
     MoveNode {
         path: Vec<String>,
         node_id: NodeId,
         source_parent_id: NodeId,
         target_parent_id: NodeId,
         position: Option<usize>,
+    },
+    ReplaceNode {
+        path: Vec<String>,
+        old: Arc<Node>,
+        new: Arc<Node>,
     },
 }

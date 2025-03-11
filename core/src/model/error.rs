@@ -14,4 +14,6 @@ pub enum PoolError {
     OrphanNode(NodeId),
     #[error("无效的:子节点 {child} 没在  {alleged_parent} 找到 's")]
     InvalidParenting { child: NodeId, alleged_parent: NodeId },
+    #[error("新节点ID({nodeid})与要替换的节点ID({new_node_id})不一致")]
+    InvalidNodeId { nodeid: NodeId, new_node_id: NodeId },
 }
