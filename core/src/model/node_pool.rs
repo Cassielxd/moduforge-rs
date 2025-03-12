@@ -682,12 +682,13 @@ impl Draft {
     }
     /// 提交修改，生成新 NodePool 和补丁列表
     pub fn commit(&self) -> StepResult {
-        let new_pool = NodePool { inner: Arc::new(self.inner.clone()) };
+       
         match self.begin {
             true => {
                 StepResult{ doc: None, failed: None, patches: Vec::new() }
             },
             false => {
+                let new_pool = NodePool { inner: Arc::new(self.inner.clone()) };
                 StepResult::ok(Arc::new(new_pool),  self.patches.clone())
                
             },
