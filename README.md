@@ -4,11 +4,9 @@ Moduforge是一个不含任何业务绑定的 计价编辑器默认实现，它�
 
 ### Moduforge是如何工作的?
 
-
-
 - **工作方式:** 定义基础节点和标记和约束，然后定义扩展添加行为。
 
-  - **core/model:** 基础数据的定义，包括节点(Node)，标记(Mark)，约束(Schema),片段(Fragment)等。
+  - **core/model:** 基础数据的定义，包括节点(Node)，标记(Mark)，约束(Schema)等。
 
   - **core/state:** 状态管理，主要负责状态的更新，插件的调度。
 
@@ -35,7 +33,6 @@ Moduforge是一个不含任何业务绑定的 计价编辑器默认实现，它�
 ## 关于Moduforge
 
 Moduforge,是基于当前计价软件延伸出来的，因此它与 计价 的业务无关，它只是 个大型的 的编辑器。
-
 
 ## License
 
