@@ -4,6 +4,8 @@ use async_channel::{Receiver, Sender};
 use moduforge_core::state::{state::State, transaction::Transaction};
 use tokio::{signal, sync::RwLock};
 
+use crate::error::{EditorError, EditorResult, error_utils};
+
 // 事件类型定义
 #[derive(Clone)]
 pub enum Event {
@@ -26,25 +28,28 @@ impl Default for EventBus {
 }
 
 impl EventBus {
-    pub async fn restart(&self) {
-        let _ = self.broadcast(Event::Stop).await;
+    pub async fn restart(&self) -> EditorResult<()> {
+        self.broadcast(Event::Stop).await?;
         //由于是异步的 延迟50毫秒启动
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         self.start_event_loop();
+        Ok(())
     }
     pub async fn add_event_handler(
         &mut self,
         event_handler: Arc<dyn EventHandler>,
-    ) {
+    ) -> EditorResult<()> {
         let mut write = self.event_handlers.write().await;
         write.push(event_handler);
+        Ok(())
     }
     pub async fn add_event_handlers(
         &mut self,
         event_handlers: Vec<Arc<dyn EventHandler>>,
-    ) {
+    ) -> EditorResult<()> {
         let mut write = self.event_handlers.write().await;
         write.extend(event_handlers);
+        Ok(())
     }
     /// 启动事件循环
     pub fn start_event_loop(&self) {
@@ -64,10 +69,13 @@ impl EventBus {
                         },
                         Ok(event) => {
                             for handler in &handlers_clone {
-                                handler.handle(&event).await;
+                                if let Err(e) = handler.handle(&event).await {
+                                    eprintln!("事件处理错误: {}", e);
+                                }
                             }
                         },
-                        Err(_) => {
+                        Err(e) => {
+                            eprintln!("事件接收错误: {}", e);
                             break;
                         },
                     },
@@ -100,16 +108,16 @@ impl EventBus {
     pub async fn broadcast(
         &self,
         event: Event,
-    ) -> Result<(), async_channel::SendError<Event>> {
-        self.tx.send(event).await?;
-        Ok(())
+    ) -> EditorResult<()> {
+        self.tx.send(event).await
+            .map_err(|e| error_utils::event_error(format!("Failed to broadcast event: {}", e)))
     }
     pub fn broadcast_blocking(
         &self,
         event: Event,
-    ) -> Result<(), async_channel::SendError<Event>> {
-        self.tx.send_blocking(event)?;
-        Ok(())
+    ) -> EditorResult<()> {
+        self.tx.send_blocking(event)
+            .map_err(|e| error_utils::event_error(format!("Failed to broadcast event: {}", e)))
     }
 }
 
@@ -119,7 +127,7 @@ pub trait EventHandler: Send + Sync + Debug {
     async fn handle(
         &self,
         event: &Event,
-    );
+    ) -> EditorResult<()>;
 }
 
 // 事件上下文

@@ -16,7 +16,7 @@ use tokio::{
 use crate::{
     event::{Event, EventHandler},
     storage_manager::StorageManager,
-    types::StorageOptions,
+    types::StorageOptions, EditorResult,
 };
 
 use moduforge_delta::{
@@ -173,7 +173,7 @@ impl EventHandler for SnapshotHandler {
     async fn handle(
         &self,
         event: &Event,
-    ) {
+    ) -> EditorResult<()> {
         if let Event::TrApply(tr, state) = event {
             let count = self.counter.fetch_add(1, Ordering::SeqCst) + 1;
             // 处理增量事务快照
@@ -183,6 +183,7 @@ impl EventHandler for SnapshotHandler {
                 self.handle_full_snapshot(tr, state).await;
             }
         }
+        Ok(())
     }
 }
 

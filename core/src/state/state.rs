@@ -1,4 +1,5 @@
 use crate::model::{id_generator::IdGenerator, mark::Mark, node_pool::NodePool, schema::Schema};
+use crate::error::{StateError, StateResult};
 use im::HashMap as ImHashMap;
 use std::{
     collections::HashMap,
@@ -36,10 +37,10 @@ impl State {
     /// - 初始化基础配置
     /// - 初始化所有插件的状态
     /// - 返回完整的编辑器状态实例
-    pub async fn create(state_config: StateConfig) -> Result<State, Box<dyn std::error::Error>> {
+    pub async fn create(state_config: StateConfig) -> StateResult<State> {
         let schema = match &state_config.schema {
             Some(schema) => schema.clone(),
-            None => state_config.schema.clone().ok_or("Schema is required")?,
+            None => state_config.schema.clone().ok_or_else(|| StateError::SchemaError("Schema is required".to_string()))?,
         };
         let config = Configuration::new(schema, state_config.plugins.clone(), state_config.doc.clone());
         let mut instance = State::new(Arc::new(config));
@@ -97,16 +98,11 @@ impl State {
     pub async fn apply(
         &self,
         tr: &mut Transaction,
-    ) -> Result<State, Box<dyn std::error::Error>> {
-        //执行前置处理器：允许在应用事务前执行自定义逻辑
+    ) -> StateResult<State> {
         self.before_apply_transaction(tr).await?;
-
-        // 应用事务
         let result = self.apply_transaction(tr).await?;
         let befor = tr.steps.len();
-        // 后置处理器：允许在应用事务后执行自定义逻辑
         self.after_apply_transaction(&result.state, tr).await?;
-        // 如果事务没有被插件后置处理修改，则直接返回原始状态
         let after = tr.steps.len();
         match befor.cmp(&after) {
             std::cmp::Ordering::Equal => Ok(result.state),
@@ -121,11 +117,10 @@ impl State {
     pub async fn before_apply_transaction(
         &self,
         tr: &mut Transaction,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        // 遍历所有插件，执行前置处理
+    ) -> StateResult<()> {
         for plugin in &self.config.plugins {
             if let Err(e) = plugin.before_apply_transaction(tr, self).await {
-                return Err(e);
+                return Err(StateError::TransactionError(format!("Plugin {} before_apply_transaction failed: {}", plugin.key, e)));
             }
         }
         Ok(())
@@ -135,11 +130,10 @@ impl State {
         &self,
         new_state: &State,
         tr: &Transaction,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        // 遍历所有插件，执行后置处理
+    ) -> StateResult<()> {
         for plugin in &self.config.plugins {
             if let Err(e) = plugin.after_apply_transaction(new_state, tr, self).await {
-                return Err(e);
+                return Err(StateError::TransactionError(format!("Plugin {} after_apply_transaction failed: {}", plugin.key, e)));
             }
         }
         Ok(())
@@ -149,7 +143,7 @@ impl State {
         &self,
         tr: &Transaction,
         ignore: Option<usize>,
-    ) -> Result<bool, Box<dyn std::error::Error>> {
+    ) -> StateResult<bool> {
         for (i, plugin) in self.config.plugins.iter().enumerate() {
             if Some(i) != ignore && !plugin.apply_filter_transaction(tr, self).await {
                 return Ok(false);
@@ -162,7 +156,7 @@ impl State {
     pub async fn apply_transaction(
         &self,
         root_tr: &mut Transaction,
-    ) -> Result<TransactionResult, Box<dyn std::error::Error>> {
+    ) -> StateResult<TransactionResult> {
         if !self.filter_transaction(root_tr, None).await? {
             return Ok(TransactionResult { state: self.clone() });
         }
@@ -212,7 +206,7 @@ impl State {
     pub async fn apply_inner(
         &self,
         tr: &Transaction,
-    ) -> Result<State, Box<dyn std::error::Error>> {
+    ) -> StateResult<State> {
         let mut new_instance = State::new(self.config.clone());
         new_instance.node_pool = tr.doc.clone();
         for plugin in &self.config.plugins {
@@ -234,7 +228,7 @@ impl State {
     pub async fn reconfigure(
         &self,
         state_config: StateConfig,
-    ) -> Result<State, Box<dyn std::error::Error>> {
+    ) -> StateResult<State> {
         let config = Configuration::new(self.schema(), state_config.plugins.clone(), state_config.doc.clone());
         let mut instance = State::new(Arc::new(config));
         let mut field_values = Vec::new();
@@ -266,7 +260,7 @@ impl State {
         &mut self,
         name: &str,
         value: PluginState,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> StateResult<()> {
         self.fields_instances.insert(name.to_owned(), value);
         Ok(())
     }

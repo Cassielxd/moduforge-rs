@@ -1,6 +1,6 @@
-use crate::transform::step::StepResult;
+use crate::{error::PoolError, transform::step::StepResult};
 
-use super::{error::PoolError, mark::Mark, node::Node, patch::Patch, types::NodeId};
+use super::{mark::Mark, node::Node, patch::Patch, types::NodeId};
 use bincode::{Decode, Encode};
 use im::HashMap;
 use serde::{Deserialize, Serialize};

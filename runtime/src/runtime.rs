@@ -3,6 +3,7 @@ use std::{path::Path, sync::Arc};
 use crate::{
     cache::{CacheKey, cache::DocumentCache},
     engine_manager::EngineManager,
+    error::{EditorError, EditorResult, error_utils},
     event::{Event, EventBus, EventHandler},
     event_handler::SnapshotHandler,
     extension_manager::ExtensionManager,
@@ -42,7 +43,7 @@ pub struct Editor {
 impl Editor {
     /// 创建新的编辑器实例
     /// options: 编辑器配置选项
-    pub async fn create(options: EditorOptions) -> Self {
+    pub async fn create(options: EditorOptions) -> EditorResult<Self> {
         let extension_manager = ExtensionManager::new(&options.get_extensions());
 
         let doc = create_doc::create_doc(&options.get_content());
@@ -50,6 +51,7 @@ impl Editor {
         let cache: Arc<DocumentCache> = DocumentCache::new(&storage);
         let storage_manager = StorageManager::create(cache);
         let event_bus = EventBus::new();
+        
         let state: State = State::create(StateConfig {
             schema: Some(extension_manager.get_schema()),
             doc,
@@ -57,7 +59,8 @@ impl Editor {
             plugins: Some(extension_manager.get_plugins().clone()),
         })
         .await
-        .unwrap();
+        .map_err(|e| error_utils::state_error(format!("Failed to create state: {}", e)))?;
+        
         let state: Arc<State> = Arc::new(state);
 
         let mut runtime = Editor {
@@ -69,11 +72,12 @@ impl Editor {
             extension_manager,
             state,
         };
-        runtime.init().await;
-        runtime
+        runtime.init().await?;
+        Ok(runtime)
     }
+
     /// 初始化编辑器，设置事件处理器并启动事件循环
-    async fn init(&mut self) {
+    async fn init(&mut self) -> EditorResult<()> {
         let default_event_handlers = init_event_handler(
             &self.storage_manager,
             self.options.get_event_handlers(),
@@ -82,20 +86,26 @@ impl Editor {
         );
         self.event_bus.add_event_handlers(default_event_handlers).await;
         self.event_bus.start_event_loop();
-        let _ = self.event_bus.broadcast_blocking(Event::Create(self.state.clone()));
+        self.event_bus.broadcast_blocking(Event::Create(self.state.clone()))
+            .map_err(|e| error_utils::event_error(format!("Failed to broadcast create event: {}", e)))?;
+        Ok(())
     }
+
     /// 获取当前文档内容
     pub fn doc(&self) -> Arc<NodePool> {
         self.get_state().doc()
     }
+
     /// 获取编辑器配置选项
     pub fn get_options(&self) -> &EditorOptions {
         &self.options
     }
-    // 获取引擎管理器实例
+
+    /// 获取引擎管理器实例
     pub fn get_engine_manager(&self) -> &EngineManager {
         &self.engine_manager
     }
+
     /// 根据缓存键获取文档快照
     pub fn get_snapshot(
         &self,
@@ -103,24 +113,27 @@ impl Editor {
     ) -> Option<Arc<NodePool>> {
         self.storage_manager.get_snapshot(key)
     }
+
     /// 获取当前状态
     pub fn get_state(&self) -> &Arc<State> {
         &self.state
     }
+
     /// 获取文档模式定义
     pub fn get_schema(&self) -> Arc<Schema> {
         self.extension_manager.get_schema()
     }
+
     /// 将当前文档导出为zip文件
     /// output_path: 输出文件路径
     pub async fn export_zip(
         &self,
         output_path: &Path,
-    ) {
-        if let Err(err) = self.storage_manager.export_zip(&self.state, output_path).await {
-            eprintln!("导出zip文件失败:{}", err);
-        }
+    ) -> EditorResult<()> {
+        self.storage_manager.export_zip(&self.state, output_path).await
+            .map_err(|e| error_utils::storage_error(format!("Failed to export zip: {}", e)))
     }
+
     /// 创建新的事务实例
     /// 返回: 包含当前状态和引擎配置的事务对象
     pub fn get_tr(&self) -> Transaction {
@@ -129,18 +142,19 @@ impl Editor {
         tr.set_meta("engine", engine);
         tr
     }
+
     /// 执行自定义命令
     /// command: 要执行的命令
     /// 返回: 执行结果
     pub async fn command(
         &mut self,
         command: Arc<dyn Command>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> EditorResult<()> {
         let mut tr = self.get_tr();
         tr.transaction(command).await;
-        self.dispatch(tr).await?;
-        Ok(())
+        self.dispatch(tr).await
     }
+
     /// 获取事件总线实例
     pub fn get_event_bus(&self) -> &EventBus {
         &self.event_bus
@@ -152,21 +166,25 @@ impl Editor {
     pub async fn dispatch(
         &mut self,
         transaction: Transaction,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> EditorResult<()> {
         let mut transaction = transaction;
-        self.state = Arc::new(self.state.apply(&mut transaction).await?);
+        self.state = Arc::new(self.state.apply(&mut transaction).await
+            .map_err(|e| error_utils::state_error(format!("Failed to apply transaction: {}", e)))?);
+        
         if !transaction.doc_changed() {
             return Ok(());
         }
+        
         self.history_manager.insert(self.state.clone());
         let event_bus = self.get_event_bus();
-        event_bus.broadcast(Event::TrApply(Arc::new(transaction), self.state.clone())).await?;
+        event_bus.broadcast(Event::TrApply(Arc::new(transaction), self.state.clone())).await
+            .map_err(|e| error_utils::event_error(format!("Failed to broadcast transaction event: {}", e)))?;
         Ok(())
     }
+
     /// 注册新插件
     /// 更新状态以包含新插件的配置
-    #[allow(dead_code)]
-    async fn register_plugin(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn register_plugin(&mut self) -> EditorResult<()> {
         let state = self
             .get_state()
             .reconfigure(StateConfig {
@@ -175,16 +193,17 @@ impl Editor {
                 stored_marks: None,
                 plugins: Some(self.get_state().plugins().clone()),
             })
-            .await?;
+            .await
+            .map_err(|e| error_utils::state_error(format!("Failed to reconfigure state: {}", e)))?;
         self.state = Arc::new(state);
         Ok(())
     }
+
     /// 注销插件
-    #[allow(dead_code)]
-    async fn unregister_plugin(
+    pub async fn unregister_plugin(
         &mut self,
         plugin_key: String,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> EditorResult<()> {
         let ps = self.get_state().plugins().iter().filter(|p| p.key != plugin_key).cloned().collect();
         let state = self
             .get_state()
@@ -194,21 +213,27 @@ impl Editor {
                 stored_marks: None,
                 plugins: Some(ps),
             })
-            .await?;
+            .await
+            .map_err(|e| error_utils::state_error(format!("Failed to reconfigure state: {}", e)))?;
         self.state = Arc::new(state);
         Ok(())
     }
+
     /// 执行撤销操作
-    pub fn undo(&mut self) {
+    pub fn undo(&mut self) -> EditorResult<()> {
         self.history_manager.jump(-1);
         self.state = self.history_manager.get_present();
+        Ok(())
     }
+
     /// 执行重做操作
-    pub fn redo(&mut self) {
+    pub fn redo(&mut self) -> EditorResult<()> {
         self.history_manager.jump(1);
         self.state = self.history_manager.get_present();
+        Ok(())
     }
 }
+
 /// 初始化事件处理器
 /// storage_manager: 存储管理器实例
 /// event_handlers: 自定义事件处理器列表

@@ -13,7 +13,6 @@ pub mod schema;
 //内容匹配定义
 pub mod content;
 //id生成器定义
-pub mod error;
 pub mod id_generator;
 pub mod node_pool;
 pub mod patch;

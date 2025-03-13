@@ -6,7 +6,7 @@ use moduforge_runtime::{runtime::Editor, types::EditorOptions};
 use crate::{base::get_base, commands::MyCommand};
 
 pub async fn export_zip() {
-    let mut runtime = Editor::create(EditorOptions::default().set_extensions(get_base())).await;
+    let mut runtime = Editor::create(EditorOptions::default().set_extensions(get_base())).await.unwrap();
     let mut tr: Transaction = runtime.get_tr();
     tr.transaction(MyCommand::new()).await;
     let _ = runtime.dispatch(tr).await;
