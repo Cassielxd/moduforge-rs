@@ -141,7 +141,7 @@ impl SnapshotHandler {
         let path = snapshot_path.join(format!("snapshot_v_{}.bin", state_clone.version));
 
         let cache_ref: Arc<StorageManager> = self.storage_manager.clone();
-        let time: u64 = tr.time;
+        let time: u64 = tr.id;
         cache_ref.put(&state_clone, time);
         let _ = self.tx.send((SnapshotData::State(state_clone), delta_path, path)).await;
     }
@@ -153,7 +153,7 @@ impl SnapshotHandler {
     ) {
         let id: String = state.doc().inner.root_id.clone();
         let delta_path = self.get_delta_path(id.clone()).await;
-        let path = delta_path.join(format!("delta_{}_{}.bin", tr.time, state.version));
+        let path = delta_path.join(format!("delta_{}_{}.bin", tr.id, state.version));
 
         let tr_clone = tr.clone();
         let path_clone = path.clone();

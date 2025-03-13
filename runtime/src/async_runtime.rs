@@ -1,11 +1,12 @@
 use std::{path::Path, sync::Arc};
 
 use crate::{
-    cache::{CacheKey, cache::DocumentCache},
+    cache::{cache::DocumentCache, CacheKey},
     engine_manager::EngineManager,
     event::{Event, EventBus, EventHandler},
     event_handler::SnapshotHandler,
     extension_manager::ExtensionManager,
+    flow::{FlowEngine, TransactionResult},
     helpers::create_doc,
     history_manager::HistoryManager,
     storage_manager::StorageManager,
@@ -27,6 +28,7 @@ pub struct Editor {
     event_bus: EventBus,
     /// 当前文档状态
     state: Arc<State>,
+    flow_engine: FlowEngine,
     /// 插件管理器，负责插件的加载和管理
     extension_manager: ExtensionManager,
     /// 存储管理器，负责文档的持久化存储
@@ -68,6 +70,7 @@ impl Editor {
             options,
             extension_manager,
             state,
+            flow_engine: FlowEngine::new().unwrap(),
         };
         runtime.init().await;
         runtime
@@ -153,14 +156,23 @@ impl Editor {
         &mut self,
         transaction: Transaction,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let mut transaction = transaction;
-        self.state = Arc::new(self.state.apply(&mut transaction).await?);
-        if !transaction.doc_changed() {
-            return Ok(());
+        let (_id, mut rx) = self.flow_engine.submit_transaction(self.state.clone(), transaction).await?;
+        match rx.recv().await {
+            Some(TransactionResult { transaction_id: _, status: _, transaction, error: _, state }) => {
+                self.state = Arc::new(state.unwrap());
+                let tr = transaction.unwrap();
+                if !tr.doc_changed() {
+                    return Ok(());
+                }
+                self.history_manager.insert(self.state.clone());
+                let event_bus = self.get_event_bus();
+                event_bus.broadcast(Event::TrApply(Arc::new(tr), self.state.clone())).await?;
+            },
+            None => {
+                println!("transaction is not found");
+            },
         }
-        self.history_manager.insert(self.state.clone());
-        let event_bus = self.get_event_bus();
-        event_bus.broadcast(Event::TrApply(Arc::new(transaction), self.state.clone())).await?;
+
         Ok(())
     }
     /// 注册新插件

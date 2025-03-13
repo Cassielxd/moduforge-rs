@@ -50,6 +50,11 @@ zip="2"
 # metrics 监控
 metrics = "0.24.1"
 metrics-exporter-prometheus = "0.16.2"
+
+
+uuid="1"
+futures="0"
+
 # 业务核心
 moduforge-core = { path = "./core" }
 moduforge-delta = { path = "./delta" }

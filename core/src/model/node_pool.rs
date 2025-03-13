@@ -231,8 +231,7 @@ pub struct Draft {
     pub patches: Vec<Patch>,
     pub current_path: Vec<String>,
     pub skip_record: bool,
-    pub begin:bool
-        
+    pub begin: bool,
 }
 
 impl Draft {
@@ -248,7 +247,7 @@ impl Draft {
             patches: Vec::new(),
             current_path: Vec::new(),
             skip_record: false,
-            begin:false
+            begin: false,
         }
     }
 
@@ -682,17 +681,12 @@ impl Draft {
     }
     /// 提交修改，生成新 NodePool 和补丁列表
     pub fn commit(&self) -> StepResult {
-       
         match self.begin {
-            true => {
-                StepResult{ doc: None, failed: None, patches: Vec::new() }
-            },
+            true => StepResult { doc: None, failed: Some("事务操作".to_string()), patches: Vec::new() },
             false => {
                 let new_pool = NodePool { inner: Arc::new(self.inner.clone()) };
-                StepResult::ok(Arc::new(new_pool),  self.patches.clone())
-               
+                StepResult::ok(Arc::new(new_pool), self.patches.clone())
             },
         }
-       
     }
 }

@@ -32,9 +32,7 @@ impl Step for AddNodeStep {
         let _ = schema;
 
         match dart.add_node(&self.parent_id, self.node.clone()) {
-            Ok(()) => {
-                Ok(dart.commit())
-            },
+            Ok(()) => Ok(dart.commit()),
             Err(err) => Err(TransformError::new(err.to_string())),
         }
     }
@@ -66,9 +64,7 @@ impl Step for RemoveNodeStep {
         let _ = schema;
 
         match dart.remove_node(&self.parent_id, self.node_ids.clone()) {
-            Ok(()) => {
-                Ok(dart.commit())
-            },
+            Ok(()) => Ok(dart.commit()),
             Err(err) => Err(TransformError::new(err.to_string())),
         }
     }
@@ -106,9 +102,7 @@ impl Step for MoveNodeStep {
         let _ = schema;
 
         match dart.move_node(&self.source_parent_id, &self.target_parent_id, &self.node_id, self.position) {
-            Ok(()) => {
-                Ok(dart.commit())
-            },
+            Ok(()) => Ok(dart.commit()),
             Err(err) => Err(TransformError::new(err.to_string())),
         }
     }
@@ -141,9 +135,7 @@ impl Step for ReplaceNodeStep {
         let _ = schema;
 
         match dart.replace_node(self.node_id.clone(), Arc::new(self.node.clone())) {
-            Ok(()) => {
-                Ok(dart.commit())
-            },
+            Ok(()) => Ok(dart.commit()),
             Err(err) => Err(TransformError::new(err.to_string())),
         }
     }

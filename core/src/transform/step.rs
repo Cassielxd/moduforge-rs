@@ -18,6 +18,7 @@ pub trait Step: Send + Sync + Debug {
     fn to_concrete(&self) -> ConcreteStep;
 }
 
+#[derive(Debug, Clone)]
 pub struct StepResult {
     pub doc: Option<Arc<NodePool>>,
     pub failed: Option<String>,

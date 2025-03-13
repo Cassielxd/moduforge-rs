@@ -93,6 +93,7 @@ impl State {
         &self.config.plugins
     }
 
+    /// 异步应用事务到当前状态
     pub async fn apply(
         &self,
         tr: &mut Transaction,
@@ -115,8 +116,9 @@ impl State {
             },
         }
     }
+
     /// 事务应用前的处理器
-    async fn before_apply_transaction(
+    pub async fn before_apply_transaction(
         &self,
         tr: &mut Transaction,
     ) -> Result<(), Box<dyn std::error::Error>> {
@@ -155,33 +157,23 @@ impl State {
         }
         Ok(true)
     }
-    /// 应用事务到当前状态
-    /// - 首先检查事务是否被所有插件接受
-    /// - 然后按顺序应用每个插件的变更
-    /// - 最后返回新的状态
+
+    /// 异步应用事务到当前状态
     pub async fn apply_transaction(
         &self,
         root_tr: &mut Transaction,
     ) -> Result<TransactionResult, Box<dyn std::error::Error>> {
-        /*
-        首先检查事务是否通过所有插件的过滤条件。如果任何插件拒绝这个事务，则直接返回原始状态，不做任何修改。
-         */
         if !self.filter_transaction(root_tr, None).await? {
             return Ok(TransactionResult { state: self.clone() });
         }
-        /*
-        - 创建一个事务计数器数组 trs
-        - 应用初始事务到当前状态，得到新状态 new_state
-        - 初始化 seen 为 None，它将用于跟踪每个插件看到的状态
-         */
+
         let mut trs = Vec::new();
         trs.push(1);
         let mut new_state: State = self.apply_inner(root_tr).await?;
         let mut seen: Option<Vec<SeenState>> = None;
-        //整个方法的核心是一个无限循环，直到没有新的事务被添加
+
         loop {
             let mut have_new = false;
-            //循环遍历每个插件，让它们有机会添加新的事务
             for (i, plugin) in self.config.plugins.iter().enumerate() {
                 let n: usize = seen.as_ref().map(|s| s[i].n).unwrap_or(0);
                 let old_state = seen.as_ref().map(|s| &s[i].state).unwrap_or(self);
@@ -216,10 +208,7 @@ impl State {
         }
     }
 
-    /// 内部应用事务的具体实现
-    /// - 创建新的状态实例
-    /// - 更新文档内容
-    /// - 应用每个插件的状态变更
+    /// 异步应用内部事务
     pub async fn apply_inner(
         &self,
         tr: &Transaction,
@@ -228,7 +217,6 @@ impl State {
         new_instance.node_pool = tr.doc.clone();
         for plugin in &self.config.plugins {
             if let Some(field) = &plugin.spec.state {
-                //如果有插件的情况下是一定存在的
                 if let Some(old_plugin_state) = self.get_field(&plugin.key) {
                     let value = field.apply(tr, old_plugin_state, self, &new_instance).await;
                     new_instance.set_field(&plugin.key, value)?;

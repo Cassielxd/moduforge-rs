@@ -14,7 +14,7 @@ use super::{from_binary, to_binary};
 #[derive(Debug, Clone, Serialize, Deserialize, Decode, Encode)]
 pub struct TransactionDelta {
     parent_version: u64,
-    timestamp: u64,
+    tr_id: u64,
     pub steps: Vec<ConcreteStep>,
 }
 /// 将Transaction转换为TransactionDelta
@@ -23,7 +23,7 @@ pub fn to_delta(
     base_version: u64,
 ) -> TransactionDelta {
     let steps = tr.steps.iter().map(Transaction::as_concrete).collect();
-    TransactionDelta { parent_version: base_version, timestamp: tr.time, steps }
+    TransactionDelta { parent_version: base_version, tr_id: tr.id, steps }
 }
 
 /// 从增量记录重建事务
@@ -32,7 +32,7 @@ pub fn apply_delta(
     delta: TransactionDelta,
 ) -> Transaction {
     let mut tr = Transaction::new(state);
-    tr.time = delta.timestamp;
+    tr.id = delta.tr_id;
     for s in delta.steps.into_iter() {
         let _ = tr.step(Arc::new(s));
     }

@@ -29,12 +29,12 @@ pub trait Command: Send + Sync + Debug {
 }
 
 /// 事务结构体，用于管理文档的修改操作
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Transaction {
     /// 存储元数据的哈希表，支持任意类型数据
     pub meta: HashMap<String, Arc<dyn std::any::Any>>,
     /// 事务的时间戳
-    pub time: u64,
+    pub id: u64,
     /// 存储所有操作步骤
     pub steps: Vec<Arc<dyn Step>>,
     /// 存储每个步骤对应的补丁列表
@@ -88,15 +88,12 @@ impl Transaction {
         &mut self,
         call_back: Arc<dyn Command>,
     ) {
-        self.draft.begin=true;
+        self.draft.begin = true;
         let result = call_back.execute(self).await;
-        self.draft.begin=false;
+        self.draft.begin = false;
         if result.is_ok() {
             let result = self.draft.commit();
-            self.add_step(
-                Arc::new(PatchStep { patches: result.patches.clone() }),
-                result,
-            );
+            self.add_step(Arc::new(PatchStep { patches: result.patches.clone() }), result);
         }
     }
     /// 创建新的事务实例
@@ -108,7 +105,7 @@ impl Transaction {
         let node = state.doc();
         Transaction {
             meta: HashMap::new(),
-            time: now,
+            id: now,
             steps: vec![],
             doc: node,
             schema: state.schema(),
@@ -147,9 +144,9 @@ impl Transaction {
     /// 设置事务时间戳
     pub fn set_time(
         &mut self,
-        time: u64,
+        id: u64,
     ) -> &mut Self {
-        self.time = time;
+        self.id = id;
         self
     }
     /// 设置元数据

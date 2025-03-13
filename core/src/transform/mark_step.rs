@@ -31,9 +31,7 @@ impl Step for AddMarkStep {
         let _ = schema;
 
         match dart.add_mark(&self.id, self.mark.clone()) {
-            Ok(_) => {
-                Ok(dart.commit())
-            },
+            Ok(_) => Ok(dart.commit()),
             Err(err) => Err(TransformError::new(err.to_string())),
         }
     }

@@ -58,9 +58,7 @@ impl Step for PatchStep {
         _: std::sync::Arc<crate::model::schema::Schema>,
     ) -> Result<step::StepResult, transform::TransformError> {
         match dart.apply_patches(&self.patches) {
-            Ok(()) => {
-                Ok(dart.commit())
-            },
+            Ok(()) => Ok(dart.commit()),
             Err(err) => Err(TransformError::new(err.to_string())),
         }
     }
@@ -86,7 +84,7 @@ impl Step for BatchStep {
         dart: &mut Draft,
         schema: Arc<Schema>,
     ) -> Result<StepResult, TransformError> {
-        dart.begin=true;
+        dart.begin = true;
         for step in &self.steps {
             let schema = schema.clone();
             let result = match step {
@@ -97,7 +95,7 @@ impl Step for BatchStep {
                 ConcreteStep::PatchStep(patch_step) => patch_step.apply(dart, schema),
                 ConcreteStep::MoveNodeStep(move_node_step) => move_node_step.apply(dart, schema),
                 ConcreteStep::ReplaceNodeStep(replace_node_step) => replace_node_step.apply(dart, schema),
-                ConcreteStep::BatchStep(batch_setp) =>batch_setp.apply(dart, schema),
+                ConcreteStep::BatchStep(batch_setp) => batch_setp.apply(dart, schema),
             };
             match result {
                 Ok(result) => {
@@ -109,7 +107,7 @@ impl Step for BatchStep {
                 Err(err) => return Err(err),
             }
         }
-        dart.begin=false;
+        dart.begin = false;
         // 所有步骤执行成功，提交更改
         Ok(dart.commit())
     }
