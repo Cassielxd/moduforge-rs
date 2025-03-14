@@ -29,7 +29,10 @@ pub enum EditorError {
 }
 
 impl fmt::Display for EditorError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
         match self {
             EditorError::StateError(msg) => write!(f, "State error: {}", msg),
             EditorError::StorageError(msg) => write!(f, "Storage error: {}", msg),
@@ -74,7 +77,10 @@ pub mod error_utils {
     use super::*;
 
     /// 将错误转换为更具体的错误类型
-    pub fn map_error<T, E: std::error::Error>(result: Result<T, E>, context: &str) -> EditorResult<T> {
+    pub fn map_error<T, E: std::error::Error>(
+        result: Result<T, E>,
+        context: &str,
+    ) -> EditorResult<T> {
         result.map_err(|e| EditorError::Unknown(format!("{}: {}", context, e)))
     }
 
@@ -122,4 +128,4 @@ pub mod error_utils {
     pub fn cache_error(msg: impl Into<String>) -> EditorError {
         EditorError::CacheError(msg.into())
     }
-} 
+}

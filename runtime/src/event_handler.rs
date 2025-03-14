@@ -16,7 +16,8 @@ use tokio::{
 use crate::{
     event::{Event, EventHandler},
     storage_manager::StorageManager,
-    types::StorageOptions, EditorResult,
+    types::StorageOptions,
+    EditorResult,
 };
 
 use moduforge_delta::{

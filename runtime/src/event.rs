@@ -109,15 +109,13 @@ impl EventBus {
         &self,
         event: Event,
     ) -> EditorResult<()> {
-        self.tx.send(event).await
-            .map_err(|e| error_utils::event_error(format!("Failed to broadcast event: {}", e)))
+        self.tx.send(event).await.map_err(|e| error_utils::event_error(format!("Failed to broadcast event: {}", e)))
     }
     pub fn broadcast_blocking(
         &self,
         event: Event,
     ) -> EditorResult<()> {
-        self.tx.send_blocking(event)
-            .map_err(|e| error_utils::event_error(format!("Failed to broadcast event: {}", e)))
+        self.tx.send_blocking(event).map_err(|e| error_utils::event_error(format!("Failed to broadcast event: {}", e)))
     }
 }
 

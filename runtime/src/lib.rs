@@ -1,3 +1,4 @@
+pub mod async_processor;
 pub mod async_runtime;
 pub mod cache;
 pub mod engine_manager;
@@ -15,6 +16,6 @@ pub mod node;
 pub mod runtime;
 pub mod storage_manager;
 pub mod tr;
+pub mod traits;
 pub mod types;
-
 pub use error::{EditorError, EditorResult, error_utils};
