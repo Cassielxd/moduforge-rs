@@ -7,7 +7,7 @@ use moduforge_core::state::{
     state::{State, TransactionResult},
     transaction::Transaction,
 };
-use crate::async_processor::{TaskProcessor, AsyncProcessor, ProcessorConfig, ProcessorError, TaskResult, TaskStatus};
+use crate::async_processor::{TaskProcessor, AsyncProcessor, ProcessorConfig, ProcessorError, TaskResult};
 use async_trait::async_trait;
 
 pub type Result<T> = std::result::Result<T, FlowError>;
@@ -81,16 +81,12 @@ impl TaskProcessor<TaskParams, ProcessorResult> for TransactionProcessor {
         (state, tr): TaskParams,
     ) -> std::result::Result<ProcessorResult, ProcessorError> {
         match state.apply(tr).await {
-            Ok(result) => Ok(ProcessorResult {
-                status: TransactionStatus::Completed,
-                error: None,
-                result: Some(result),
-            }),
-            Err(e) => Ok(ProcessorResult {
-                status: TransactionStatus::Failed(e.to_string()),
-                error: None,
-                result: None,
-            }),
+            Ok(result) => {
+                Ok(ProcessorResult { status: TransactionStatus::Completed, error: None, result: Some(result) })
+            },
+            Err(e) => {
+                Ok(ProcessorResult { status: TransactionStatus::Failed(e.to_string()), error: None, result: None })
+            },
         }
     }
 }

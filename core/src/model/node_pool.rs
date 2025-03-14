@@ -363,7 +363,11 @@ impl Draft {
         node.marks.push_back(mark.clone());
         self.inner.nodes.insert(id.clone(), Arc::new(node));
         // 记录补丁
-        self.record_patch(Patch::AddMark { path: self.current_path.iter().cloned().collect(), node_id: id.clone(), mark });
+        self.record_patch(Patch::AddMark {
+            path: self.current_path.iter().cloned().collect(),
+            node_id: id.clone(),
+            mark,
+        });
         Ok(())
     }
     pub fn sort_children<F: FnMut(&(String, &Arc<Node>), &(String, &Arc<Node>)) -> std::cmp::Ordering>(
@@ -439,7 +443,11 @@ impl Draft {
         // 更新节点
         self.inner.nodes.insert(node_id.clone(), new_node.clone());
         // 记录补丁
-        self.record_patch(Patch::ReplaceNode { path: self.current_path.iter().cloned().collect(), old: old_node_clone, new: new_node });
+        self.record_patch(Patch::ReplaceNode {
+            path: self.current_path.iter().cloned().collect(),
+            old: old_node_clone,
+            new: new_node,
+        });
         Ok(())
     }
     /// 移动节点

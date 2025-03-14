@@ -1,7 +1,17 @@
 use std::{path::Path, sync::Arc};
 
 use crate::{
-    cache::{cache::DocumentCache, CacheKey}, engine_manager::EngineManager, event::{Event, EventBus, EventHandler}, event_handler::SnapshotHandler, extension_manager::ExtensionManager, flow::{FlowEngine, ProcessorResult}, helpers::create_doc, history_manager::HistoryManager, storage_manager::StorageManager, traits::{EditorBase, EditorCore}, types::{EditorOptions, StorageOptions}
+    cache::{cache::DocumentCache, CacheKey},
+    engine_manager::EngineManager,
+    event::{Event, EventBus, EventHandler},
+    event_handler::SnapshotHandler,
+    extension_manager::ExtensionManager,
+    flow::{FlowEngine, ProcessorResult},
+    helpers::create_doc,
+    history_manager::HistoryManager,
+    storage_manager::StorageManager,
+    traits::{EditorBase, EditorCore},
+    types::{EditorOptions, StorageOptions},
 };
 use async_trait::async_trait;
 use moduforge_core::{
@@ -124,8 +134,8 @@ impl EditorCore for Editor {
         let (_id, mut rx) = self.flow_engine.submit_transaction((self.base.state.clone(), transaction)).await?;
         match rx.recv().await {
             Some(task_result) => {
-                if let Some(ProcessorResult { result,  status: _, error : _}) = task_result.output {
-                    if let Some(result)=result{
+                if let Some(ProcessorResult { result, status: _, error: _ }) = task_result.output {
+                    if let Some(result) = result {
                         self.base.state = Arc::new(result.state);
                         let mut trs = result.trs;
                         let tr = trs.pop().unwrap();
@@ -136,7 +146,6 @@ impl EditorCore for Editor {
                         let event_bus = self.get_event_bus();
                         event_bus.broadcast(Event::TrApply(Arc::new(tr), self.base.state.clone())).await?;
                     }
-                    
                 }
             },
             None => {

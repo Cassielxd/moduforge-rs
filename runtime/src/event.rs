@@ -4,7 +4,7 @@ use async_channel::{Receiver, Sender};
 use moduforge_core::state::{state::State, transaction::Transaction};
 use tokio::{signal, sync::RwLock};
 
-use crate::error::{EditorError, EditorResult, error_utils};
+use crate::error::{EditorResult, error_utils};
 
 // 事件类型定义
 #[derive(Clone)]

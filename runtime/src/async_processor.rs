@@ -147,13 +147,7 @@ where
         processor: P,
     ) -> Self {
         let task_queue = Arc::new(TaskQueue::new(&config));
-        Self { 
-            task_queue, 
-            config, 
-            processor: Arc::new(processor),
-            shutdown_tx: None,
-            handle: None,
-        }
+        Self { task_queue, config, processor: Arc::new(processor), shutdown_tx: None, handle: None }
     }
 
     pub async fn submit_task(
@@ -168,31 +162,31 @@ where
         let processor = self.processor.clone();
         let config = self.config.clone();
         let (shutdown_tx, mut shutdown_rx) = oneshot::channel();
-        
+
         self.shutdown_tx = Some(shutdown_tx);
 
         let handle = tokio::spawn(async move {
             let mut join_set = tokio::task::JoinSet::new();
-            
+
             loop {
                 select! {
                     // 处理关闭信号
                     _ = &mut shutdown_rx => {
                         break;
                     }
-                    
+
                     // 处理任务完成
                     Some(result) = join_set.join_next() => {
                         if let Err(e) = result {
                             eprintln!("Task failed: {}", e);
                         }
                     }
-                    
+
                     // 获取新任务
                     Some((task, task_id, result_tx)) = queue.get_next_ready() => {
                         if join_set.len() < config.max_concurrent_tasks {
                             let processor = processor.clone();
-                            
+
                             join_set.spawn(async move {
                                 let result = processor.process(task.clone()).await;
 
@@ -225,19 +219,19 @@ where
     }
 
     /// 优雅地关闭处理器
-    /// 
+    ///
     /// 此方法会等待所有正在处理的任务完成后再关闭处理器。
     /// 在关闭过程中，新的任务将不会被接受。
     pub async fn shutdown(&mut self) -> Result<(), ProcessorError> {
         if let Some(shutdown_tx) = self.shutdown_tx.take() {
-            shutdown_tx.send(()).map_err(|_| {
-                ProcessorError::InternalError("Failed to send shutdown signal".to_string())
-            })?;
+            shutdown_tx
+                .send(())
+                .map_err(|_| ProcessorError::InternalError("Failed to send shutdown signal".to_string()))?;
 
             if let Some(handle) = self.handle.take() {
-                handle.await.map_err(|e| {
-                    ProcessorError::InternalError(format!("Failed to join processor task: {}", e))
-                })?;
+                handle
+                    .await
+                    .map_err(|e| ProcessorError::InternalError(format!("Failed to join processor task: {}", e)))?;
             }
         }
         Ok(())
@@ -299,11 +293,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_processor_shutdown() {
-        let config = ProcessorConfig { 
-            max_queue_size: 100, 
-            max_concurrent_tasks: 5, 
-            task_timeout: Duration::from_secs(1) 
-        };
+        let config =
+            ProcessorConfig { max_queue_size: 100, max_concurrent_tasks: 5, task_timeout: Duration::from_secs(1) };
         let mut processor = AsyncProcessor::new(config, TestProcessor);
         processor.start();
 
@@ -326,11 +317,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_processor_auto_shutdown() {
-        let config = ProcessorConfig { 
-            max_queue_size: 100, 
-            max_concurrent_tasks: 5, 
-            task_timeout: Duration::from_secs(1) 
-        };
+        let config =
+            ProcessorConfig { max_queue_size: 100, max_concurrent_tasks: 5, task_timeout: Duration::from_secs(1) };
         let mut processor = AsyncProcessor::new(config, TestProcessor);
         processor.start();
 

@@ -62,15 +62,14 @@ macro_rules! mark {
             mark
         }
     };
-} 
-
+}
 
 #[macro_export]
 macro_rules! impl_plugin {
     ($name:ident, $append_fn:expr) => {
         #[derive(Debug)]
         pub struct $name {}
-        
+
         #[async_trait]
         impl PluginTrait for $name {
             async fn append_transaction(
@@ -111,7 +110,7 @@ macro_rules! impl_plugin {
     ($name:ident, $append_fn:expr, $filter_fn:expr) => {
         #[derive(Debug)]
         pub struct $name {}
-        
+
         #[async_trait]
         impl PluginTrait for $name {
             async fn append_transaction(
@@ -152,7 +151,7 @@ macro_rules! impl_plugin {
     ($name:ident, $append_fn:expr, $filter_fn:expr, $before_fn:expr) => {
         #[derive(Debug)]
         pub struct $name {}
-        
+
         #[async_trait]
         impl PluginTrait for $name {
             async fn append_transaction(
@@ -193,7 +192,7 @@ macro_rules! impl_plugin {
     ($name:ident, $append_fn:expr, $filter_fn:expr, $before_fn:expr, $after_fn:expr) => {
         #[derive(Debug)]
         pub struct $name {}
-        
+
         #[async_trait]
         impl PluginTrait for $name {
             async fn append_transaction(
@@ -233,13 +232,12 @@ macro_rules! impl_plugin {
     };
 }
 
-
 #[macro_export]
 macro_rules! impl_state_field {
     ($name:ident, $init_fn:expr, $apply_fn:expr) => {
         #[derive(Debug)]
         pub struct $name;
-        
+
         #[async_trait]
         impl StateField for $name {
             async fn init(

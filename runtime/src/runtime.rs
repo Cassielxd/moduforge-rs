@@ -149,7 +149,7 @@ impl EditorCore for Editor {
         self.base.state = Arc::new(state);
         self.base.history_manager.insert(self.base.state.clone());
         let event_bus = self.get_event_bus();
-        
+
         event_bus
             .broadcast(Event::TrApply(Arc::new(tr), self.base.state.clone()))
             .await
