@@ -10,12 +10,12 @@ use super::transaction::Transaction;
 pub trait PluginTrait: Send + Sync + Debug {
     /// 追加事务处理
     /// 允许插件在事务执行前修改或扩展事务内容
-    async fn append_transaction<'a>(
+    async fn append_transaction(
         &self,
-        _: &'a mut Transaction,
+        _: &Transaction,
         _: &State,
         _: &State,
-    ) -> Option<&'a mut Transaction> {
+    ) -> Option<Transaction> {
         None
     }
     /// 事务过滤
@@ -41,7 +41,7 @@ pub trait PluginTrait: Send + Sync + Debug {
     async fn after_apply_transaction(
         &self,
         _new_state: &State,
-        _tr: &Transaction,
+        _tr: &mut Transaction,
         _old_state: &State,
     ) -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
@@ -104,10 +104,10 @@ impl PluginSpec {
     /// 执行事务追加
     async fn append_transaction<'a>(
         &self,
-        trs: &'a mut Transaction,
+        trs: &Transaction,
         old_state: &State,
         new_state: &State,
-    ) -> Option<&'a mut Transaction> {
+    ) -> Option<Transaction> {
         match &self.tr {
             Some(transaction) => transaction.append_transaction(trs, old_state, new_state).await,
             None => None,
@@ -129,7 +129,7 @@ impl PluginSpec {
     pub async fn after_apply_transaction(
         &self,
         new_state: &State,
-        tr: &Transaction,
+        tr: &mut Transaction,
         old_state: &State,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // 默认实现为空，由具体插件重写
@@ -186,7 +186,7 @@ impl Plugin {
     pub async fn after_apply_transaction(
         &self,
         new_state: &State,
-        tr: &Transaction,
+        tr: &mut Transaction,
         old_state: &State,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // 默认实现为空，由具体插件重写
@@ -195,12 +195,12 @@ impl Plugin {
     }
 
     /// 应用事务追加逻辑
-    pub async fn apply_append_transaction<'a>(
+    pub async fn apply_append_transaction(
         &self,
-        trs: &'a mut Transaction,
+        trs: &Transaction,
         old_state: &State,
         new_state: &State,
-    ) -> Option<&'a mut Transaction> {
+    ) -> Option<Transaction> {
         self.spec.append_transaction(trs, old_state, new_state).await
     }
 }

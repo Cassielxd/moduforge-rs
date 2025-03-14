@@ -13,5 +13,5 @@ async fn main() {
     let after_doc = runtime.doc();
     dbg!(before_doc);
     dbg!(after_doc);
-    tokio::time::sleep(std::time::Duration::from_secs(100)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
 }

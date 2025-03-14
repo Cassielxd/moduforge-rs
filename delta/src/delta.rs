@@ -46,8 +46,8 @@ pub async fn apply_state_delta(
     if delta.parent_version != state.version {
         return state.clone();
     }
-    let mut tr = apply_delta(state, delta);
-    match state.apply_transaction(&mut tr).await {
+    let tr = apply_delta(state, delta);
+    match state.apply(tr).await {
         Ok(result) => result.state,
         Err(_) => state.clone(),
     }

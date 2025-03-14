@@ -34,12 +34,13 @@ impl StateField for P1State {
 pub struct P1Plugin {}
 #[async_trait]
 impl PluginTrait for P1Plugin {
-    async fn append_transaction<'a>(
+    async fn append_transaction(
         &self,
-        tr: &'a mut Transaction,
+        tr: &Transaction,
         _old_state: &State,
         _new_state: &State,
-    ) -> Option<&'a mut Transaction> {
+    ) -> Option<Transaction> {
+        let mut tr = tr.clone();
         let ok: Option<&bool> = tr.get_meta("add_node");
         println!("开始节点个数：{}", tr.doc.size());
         if let Some(ok) = ok {
@@ -68,12 +69,13 @@ impl PluginTrait for P1Plugin {
 pub struct P2Plugin {}
 #[async_trait]
 impl PluginTrait for P2Plugin {
-    async fn append_transaction<'a>(
+    async fn append_transaction(
         &self,
-        tr: &'a mut Transaction,
+        tr: &Transaction,
         _: &State,
         _: &State,
-    ) -> Option<&'a mut Transaction> {
+    ) -> Option<Transaction> {
+        let mut tr = tr.clone();
         let size = tr.doc.size();
         println!("P2Plugin开始节点个数：{}", tr.doc.size());
         if size < 10 {

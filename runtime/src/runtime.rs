@@ -17,7 +17,7 @@ use async_trait::async_trait;
 use moduforge_core::{
     model::{node_pool::NodePool, schema::Schema},
     state::{
-        state::{State, StateConfig},
+        state::{State, StateConfig, TransactionResult},
         transaction::{Command, Transaction},
     },
     transform::transform::Transform,
@@ -136,23 +136,22 @@ impl EditorCore for Editor {
         &mut self,
         transaction: Transaction,
     ) -> EditorResult<()> {
-        let mut transaction = transaction;
-        self.base.state = Arc::new(
-            self.base
-                .state
-                .apply(&mut transaction)
-                .await
-                .map_err(|e| error_utils::state_error(format!("Failed to apply transaction: {}", e)))?,
-        );
-
-        if !transaction.doc_changed() {
+        let TransactionResult { state, mut trs } = self
+            .base
+            .state
+            .apply(transaction)
+            .await
+            .map_err(|e| error_utils::state_error(format!("Failed to apply transaction: {}", e)))?;
+        let tr = trs.pop().unwrap();
+        if !tr.doc_changed() {
             return Ok(());
         }
-
+        self.base.state = Arc::new(state);
         self.base.history_manager.insert(self.base.state.clone());
         let event_bus = self.get_event_bus();
+        
         event_bus
-            .broadcast(Event::TrApply(Arc::new(transaction), self.base.state.clone()))
+            .broadcast(Event::TrApply(Arc::new(tr), self.base.state.clone()))
             .await
             .map_err(|e| error_utils::event_error(format!("Failed to broadcast transaction event: {}", e)))?;
         Ok(())

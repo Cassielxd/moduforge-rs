@@ -99,18 +99,21 @@ impl State {
     /// 异步应用事务到当前状态
     pub async fn apply(
         &self,
-        tr: &mut Transaction,
-    ) -> StateResult<State> {
-        self.before_apply_transaction(tr).await?;
-        let result = self.apply_transaction(tr).await?;
+        mut tr: Transaction,
+    ) -> StateResult<TransactionResult> {
+        self.before_apply_transaction(&mut tr).await?;
         let befor = tr.steps.len();
-        self.after_apply_transaction(&result.state, tr).await?;
+        let mut result = self.apply_transaction(tr).await?;
+        let mut tr: Transaction = result.trs.remove(result.trs.len() - 1);
+        self.after_apply_transaction(&result.state, &mut tr).await?;
         let after = tr.steps.len();
         match befor.cmp(&after) {
-            std::cmp::Ordering::Equal => Ok(result.state),
+            std::cmp::Ordering::Equal => Ok(result),
             _ => {
-                let new_state = result.state.apply_inner(tr).await?;
-                Ok(new_state)
+                let new_state = result.state.apply_inner(&tr).await?;
+                result.state = new_state;
+                result.trs.push(tr);
+                Ok(result)
             },
         }
     }
@@ -134,7 +137,7 @@ impl State {
     async fn after_apply_transaction(
         &self,
         new_state: &State,
-        tr: &Transaction,
+        tr: &mut Transaction,
     ) -> StateResult<()> {
         for plugin in &self.config.plugins {
             if let Err(e) = plugin.after_apply_transaction(new_state, tr, self).await {
@@ -163,15 +166,16 @@ impl State {
     /// 异步应用事务到当前状态
     pub async fn apply_transaction(
         &self,
-        root_tr: &mut Transaction,
+        root_tr: Transaction,
     ) -> StateResult<TransactionResult> {
-        if !self.filter_transaction(root_tr, None).await? {
-            return Ok(TransactionResult { state: self.clone() });
+        if !self.filter_transaction(&root_tr, None).await? {
+            return Ok(TransactionResult { state: self.clone(), trs: vec![root_tr] });
         }
 
         let mut trs = Vec::new();
-        trs.push(1);
-        let mut new_state: State = self.apply_inner(root_tr).await?;
+
+        let mut new_state: State = self.apply_inner(&root_tr).await?;
+        trs.push(root_tr);
         let mut seen: Option<Vec<SeenState>> = None;
 
         loop {
@@ -180,8 +184,9 @@ impl State {
                 let n: usize = seen.as_ref().map(|s| s[i].n).unwrap_or(0);
                 let old_state = seen.as_ref().map(|s| &s[i].state).unwrap_or(self);
                 if n < trs.len() {
-                    if let Some(tr) = plugin.apply_append_transaction(root_tr, old_state, &new_state).await {
-                        if new_state.filter_transaction(tr, Some(i)).await? {
+                    if let Some(tr) = plugin.apply_append_transaction(trs.get(n).unwrap(), old_state, &new_state).await
+                    {
+                        if new_state.filter_transaction(&tr, Some(i)).await? {
                             if seen.is_none() {
                                 let mut s = Vec::new();
                                 for j in 0..self.config.plugins.len() {
@@ -193,8 +198,8 @@ impl State {
                                 }
                                 seen = Some(s);
                             }
-                            new_state = new_state.apply_inner(tr).await?;
-                            trs.push(1);
+                            new_state = new_state.apply_inner(&tr).await?;
+                            trs.push(tr);
                             have_new = true;
                         }
                     }
@@ -205,7 +210,7 @@ impl State {
             }
 
             if !have_new {
-                return Ok(TransactionResult { state: new_state });
+                return Ok(TransactionResult { state: new_state, trs });
             }
         }
     }
@@ -296,9 +301,10 @@ pub struct SeenState {
     state: State,
     n: usize,
 }
-
+#[derive(Debug, Clone)]
 pub struct TransactionResult {
     pub state: State,
+    pub trs: Vec<Transaction>,
 }
 /// 配置结构体，存储编辑器的核心配置信息
 /// - plugins: 已加载的插件列表

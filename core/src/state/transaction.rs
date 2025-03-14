@@ -32,13 +32,13 @@ pub trait Command: Send + Sync + Debug {
 #[derive(Debug, Clone)]
 pub struct Transaction {
     /// 存储元数据的哈希表，支持任意类型数据
-    pub meta: HashMap<String, Arc<dyn std::any::Any>>,
+    pub meta: im::HashMap<String, Arc<dyn std::any::Any>>,
     /// 事务的时间戳
     pub id: u64,
     /// 存储所有操作步骤
-    pub steps: Vec<Arc<dyn Step>>,
+    pub steps: im::Vector<Arc<dyn Step>>,
     /// 存储每个步骤对应的补丁列表
-    pub patches: Vec<Vec<Patch>>,
+    pub patches: im::Vector<Vec<Patch>>,
     /// 当前文档状态
     pub doc: Arc<NodePool>,
     /// 文档的草稿状态，用于临时修改
@@ -76,8 +76,8 @@ impl Transform for Transaction {
         step: Arc<dyn Step>,
         result: StepResult,
     ) {
-        self.steps.push(step);
-        self.patches.push(result.patches);
+        self.steps.push_back(step);
+        self.patches.push_back(result.patches);
         self.doc = result.doc.unwrap();
     }
 }
@@ -100,17 +100,17 @@ impl Transaction {
     /// state: 当前状态对象
     /// 返回: Transaction 实例
     pub fn new(state: &State) -> Self {
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        let now: u64 = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
 
         let node = state.doc();
         Transaction {
-            meta: HashMap::new(),
+            meta: im::HashMap::new(),
             id: now,
-            steps: vec![],
+            steps: im::Vector::new(),
             doc: node,
             schema: state.schema(),
             draft: Draft::new(state.doc()),
-            patches: vec![],
+            patches: im::Vector::new(),
         }
     }
     /// 获取当前文档状态

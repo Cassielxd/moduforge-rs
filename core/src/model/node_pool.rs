@@ -228,8 +228,8 @@ impl NodePool {
 pub struct Draft {
     pub base: Arc<NodePool>,
     pub inner: NodePoolInner,
-    pub patches: Vec<Patch>,
-    pub current_path: Vec<String>,
+    pub patches: im::Vector<Patch>,
+    pub current_path: im::Vector<String>,
     pub skip_record: bool,
     pub begin: bool,
 }
@@ -244,8 +244,8 @@ impl Draft {
         Draft {
             inner: base.inner.as_ref().clone(),
             base,
-            patches: Vec::new(),
-            current_path: Vec::new(),
+            patches: im::Vector::new(),
+            current_path: im::Vector::new(),
             skip_record: false,
             begin: false,
         }
@@ -266,7 +266,7 @@ impl Draft {
         &mut self,
         key: &str,
     ) -> &mut Self {
-        self.current_path.push(key.to_string());
+        self.current_path.push_back(key.to_string());
         self
     }
 
@@ -275,13 +275,15 @@ impl Draft {
         &mut self,
         index: usize,
     ) -> &mut Self {
-        self.current_path.push(index.to_string());
+        self.current_path.push_back(index.to_string());
         self
     }
 
     /// 退出当前路径层级
     pub fn exit(&mut self) -> &mut Self {
-        self.current_path.pop();
+        if !self.current_path.is_empty() {
+            self.current_path = self.current_path.take(self.current_path.len() - 1);
+        }
         self
     }
 
@@ -306,10 +308,10 @@ impl Draft {
         // 更新节点属性
         let mut new_node = node.as_ref().clone();
         new_node.attrs = new_values.clone();
-        self.inner.nodes.insert(id.clone(), Arc::new(new_node));
+        self.inner.nodes = self.inner.nodes.update(id.clone(), Arc::new(new_node));
         // 记录补丁
         self.record_patch(Patch::UpdateAttr {
-            path: self.current_path.clone(),
+            path: self.current_path.iter().cloned().collect(),
             id: id.clone(),
             old: old_values.into_iter().collect(),
             new: new_values.into_iter().collect(),
@@ -336,7 +338,7 @@ impl Draft {
         self.inner.nodes.insert(id.clone(), Arc::new(node));
         // 记录补丁
         self.record_patch(Patch::RemoveMark {
-            path: self.current_path.clone(),
+            path: self.current_path.iter().cloned().collect(),
             parent_id: id.clone(),
             marks: vec![Arc::new(mark)],
         });
@@ -361,7 +363,7 @@ impl Draft {
         node.marks.push_back(mark.clone());
         self.inner.nodes.insert(id.clone(), Arc::new(node));
         // 记录补丁
-        self.record_patch(Patch::AddMark { path: self.current_path.clone(), node_id: id.clone(), mark });
+        self.record_patch(Patch::AddMark { path: self.current_path.iter().cloned().collect(), node_id: id.clone(), mark });
         Ok(())
     }
     pub fn sort_children<F: FnMut(&(String, &Arc<Node>), &(String, &Arc<Node>)) -> std::cmp::Ordering>(
@@ -390,7 +392,7 @@ impl Draft {
         let mut new_parent = parent.as_ref().clone();
         new_parent.content = sorted_children;
         self.record_patch(Patch::ReplaceNode {
-            path: self.current_path.clone(),
+            path: self.current_path.iter().cloned().collect(),
             old: parent.clone(),
             new: Arc::new(new_parent.clone()),
         });
@@ -414,7 +416,7 @@ impl Draft {
         self.inner.parent_map.insert(id.clone(), parent_id.clone());
         // 记录补丁
         self.record_patch(Patch::AddNode {
-            path: self.current_path.clone(),
+            path: self.current_path.iter().cloned().collect(),
             parent_id: parent_id.clone(),
             node: node.clone(),
         });
@@ -437,7 +439,7 @@ impl Draft {
         // 更新节点
         self.inner.nodes.insert(node_id.clone(), new_node.clone());
         // 记录补丁
-        self.record_patch(Patch::ReplaceNode { path: self.current_path.clone(), old: old_node_clone, new: new_node });
+        self.record_patch(Patch::ReplaceNode { path: self.current_path.iter().cloned().collect(), old: old_node_clone, new: new_node });
         Ok(())
     }
     /// 移动节点
@@ -500,7 +502,7 @@ impl Draft {
         self.inner.parent_map.insert(node_id.clone(), target_parent_id.clone());
         // 记录移动节点的补丁
         self.record_patch(Patch::MoveNode {
-            path: self.current_path.clone(),
+            path: self.current_path.iter().cloned().collect(),
             node_id: node_id.clone(),
             source_parent_id: source_parent_id.clone(),
             target_parent_id: target_parent_id.clone(),
@@ -533,7 +535,7 @@ impl Draft {
         self.inner.parent_map.remove(node_id);
         if let Some(romove_node) = self.inner.nodes.remove(node_id) {
             self.record_patch(Patch::RemoveNode {
-                path: self.current_path.clone(),
+                path: self.current_path.iter().cloned().collect(),
                 parent_id: parent_id.clone(),
                 nodes: vec![romove_node],
             });
@@ -579,7 +581,7 @@ impl Draft {
         }
         // 记录补丁
         self.record_patch(Patch::RemoveNode {
-            path: self.current_path.clone(),
+            path: self.current_path.iter().cloned().collect(),
             parent_id: parent_id.clone(),
             nodes: renoved_nodes,
         });
@@ -676,7 +678,7 @@ impl Draft {
         patch: Patch,
     ) {
         if !self.skip_record {
-            self.patches.push(patch);
+            self.patches.push_back(patch);
         }
     }
     /// 提交修改，生成新 NodePool 和补丁列表
@@ -685,7 +687,7 @@ impl Draft {
             true => StepResult { doc: None, failed: Some("事务操作".to_string()), patches: Vec::new() },
             false => {
                 let new_pool = NodePool { inner: Arc::new(self.inner.clone()) };
-                StepResult::ok(Arc::new(new_pool), self.patches.clone())
+                StepResult::ok(Arc::new(new_pool), self.patches.iter().cloned().collect())
             },
         }
     }

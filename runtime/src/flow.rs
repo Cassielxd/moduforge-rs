@@ -1,10 +1,12 @@
 use std::{
     fmt::{Display, Formatter},
     sync::Arc,
-    time::Duration,
 };
 
-use moduforge_core::state::{state::State, transaction::Transaction};
+use moduforge_core::state::{
+    state::{State, TransactionResult},
+    transaction::Transaction,
+};
 use crate::async_processor::{TaskProcessor, AsyncProcessor, ProcessorConfig, ProcessorError, TaskResult, TaskStatus};
 use async_trait::async_trait;
 
@@ -63,37 +65,31 @@ impl From<ProcessorError> for FlowError {
 }
 
 #[derive(Debug, Clone)]
-pub struct TransactionResult {
-    pub transaction_id: u64,
+pub struct ProcessorResult {
     pub status: TransactionStatus,
-    pub transaction: Option<Transaction>,
     pub error: Option<String>,
-    pub state: Option<State>,
+    pub result: Option<TransactionResult>,
 }
 /// 事务处理器
 pub struct TransactionProcessor;
 pub type TaskParams = (Arc<State>, Transaction);
 
 #[async_trait]
-impl TaskProcessor<TaskParams, TransactionResult> for TransactionProcessor {
+impl TaskProcessor<TaskParams, ProcessorResult> for TransactionProcessor {
     async fn process(
         &self,
-        (state, mut tr): TaskParams,
-    ) -> std::result::Result<TransactionResult, ProcessorError> {
-        match state.apply(&mut tr).await {
-            Ok(state) => Ok(TransactionResult {
-                transaction_id: tr.id,
+        (state, tr): TaskParams,
+    ) -> std::result::Result<ProcessorResult, ProcessorError> {
+        match state.apply(tr).await {
+            Ok(result) => Ok(ProcessorResult {
                 status: TransactionStatus::Completed,
                 error: None,
-                state: Some(state),
-                transaction: Some(tr),
+                result: Some(result),
             }),
-            Err(e) => Ok(TransactionResult {
-                transaction_id: tr.id,
+            Err(e) => Ok(ProcessorResult {
                 status: TransactionStatus::Failed(e.to_string()),
                 error: None,
-                state: None,
-                transaction: None,
+                result: None,
             }),
         }
     }
@@ -101,13 +97,13 @@ impl TaskProcessor<TaskParams, TransactionResult> for TransactionProcessor {
 
 #[derive(Clone)]
 pub struct FlowEngine {
-    processor: Arc<AsyncProcessor<TaskParams, TransactionResult, TransactionProcessor>>,
+    processor: Arc<AsyncProcessor<TaskParams, ProcessorResult, TransactionProcessor>>,
 }
 
 impl FlowEngine {
     pub fn new() -> Result<Self> {
         let config = ProcessorConfig::default();
-        let processor = AsyncProcessor::new(config, TransactionProcessor);
+        let mut processor = AsyncProcessor::new(config, TransactionProcessor);
         processor.start();
 
         Ok(Self { processor: Arc::new(processor) })
@@ -116,14 +112,14 @@ impl FlowEngine {
     pub async fn submit_transaction(
         &self,
         params: TaskParams,
-    ) -> Result<(u64, tokio::sync::mpsc::Receiver<TaskResult<TaskParams, TransactionResult>>)> {
+    ) -> Result<(u64, tokio::sync::mpsc::Receiver<TaskResult<TaskParams, ProcessorResult>>)> {
         self.processor.submit_task(params).await.map_err(Into::into)
     }
 
     pub async fn submit_transactions(
         &self,
         paramss: Vec<TaskParams>,
-    ) -> Result<Vec<(u64, tokio::sync::mpsc::Receiver<TaskResult<TaskParams, TransactionResult>>)>> {
+    ) -> Result<Vec<(u64, tokio::sync::mpsc::Receiver<TaskResult<TaskParams, ProcessorResult>>)>> {
         let mut results = Vec::new();
         for transaction in paramss {
             let result = self.submit_transaction(transaction).await?;
