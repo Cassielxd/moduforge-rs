@@ -1,4 +1,3 @@
-
 #[macro_export]
 macro_rules! node {
     ($name:expr) => {
@@ -64,3 +63,202 @@ macro_rules! mark {
         }
     };
 } 
+
+
+#[macro_export]
+macro_rules! impl_plugin {
+    ($name:ident, $append_fn:expr) => {
+        #[derive(Debug)]
+        pub struct $name {}
+        
+        #[async_trait]
+        impl PluginTrait for $name {
+            async fn append_transaction(
+                &self,
+                tr: &Transaction,
+                old_state: &State,
+                new_state: &State,
+            ) -> Option<Transaction> {
+                $append_fn(tr, old_state, new_state)
+            }
+
+            async fn filter_transaction(
+                &self,
+                _tr: &Transaction,
+                _state: &State,
+            ) -> bool {
+                true
+            }
+
+            async fn before_apply_transaction(
+                &self,
+                _tr: &mut Transaction,
+                _state: &State,
+            ) -> Result<(), Box<dyn std::error::Error>> {
+                Ok(())
+            }
+
+            async fn after_apply_transaction(
+                &self,
+                _new_state: &State,
+                _tr: &mut Transaction,
+                _old_state: &State,
+            ) -> Result<(), Box<dyn std::error::Error>> {
+                Ok(())
+            }
+        }
+    };
+    ($name:ident, $append_fn:expr, $filter_fn:expr) => {
+        #[derive(Debug)]
+        pub struct $name {}
+        
+        #[async_trait]
+        impl PluginTrait for $name {
+            async fn append_transaction(
+                &self,
+                tr: &Transaction,
+                old_state: &State,
+                new_state: &State,
+            ) -> Option<Transaction> {
+                $append_fn(tr, old_state, new_state)
+            }
+
+            async fn filter_transaction(
+                &self,
+                tr: &Transaction,
+                state: &State,
+            ) -> bool {
+                $filter_fn(tr, state)
+            }
+
+            async fn before_apply_transaction(
+                &self,
+                _tr: &mut Transaction,
+                _state: &State,
+            ) -> Result<(), Box<dyn std::error::Error>> {
+                Ok(())
+            }
+
+            async fn after_apply_transaction(
+                &self,
+                _new_state: &State,
+                _tr: &mut Transaction,
+                _old_state: &State,
+            ) -> Result<(), Box<dyn std::error::Error>> {
+                Ok(())
+            }
+        }
+    };
+    ($name:ident, $append_fn:expr, $filter_fn:expr, $before_fn:expr) => {
+        #[derive(Debug)]
+        pub struct $name {}
+        
+        #[async_trait]
+        impl PluginTrait for $name {
+            async fn append_transaction(
+                &self,
+                tr: &Transaction,
+                old_state: &State,
+                new_state: &State,
+            ) -> Option<Transaction> {
+                $append_fn(tr, old_state, new_state)
+            }
+
+            async fn filter_transaction(
+                &self,
+                tr: &Transaction,
+                state: &State,
+            ) -> bool {
+                $filter_fn(tr, state)
+            }
+
+            async fn before_apply_transaction(
+                &self,
+                tr: &mut Transaction,
+                state: &State,
+            ) -> Result<(), Box<dyn std::error::Error>> {
+                $before_fn(tr, state)
+            }
+
+            async fn after_apply_transaction(
+                &self,
+                _new_state: &State,
+                _tr: &mut Transaction,
+                _old_state: &State,
+            ) -> Result<(), Box<dyn std::error::Error>> {
+                Ok(())
+            }
+        }
+    };
+    ($name:ident, $append_fn:expr, $filter_fn:expr, $before_fn:expr, $after_fn:expr) => {
+        #[derive(Debug)]
+        pub struct $name {}
+        
+        #[async_trait]
+        impl PluginTrait for $name {
+            async fn append_transaction(
+                &self,
+                tr: &Transaction,
+                old_state: &State,
+                new_state: &State,
+            ) -> Option<Transaction> {
+                $append_fn(tr, old_state, new_state)
+            }
+
+            async fn filter_transaction(
+                &self,
+                tr: &Transaction,
+                state: &State,
+            ) -> bool {
+                $filter_fn(tr, state)
+            }
+
+            async fn before_apply_transaction(
+                &self,
+                tr: &mut Transaction,
+                state: &State,
+            ) -> Result<(), Box<dyn std::error::Error>> {
+                $before_fn(tr, state)
+            }
+
+            async fn after_apply_transaction(
+                &self,
+                new_state: &State,
+                tr: &mut Transaction,
+                old_state: &State,
+            ) -> Result<(), Box<dyn std::error::Error>> {
+                $after_fn(new_state, tr, old_state)
+            }
+        }
+    };
+}
+
+
+#[macro_export]
+macro_rules! impl_state_field {
+    ($name:ident, $init_fn:expr, $apply_fn:expr) => {
+        #[derive(Debug)]
+        pub struct $name;
+        
+        #[async_trait]
+        impl StateField for $name {
+            async fn init(
+                &self,
+                config: &StateConfig,
+                instance: Option<&State>,
+            ) -> PluginState {
+                $init_fn(config, instance)
+            }
+
+            async fn apply(
+                &self,
+                tr: &Transaction,
+                value: PluginState,
+                old_state: &State,
+                new_state: &State,
+            ) -> PluginState {
+                $apply_fn(tr, value, old_state, new_state)
+            }
+        }
+    };
+}
