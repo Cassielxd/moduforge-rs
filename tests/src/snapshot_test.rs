@@ -1,5 +1,5 @@
 use moduforge_core::state::transaction::Transaction;
-use moduforge_runtime::{cache::CacheKey, runtime::Editor, types::EditorOptions};
+use moduforge_runtime::{cache::CacheKey, runtime::Editor, traits::EditorCore, types::EditorOptions};
 
 use crate::{base::get_base, commands::MyCommand};
 

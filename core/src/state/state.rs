@@ -40,7 +40,9 @@ impl State {
     pub async fn create(state_config: StateConfig) -> StateResult<State> {
         let schema = match &state_config.schema {
             Some(schema) => schema.clone(),
-            None => state_config.schema.clone().ok_or_else(|| StateError::SchemaError("Schema is required".to_string()))?,
+            None => {
+                state_config.schema.clone().ok_or_else(|| StateError::SchemaError("Schema is required".to_string()))?
+            },
         };
         let config = Configuration::new(schema, state_config.plugins.clone(), state_config.doc.clone());
         let mut instance = State::new(Arc::new(config));
@@ -120,7 +122,10 @@ impl State {
     ) -> StateResult<()> {
         for plugin in &self.config.plugins {
             if let Err(e) = plugin.before_apply_transaction(tr, self).await {
-                return Err(StateError::TransactionError(format!("Plugin {} before_apply_transaction failed: {}", plugin.key, e)));
+                return Err(StateError::TransactionError(format!(
+                    "Plugin {} before_apply_transaction failed: {}",
+                    plugin.key, e
+                )));
             }
         }
         Ok(())
@@ -133,7 +138,10 @@ impl State {
     ) -> StateResult<()> {
         for plugin in &self.config.plugins {
             if let Err(e) = plugin.after_apply_transaction(new_state, tr, self).await {
-                return Err(StateError::TransactionError(format!("Plugin {} after_apply_transaction failed: {}", plugin.key, e)));
+                return Err(StateError::TransactionError(format!(
+                    "Plugin {} after_apply_transaction failed: {}",
+                    plugin.key, e
+                )));
             }
         }
         Ok(())

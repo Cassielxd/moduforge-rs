@@ -1,7 +1,5 @@
 use crate::model::types::NodeId;
 
-
-
 /// Represents all possible errors that can occur in the node pool operations.
 #[derive(Debug, thiserror::Error)]
 pub enum PoolError {
@@ -54,9 +52,6 @@ pub enum PoolError {
     NodeDeleted(NodeId),
 }
 
-
-
-
 impl PoolError {
     /// Returns the node ID associated with this error, if any.
     pub fn node_id(&self) -> Option<&NodeId> {
@@ -82,7 +77,6 @@ pub type PoolResult<T> = Result<T, PoolError>;
 
 /// A type alias for Result that uses StateError as the error type.
 pub type StateResult<T> = Result<T, StateError>;
-
 
 /// Represents all possible errors that can occur in state management operations.
 #[derive(Debug, thiserror::Error)]
