@@ -18,4 +18,5 @@ pub mod storage_manager;
 pub mod tr;
 pub mod traits;
 pub mod types;
+pub mod macros;
 pub use error::{EditorError, EditorResult, error_utils};
