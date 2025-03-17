@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;
 use std::path::Path;
+use std::fs;
 use std::thread::available_parallelism;
 use tokio_util::task::LocalPoolHandle;
 use tower_http::compression::CompressionLayer;
@@ -39,6 +40,7 @@ async fn main() {
     let app = Router::new()
         .route("/api/health", get(health))
         .route("/api/simulate", post(simulate).layer(DefaultBodyLimit::max(16 * 1024 * 1024)))
+        .route("/api/rules/save", post(save_rule))
         .layer(Extension(local_pool))
         .nest_service("/", serve_dir_service());
 
@@ -106,4 +108,39 @@ impl From<Box<EvaluationError>> for SimulateError {
     fn from(value: Box<EvaluationError>) -> Self {
         Self(value)
     }
+}
+
+#[derive(Deserialize, Serialize)]
+struct SaveRuleRequest {
+    name: String,
+    content: DecisionContent,
+}
+
+async fn save_rule(Json(payload): Json<SaveRuleRequest>) -> Result<Json<Value>, (StatusCode, String)> {
+    let rules_dir = Path::new("rules");
+    
+    // 创建rules目录（如果不存在）
+    if !rules_dir.exists() {
+        fs::create_dir(rules_dir).map_err(|e| {
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to create rules directory: {}", e))
+        })?;
+    }
+    
+    // 构建文件路径
+    let file_name = format!("{}.json", payload.name);
+    let file_path = rules_dir.join(file_name);
+    
+    // 将规则内容序列化为JSON并保存
+    let json_content = serde_json::to_string_pretty(&payload.content).map_err(|e| {
+        (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to serialize rule content: {}", e))
+    })?;
+    
+    fs::write(&file_path, json_content).map_err(|e| {
+        (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to write rule file: {}", e))
+    })?;
+    
+    Ok(Json(serde_json::json!({
+        "status": "success",
+        "message": format!("Rule '{}' saved successfully", payload.name)
+    })))
 }
