@@ -9,6 +9,7 @@ use std::env;
 use std::path::Path;
 use std::fs;
 use std::thread::available_parallelism;
+use tokio::task::JoinSet;
 use tokio_util::task::LocalPoolHandle;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
@@ -81,16 +82,22 @@ async fn simulate(
 ) -> Result<Json<Value>, SimulateError> {
     let engine = DecisionEngine::default();
     let decision = engine.create_decision(payload.content.into());
+    let context = payload.context.into();
 
-    let result = local_pool
-        .spawn_pinned(move || async move {
-            decision
-                .evaluate_with_opts(payload.context.into(), EvaluationOptions { trace: Some(true), max_depth: None })
-                .await
-                .map(serde_json::to_value)
-        })
-        .await
-        .expect("Thread failed to join")?
+    let mut join_set = JoinSet::new();
+    
+    // 在 JoinSet 中启动评估任务
+    join_set.spawn_local(async move {
+        decision
+            .evaluate_with_opts(context, EvaluationOptions { trace: Some(true), max_depth: None })
+            .await
+            .map(serde_json::to_value)
+    });
+
+    // 等待任务完成并处理结果
+    let result = join_set.join_next().await
+        .expect("Task should complete")
+        .expect("Task should not fail")?
         .map_err(|_| SimulateError::from(Box::new(EvaluationError::DepthLimitExceeded)))?;
 
     Ok(Json(result))
