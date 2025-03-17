@@ -30,4 +30,3 @@ bincode= {workspace=true}
 moduforge-delta = {workspace=true}
 moduforge-core= {workspace=true}
 zen-engine= {workspace=true}
-actix = {workspace=true}
