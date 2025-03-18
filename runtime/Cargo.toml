@@ -3,6 +3,8 @@ name = "moduforge-runtime"
 version = "0.1.0"
 edition = "2024"
 description = "插件加载、热更新、依赖管理"
+authors = ["String <348040933@qq.com>"]
+license = "MIT"
 [lib]
 lib="./src/lib.rs"
 
