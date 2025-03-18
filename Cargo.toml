@@ -4,9 +4,9 @@ members = [
    "core",
    "delta",
    "runtime",
-   "engine-dev-tools",
-   "tests"
-, "rules"]
+   "rules"]
+
+exclude = ["tests","engine-dev-tools"]
 [workspace.package]
 name = "moduforge"
 version = "0.1.0"
@@ -30,7 +30,7 @@ flate2 = { version = "1.0", features = ["zlib"] }
 lru="0.13"
 chrono="0.4"
 async-channel = "2.3.1"
-bincode={ version = "2.0.0-rc.3", features = ["serde"] }
+bincode={ version = "~2.0.0-rc.3", features = ["serde"] }
 zen-engine= "0"
 zen-expression= "0"
 zen-tmpl  = "0"

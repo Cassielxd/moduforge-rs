@@ -13,7 +13,7 @@ pub fn to_binary<T: Encode>(data: T) -> Result<Vec<u8>, EncodeError> {
 }
 
 /// 二进制反序列化
-pub fn from_binary<T: Decode>(data: &Vec<u8>) -> Result<T, DecodeError> {
+pub fn from_binary<T: Decode<()>>(data: &Vec<u8>) -> Result<T, DecodeError> {
     let decompressed = zstd::decode_all(data.as_slice()).unwrap();
     let d: T = bincode::decode_from_slice(&decompressed, config::standard().with_no_limit())?.0;
     Ok(d)
