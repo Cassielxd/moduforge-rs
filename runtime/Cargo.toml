@@ -19,7 +19,6 @@ tempfile={workspace=true}
 zip={workspace=true}
 zstd= {workspace=true}
 chrono= {workspace=true}
-zen-expression= {workspace=true}
 log = {workspace=true}
 lru = {workspace=true}
 serde = {workspace=true}
@@ -29,4 +28,4 @@ async-trait= {workspace=true}
 bincode= {workspace=true}
 moduforge-delta = {workspace=true}
 moduforge-core= {workspace=true}
-zen-engine= {workspace=true}
+moduforge-rules= {workspace=true}

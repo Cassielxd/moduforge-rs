@@ -1,7 +1,6 @@
 use std::{path::Path, sync::Arc};
 use crate::{
-    cache::CacheKey, engine_manager::EngineManager, event::EventBus, extension_manager::ExtensionManager,
-    history_manager::HistoryManager, storage_manager::StorageManager, types::EditorOptions,
+    cache::CacheKey, engine_manager::EngineManager, event::EventBus, extension_manager::ExtensionManager, history_manager::HistoryManager, storage_manager::StorageManager, types::EditorOptions
 };
 use async_trait::async_trait;
 use moduforge_core::{

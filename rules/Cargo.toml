@@ -1,0 +1,8 @@
+[package]
+name = "moduforge-rules"
+version = "0.1.0"
+edition = "2024"
+description = "规则引擎"
+[dependencies]
+zen-engine= {workspace=true}
+zen-expression= {workspace=true}

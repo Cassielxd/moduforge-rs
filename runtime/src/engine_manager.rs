@@ -1,10 +1,8 @@
 use std::{env::current_dir, path::PathBuf, sync::Arc};
 
+use moduforge_rules::zen_engine::{loader::{FilesystemLoader, FilesystemLoaderOptions}, DecisionEngine, Variable};
 use serde_json::Error;
-use zen_engine::{
-    DecisionEngine, Variable,
-    loader::{FilesystemLoader, FilesystemLoaderOptions},
-};
+
 
 use crate::types::Engine;
 
