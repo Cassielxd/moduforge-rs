@@ -38,11 +38,6 @@ once_cell = "1.19.0"
 petgraph = "0.7.0"
 ahash = "0.8.11"
 criterion = "0.5.1"
-zstd="0.13"
-rocksdb = "0.23.0"
-tempfile="3"
-zip="2"
-# metrics 监控
 metrics = "0.24.1"
 metrics-exporter-prometheus = "0.16.2"
 

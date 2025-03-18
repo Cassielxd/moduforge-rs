@@ -15,4 +15,3 @@ thiserror= {workspace=true}
 async-trait= {workspace=true}
 tokio= {workspace=true}
 moduforge-core= {workspace=true}
-zstd= {workspace=true}
