@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 description = "不可变数据结构与事务系统基础"
 authors = ["String <348040933@qq.com>"]
+license = "MIT"
 [lib]
 lib="./src/lib.rs"
 
