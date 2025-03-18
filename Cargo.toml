@@ -46,6 +46,6 @@ uuid="1"
 futures="0.3"
 
 # 业务核心
-moduforge-core = { path = "./core" }
+moduforge-core = "0.1.0"
 moduforge-runtime = { path = "./runtime" }
 moduforge-tests = { path = "./tests" }
