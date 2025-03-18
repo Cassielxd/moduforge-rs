@@ -1,4 +1,3 @@
-use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 use super::{mark::Mark, node::Node, types::NodeId};
@@ -6,7 +5,7 @@ use std::{collections::HashMap, sync::Arc};
 
 /// 文档补丁枚举
 /// 用于描述对文档树的各种修改操作
-#[derive(Debug, Clone, Serialize, Deserialize, Decode, Encode)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Patch {
     /// 更新节点属性
     UpdateAttr {

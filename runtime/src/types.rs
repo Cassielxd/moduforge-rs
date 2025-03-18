@@ -18,9 +18,7 @@ pub enum Extensions {
 
 #[derive(Clone, Debug, Default)]
 pub enum Content {
-    NodePoolBinary(Vec<u8>),
     NodePool(NodePool),
-    Snapshot(Vec<u8>),
     #[default]
     None,
 }
@@ -43,10 +41,7 @@ pub struct EditorOptions {
     content: Content,
     extensions: Vec<Extensions>,
     history_limit: Option<usize>,
-    snapshot_interval: Option<usize>,
-    rules_path: Option<PathBuf>,
     event_handlers: Vec<Arc<dyn EventHandler>>,
-    storage_option: StorageOptions,
 }
 impl EditorOptions {
     pub fn get_content(&self) -> Content {
@@ -79,26 +74,8 @@ impl EditorOptions {
         self.history_limit = Some(history_limit);
         self
     }
-    pub fn get_snapshot_interval(&self) -> Option<usize> {
-        self.snapshot_interval
-    }
-    pub fn set_snapshot_interval(
-        mut self,
-        snapshot_interval: usize,
-    ) -> Self {
-        self.snapshot_interval = Some(snapshot_interval);
-        self
-    }
-    pub fn get_rules_path(&self) -> Option<PathBuf> {
-        self.rules_path.clone()
-    }
-    pub fn set_rules_path(
-        mut self,
-        rules_path: PathBuf,
-    ) -> Self {
-        self.rules_path = Some(rules_path);
-        self
-    }
+  
+   
     pub fn get_event_handlers(&self) -> Vec<Arc<dyn EventHandler>> {
         self.event_handlers.clone()
     }
@@ -107,16 +84,6 @@ impl EditorOptions {
         event_handlers: Vec<Arc<dyn EventHandler>>,
     ) -> Self {
         self.event_handlers = event_handlers;
-        self
-    }
-    pub fn get_storage_option(&self) -> StorageOptions {
-        self.storage_option.clone()
-    }
-    pub fn set_storage_option(
-        mut self,
-        storage_option: StorageOptions,
-    ) -> Self {
-        self.storage_option = storage_option;
         self
     }
 }

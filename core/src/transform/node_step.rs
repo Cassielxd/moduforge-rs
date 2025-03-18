@@ -7,10 +7,9 @@ use super::{
     step::{Step, StepResult},
     transform::TransformError,
 };
-use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 /// 添加节点的步骤
-#[derive(Debug, Serialize, Deserialize, Clone, Decode, Encode)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AddNodeStep {
     parent_id: NodeId,
     node: Node,
@@ -42,7 +41,7 @@ impl Step for AddNodeStep {
     }
 }
 /// 删除节点的步骤
-#[derive(Debug, Serialize, Deserialize, Clone, Decode, Encode)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RemoveNodeStep {
     parent_id: NodeId,
     node_ids: Vec<NodeId>,
@@ -74,7 +73,7 @@ impl Step for RemoveNodeStep {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Decode, Encode)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MoveNodeStep {
     source_parent_id: NodeId,
     target_parent_id: NodeId,
@@ -113,7 +112,7 @@ impl Step for MoveNodeStep {
 }
 
 /// 替换节点
-#[derive(Debug, Serialize, Deserialize, Clone, Decode, Encode)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ReplaceNodeStep {
     node_id: NodeId,
     node: Node,

@@ -1,4 +1,4 @@
-use std::env::current_dir;
+/* use std::env::current_dir;
 
 use moduforge_core::state::transaction::Transaction;
 use moduforge_runtime::{runtime::Editor, traits::EditorCore, types::EditorOptions};
@@ -23,3 +23,4 @@ mod tests {
         export_zip().await;
     }
 }
+ */

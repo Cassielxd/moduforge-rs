@@ -14,6 +14,5 @@ serde_json = {workspace=true}
 thiserror= {workspace=true}
 async-trait= {workspace=true}
 tokio= {workspace=true}
-bincode= {workspace=true}
 moduforge-core= {workspace=true}
 zstd= {workspace=true}

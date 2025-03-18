@@ -1,14 +1,11 @@
 use std::{path::Path, sync::Arc};
 
 use crate::{
-    cache::{CacheKey, cache::DocumentCache},
     error::{EditorError, EditorResult, error_utils},
     event::{Event, EventBus, EventHandler},
-    event_handler::SnapshotHandler,
     extension_manager::ExtensionManager,
     helpers::create_doc,
     history_manager::HistoryManager,
-    storage_manager::StorageManager,
     types::{EditorOptions, StorageOptions},
     traits::{EditorCore, EditorBase},
 };
@@ -35,9 +32,6 @@ impl Editor {
         let extension_manager = ExtensionManager::new(&options.get_extensions());
 
         let doc = create_doc::create_doc(&options.get_content());
-        let storage = options.get_storage_option();
-        let cache: Arc<DocumentCache> = DocumentCache::new(&storage);
-        let storage_manager = StorageManager::create(cache);
         let event_bus = EventBus::new();
 
         let state: State = State::create(StateConfig {
@@ -55,7 +49,6 @@ impl Editor {
             event_bus,
             state: state.clone(),
             extension_manager,
-            storage_manager,
             history_manager: HistoryManager::new(state, options.get_history_limit()),
             options,
         };
@@ -67,13 +60,7 @@ impl Editor {
 
     /// 初始化编辑器，设置事件处理器并启动事件循环
     async fn init(&mut self) -> EditorResult<()> {
-        let default_event_handlers = init_event_handler(
-            &self.base.storage_manager,
-            self.base.options.get_event_handlers(),
-            self.base.options.get_storage_option(),
-            self.base.options.get_history_limit(),
-        );
-        self.base.event_bus.add_event_handlers(default_event_handlers).await?;
+        self.base.event_bus.add_event_handlers(self.base.options.get_event_handlers()).await?;
         self.base.event_bus.start_event_loop();
         self.base
             .event_bus
@@ -92,12 +79,6 @@ impl EditorCore for Editor {
 
     fn get_options(&self) -> &EditorOptions {
         self.base.get_options()
-    }
-    fn get_snapshot(
-        &self,
-        key: &CacheKey,
-    ) -> Option<Arc<NodePool>> {
-        self.base.get_snapshot(key)
     }
 
     fn get_state(&self) -> &Arc<State> {
@@ -150,17 +131,6 @@ impl EditorCore for Editor {
         Ok(())
     }
 
-    async fn export_zip(
-        &self,
-        output_path: &Path,
-    ) -> EditorResult<()> {
-        self.base
-            .storage_manager
-            .export_zip(&self.base.state, output_path)
-            .await
-            .map_err(|e| error_utils::storage_error(format!("Failed to export zip: {}", e)))
-    }
-
     async fn register_plugin(&mut self) -> EditorResult<()> {
         let state = self
             .get_state()
@@ -204,20 +174,3 @@ impl EditorCore for Editor {
     }
 }
 
-/// 初始化事件处理器
-/// storage_manager: 存储管理器实例
-/// event_handlers: 自定义事件处理器列表
-/// storage: 存储配置选项
-/// snapshot_interval: 快照间隔配置
-/// 返回: 包含默认处理器和自定义处理器的完整处理器列表
-pub fn init_event_handler(
-    storage_manager: &Arc<StorageManager>,
-    event_handlers: Vec<Arc<dyn EventHandler>>,
-    storage: StorageOptions,
-    snapshot_interval: Option<usize>,
-) -> Vec<Arc<dyn EventHandler>> {
-    let mut default_event_handlers: Vec<Arc<dyn EventHandler>> =
-        vec![SnapshotHandler::new(storage.clone(), snapshot_interval.unwrap_or(50), storage_manager.clone())];
-    default_event_handlers.append(&mut event_handlers.clone());
-    default_event_handlers
-}

@@ -1,6 +1,5 @@
 use std::{path::Path, sync::Arc};
-use crate::{
-    cache::CacheKey, event::EventBus, extension_manager::ExtensionManager, history_manager::HistoryManager, storage_manager::StorageManager, types::EditorOptions
+use crate::{ event::EventBus, extension_manager::ExtensionManager, history_manager::HistoryManager, types::EditorOptions
 };
 use async_trait::async_trait;
 use moduforge_core::{
@@ -22,12 +21,6 @@ pub trait EditorCore {
     /// 获取编辑器配置选项
     fn get_options(&self) -> &EditorOptions;
 
-
-    /// 根据缓存键获取文档快照
-    fn get_snapshot(
-        &self,
-        key: &CacheKey,
-    ) -> Option<Arc<NodePool>>;
 
     /// 获取当前状态
     fn get_state(&self) -> &Arc<State>;
@@ -53,11 +46,6 @@ pub trait EditorCore {
         transaction: Transaction,
     ) -> Result<(), Self::Error>;
 
-    /// 将当前文档导出为zip文件
-    async fn export_zip(
-        &self,
-        output_path: &Path,
-    ) -> Result<(), Self::Error>;
 
     /// 注册新插件
     async fn register_plugin(&mut self) -> Result<(), Self::Error>;
@@ -80,7 +68,6 @@ pub struct EditorBase {
     pub event_bus: EventBus,
     pub state: Arc<State>,
     pub extension_manager: ExtensionManager,
-    pub storage_manager: Arc<StorageManager>,
     pub history_manager: HistoryManager<Arc<State>>,
     pub options: EditorOptions,
 }
@@ -96,12 +83,6 @@ impl EditorBase {
     }
 
 
-    pub fn get_snapshot(
-        &self,
-        key: &CacheKey,
-    ) -> Option<Arc<NodePool>> {
-        self.storage_manager.get_snapshot(key)
-    }
 
     pub fn get_state(&self) -> &Arc<State> {
         &self.state

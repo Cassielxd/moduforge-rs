@@ -7,13 +7,11 @@ use super::{
     step::{Step, StepResult},
     transform::TransformError,
 };
-use bincode::{Decode, Encode};
 use im::HashMap;
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Serialize, Deserialize, Clone, Decode, Encode)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AttrStep {
     id: NodeId,
-    #[bincode(with_serde)]
     values: HashMap<String, String>,
 }
 impl AttrStep {

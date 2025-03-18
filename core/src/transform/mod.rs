@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use attr_step::AttrStep;
-use bincode::{Decode, Encode};
 use mark_step::AddMarkStep;
 use node_step::{AddNodeStep, MoveNodeStep, RemoveNodeStep, ReplaceNodeStep};
 use serde::{Deserialize, Serialize};
@@ -15,7 +14,7 @@ pub mod node_step;
 pub mod step;
 pub mod transform;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Decode, Encode)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConcreteStep {
     UpdateAttrs(AttrStep),
     AddNodeStep(AddNodeStep),
@@ -47,7 +46,7 @@ impl Step for ConcreteStep {
         self.clone()
     }
 }
-#[derive(Debug, Clone, Serialize, Deserialize, Decode, Encode)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PatchStep {
     pub patches: Vec<Patch>,
 }
@@ -68,7 +67,7 @@ impl Step for PatchStep {
     }
 }
 /// 批量操作步骤
-#[derive(Debug, Serialize, Deserialize, Clone, Decode, Encode)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BatchStep {
     steps: Vec<ConcreteStep>,
 }

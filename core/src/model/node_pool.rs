@@ -1,7 +1,6 @@
 use crate::{error::PoolError, transform::step::StepResult};
 
 use super::{mark::Mark, node::Node, patch::Patch, types::NodeId};
-use bincode::{Decode, Encode};
 use im::HashMap;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -12,12 +11,10 @@ use std::sync::Arc;
 /// * `root_id` - 根节点标识符
 /// * `nodes` - 节点存储的不可变哈希表（使用结构共享）
 /// * `parent_map` - 父子关系映射表
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Decode, Encode)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct NodePoolInner {
     pub root_id: NodeId,
-    #[bincode(with_serde)]
     pub nodes: im::HashMap<NodeId, Arc<Node>>, // 节点数据共享
-    #[bincode(with_serde)]
     pub parent_map: im::HashMap<NodeId, NodeId>,
 }
 impl NodePoolInner {
@@ -54,7 +51,7 @@ impl NodePoolInner {
 /// 线程安全的节点池封装
 ///
 /// 使用 [`Arc`] 实现快速克隆，内部使用不可变数据结构保证线程安全
-#[derive(Clone, PartialEq, Debug, Decode, Encode, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug,Serialize, Deserialize)]
 pub struct NodePool {
     // 使用 Arc 包裹内部结构，实现快速克隆
     pub inner: Arc<NodePoolInner>,

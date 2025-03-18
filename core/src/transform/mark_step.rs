@@ -7,9 +7,8 @@ use super::{
     step::{Step, StepResult},
     transform::TransformError,
 };
-use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Serialize, Deserialize, Clone, Decode, Encode)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AddMarkStep {
     id: NodeId,
     mark: Mark,
