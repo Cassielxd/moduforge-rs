@@ -3,8 +3,8 @@ resolver = "2"
 members = [
    "core",
    "delta",
-   "runtime",
-   "rules"]
+   "runtime"
+   ]
 
 exclude = ["tests","engine-dev-tools"]
 [workspace.package]
@@ -31,9 +31,6 @@ lru="0.13"
 chrono="0.4"
 async-channel = "2.3.1"
 bincode={ version = "~2.0.0-rc.3", features = ["serde"] }
-zen-engine= "0"
-zen-expression= "0"
-zen-tmpl  = "0"
 
 itertools = "0.13.0"
 rust_decimal = "1.33.1"
@@ -60,4 +57,3 @@ moduforge-core = { path = "./core" }
 moduforge-delta = { path = "./delta" }
 moduforge-runtime = { path = "./runtime" }
 moduforge-tests = { path = "./tests" }
-moduforge-rules = { path = "./rules" }

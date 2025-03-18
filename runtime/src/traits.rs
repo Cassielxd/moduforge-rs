@@ -1,6 +1,6 @@
 use std::{path::Path, sync::Arc};
 use crate::{
-    cache::CacheKey, engine_manager::EngineManager, event::EventBus, extension_manager::ExtensionManager, history_manager::HistoryManager, storage_manager::StorageManager, types::EditorOptions
+    cache::CacheKey, event::EventBus, extension_manager::ExtensionManager, history_manager::HistoryManager, storage_manager::StorageManager, types::EditorOptions
 };
 use async_trait::async_trait;
 use moduforge_core::{
@@ -22,8 +22,6 @@ pub trait EditorCore {
     /// 获取编辑器配置选项
     fn get_options(&self) -> &EditorOptions;
 
-    /// 获取引擎管理器实例
-    fn get_engine_manager(&self) -> &EngineManager;
 
     /// 根据缓存键获取文档快照
     fn get_snapshot(
@@ -83,7 +81,6 @@ pub struct EditorBase {
     pub state: Arc<State>,
     pub extension_manager: ExtensionManager,
     pub storage_manager: Arc<StorageManager>,
-    pub engine_manager: EngineManager,
     pub history_manager: HistoryManager<Arc<State>>,
     pub options: EditorOptions,
 }
@@ -98,9 +95,6 @@ impl EditorBase {
         &self.options
     }
 
-    pub fn get_engine_manager(&self) -> &EngineManager {
-        &self.engine_manager
-    }
 
     pub fn get_snapshot(
         &self,
@@ -122,9 +116,7 @@ impl EditorBase {
     }
 
     pub fn get_tr(&self) -> Transaction {
-        let mut tr = self.get_state().tr();
-        let engine = self.engine_manager.engine.clone();
-        tr.set_meta("engine", engine);
+        let tr = self.get_state().tr();
         tr
     }
 

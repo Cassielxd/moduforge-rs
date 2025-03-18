@@ -2,7 +2,6 @@ use std::{path::Path, sync::Arc};
 
 use crate::{
     cache::{CacheKey, cache::DocumentCache},
-    engine_manager::EngineManager,
     error::{EditorError, EditorResult, error_utils},
     event::{Event, EventBus, EventHandler},
     event_handler::SnapshotHandler,
@@ -57,7 +56,6 @@ impl Editor {
             state: state.clone(),
             extension_manager,
             storage_manager,
-            engine_manager: EngineManager::create(options.get_rules_path()),
             history_manager: HistoryManager::new(state, options.get_history_limit()),
             options,
         };
@@ -95,11 +93,6 @@ impl EditorCore for Editor {
     fn get_options(&self) -> &EditorOptions {
         self.base.get_options()
     }
-
-    fn get_engine_manager(&self) -> &EngineManager {
-        self.base.get_engine_manager()
-    }
-
     fn get_snapshot(
         &self,
         key: &CacheKey,

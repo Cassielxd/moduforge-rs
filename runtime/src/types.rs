@@ -2,8 +2,7 @@ use std::{collections::HashMap, env::current_dir, path::PathBuf, sync::Arc};
 
 use crate::{event::EventHandler, extension::Extension, mark::Mark, node::Node};
 use moduforge_core::model::{node_pool::NodePool, schema::AttributeSpec};
-use moduforge_rules::zen_engine::{handler::custom_node_adapter::NoopCustomNode, loader::FilesystemLoader, DecisionEngine};
-pub type Engine = Arc<DecisionEngine<FilesystemLoader, NoopCustomNode>>;
+
 pub type GlobalAttributes = Vec<GlobalAttributeItem>;
 #[derive(Clone, PartialEq, Debug, Eq, Default)]
 pub struct GlobalAttributeItem {

@@ -28,4 +28,3 @@ async-trait= {workspace=true}
 bincode= {workspace=true}
 moduforge-delta = {workspace=true}
 moduforge-core= {workspace=true}
-moduforge-rules= {workspace=true}
