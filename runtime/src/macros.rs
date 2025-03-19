@@ -71,14 +71,14 @@ macro_rules! impl_plugin {
         pub struct $name {}
 
         #[async_trait]
-        impl PluginTrait for $name {
+        impl PluginTrait for $name where Self: Send + Sync {
             async fn append_transaction(
                 &self,
                 tr: &Transaction,
                 old_state: &State,
                 new_state: &State,
             ) -> Option<Transaction> {
-                $append_fn(tr, old_state, new_state)
+                $append_fn(tr, old_state, new_state).await
             }
 
             async fn filter_transaction(
@@ -112,14 +112,14 @@ macro_rules! impl_plugin {
         pub struct $name {}
 
         #[async_trait]
-        impl PluginTrait for $name {
+        impl PluginTrait for $name where Self: Send + Sync {
             async fn append_transaction(
                 &self,
                 tr: &Transaction,
                 old_state: &State,
                 new_state: &State,
             ) -> Option<Transaction> {
-                $append_fn(tr, old_state, new_state)
+                $append_fn(tr, old_state, new_state).await
             }
 
             async fn filter_transaction(
@@ -153,14 +153,14 @@ macro_rules! impl_plugin {
         pub struct $name {}
 
         #[async_trait]
-        impl PluginTrait for $name {
+        impl PluginTrait for $name where Self: Send + Sync {
             async fn append_transaction(
                 &self,
                 tr: &Transaction,
                 old_state: &State,
                 new_state: &State,
             ) -> Option<Transaction> {
-                $append_fn(tr, old_state, new_state)
+                $append_fn(tr, old_state, new_state).await
             }
 
             async fn filter_transaction(
@@ -168,7 +168,7 @@ macro_rules! impl_plugin {
                 tr: &Transaction,
                 state: &State,
             ) -> bool {
-                $filter_fn(tr, state)
+                $filter_fn(tr, state).await
             }
 
             async fn before_apply_transaction(
@@ -176,7 +176,7 @@ macro_rules! impl_plugin {
                 tr: &mut Transaction,
                 state: &State,
             ) -> Result<(), Box<dyn std::error::Error>> {
-                $before_fn(tr, state)
+                $before_fn(tr, state).await
             }
 
             async fn after_apply_transaction(
@@ -194,14 +194,14 @@ macro_rules! impl_plugin {
         pub struct $name {}
 
         #[async_trait]
-        impl PluginTrait for $name {
+        impl PluginTrait for $name where Self: Send + Sync {
             async fn append_transaction(
                 &self,
                 tr: &Transaction,
                 old_state: &State,
                 new_state: &State,
             ) -> Option<Transaction> {
-                $append_fn(tr, old_state, new_state)
+                $append_fn(tr, old_state, new_state).await
             }
 
             async fn filter_transaction(
@@ -209,7 +209,7 @@ macro_rules! impl_plugin {
                 tr: &Transaction,
                 state: &State,
             ) -> bool {
-                $filter_fn(tr, state)
+                $filter_fn(tr, state).await
             }
 
             async fn before_apply_transaction(
@@ -217,7 +217,7 @@ macro_rules! impl_plugin {
                 tr: &mut Transaction,
                 state: &State,
             ) -> Result<(), Box<dyn std::error::Error>> {
-                $before_fn(tr, state)
+                $before_fn(tr, state).await
             }
 
             async fn after_apply_transaction(
@@ -226,7 +226,7 @@ macro_rules! impl_plugin {
                 tr: &mut Transaction,
                 old_state: &State,
             ) -> Result<(), Box<dyn std::error::Error>> {
-                $after_fn(new_state, tr, old_state)
+                $after_fn(new_state, tr, old_state).await
             }
         }
     };
@@ -239,13 +239,13 @@ macro_rules! impl_state_field {
         pub struct $name;
 
         #[async_trait]
-        impl StateField for $name {
+        impl StateField for $name where Self: Send + Sync {
             async fn init(
                 &self,
                 config: &StateConfig,
                 instance: Option<&State>,
             ) -> PluginState {
-                $init_fn(config, instance)
+                $init_fn(config, instance).await
             }
 
             async fn apply(
@@ -255,7 +255,7 @@ macro_rules! impl_state_field {
                 old_state: &State,
                 new_state: &State,
             ) -> PluginState {
-                $apply_fn(tr, value, old_state, new_state)
+                $apply_fn(tr, value, old_state, new_state).await
             }
         }
     };
@@ -273,7 +273,7 @@ macro_rules! impl_command {
                 &self,
                 tr: &mut Transaction,
             ) -> Result<(), TransformError> {
-                $execute_fn(tr)
+                $execute_fn(tr).await
             }
 
             fn name(&self) -> String {
@@ -291,7 +291,7 @@ macro_rules! impl_command {
                 &self,
                 tr: &mut Transaction,
             ) -> Result<(), TransformError> {
-                $execute_fn(tr)
+                $execute_fn(tr).await
             }
 
             fn name(&self) -> String {

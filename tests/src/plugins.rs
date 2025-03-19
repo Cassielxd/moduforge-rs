@@ -7,7 +7,7 @@ use moduforge_core::state::{
     transaction::Transaction,
 };
 use moduforge_runtime::{impl_plugin, impl_state_field};
-fn p1_append(
+async fn p1_append(
     tr: &Transaction,
     _: &State,
     _: &State,
@@ -22,7 +22,7 @@ fn p1_append(
 
 impl_plugin!(P1Plugin, p1_append);
 
-fn p1_init(
+async fn p1_init(
     _config: &StateConfig,
     _instance: Option<&State>,
 ) -> PluginState {
@@ -30,7 +30,7 @@ fn p1_init(
     Arc::new(map)
 }
 
-fn p1_apply(
+async fn p1_apply(
     _tr: &Transaction,
     value: PluginState,
     _old_state: &State,
@@ -41,7 +41,7 @@ fn p1_apply(
 
 impl_state_field!(P1State, p1_init, p1_apply);
 
-fn p2_append(
+async fn p2_append(
     tr: &Transaction,
     _: &State,
     _: &State,

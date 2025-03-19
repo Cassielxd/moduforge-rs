@@ -36,7 +36,7 @@ impl Command for MyCommand {
 
 impl_command!(
     MyCommand1,
-    |tr: &mut Transaction| -> Result<(), TransformError> {
+    async |tr: &mut Transaction| -> Result<(), TransformError> {
         tr.add_node(
             tr.doc().inner.root_id.to_string(),
             tr.schema.nodes.get("DW").unwrap().create(None, None, vec![], None),

@@ -89,6 +89,10 @@ pub struct PluginSpec {
     pub key: PluginKey,
     pub tr: Option<Arc<dyn PluginTrait>>,
 }
+
+unsafe impl Send for PluginSpec {}
+unsafe impl Sync for PluginSpec {}
+
 impl PluginSpec {
     /// 插件状态管理器
     async fn filter_transaction(
@@ -146,6 +150,9 @@ pub struct Plugin {
     pub spec: PluginSpec,
     pub key: String,
 }
+
+unsafe impl Send for Plugin {}
+unsafe impl Sync for Plugin {}
 
 impl Plugin {
     /// 创建新的插件实例
