@@ -9,6 +9,10 @@ pub struct GlobalAttributeItem {
     pub types: Vec<String>,
     pub attributes: HashMap<String, AttributeSpec>,
 }
+
+unsafe impl Send for GlobalAttributeItem {}
+unsafe impl Sync for GlobalAttributeItem {}
+
 #[derive(Clone, Debug)]
 pub enum Extensions {
     N(Node),

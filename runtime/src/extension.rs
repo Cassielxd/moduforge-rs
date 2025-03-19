@@ -10,8 +10,10 @@ pub struct Extension {
     global_attributes: Vec<GlobalAttributeItem>,
     plugins: Vec<Arc<Plugin>>,
 }
+
 unsafe impl Send for Extension {}
 unsafe impl Sync for Extension {}
+
 impl Extension {
     pub fn new() -> Self {
         Extension { global_attributes: vec![], plugins: vec![] }
