@@ -796,7 +796,22 @@ dependencies = [
 
 [[package]]
 name = "moduforge-core"
-version = "0.1.0"
+version = "0.1.1"
+dependencies = [
+ "async-trait",
+ "im",
+ "log",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.11",
+ "tokio",
+]
+
+[[package]]
+name = "moduforge-core"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9035871b50f9a171f12c69292e17216a98699e91b58dffb25cc0ed03e1033ce3"
 dependencies = [
  "async-trait",
  "im",
@@ -809,7 +824,7 @@ dependencies = [
 
 [[package]]
 name = "moduforge-runtime"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -820,7 +835,7 @@ dependencies = [
  "lru",
  "metrics",
  "metrics-exporter-prometheus",
- "moduforge-core",
+ "moduforge-core 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
  "thiserror 2.0.11",
@@ -833,7 +848,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "log",
- "moduforge-core",
+ "moduforge-core 0.1.1",
  "moduforge-runtime",
  "serde",
  "serde_json",
