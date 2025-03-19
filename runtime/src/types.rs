@@ -74,8 +74,7 @@ impl EditorOptions {
         self.history_limit = Some(history_limit);
         self
     }
-  
-   
+
     pub fn get_event_handlers(&self) -> Vec<Arc<dyn EventHandler>> {
         self.event_handlers.clone()
     }

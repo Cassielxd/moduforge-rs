@@ -51,7 +51,7 @@ impl NodePoolInner {
 /// 线程安全的节点池封装
 ///
 /// 使用 [`Arc`] 实现快速克隆，内部使用不可变数据结构保证线程安全
-#[derive(Clone, PartialEq, Debug,Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct NodePool {
     // 使用 Arc 包裹内部结构，实现快速克隆
     pub inner: Arc<NodePoolInner>,

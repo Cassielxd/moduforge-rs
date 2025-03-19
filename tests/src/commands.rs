@@ -5,6 +5,7 @@ use moduforge_core::{
     state::transaction::{Command, Transaction},
     transform::transform::TransformError,
 };
+use moduforge_runtime::impl_command;
 
 #[derive(Clone, Default, Debug)]
 pub struct MyCommand;
@@ -32,3 +33,15 @@ impl Command for MyCommand {
         Ok(())
     }
 }
+
+impl_command!(
+    MyCommand1,
+    |tr: &mut Transaction| -> Result<(), TransformError> {
+        tr.add_node(
+            tr.doc().inner.root_id.to_string(),
+            tr.schema.nodes.get("DW").unwrap().create(None, None, vec![], None),
+        );
+        Ok(())
+    },
+    "MyCommand1"
+);

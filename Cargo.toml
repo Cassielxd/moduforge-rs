@@ -8,9 +8,10 @@ members = [
 
 [workspace.package]
 name = "moduforge"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
-
+authors = ["String <348040933@qq.com>"]
+license = "MIT"
 
 [workspace.dependencies]
 tokio = { version = "1",features = ["full"] }

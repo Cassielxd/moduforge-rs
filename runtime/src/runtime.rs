@@ -1,12 +1,12 @@
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
     error::{EditorError, EditorResult, error_utils},
-    event::{Event, EventBus, EventHandler},
+    event::{Event, EventBus},
     extension_manager::ExtensionManager,
     helpers::create_doc,
     history_manager::HistoryManager,
-    types::{EditorOptions, StorageOptions},
+    types::EditorOptions,
     traits::{EditorCore, EditorBase},
 };
 use async_trait::async_trait;
@@ -173,4 +173,3 @@ impl EditorCore for Editor {
         self.base.redo()
     }
 }
-

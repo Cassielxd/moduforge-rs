@@ -1,13 +1,13 @@
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
-    event::{Event, EventBus, EventHandler},
+    event::{Event, EventBus},
     extension_manager::ExtensionManager,
     flow::{FlowEngine, ProcessorResult},
     helpers::create_doc,
     history_manager::HistoryManager,
     traits::{EditorBase, EditorCore},
-    types::{EditorOptions, StorageOptions},
+    types::EditorOptions,
 };
 use async_trait::async_trait;
 use moduforge_core::{
@@ -75,8 +75,6 @@ impl EditorCore for Editor {
     fn get_options(&self) -> &EditorOptions {
         self.base.get_options()
     }
-
-
 
     fn get_state(&self) -> &Arc<State> {
         self.base.get_state()

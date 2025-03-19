@@ -1,6 +1,5 @@
-use std::{path::Path, sync::Arc};
-use crate::{ event::EventBus, extension_manager::ExtensionManager, history_manager::HistoryManager, types::EditorOptions
-};
+use std::sync::Arc;
+use crate::{event::EventBus, extension_manager::ExtensionManager, history_manager::HistoryManager, types::EditorOptions};
 use async_trait::async_trait;
 use moduforge_core::{
     model::{node_pool::NodePool, schema::Schema},
@@ -20,7 +19,6 @@ pub trait EditorCore {
 
     /// 获取编辑器配置选项
     fn get_options(&self) -> &EditorOptions;
-
 
     /// 获取当前状态
     fn get_state(&self) -> &Arc<State>;
@@ -45,7 +43,6 @@ pub trait EditorCore {
         &mut self,
         transaction: Transaction,
     ) -> Result<(), Self::Error>;
-
 
     /// 注册新插件
     async fn register_plugin(&mut self) -> Result<(), Self::Error>;
@@ -81,8 +78,6 @@ impl EditorBase {
     pub fn get_options(&self) -> &EditorOptions {
         &self.options
     }
-
-
 
     pub fn get_state(&self) -> &Arc<State> {
         &self.state
