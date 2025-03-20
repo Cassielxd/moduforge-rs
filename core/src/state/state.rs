@@ -1,5 +1,5 @@
 use crate::model::{id_generator::IdGenerator, mark::Mark, node_pool::NodePool, schema::Schema};
-use crate::error::{StateError, StateResult};
+
 use im::HashMap as ImHashMap;
 use std::{
     collections::HashMap,
@@ -10,8 +10,7 @@ use std::{
 };
 
 use super::{
-    plugin::{Plugin, PluginState},
-    transaction::Transaction,
+    error::{StateError, StateResult}, plugin::{Plugin, PluginState}, transaction::Transaction
 };
 
 static VERSION: AtomicU64 = AtomicU64::new(0);
