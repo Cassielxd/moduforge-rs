@@ -27,7 +27,7 @@ pub trait Command: Send + Sync + Debug {
 }
 
 /// 事务结构体，用于管理文档的修改操作
-#[derive(Debug, Clone)]
+#[derive(Debug,Clone)]
 pub struct Transaction {
     /// 存储元数据的哈希表，支持任意类型数据
     pub meta: im::HashMap<String, Arc<dyn std::any::Any>>,

@@ -31,11 +31,12 @@ async fn p1_init(
 }
 
 async fn p1_apply(
-    _tr: &Transaction,
+    tr: &Transaction,
     value: PluginState,
     _old_state: &State,
     _new_state: &State,
 ) -> PluginState {
+    println!("P1Plugin apply{}", tr.steps.len());
     value
 }
 
