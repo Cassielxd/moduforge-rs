@@ -73,14 +73,11 @@ impl Editor {
         self.base.event_bus.add_event_handlers(self.base.options.get_event_handlers()).await?;
         self.base.event_bus.start_event_loop();
         debug!("事件总线已启动");
-        
-        self.base
-            .event_bus
-            .broadcast_blocking(Event::Create(self.base.state.clone()))
-            .map_err(|e| {
-                error!("广播创建事件失败: {}", e);
-                error_utils::event_error(format!("Failed to broadcast create event: {}", e))
-            })?;
+
+        self.base.event_bus.broadcast_blocking(Event::Create(self.base.state.clone())).map_err(|e| {
+            error!("广播创建事件失败: {}", e);
+            error_utils::event_error(format!("Failed to broadcast create event: {}", e))
+        })?;
         debug!("已广播创建事件");
         Ok(())
     }
@@ -129,15 +126,10 @@ impl EditorCore for Editor {
         transaction: Transaction,
     ) -> EditorResult<()> {
         debug!("正在分发事务");
-        let TransactionResult { state, mut trs } = self
-            .base
-            .state
-            .apply(transaction)
-            .await
-            .map_err(|e| {
-                error!("应用事务失败: {}", e);
-                error_utils::state_error(format!("Failed to apply transaction: {}", e))
-            })?;
+        let TransactionResult { state, mut trs } = self.base.state.apply(transaction).await.map_err(|e| {
+            error!("应用事务失败: {}", e);
+            error_utils::state_error(format!("Failed to apply transaction: {}", e))
+        })?;
         let tr = trs.pop().unwrap();
         if !tr.doc_changed() {
             debug!("文档未发生变化，跳过事件广播");
@@ -147,13 +139,10 @@ impl EditorCore for Editor {
         self.base.history_manager.insert(self.base.state.clone());
         let event_bus = self.get_event_bus();
 
-        event_bus
-            .broadcast(Event::TrApply(Arc::new(tr), self.base.state.clone()))
-            .await
-            .map_err(|e| {
-                error!("广播事务事件失败: {}", e);
-                error_utils::event_error(format!("Failed to broadcast transaction event: {}", e))
-            })?;
+        event_bus.broadcast(Event::TrApply(Arc::new(tr), self.base.state.clone())).await.map_err(|e| {
+            error!("广播事务事件失败: {}", e);
+            error_utils::event_error(format!("Failed to broadcast transaction event: {}", e))
+        })?;
         debug!("事务分发完成");
         Ok(())
     }

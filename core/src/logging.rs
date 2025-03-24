@@ -8,11 +8,14 @@ use tracing_subscriber::{
 };
 
 /// 初始化日志系统
-/// 
+///
 /// # Arguments
 /// * `log_level` - 日志级别，默认为 INFO
 /// * `log_file` - 日志文件路径，如果为 None 则只输出到控制台
-pub fn init_logging(log_level: Option<Level>, log_file: Option<PathBuf>) -> anyhow::Result<()> {
+pub fn init_logging(
+    log_level: Option<Level>,
+    log_file: Option<PathBuf>,
+) -> anyhow::Result<()> {
     // 设置日志级别
     let level = log_level.unwrap_or(Level::INFO);
     let env_filter = EnvFilter::try_from_default_env()
@@ -28,9 +31,7 @@ pub fn init_logging(log_level: Option<Level>, log_file: Option<PathBuf>) -> anyh
         .with_line_number(true);
 
     // 创建订阅者
-    let subscriber = tracing_subscriber::registry()
-        .with(env_filter)
-        .with(console_layer);
+    let subscriber = tracing_subscriber::registry().with(env_filter).with(console_layer);
 
     // 如果指定了日志文件，添加文件输出
     if let Some(log_file) = log_file {
@@ -60,12 +61,10 @@ pub fn init_logging(log_level: Option<Level>, log_file: Option<PathBuf>) -> anyh
 
 /// 获取当前日志级别
 pub fn get_log_level() -> Level {
-    tracing::level_filters::LevelFilter::current()
-        .into_level()
-        .unwrap_or(Level::INFO)
+    tracing::level_filters::LevelFilter::current().into_level().unwrap_or(Level::INFO)
 }
 
 /// 设置日志级别
 pub fn set_log_level(level: Level) {
     tracing_subscriber::filter::LevelFilter::from_level(level);
-} 
+}

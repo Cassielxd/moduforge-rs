@@ -71,7 +71,10 @@ macro_rules! impl_plugin {
         pub struct $name {}
 
         #[async_trait]
-        impl PluginTrait for $name where Self: Send + Sync {
+        impl PluginTrait for $name
+        where
+            Self: Send + Sync,
+        {
             async fn append_transaction(
                 &self,
                 tr: &Transaction,
@@ -112,7 +115,10 @@ macro_rules! impl_plugin {
         pub struct $name {}
 
         #[async_trait]
-        impl PluginTrait for $name where Self: Send + Sync {
+        impl PluginTrait for $name
+        where
+            Self: Send + Sync,
+        {
             async fn append_transaction(
                 &self,
                 tr: &Transaction,
@@ -153,7 +159,10 @@ macro_rules! impl_plugin {
         pub struct $name {}
 
         #[async_trait]
-        impl PluginTrait for $name where Self: Send + Sync {
+        impl PluginTrait for $name
+        where
+            Self: Send + Sync,
+        {
             async fn append_transaction(
                 &self,
                 tr: &Transaction,
@@ -194,7 +203,10 @@ macro_rules! impl_plugin {
         pub struct $name {}
 
         #[async_trait]
-        impl PluginTrait for $name where Self: Send + Sync {
+        impl PluginTrait for $name
+        where
+            Self: Send + Sync,
+        {
             async fn append_transaction(
                 &self,
                 tr: &Transaction,
@@ -239,7 +251,10 @@ macro_rules! impl_state_field {
         pub struct $name;
 
         #[async_trait]
-        impl StateField for $name where Self: Send + Sync {
+        impl StateField for $name
+        where
+            Self: Send + Sync,
+        {
             async fn init(
                 &self,
                 config: &StateConfig,

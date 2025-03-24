@@ -627,10 +627,10 @@ impl Draft {
                         self.remove_mark(parent_id, mark.as_ref().clone())?;
                     }
                 },
-                Patch::MoveNode { path:_, node_id, source_parent_id, target_parent_id, position } => {
+                Patch::MoveNode { path: _, node_id, source_parent_id, target_parent_id, position } => {
                     self.move_node(source_parent_id, target_parent_id, node_id, position.clone())?;
                 },
-                Patch::ReplaceNode { path:_, old, new } => {
+                Patch::ReplaceNode { path: _, old, new } => {
                     self.replace_node(old.id.clone(), new.clone())?;
                 },
             }

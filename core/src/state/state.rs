@@ -12,7 +12,9 @@ use std::{
 };
 
 use super::{
-    error::{StateError, StateResult}, plugin::{Plugin, PluginState}, transaction::Transaction
+    error::{StateError, StateResult},
+    plugin::{Plugin, PluginState},
+    transaction::Transaction,
 };
 
 static VERSION: AtomicU64 = AtomicU64::new(0);
@@ -200,7 +202,8 @@ impl State {
                 let n: usize = seen.as_ref().map(|s| s[i].n).unwrap_or(0);
                 let old_state = seen.as_ref().map(|s| &s[i].state).unwrap_or(self);
                 if n < trs.len() {
-                    if let Some(tr) = plugin.apply_append_transaction(trs.get(n).unwrap(), old_state, &new_state).await {
+                    if let Some(tr) = plugin.apply_append_transaction(trs.get(n).unwrap(), old_state, &new_state).await
+                    {
                         if new_state.filter_transaction(&tr, Some(i)).await? {
                             if seen.is_none() {
                                 let mut s = Vec::new();

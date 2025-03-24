@@ -1,7 +1,10 @@
 use std::{fmt::Debug, sync::Arc};
 
 use async_channel::{Receiver, Sender};
-use moduforge_core::{debug, state::{state::State, transaction::Transaction}};
+use moduforge_core::{
+    debug,
+    state::{state::State, transaction::Transaction},
+};
 use tokio::{signal, sync::RwLock};
 
 use crate::error::{EditorResult, error_utils};

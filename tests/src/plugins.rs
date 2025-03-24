@@ -1,11 +1,14 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
-use moduforge_core::{debug, state::{
-    plugin::{PluginState, PluginTrait, StateField},
-    state::{State, StateConfig},
-    transaction::Transaction,
-}};
+use moduforge_core::{
+    debug,
+    state::{
+        plugin::{PluginState, PluginTrait, StateField},
+        state::{State, StateConfig},
+        transaction::Transaction,
+    },
+};
 use moduforge_runtime::{impl_plugin, impl_state_field};
 async fn p1_append(
     tr: &Transaction,
