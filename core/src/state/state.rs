@@ -1,4 +1,5 @@
 use crate::model::{id_generator::IdGenerator, mark::Mark, node_pool::NodePool, schema::Schema};
+use crate::logging;
 
 use im::HashMap as ImHashMap;
 use std::{
@@ -37,6 +38,7 @@ impl State {
     /// - 初始化所有插件的状态
     /// - 返回完整的编辑器状态实例
     pub async fn create(state_config: StateConfig) -> StateResult<State> {
+        tracing::info!("正在创建新的state");
         let schema = match &state_config.schema {
             Some(schema) => schema.clone(),
             None => {
@@ -48,6 +50,7 @@ impl State {
         let mut field_values = Vec::new();
         for plugin in &instance.config.plugins {
             if let Some(field) = &plugin.spec.state {
+                tracing::debug!("正在初始化插件状态: {}", plugin.key);
                 let value = field.init(&state_config, Some(&instance)).await;
                 field_values.push((plugin.key.clone(), value));
             }
@@ -55,6 +58,7 @@ impl State {
         for (name, value) in field_values {
             instance.set_field(&name, value)?;
         }
+        tracing::info!("state创建成功");
         Ok(instance)
     }
     /// 根据配置创建新的状态实例
@@ -100,6 +104,7 @@ impl State {
         &self,
         mut tr: Transaction,
     ) -> StateResult<TransactionResult> {
+        tracing::info!("正在应用事务，步骤数: {}", tr.steps.len());
         self.before_apply_transaction(&mut tr).await?;
         let befor = tr.steps.len();
         let mut result = self.apply_transaction(tr).await?;
@@ -107,8 +112,12 @@ impl State {
         self.after_apply_transaction(&result.state, &mut tr).await?;
         let after = tr.steps.len();
         match befor.cmp(&after) {
-            std::cmp::Ordering::Equal => Ok(result),
+            std::cmp::Ordering::Equal => {
+                tracing::debug!("事务应用成功，没有产生额外步骤");
+                Ok(result)
+            },
             _ => {
+                tracing::info!("事务产生了额外步骤: {} -> {}", befor, after);
                 let new_state = result.state.apply_inner(&tr).await?;
                 result.state = new_state;
                 result.trs.push(tr);
@@ -122,8 +131,10 @@ impl State {
         &self,
         tr: &mut Transaction,
     ) -> StateResult<()> {
+        tracing::debug!("正在执行事务前处理钩子");
         for plugin in &self.config.plugins {
             if let Err(e) = plugin.before_apply_transaction(tr, self).await {
+                tracing::error!("插件 {} 的事务前处理失败: {}", plugin.key, e);
                 return Err(StateError::TransactionError(format!(
                     "Plugin {} before_apply_transaction failed: {}",
                     plugin.key, e
@@ -138,8 +149,10 @@ impl State {
         new_state: &State,
         tr: &mut Transaction,
     ) -> StateResult<()> {
+        tracing::debug!("正在执行事务后处理钩子");
         for plugin in &self.config.plugins {
             if let Err(e) = plugin.after_apply_transaction(new_state, tr, self).await {
+                tracing::error!("插件 {} 的事务后处理失败: {}", plugin.key, e);
                 return Err(StateError::TransactionError(format!(
                     "Plugin {} after_apply_transaction failed: {}",
                     plugin.key, e
@@ -167,12 +180,13 @@ impl State {
         &self,
         root_tr: Transaction,
     ) -> StateResult<TransactionResult> {
+        tracing::info!("开始应用事务");
         if !self.filter_transaction(&root_tr, None).await? {
+            tracing::debug!("事务被过滤，返回原始状态");
             return Ok(TransactionResult { state: self.clone(), trs: vec![root_tr] });
         }
 
         let mut trs = Vec::new();
-
         let mut new_state: State = self.apply_inner(&root_tr).await?;
         trs.push(root_tr);
         let mut seen: Option<Vec<SeenState>> = None;
@@ -183,8 +197,7 @@ impl State {
                 let n: usize = seen.as_ref().map(|s| s[i].n).unwrap_or(0);
                 let old_state = seen.as_ref().map(|s| &s[i].state).unwrap_or(self);
                 if n < trs.len() {
-                    if let Some(tr) = plugin.apply_append_transaction(trs.get(n).unwrap(), old_state, &new_state).await
-                    {
+                    if let Some(tr) = plugin.apply_append_transaction(trs.get(n).unwrap(), old_state, &new_state).await {
                         if new_state.filter_transaction(&tr, Some(i)).await? {
                             if seen.is_none() {
                                 let mut s = Vec::new();
@@ -197,6 +210,7 @@ impl State {
                                 }
                                 seen = Some(s);
                             }
+                            tracing::debug!("插件 {} 添加了新事务", plugin.spec.key.1);
                             new_state = new_state.apply_inner(&tr).await?;
                             trs.push(tr);
                             have_new = true;
@@ -209,6 +223,7 @@ impl State {
             }
 
             if !have_new {
+                tracing::info!("事务应用完成，共 {} 个步骤", trs.len());
                 return Ok(TransactionResult { state: new_state, trs });
             }
         }
@@ -219,8 +234,9 @@ impl State {
         &self,
         tr: &Transaction,
     ) -> StateResult<State> {
-        let mut new_instance = State::new(self.config.clone());
-        new_instance.node_pool = tr.doc.clone();
+        let mut config = self.config.as_ref().clone();
+        config.doc = Some(tr.doc.clone());
+        let mut new_instance = State::new(Arc::new(config));
         for plugin in &self.config.plugins {
             if let Some(field) = &plugin.spec.state {
                 if let Some(old_plugin_state) = self.get_field(&plugin.key) {
@@ -241,23 +257,30 @@ impl State {
         &self,
         state_config: StateConfig,
     ) -> StateResult<State> {
+        tracing::info!("正在重新配置状态");
         let config = Configuration::new(self.schema(), state_config.plugins.clone(), state_config.doc.clone());
         let mut instance = State::new(Arc::new(config));
         let mut field_values = Vec::new();
         for plugin in &instance.config.plugins {
             if let Some(field) = &plugin.spec.state {
                 let key = plugin.key.clone();
+                tracing::debug!("正在重新配置插件: {}", key);
                 let value = if self.has_field(&key) {
-                    self.get_field(&key).unwrap()
+                    if let Some(old_plugin_state) = self.get_field(&key) {
+                        old_plugin_state
+                    } else {
+                        field.init(&state_config, Some(&instance)).await
+                    }
                 } else {
                     field.init(&state_config, Some(&instance)).await
                 };
-                field_values.push((key.clone(), value));
+                field_values.push((key, value));
             }
         }
         for (name, value) in field_values {
             instance.set_field(&name, value)?;
         }
+        tracing::info!("状态重新配置完成");
         Ok(instance)
     }
 

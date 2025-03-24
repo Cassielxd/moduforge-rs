@@ -11,12 +11,10 @@ use crate::{
 };
 use async_trait::async_trait;
 use moduforge_core::{
-    model::{node_pool::NodePool, schema::Schema},
-    state::{
+    debug, info, model::{node_pool::NodePool, schema::Schema}, state::{
         state::{State, StateConfig},
         transaction::{Command, Transaction},
-    },
-    transform::transform::Transform,
+    }, transform::transform::Transform
 };
 
 /// Editor 结构体代表编辑器的核心功能实现
@@ -30,10 +28,12 @@ impl Editor {
     /// 创建新的编辑器实例
     /// options: 编辑器配置选项
     pub async fn create(options: EditorOptions) -> Result<Self, Box<dyn std::error::Error>> {
+        info!("正在创建新的编辑器实例");
         let extension_manager = ExtensionManager::new(&options.get_extensions());
-
+        debug!("已初始化扩展管理器");
         let doc = create_doc::create_doc(&options.get_content());
         let event_bus = EventBus::new();
+        debug!("已创建文档和事件总线");
         let state: State = State::create(StateConfig {
             schema: Some(extension_manager.get_schema()),
             doc,
@@ -53,6 +53,7 @@ impl Editor {
 
         let mut runtime = Editor { base, flow_engine: FlowEngine::new()? };
         runtime.init().await?;
+        info!("编辑器实例创建成功");
         Ok(runtime)
     }
 
@@ -112,13 +113,19 @@ impl EditorCore for Editor {
                     if let Some(result) = result {
                         self.base.state = Arc::new(result.state);
                         let mut trs = result.trs;
-                        let tr = trs.pop().unwrap();
-                        if !tr.doc_changed() {
-                            return Ok(());
+                        match trs.pop() {
+                            Some(tr) => {
+                                if !tr.doc_changed() {
+                                    return Ok(());
+                                }
+                                self.base.history_manager.insert(self.base.state.clone());
+                                let event_bus = self.get_event_bus();
+                                event_bus.broadcast(Event::TrApply(Arc::new(tr), self.base.state.clone())).await?;
+                            }
+                            None => {
+                                println!("transaction is not found");
+                            }
                         }
-                        self.base.history_manager.insert(self.base.state.clone());
-                        let event_bus = self.get_event_bus();
-                        event_bus.broadcast(Event::TrApply(Arc::new(tr), self.base.state.clone())).await?;
                     }
                 }
             },

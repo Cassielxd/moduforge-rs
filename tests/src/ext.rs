@@ -9,7 +9,7 @@ pub fn get_extension() -> Extension {
     let mut extension = Extension::default();
     let plugin1 = Plugin::new(PluginSpec {
         state: Some(Arc::new(P1State)),
-        key: ("name".to_owned(), "sadasdasdsad".to_owned()),
+        key: ("name".to_owned(), "测试插件一".to_owned()),
         tr: Some(Arc::new(P1Plugin {})),
     });
     extension.add_plugin(
@@ -18,7 +18,7 @@ pub fn get_extension() -> Extension {
     extension.add_plugin(
         Arc::new(Plugin::new(PluginSpec {
             state: None,
-            key: ("name1".to_owned(), "sadasdasdsad1".to_owned()),
+            key: ("name1".to_owned(), "测试插件二".to_owned()),
             tr: Some(Arc::new(P2Plugin {})),
         })),
     );

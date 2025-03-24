@@ -1,5 +1,3 @@
-
-
 use crate::transform::step::StepResult;
 
 use super::{error::PoolError, mark::Mark, node::Node, patch::Patch, types::NodeId};
@@ -464,7 +462,7 @@ impl Draft {
         let target_parent =
             self.get_node(target_parent_id).ok_or(PoolError::ParentNotFound(target_parent_id.clone()))?;
         // 检查要移动的节点是否存在
-        let node = self.get_node(node_id).ok_or(PoolError::NodeNotFound(node_id.clone()))?;
+        let _node = self.get_node(node_id).ok_or(PoolError::NodeNotFound(node_id.clone()))?;
         // 检查节点是否是源父节点的子节点
         if !source_parent.content.contains(node_id) {
             return Err(PoolError::InvalidParenting {
@@ -629,10 +627,10 @@ impl Draft {
                         self.remove_mark(parent_id, mark.as_ref().clone())?;
                     }
                 },
-                Patch::MoveNode { path, node_id, source_parent_id, target_parent_id, position } => {
+                Patch::MoveNode { path:_, node_id, source_parent_id, target_parent_id, position } => {
                     self.move_node(source_parent_id, target_parent_id, node_id, position.clone())?;
                 },
-                Patch::ReplaceNode { path, old, new } => {
+                Patch::ReplaceNode { path:_, old, new } => {
                     self.replace_node(old.id.clone(), new.clone())?;
                 },
             }

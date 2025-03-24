@@ -64,7 +64,7 @@ impl EventBus {
                 tokio::select! {
                     event = rx.recv() => match event {
                         Ok(Event::Stop) => {
-                            println!("接收到停止事件，正在退出...");
+                            eprintln!("接收到停止事件，正在退出...");
                             break;
                         },
                         Ok(event) => {

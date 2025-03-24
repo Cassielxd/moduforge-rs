@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
+use tracing::{debug, info, warn, error};
 
 use super::state::State;
 use crate::model::node::Node;
@@ -57,7 +58,9 @@ impl Transform for Transaction {
     ) -> Result<(), TransformError> {
         let result = step.apply(&mut self.draft, self.schema.clone())?;
         match result.failed {
-            Some(message) => Err(TransformError::new(message)),
+            Some(message) => {
+                Err(TransformError::new(message))
+            },
             None => {
                 self.add_step(step, result);
                 Ok(())
@@ -86,12 +89,20 @@ impl Transaction {
         &mut self,
         call_back: Arc<dyn Command>,
     ) {
+        info!("开始执行事务: {}", call_back.name());
         self.draft.begin = true;
         let result = call_back.execute(self).await;
         self.draft.begin = false;
-        if result.is_ok() {
-            let result = self.draft.commit();
-            self.add_step(Arc::new(PatchStep { patches: result.patches.clone() }), result);
+        match result {
+            Ok(_) => {
+                info!("事务执行成功，正在提交更改");
+                let result = self.draft.commit();
+                self.add_step(Arc::new(PatchStep { patches: result.patches.clone() }), result);
+            },
+            Err(e) => {
+                error!("事务执行失败: {}", e);
+                warn!("事务回滚");
+            }
         }
     }
     /// 创建新的事务实例
