@@ -8,6 +8,7 @@ use std::{
         Arc,
         atomic::{AtomicU64, Ordering},
     },
+    time::Instant,
 };
 
 use super::{
@@ -104,6 +105,7 @@ impl State {
         &self,
         mut tr: Transaction,
     ) -> StateResult<TransactionResult> {
+        let start_time = Instant::now();
         tracing::info!("正在应用事务，步骤数: {}", tr.steps.len());
         self.before_apply_transaction(&mut tr).await?;
         let befor = tr.steps.len();
@@ -111,13 +113,14 @@ impl State {
         let mut tr: Transaction = result.trs.remove(result.trs.len() - 1);
         self.after_apply_transaction(&result.state, &mut tr).await?;
         let after = tr.steps.len();
+        let duration = start_time.elapsed();
         match befor.cmp(&after) {
             std::cmp::Ordering::Equal => {
-                tracing::debug!("事务应用成功，没有产生额外步骤");
+                tracing::debug!("事务应用成功，没有产生额外步骤，耗时: {:?}", duration);
                 Ok(result)
             },
             _ => {
-                tracing::info!("事务产生了额外步骤: {} -> {}", befor, after);
+                tracing::info!("事务产生了额外步骤: {} -> {}，耗时: {:?}", befor, after, duration);
                 let new_state = result.state.apply_inner(&tr).await?;
                 result.state = new_state;
                 result.trs.push(tr);

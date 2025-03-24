@@ -1,7 +1,7 @@
 use std::{fmt::Debug, sync::Arc};
 
 use async_channel::{Receiver, Sender};
-use moduforge_core::state::{state::State, transaction::Transaction};
+use moduforge_core::{debug, state::{state::State, transaction::Transaction}};
 use tokio::{signal, sync::RwLock};
 
 use crate::error::{EditorResult, error_utils};
@@ -64,29 +64,29 @@ impl EventBus {
                 tokio::select! {
                     event = rx.recv() => match event {
                         Ok(Event::Stop) => {
-                            eprintln!("接收到停止事件，正在退出...");
+                            debug!("接收到停止事件，正在退出...");
                             break;
                         },
                         Ok(event) => {
                             for handler in &handlers_clone {
                                 if let Err(e) = handler.handle(&event).await {
-                                    eprintln!("事件处理错误: {}", e);
+                                    debug!("事件处理错误: {}", e);
                                 }
                             }
                         },
                         Err(e) => {
-                            eprintln!("事件接收错误: {}", e);
+                            debug!("事件接收错误: {}", e);
                             break;
                         },
                     },
                     shutdown_signal = Box::pin(signal::ctrl_c()) => {
                         match shutdown_signal {
                             Ok(()) => {
-                                println!("事件管理器,接收到关闭信号，正在退出...");
+                                debug!("事件管理器,接收到关闭信号，正在退出...");
                                 break;
                             },
                             Err(e) => {
-                                eprintln!("事件管理器,处理关闭信号时出错: {}", e);
+                                debug!("事件管理器,处理关闭信号时出错: {}", e);
                                 break;
                             }
                         }

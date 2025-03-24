@@ -123,14 +123,14 @@ impl EditorCore for Editor {
                                 event_bus.broadcast(Event::TrApply(Arc::new(tr), self.base.state.clone())).await?;
                             }
                             None => {
-                                println!("transaction is not found");
+                                debug!("transaction is not found");
                             }
                         }
                     }
                 }
             },
             None => {
-                println!("transaction is not found");
+                debug!("transaction is not found");
             },
         }
         Ok(())

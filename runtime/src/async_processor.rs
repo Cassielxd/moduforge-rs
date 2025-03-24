@@ -1,4 +1,5 @@
 use std::{fmt::Display, sync::Arc, time::Duration};
+use moduforge_core::debug;
 use tokio::sync::{mpsc, oneshot};
 use async_trait::async_trait;
 use tokio::select;
@@ -178,7 +179,7 @@ where
                     // 处理任务完成
                     Some(result) = join_set.join_next() => {
                         if let Err(e) = result {
-                            eprintln!("Task failed: {}", e);
+                            debug!("Task failed: {}", e);
                         }
                     }
 
