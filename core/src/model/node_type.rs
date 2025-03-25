@@ -7,7 +7,6 @@ use super::node::Node;
 use super::schema::{Attribute, AttributeSpec, Schema, compute_attrs};
 use super::types::NodeId;
 use im::HashMap as ImHashMap;
-use tracing::debug;
 use std::collections::HashMap;
 
 /// 用于描述节点类型的行为规则和属性约束，通过[Schema](super::schema::Schema)进行统一管理
