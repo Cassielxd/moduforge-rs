@@ -144,6 +144,16 @@ impl NodeType {
         self.attrs.values().any(|attr: &Attribute| attr.is_required())
     }
     /// 创建节点并填充内容
+    ///
+    /// # 参数
+    /// - `id`: 可选的节点ID，如果未提供则自动生成
+    /// - `attrs`: 可选的属性映射，用于设置节点属性
+    /// - `content`: 子节点列表
+    /// - `marks`: 可选的标记列表，用于设置节点标记
+    /// - `schema`: 当前使用的文档模式
+    ///
+    /// # 返回值
+    /// 返回包含新创建的节点及其所有子节点的向量
     pub fn create_and_fill(
         &self,
         id: Option<String>,
@@ -155,15 +165,15 @@ impl NodeType {
         let id: String = id.unwrap_or_else(IdGenerator::get_id);
         let attrs = self.compute_attrs(attrs);
         
-        // First create any filled content if needed
+        // 首先创建需要填充的内容
         let mut filled_nodes = Vec::new();
         if let Some(content_match) = &self.content_match {
             if let Some(matched) = content_match.match_fragment(&content, schema) {
                 if let Some(mut filled) = matched.fill(&content, true, schema) {
-                    // For each filled node, recursively create its children
+                    // 对每个填充的节点，递归创建其子节点
                     for node in filled {
                         if let Some(node_type) = schema.nodes.get(&node.r#type) {
-                            // Recursively create the node and its children
+                            // 递归创建节点及其子节点
                             let mut child_nodes = node_type.create_and_fill(
                                 Some(node.id.clone()),
                                 None,
@@ -178,11 +188,11 @@ impl NodeType {
             }
         }
         
-        // Create the current node with references to its direct children
+        // 创建当前节点并引用其直接子节点
         let content_ref = if filled_nodes.is_empty() {
             content.iter().map(|i| i.id.clone()).collect()
         } else {
-            // Only reference the first node of each child type to maintain proper hierarchy
+            // 仅引用每种子类型的第一个节点以保持正确的层级结构
             let mut seen_types = std::collections::HashSet::new();
             filled_nodes.iter()
                 .filter(|node| seen_types.insert(&node.r#type))

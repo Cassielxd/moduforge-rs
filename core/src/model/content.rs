@@ -77,6 +77,15 @@ impl ContentMatch {
         Some(current)
     }
 
+    /// 根据内容匹配规则填充节点
+    ///
+    /// # 参数
+    /// - `after`: 待匹配的节点列表
+    /// - `to_end`: 是否需要匹配到结束状态
+    /// - `schema`: 当前使用的文档模式
+    ///
+    /// # 返回值
+    /// 返回填充后的节点列表，如果无法匹配则返回None
     pub fn fill(
         &self,
         after: &Vec<Node>,
@@ -93,12 +102,12 @@ impl ContentMatch {
             types: &mut Vec<NodeType>,
             schema: &Schema,
         ) -> Option<Vec<Node>> {
-            // First check if we can match the current fragment
+            // 首先检查是否可以匹配当前片段
             if let Some(finished) = match_.match_fragment(after, schema) {
                 if finished.valid_end || !to_end {
                     let mut nodes = vec![];
                     for tp in types.iter() {
-                        // Create a single node without recursively creating children
+                        // 创建一个节点，但不递归创建子节点
                         let node = tp.create(None, None, vec![], None);
                         nodes.push(node);
                     }
@@ -106,7 +115,7 @@ impl ContentMatch {
                 }
             }
 
-            // Then try to match each edge in sequence
+            // 然后尝试按顺序匹配每个边
             for edge in &match_.next {
                 if !edge.node_type.has_required_attrs() && !seen.contains(&edge.next) {
                     seen.push(edge.next.clone());
