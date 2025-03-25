@@ -93,16 +93,20 @@ impl ContentMatch {
             types: &mut Vec<NodeType>,
             schema: &Schema,
         ) -> Option<Vec<Node>> {
+            // First check if we can match the current fragment
             if let Some(finished) = match_.match_fragment(after, schema) {
                 if finished.valid_end || !to_end {
                     let mut nodes = vec![];
                     for tp in types.iter() {
-                        let mut node = tp.create_and_fill(None, None, vec![], None, schema);
-                        nodes.append(&mut node);
+                        // Create a single node without recursively creating children
+                        let node = tp.create(None, None, vec![], None);
+                        nodes.push(node);
                     }
                     return Some(nodes);
                 }
             }
+
+            // Then try to match each edge in sequence
             for edge in &match_.next {
                 if !edge.node_type.has_required_attrs() && !seen.contains(&edge.next) {
                     seen.push(edge.next.clone());
@@ -504,16 +508,30 @@ fn compile(
         Expr::Choice { exprs } => exprs.into_iter().flat_map(|expr| compile(expr, from, nfa)).collect(),
         Expr::Seq { exprs } => {
             let mut cur = from;
-            let len = exprs.len(); // 在这里获取长度
+            let mut last_edges = Vec::new();
+            let exprs_len = exprs.len();
+            
             for (i, expr) in exprs.into_iter().enumerate() {
-                let mut next = compile(expr, cur, nfa);
-                if i == len - 1 {
-                    return next;
+                let next = if i == exprs_len - 1 {
+                    cur
+                } else {
+                    node(nfa)
+                };
+                
+                let mut edges = compile(expr, cur, nfa);
+                if i < exprs_len - 1 {
+                    connect(&mut edges, next);
+                    cur = next;
+                } else {
+                    last_edges = edges;
                 }
-                connect(&mut next, node(nfa));
-                cur = node(nfa);
             }
-            vec![]
+            
+            if last_edges.is_empty() {
+                vec![edge(cur, None, None, nfa)]
+            } else {
+                last_edges
+            }
         },
         Expr::Star { expr } => {
             let loop_node = node(nfa);
@@ -527,7 +545,6 @@ fn compile(
             connect(&mut compile(*expr.clone(), from, nfa), loop_node);
             let mut compiled_expr = compile(*expr, loop_node, nfa);
             connect(&mut compiled_expr, loop_node);
-
             vec![edge(loop_node, None, None, nfa)]
         },
         Expr::Opt { expr } => {

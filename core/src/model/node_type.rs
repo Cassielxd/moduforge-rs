@@ -7,6 +7,7 @@ use super::node::Node;
 use super::schema::{Attribute, AttributeSpec, Schema, compute_attrs};
 use super::types::NodeId;
 use im::HashMap as ImHashMap;
+use tracing::debug;
 use std::collections::HashMap;
 
 /// 用于描述节点类型的行为规则和属性约束，通过[Schema](super::schema::Schema)进行统一管理
@@ -40,9 +41,20 @@ impl NodeType {
     /// 返回[HashMap]<String, [NodeType]> 类型节点集合
     pub fn compile(nodes: HashMap<String, NodeSpec>) -> HashMap<String, NodeType> {
         let mut result = HashMap::new();
-        for (name, spec) in nodes {
+        
+        // First create all node types without content_match
+        for (name, spec) in &nodes {
             result.insert(name.clone(), NodeType::new(name.clone(), spec.clone()));
         }
+        
+        // Then set up content_match for each node type
+        let result_clone = result.clone();
+        for (_, node_type) in result.iter_mut() {
+            if let Some(content) = &node_type.spec.content {
+                node_type.content_match = Some(ContentMatch::parse(content.clone(), &result_clone));
+            }
+        }
+        
         result
     }
     /// 创建新的节点类型实例
@@ -142,21 +154,45 @@ impl NodeType {
     ) -> Vec<Node> {
         let id: String = id.unwrap_or_else(IdGenerator::get_id);
         let attrs = self.compute_attrs(attrs);
-        let mut content_ref = content.iter().map(|i| i.id.clone()).collect::<Vec<NodeId>>();
-        let binding = &self.content_match.clone();
-        let matched = match binding {
-            Some(bind) => bind.match_fragment(&content, schema),
-            None => None,
-        };
-        let mut nodes = vec![];
-        let mut after = matched.and_then(|m| m.fill(&content, true, schema));
-        if let Some(after_content) = &mut after {
-            let mut ids: Vec<NodeId> = after_content.iter().map(|i| i.id.clone()).collect();
-            content_ref.append(&mut ids);
-            nodes.append(after_content);
+        
+        // First create any filled content if needed
+        let mut filled_nodes = Vec::new();
+        if let Some(content_match) = &self.content_match {
+            if let Some(matched) = content_match.match_fragment(&content, schema) {
+                if let Some(mut filled) = matched.fill(&content, true, schema) {
+                    // For each filled node, recursively create its children
+                    for node in filled {
+                        if let Some(node_type) = schema.nodes.get(&node.r#type) {
+                            // Recursively create the node and its children
+                            let mut child_nodes = node_type.create_and_fill(
+                                Some(node.id.clone()),
+                                None,
+                                vec![],
+                                None,
+                                schema,
+                            );
+                            filled_nodes.append(&mut child_nodes);
+                        }
+                    }
+                }
+            }
         }
-        let node = Node::new(&id, self.name.clone(), attrs, content_ref, Mark::set_from(marks));
-        nodes.push(node);
+        
+        // Create the current node with references to its direct children
+        let content_ref = if filled_nodes.is_empty() {
+            content.iter().map(|i| i.id.clone()).collect()
+        } else {
+            // Only reference the first node of each child type to maintain proper hierarchy
+            let mut seen_types = std::collections::HashSet::new();
+            filled_nodes.iter()
+                .filter(|node| seen_types.insert(&node.r#type))
+                .map(|node| node.id.clone())
+                .collect()
+        };
+        
+        let mut nodes = vec![Node::new(&id, self.name.clone(), attrs, content_ref, Mark::set_from(marks))];
+        nodes.append(&mut filled_nodes);
+        
         nodes
     }
     /// 创建节点
