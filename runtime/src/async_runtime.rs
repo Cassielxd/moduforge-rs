@@ -110,31 +110,21 @@ impl EditorCore for Editor {
         transaction: Transaction,
     ) -> Result<(), Self::Error> {
         let (_id, mut rx) = self.flow_engine.submit_transaction((self.base.state.clone(), transaction)).await?;
-        match rx.recv().await {
-            Some(task_result) => {
-                if let Some(ProcessorResult { result, status: _, error: _ }) = task_result.output {
-                    if let Some(result) = result {
-                        self.base.state = Arc::new(result.state);
-                        let mut trs = result.trs;
-                        match trs.pop() {
-                            Some(tr) => {
-                                if !tr.doc_changed() {
-                                    return Ok(());
-                                }
-                                self.base.history_manager.insert(self.base.state.clone());
-                                let event_bus = self.get_event_bus();
-                                event_bus.broadcast(Event::TrApply(Arc::new(tr), self.base.state.clone())).await?;
-                            },
-                            None => {
-                                debug!("transaction is not found");
-                            },
-                        }
-                    }
-                }
-            },
-            None => {
-                debug!("transaction is not found");
-            },
+
+        let Some(task_result) = rx.recv().await else {
+            return Ok(());
+        };
+        let Some(ProcessorResult { result: Some(mut result), .. }) = task_result.output else {
+            return Ok(());
+        };
+
+        self.base.state = Arc::new(result.state);
+
+        if let Some(tr) = result.trs.pop() {
+            if tr.doc_changed() {
+                self.base.history_manager.insert(self.base.state.clone());
+                self.base.event_bus.broadcast(Event::TrApply(Arc::new(tr), self.base.state.clone())).await?;
+            }
         }
         Ok(())
     }

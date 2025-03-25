@@ -125,25 +125,26 @@ impl EditorCore for Editor {
         &mut self,
         transaction: Transaction,
     ) -> EditorResult<()> {
-        debug!("正在分发事务");
-        let TransactionResult { state, mut trs } = self.base.state.apply(transaction).await.map_err(|e| {
-            error!("应用事务失败: {}", e);
-            error_utils::state_error(format!("Failed to apply transaction: {}", e))
-        })?;
-        let tr = trs.pop().unwrap();
-        if !tr.doc_changed() {
-            debug!("文档未发生变化，跳过事件广播");
-            return Ok(());
-        }
-        self.base.state = Arc::new(state);
-        self.base.history_manager.insert(self.base.state.clone());
-        let event_bus = self.get_event_bus();
+        let TransactionResult { state, mut trs } = self
+            .base
+            .state
+            .apply(transaction)
+            .await
+            .map_err(|e| error_utils::state_error(format!("Failed to apply transaction: {}", e)))?;
 
-        event_bus.broadcast(Event::TrApply(Arc::new(tr), self.base.state.clone())).await.map_err(|e| {
-            error!("广播事务事件失败: {}", e);
-            error_utils::event_error(format!("Failed to broadcast transaction event: {}", e))
-        })?;
-        debug!("事务分发完成");
+        if let Some(tr) = trs.pop() {
+            if tr.doc_changed() {
+                self.base.state = Arc::new(state);
+                self.base.history_manager.insert(self.base.state.clone());
+
+                self.base
+                    .event_bus
+                    .broadcast(Event::TrApply(Arc::new(tr), self.base.state.clone()))
+                    .await
+                    .map_err(|e| error_utils::event_error(format!("Failed to broadcast transaction event: {}", e)))?;
+            }
+        }
+
         Ok(())
     }
 
