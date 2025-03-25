@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
-use tracing::{debug, info, warn, error};
+use tracing::{info, warn, error};
 
 use super::state::State;
 use crate::model::node::Node;

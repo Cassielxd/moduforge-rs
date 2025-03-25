@@ -1,8 +1,7 @@
 use std::path::PathBuf;
-use time::UtcOffset;
 use tracing::Level;
 use tracing_subscriber::{
-    fmt::{self, time::FormatTime},
+    fmt::{self},
     EnvFilter,
     prelude::*,
 };

@@ -168,7 +168,7 @@ impl NodeType {
         let mut filled_nodes = Vec::new();
         if let Some(content_match) = &self.content_match {
             if let Some(matched) = content_match.match_fragment(&content, schema) {
-                if let Some(mut filled) = matched.fill(&content, true, schema) {
+                if let Some(filled) = matched.fill(&content, true, schema) {
                     // 对每个填充的节点，递归创建其子节点
                     for node in filled {
                         if let Some(node_type) = schema.nodes.get(&node.r#type) {

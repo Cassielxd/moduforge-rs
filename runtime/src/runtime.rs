@@ -17,7 +17,7 @@ use moduforge_core::{
         transaction::{Command, Transaction},
     },
     transform::transform::Transform,
-    {info, debug, warn, error},
+    {info, debug, error},
 };
 
 /// Editor 结构体代表编辑器的核心功能实现

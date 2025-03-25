@@ -1,13 +1,12 @@
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
 use moduforge_core::model::content::{ContentMatch, TokenStream};
 use moduforge_core::model::id_generator::IdGenerator;
 use moduforge_core::model::node::Node;
 use moduforge_core::model::node_type::NodeSpec;
 use moduforge_core::model::schema::{Schema, SchemaSpec};
-
+#[warn(dead_code)]
 fn create_test_schema() -> Schema {
     let mut nodes = HashMap::new();
     nodes.insert(
@@ -16,7 +15,7 @@ fn create_test_schema() -> Schema {
             content: Some("DW+".to_string()),
             marks: None,
             group: None,
-            desc: None,
+            desc: Some("工程项目".to_string()),
             attrs: None,
         },
     );
@@ -27,7 +26,7 @@ fn create_test_schema() -> Schema {
             content: Some("djgc+".to_string()),
             marks: None,
             group: None,
-            desc: None,
+            desc: Some("单项工程".to_string()),
             attrs: None,
         },
     );
@@ -37,7 +36,7 @@ fn create_test_schema() -> Schema {
             content: Some("djgcNode+".to_string()),
             marks: None,
             group: None,
-            desc: None,
+            desc: Some("单价构成".to_string()),
             attrs: None,
         },
     );
@@ -47,7 +46,7 @@ fn create_test_schema() -> Schema {
             content: Some("qfCode standard code".to_string()),
             marks: None,
             group: None,
-            desc: None,
+            desc: Some("单价构行节点".to_string()),
             attrs: None,
         },
     );
@@ -58,7 +57,7 @@ fn create_test_schema() -> Schema {
             content: None,
             marks: None,
             group: None,
-            desc: None,
+            desc: Some("取费代码".to_string()),
             attrs: None,
         },
     );
@@ -68,7 +67,7 @@ fn create_test_schema() -> Schema {
             content: None,
             marks: None,
             group: None,
-            desc: None,
+            desc: Some("标准".to_string()),
             attrs: None,
         },
     );
@@ -78,7 +77,7 @@ fn create_test_schema() -> Schema {
             content: None,
             marks: None,
             group: None,
-            desc: None,
+            desc: Some("代码".to_string()),
             attrs: None,
         },
     );
