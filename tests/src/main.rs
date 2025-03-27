@@ -5,7 +5,7 @@ use moduforge_test::{base::get_base, commands::MyCommand1};
 
 #[tokio::main]
 async fn main() {
-    init_logging("info", None).unwrap();
+    init_logging("debug", None).unwrap();
     let mut runtime = Editor::create(EditorOptions::default().set_extensions(get_base())).await.unwrap();
     let mut tr: Transaction = runtime.get_tr();
     tr.transaction(Arc::new(MyCommand1)).await;
@@ -17,3 +17,5 @@ async fn main() {
     dbg!(after_doc);
     tokio::time::sleep(std::time::Duration::from_secs(10)).await;
 }
+
+

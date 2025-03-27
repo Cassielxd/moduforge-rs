@@ -60,6 +60,9 @@ impl From<ProcessorError> for FlowError {
             ProcessorError::QueueFull => FlowError::QueueFull,
             ProcessorError::TaskFailed(msg) => FlowError::TransactionFailed(msg),
             ProcessorError::InternalError(msg) => FlowError::InternalError(msg),
+            ProcessorError::TaskTimeout => FlowError::TransactionTimeout,
+            ProcessorError::TaskCancelled => FlowError::TransactionFailed("Task was cancelled".to_string()),
+            ProcessorError::RetryExhausted(msg) => FlowError::TransactionFailed(format!("Retry attempts exhausted: {}", msg)),
         }
     }
 }
@@ -109,7 +112,7 @@ impl FlowEngine {
         &self,
         params: TaskParams,
     ) -> Result<(u64, tokio::sync::mpsc::Receiver<TaskResult<TaskParams, ProcessorResult>>)> {
-        self.processor.submit_task(params).await.map_err(Into::into)
+        self.processor.submit_task(params, 0).await.map_err(Into::into)
     }
 
     pub async fn submit_transactions(

@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -15,6 +16,12 @@ use crate::transform::step::{Step, StepResult};
 use crate::transform::transform::{Transform, TransformError};
 use crate::transform::{ConcreteStep, PatchStep};
 use std::fmt::Debug;
+
+static IDS: AtomicU64 = AtomicU64::new(1);
+pub fn get_transaction_id() -> u64 {
+    //生成 全局自增的版本号，用于兼容性
+    IDS.fetch_add(1, Ordering::SeqCst)
+}
 
 /// 定义可执行的命令接口
 /// 要求实现 Send + Sync 以支持并发操作，并实现 Debug 以支持调试
@@ -107,12 +114,11 @@ impl Transaction {
     /// state: 当前状态对象
     /// 返回: Transaction 实例
     pub fn new(state: &State) -> Self {
-        let now: u64 = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
 
         let node = state.doc();
         Transaction {
             meta: im::HashMap::new(),
-            id: now,
+            id: get_transaction_id(),
             steps: im::Vector::new(),
             doc: node,
             schema: state.schema(),
