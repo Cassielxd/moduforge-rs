@@ -3,7 +3,6 @@ use moduforge_core::debug;
 use tokio::sync::{mpsc, oneshot};
 use async_trait::async_trait;
 use tokio::select;
-use std::collections::HashMap;
 
 /// 任务处理的结果状态
 /// - Pending: 任务等待处理
@@ -192,14 +191,14 @@ impl<T: Clone + Send + Sync + 'static, O: Clone + Send + Sync + 'static> TaskQue
         Ok((current_id, result_rx))
     }
 
-    pub async fn get_next_ready(&self) -> Option<(T, u64, mpsc::Sender<TaskResult<T, O>>, u32)> {
+    pub async fn get_next_ready(&self) -> Option<(T, u64, mpsc::Sender<TaskResult<T, O>>, u32, u32)> {
         let mut rx_guard = self.queue_rx.lock().await;
         if let Some(rx) = rx_guard.as_mut() {
             if let Some(queued) = rx.recv().await {
                 let mut stats = self.stats.lock().await;
                 stats.current_queue_size -= 1;
                 stats.current_processing_tasks += 1;
-                return Some((queued.task, queued.task_id, queued.result_tx, queued.retry_count));
+                return Some((queued.task, queued.task_id, queued.result_tx, queued.priority, queued.retry_count));
             }
         }
         None
@@ -312,7 +311,7 @@ where
                     }
 
                     // 获取新任务并处理
-                    Some((task, task_id, result_tx, retry_count)) = queue.get_next_ready() => {
+                    Some((task, task_id, result_tx, _priority, retry_count)) = queue.get_next_ready() => {
                         if join_set.len() < config.max_concurrent_tasks {
                             let processor = processor.clone();
                             let config = config.clone();

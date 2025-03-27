@@ -166,12 +166,14 @@ impl NodeType {
         
         // 首先创建需要填充的内容
         let mut filled_nodes = Vec::new();
+        let mut content_ids =Vec::new();
         if let Some(content_match) = &self.content_match {
             if let Some(matched) = content_match.match_fragment(&content, schema) {
                 if let Some(filled) = matched.fill(&content, true, schema) {
                     // 对每个填充的节点，递归创建其子节点
                     for node in filled {
                         if let Some(node_type) = schema.nodes.get(&node.r#type) {
+                            content_ids.push(node.id.clone());
                             // 递归创建节点及其子节点
                             let mut child_nodes = node_type.create_and_fill(
                                 Some(node.id.clone()),
@@ -187,19 +189,7 @@ impl NodeType {
             }
         }
         
-        // 创建当前节点并引用其直接子节点
-        let content_ref = if filled_nodes.is_empty() {
-            content.iter().map(|i| i.id.clone()).collect()
-        } else {
-            // 仅引用每种子类型的第一个节点以保持正确的层级结构
-            let mut seen_types = std::collections::HashSet::new();
-            filled_nodes.iter()
-                .filter(|node| seen_types.insert(&node.r#type))
-                .map(|node| node.id.clone())
-                .collect()
-        };
-        
-        let mut nodes = vec![Node::new(&id, self.name.clone(), attrs, content_ref, Mark::set_from(marks))];
+        let mut nodes = vec![Node::new(&id, self.name.clone(), attrs, content_ids, Mark::set_from(marks))];
         nodes.append(&mut filled_nodes);
         
         nodes

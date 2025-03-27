@@ -34,7 +34,7 @@ impl Editor {
         let extension_manager = ExtensionManager::new(&options.get_extensions());
         debug!("已初始化扩展管理器");
 
-        let doc = create_doc::create_doc(&options.get_content());
+        let doc = create_doc::create_doc(&extension_manager.get_schema(),&options.get_content()).await;
         let event_bus = EventBus::new();
         debug!("已创建文档和事件总线");
 

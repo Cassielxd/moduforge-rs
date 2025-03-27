@@ -11,7 +11,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use moduforge_core::{
-    debug, info,
+    debug,
     model::{node_pool::NodePool, schema::Schema},
     state::{
         state::{State, StateConfig},
@@ -31,10 +31,10 @@ impl Editor {
     /// 创建新的编辑器实例
     /// options: 编辑器配置选项
     pub async fn create(options: EditorOptions) -> Result<Self, Box<dyn std::error::Error>> {
-        info!("正在创建新的编辑器实例");
+        debug!("正在创建新的编辑器实例");
         let extension_manager = ExtensionManager::new(&options.get_extensions());
         debug!("已初始化扩展管理器");
-        let doc = create_doc::create_doc(&options.get_content());
+        let doc = create_doc::create_doc(&extension_manager.get_schema(),&options.get_content()).await;
         let event_bus = EventBus::new();
         debug!("已创建文档和事件总线");
         let state: State = State::create(StateConfig {
@@ -56,7 +56,7 @@ impl Editor {
 
         let mut runtime = Editor { base, flow_engine: FlowEngine::new()? };
         runtime.init().await?;
-        info!("编辑器实例创建成功");
+        debug!("编辑器实例创建成功");
         Ok(runtime)
     }
 
