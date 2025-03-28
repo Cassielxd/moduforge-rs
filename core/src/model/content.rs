@@ -314,6 +314,7 @@ fn parse_expr(stream: &mut TokenStream) -> Expr {
     if exprs.len() == 1 { exprs.pop().unwrap() } else { Expr::Choice { exprs } }
 }
 fn parse_expr_seq(stream: &mut TokenStream) -> Expr {
+    
     let mut exprs = Vec::new();
 
     while let Some(next) = stream.next() {
@@ -384,7 +385,7 @@ fn resolve_name(
         }
     }
     if result.is_empty() {
-        stream.err(&format!("No node type or group '{}' found", name));
+        stream.err(&format!("没找到类型 '{}'", name));
     }
     result
 }
