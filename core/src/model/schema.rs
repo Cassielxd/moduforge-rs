@@ -19,7 +19,10 @@ pub struct Attribute {
 impl Attribute {
     /// 从 AttributeSpec 创建新的 Attribute 实例
     pub(crate) fn new(options: AttributeSpec) -> Self {
-        Attribute { has_default: options.default.is_some(), default: options.default }
+        Attribute {
+            has_default: options.default.is_some(),
+            default: options.default,
+        }
     }
     /// 检查属性是否为必需的
     /// 如果没有默认值，则属性为必需
@@ -57,7 +60,11 @@ impl Eq for Schema {}
 impl Schema {
     /// 创建新的 Schema 实例
     pub fn new(spec: SchemaSpec) -> Self {
-        let mut instance_spec = SchemaSpec { nodes: HashMap::new(), marks: HashMap::new(), top_node: spec.top_node };
+        let mut instance_spec = SchemaSpec {
+            nodes: HashMap::new(),
+            marks: HashMap::new(),
+            top_node: spec.top_node,
+        };
         // 复制 spec 属性
         for (key, value) in spec.nodes {
             instance_spec.nodes.insert(key, value);
@@ -75,9 +82,12 @@ impl Schema {
     }
     /// 编译 Schema 定义
     /// 处理节点和标记的定义，建立它们之间的关系
-    pub fn compile(instance_spec: SchemaSpec) -> Result<Schema, Box<dyn Error>> {
+    pub fn compile(
+        instance_spec: SchemaSpec
+    ) -> Result<Schema, Box<dyn Error>> {
         let mut schema: Schema = Schema::new(instance_spec);
-        let nodes: HashMap<String, NodeType> = NodeType::compile(schema.spec.nodes.clone());
+        let nodes: HashMap<String, NodeType> =
+            NodeType::compile(schema.spec.nodes.clone());
         let marks = MarkType::compile(schema.spec.marks.clone());
         let mut content_expr_cache = HashMap::new();
         let mut updated_nodes = HashMap::new();
@@ -91,13 +101,18 @@ impl Schema {
 
             let content_match = content_expr_cache
                 .entry(content_expr.to_string())
-                .or_insert_with(|| ContentMatch::parse(content_expr.to_string(), &nodes))
+                .or_insert_with(|| {
+                    ContentMatch::parse(content_expr.to_string(), &nodes)
+                })
                 .clone();
 
             let mark_set = match mark_expr {
                 Some("_") => None,
                 Some(expr) => {
-                    let marks_result = gather_marks(&schema, expr.split_whitespace().collect());
+                    let marks_result = gather_marks(
+                        &schema,
+                        expr.split_whitespace().collect(),
+                    );
                     match marks_result {
                         Ok(marks) => Some(marks.into_iter().cloned().collect()), // Convert Vec<&MarkType> to Vec<MarkType>
                         Err(e) => return Err(e.into()),
@@ -113,8 +128,16 @@ impl Schema {
         }
         schema.nodes = updated_nodes;
         schema.marks = marks;
-        schema.top_node_type =
-            schema.nodes.get(&schema.spec.top_node.clone().unwrap_or_else(|| "doc".to_string())).cloned();
+        schema.top_node_type = schema
+            .nodes
+            .get(
+                &schema
+                    .spec
+                    .top_node
+                    .clone()
+                    .unwrap_or_else(|| "doc".to_string()),
+            )
+            .cloned();
 
         Ok(schema)
     }
@@ -132,7 +155,9 @@ pub struct SchemaSpec {
 /// 获取属性的默认值映射
 /// 如果所有属性都有默认值，返回包含所有默认值的映射
 /// 如果任一属性没有默认值，返回 None
-pub fn default_attrs(attrs: &HashMap<String, Attribute>) -> Option<HashMap<String, String>> {
+pub fn default_attrs(
+    attrs: &HashMap<String, Attribute>
+) -> Option<HashMap<String, String>> {
     let mut defaults = HashMap::new();
 
     for (attr_name, attr) in attrs {
@@ -166,7 +191,9 @@ fn gather_marks<'a>(
             let mut ok = None;
             for mark_ref in schema.marks.values() {
                 if name == "_"
-                    || mark_ref.spec.group.as_ref().is_some_and(|group| group.split_whitespace().any(|g| g == name))
+                    || mark_ref.spec.group.as_ref().is_some_and(|group| {
+                        group.split_whitespace().any(|g| g == name)
+                    })
                 {
                     found.push(mark_ref);
                     ok = Some(mark_ref);
@@ -195,7 +222,9 @@ pub fn compute_attrs(
             Some(val) => val.clone(),
             None => {
                 if attr.has_default {
-                    attr.default.clone().unwrap_or_else(|| panic!("没有为属性提供默认值 {}", name))
+                    attr.default.clone().unwrap_or_else(|| {
+                        panic!("没有为属性提供默认值 {}", name)
+                    })
                 } else {
                     "".to_string()
                 }

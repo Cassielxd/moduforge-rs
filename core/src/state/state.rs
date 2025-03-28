@@ -1,4 +1,6 @@
-use crate::model::{id_generator::IdGenerator, mark::Mark, node_pool::NodePool, schema::Schema};
+use crate::model::{
+    id_generator::IdGenerator, mark::Mark, node_pool::NodePool, schema::Schema,
+};
 
 use im::HashMap as ImHashMap;
 use std::{
@@ -43,11 +45,15 @@ impl State {
         tracing::info!("正在创建新的state");
         let schema = match &state_config.schema {
             Some(schema) => schema.clone(),
-            None => {
-                state_config.schema.clone().ok_or_else(|| StateError::SchemaError("Schema is required".to_string()))?
-            },
+            None => state_config.schema.clone().ok_or_else(|| {
+                StateError::SchemaError("Schema is required".to_string())
+            })?,
         };
-        let config = Configuration::new(schema, state_config.plugins.clone(), state_config.doc.clone());
+        let config = Configuration::new(
+            schema,
+            state_config.plugins.clone(),
+            state_config.doc.clone(),
+        );
         let mut instance = State::new(Arc::new(config));
         let mut field_values = Vec::new();
         for plugin in &instance.config.plugins {
@@ -71,13 +77,18 @@ impl State {
             Some(doc) => doc.clone(),
             None => {
                 let id = IdGenerator::get_id();
-                let nodes = config.schema.top_node_type.clone().unwrap().create_and_fill(
-                    Some(id.clone()),
-                    None,
-                    vec![],
-                    None,
-                    &config.schema,
-                );
+                let nodes = config
+                    .schema
+                    .top_node_type
+                    .clone()
+                    .unwrap()
+                    .create_and_fill(
+                        Some(id.clone()),
+                        None,
+                        vec![],
+                        None,
+                        &config.schema,
+                    );
                 NodePool::from(nodes, id).into()
             },
         };
@@ -108,30 +119,31 @@ impl State {
     ) -> StateResult<TransactionResult> {
         let start_time = Instant::now();
         let initial_step_count = transaction.steps.len();
-        
-        tracing::info!(
-            "开始应用事务，初始步骤数: {}",
-            initial_step_count
-        );
+
+        tracing::info!("开始应用事务，初始步骤数: {}", initial_step_count);
 
         // 执行事务前处理
         self.before_apply_transaction(&mut transaction).await?;
-        
+
         // 应用事务并获取结果
         let mut result = self.apply_transaction(transaction).await?;
-        
+
         // 获取最后一个事务
-        let mut last_transaction = result.transactions.pop().ok_or_else(|| {
-            StateError::TransactionError("Transaction list is empty".to_string())
-        })?;
-        
+        let mut last_transaction =
+            result.transactions.pop().ok_or_else(|| {
+                StateError::TransactionError(
+                    "Transaction list is empty".to_string(),
+                )
+            })?;
+
         // 执行事务后处理
-        self.after_apply_transaction(&result.state, &mut last_transaction).await?;
-        
+        self.after_apply_transaction(&result.state, &mut last_transaction)
+            .await?;
+
         // 检查是否需要重新应用事务
         let final_step_count = last_transaction.steps.len();
         let duration = start_time.elapsed();
-        
+
         if initial_step_count == final_step_count {
             tracing::debug!(
                 "事务应用成功，步骤数保持不变，耗时: {:?}",
@@ -140,7 +152,7 @@ impl State {
             result.transactions.push(last_transaction);
             return Ok(result);
         }
-        
+
         // 如果有额外步骤，重新应用事务
         tracing::info!(
             "事务产生额外步骤: {} -> {}，耗时: {:?}",
@@ -148,11 +160,11 @@ impl State {
             final_step_count,
             duration
         );
-        
+
         let new_state = result.state.apply_inner(&last_transaction).await?;
         result.state = new_state;
         result.transactions.push(last_transaction);
-        
+
         Ok(result)
     }
 
@@ -181,7 +193,9 @@ impl State {
     ) -> StateResult<()> {
         tracing::debug!("正在执行事务后处理钩子");
         for plugin in &self.config.plugins {
-            if let Err(e) = plugin.after_apply_transaction(new_state, tr, self).await {
+            if let Err(e) =
+                plugin.after_apply_transaction(new_state, tr, self).await
+            {
                 tracing::error!("插件 {} 的事务后处理失败: {}", plugin.key, e);
                 return Err(StateError::TransactionError(format!(
                     "Plugin {} after_apply_transaction failed: {}",
@@ -198,7 +212,9 @@ impl State {
         ignore: Option<usize>,
     ) -> StateResult<bool> {
         for (i, plugin) in self.config.plugins.iter().enumerate() {
-            if Some(i) != ignore && !plugin.apply_filter_transaction(tr, self).await {
+            if Some(i) != ignore
+                && !plugin.apply_filter_transaction(tr, self).await
+            {
                 return Ok(false);
             }
         }
@@ -213,7 +229,10 @@ impl State {
         tracing::info!("开始应用事务");
         if !self.filter_transaction(&root_tr, None).await? {
             tracing::debug!("事务被过滤，返回原始状态");
-            return Ok(TransactionResult { state: self.clone(), transactions: vec![root_tr] });
+            return Ok(TransactionResult {
+                state: self.clone(),
+                transactions: vec![root_tr],
+            });
         }
 
         let mut trs = Vec::new();
@@ -225,23 +244,36 @@ impl State {
             let mut have_new = false;
             for (i, plugin) in self.config.plugins.iter().enumerate() {
                 let n: usize = seen.as_ref().map(|s| s[i].n).unwrap_or(0);
-                let old_state = seen.as_ref().map(|s| &s[i].state).unwrap_or(self);
+                let old_state =
+                    seen.as_ref().map(|s| &s[i].state).unwrap_or(self);
                 if n < trs.len() {
-                    if let Some(tr) = plugin.apply_append_transaction(trs.get(n).unwrap(), old_state, &new_state).await
+                    if let Some(tr) = plugin
+                        .apply_append_transaction(
+                            trs.get(n).unwrap(),
+                            old_state,
+                            &new_state,
+                        )
+                        .await
                     {
                         if new_state.filter_transaction(&tr, Some(i)).await? {
                             if seen.is_none() {
                                 let mut s = Vec::new();
                                 for j in 0..self.config.plugins.len() {
                                     s.push(if j < i {
-                                        SeenState { state: new_state.clone(), n: trs.len() }
+                                        SeenState {
+                                            state: new_state.clone(),
+                                            n: trs.len(),
+                                        }
                                     } else {
                                         SeenState { state: self.clone(), n: 0 }
                                     });
                                 }
                                 seen = Some(s);
                             }
-                            tracing::debug!("插件 {} 添加了新事务", plugin.spec.key.1);
+                            tracing::debug!(
+                                "插件 {} 添加了新事务",
+                                plugin.spec.key.1
+                            );
                             new_state = new_state.apply_inner(&tr).await?;
                             trs.push(tr);
                             have_new = true;
@@ -249,13 +281,17 @@ impl State {
                     }
                 }
                 if let Some(seen) = &mut seen {
-                    seen[i] = SeenState { state: new_state.clone(), n: trs.len() };
+                    seen[i] =
+                        SeenState { state: new_state.clone(), n: trs.len() };
                 }
             }
 
             if !have_new {
                 tracing::info!("事务应用完成，共 {} 个步骤", trs.len());
-                return Ok(TransactionResult { state: new_state, transactions: trs });
+                return Ok(TransactionResult {
+                    state: new_state,
+                    transactions: trs,
+                });
             }
         }
     }
@@ -271,7 +307,9 @@ impl State {
         for plugin in &self.config.plugins {
             if let Some(field) = &plugin.spec.state {
                 if let Some(old_plugin_state) = self.get_field(&plugin.key) {
-                    let value = field.apply(tr, old_plugin_state, self, &new_instance).await;
+                    let value = field
+                        .apply(tr, old_plugin_state, self, &new_instance)
+                        .await;
                     new_instance.set_field(&plugin.key, value)?;
                 }
             }
@@ -289,7 +327,11 @@ impl State {
         state_config: StateConfig,
     ) -> StateResult<State> {
         tracing::info!("正在重新配置状态");
-        let config = Configuration::new(self.schema(), state_config.plugins.clone(), state_config.doc.clone());
+        let config = Configuration::new(
+            self.schema(),
+            state_config.plugins.clone(),
+            state_config.doc.clone(),
+        );
         let mut instance = State::new(Arc::new(config));
         let mut field_values = Vec::new();
         for plugin in &instance.config.plugins {
@@ -378,7 +420,12 @@ impl Configuration {
         plugins: Option<Vec<Arc<Plugin>>>,
         doc: Option<Arc<NodePool>>,
     ) -> Self {
-        let mut config = Configuration { doc, plugins: Vec::new(), plugins_by_key: HashMap::new(), schema };
+        let mut config = Configuration {
+            doc,
+            plugins: Vec::new(),
+            plugins_by_key: HashMap::new(),
+            schema,
+        };
 
         if let Some(plugin_list) = plugins {
             for plugin in plugin_list {

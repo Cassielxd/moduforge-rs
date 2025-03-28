@@ -5,7 +5,10 @@ use moduforge_core::model::{node_pool::NodePool, schema::Schema};
 use crate::types::Content;
 
 /// 创建文档
-pub async fn create_doc(schema: &Schema,content: &Content) -> Option<Arc<NodePool>> {
+pub async fn create_doc(
+    schema: &Schema,
+    content: &Content,
+) -> Option<Arc<NodePool>> {
     let doc = match content {
         Content::NodePool(node_pool) => Some(Arc::new(node_pool.clone())),
         Content::None => None,

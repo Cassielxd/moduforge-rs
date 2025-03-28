@@ -35,13 +35,19 @@ impl fmt::Display for EditorError {
     ) -> fmt::Result {
         match self {
             EditorError::StateError(msg) => write!(f, "State error: {}", msg),
-            EditorError::StorageError(msg) => write!(f, "Storage error: {}", msg),
+            EditorError::StorageError(msg) => {
+                write!(f, "Storage error: {}", msg)
+            },
             EditorError::EventError(msg) => write!(f, "Event error: {}", msg),
             EditorError::PluginError(msg) => write!(f, "Plugin error: {}", msg),
             EditorError::IoError(err) => write!(f, "IO error: {}", err),
             EditorError::ConfigError(msg) => write!(f, "Config error: {}", msg),
-            EditorError::TransactionError(msg) => write!(f, "Transaction error: {}", msg),
-            EditorError::HistoryError(msg) => write!(f, "History error: {}", msg),
+            EditorError::TransactionError(msg) => {
+                write!(f, "Transaction error: {}", msg)
+            },
+            EditorError::HistoryError(msg) => {
+                write!(f, "History error: {}", msg)
+            },
             EditorError::EngineError(msg) => write!(f, "Engine error: {}", msg),
             EditorError::CacheError(msg) => write!(f, "Cache error: {}", msg),
             EditorError::Unknown(msg) => write!(f, "Unknown error: {}", msg),

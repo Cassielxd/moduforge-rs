@@ -45,7 +45,11 @@ impl NodePoolInner {
         let mut cope_node = node.clone().as_ref().clone();
         cope_node.attrs.extend(values.clone());
         let nodes = self.nodes.update(id.clone(), Arc::new(cope_node));
-        Ok(NodePoolInner { nodes, parent_map: self.parent_map.clone(), root_id: self.root_id.clone() })
+        Ok(NodePoolInner {
+            nodes,
+            parent_map: self.parent_map.clone(),
+            root_id: self.root_id.clone(),
+        })
     }
 }
 /// 线程安全的节点池封装
@@ -88,7 +92,13 @@ impl NodePool {
             nodes_ref.insert(node.id.clone(), Arc::new(node));
         }
 
-        NodePool { inner: Arc::new(NodePoolInner { nodes: nodes_ref, parent_map: parent_map_ref, root_id }) }
+        NodePool {
+            inner: Arc::new(NodePoolInner {
+                nodes: nodes_ref,
+                parent_map: parent_map_ref,
+                root_id,
+            }),
+        }
     }
 
     // -- 核心查询方法 --
@@ -279,7 +289,8 @@ impl Draft {
     /// 退出当前路径层级
     pub fn exit(&mut self) -> &mut Self {
         if !self.current_path.is_empty() {
-            self.current_path = self.current_path.take(self.current_path.len() - 1);
+            self.current_path =
+                self.current_path.take(self.current_path.len() - 1);
         }
         self
     }
@@ -299,13 +310,15 @@ impl Draft {
         id: &NodeId,
         new_values: HashMap<String, String>,
     ) -> Result<(), PoolError> {
-        let node = self.get_node(id).ok_or(PoolError::NodeNotFound(id.clone()))?;
+        let node =
+            self.get_node(id).ok_or(PoolError::NodeNotFound(id.clone()))?;
         let old_values = node.attrs.clone();
 
         // 更新节点属性
         let mut new_node = node.as_ref().clone();
         new_node.attrs = new_values.clone();
-        self.inner.nodes = self.inner.nodes.update(id.clone(), Arc::new(new_node));
+        self.inner.nodes =
+            self.inner.nodes.update(id.clone(), Arc::new(new_node));
         // 记录补丁
         self.record_patch(Patch::UpdateAttr {
             path: self.current_path.iter().cloned().collect(),
@@ -330,8 +343,13 @@ impl Draft {
         id: &NodeId,
         mark: Mark,
     ) -> Result<(), PoolError> {
-        let mut node = self.get_node(id).ok_or(PoolError::NodeNotFound(id.clone()))?.as_ref().clone();
-        node.marks = node.marks.iter().filter(|&m| !m.eq(&mark)).cloned().collect();
+        let mut node = self
+            .get_node(id)
+            .ok_or(PoolError::NodeNotFound(id.clone()))?
+            .as_ref()
+            .clone();
+        node.marks =
+            node.marks.iter().filter(|&m| !m.eq(&mark)).cloned().collect();
         self.inner.nodes.insert(id.clone(), Arc::new(node));
         // 记录补丁
         self.record_patch(Patch::RemoveMark {
@@ -356,7 +374,11 @@ impl Draft {
         id: &NodeId,
         mark: Mark,
     ) -> Result<(), PoolError> {
-        let mut node = self.get_node(id).ok_or(PoolError::NodeNotFound(id.clone()))?.as_ref().clone();
+        let mut node = self
+            .get_node(id)
+            .ok_or(PoolError::NodeNotFound(id.clone()))?
+            .as_ref()
+            .clone();
         node.marks.push_back(mark.clone());
         self.inner.nodes.insert(id.clone(), Arc::new(node));
         // 记录补丁
@@ -367,13 +389,20 @@ impl Draft {
         });
         Ok(())
     }
-    pub fn sort_children<F: FnMut(&(String, &Arc<Node>), &(String, &Arc<Node>)) -> std::cmp::Ordering>(
+    pub fn sort_children<
+        F: FnMut(
+            &(String, &Arc<Node>),
+            &(String, &Arc<Node>),
+        ) -> std::cmp::Ordering,
+    >(
         &mut self,
         parent_id: &NodeId,
         compare: F,
     ) -> Result<(), PoolError> {
         // 检查父节点是否存在
-        let parent = self.get_node(parent_id).ok_or(PoolError::ParentNotFound(parent_id.clone()))?;
+        let parent = self
+            .get_node(parent_id)
+            .ok_or(PoolError::ParentNotFound(parent_id.clone()))?;
 
         // 获取所有子节点
         let children_ids = parent.content.clone();
@@ -388,7 +417,8 @@ impl Draft {
         }
         children.sort_by(compare);
         // 创建排序后的子节点ID列表
-        let sorted_children: im::Vector<NodeId> = children.into_iter().map(|(id, _)| id).collect();
+        let sorted_children: im::Vector<NodeId> =
+            children.into_iter().map(|(id, _)| id).collect();
         // 更新父节点
         let mut new_parent = parent.as_ref().clone();
         new_parent.content = sorted_children;
@@ -407,7 +437,9 @@ impl Draft {
         node: Node,
     ) -> Result<(), PoolError> {
         let node = Arc::new(node);
-        let parent = self.get_node(parent_id).ok_or(PoolError::ParentNotFound(parent_id.clone()))?;
+        let parent = self
+            .get_node(parent_id)
+            .ok_or(PoolError::ParentNotFound(parent_id.clone()))?;
         let mut new_parent = parent.as_ref().clone();
         new_parent.content.push_back(node.id.clone());
 
@@ -430,10 +462,15 @@ impl Draft {
         new_node: Arc<Node>,
     ) -> Result<(), PoolError> {
         // 检查节点是否存在
-        let old_node = self.get_node(&node_id).ok_or(PoolError::NodeNotFound(node_id.clone()))?;
+        let old_node = self
+            .get_node(&node_id)
+            .ok_or(PoolError::NodeNotFound(node_id.clone()))?;
         // 确保新节点ID与原节点ID一致
         if new_node.id != node_id {
-            return Err(PoolError::InvalidNodeId { nodeid: node_id, new_node_id: new_node.id.clone() });
+            return Err(PoolError::InvalidNodeId {
+                nodeid: node_id,
+                new_node_id: new_node.id.clone(),
+            });
         }
         // 保存旧节点用于记录补丁
         let old_node_clone = old_node.clone();
@@ -456,13 +493,17 @@ impl Draft {
         position: Option<usize>,
     ) -> Result<(), PoolError> {
         // 检查源父节点是否存在
-        let source_parent =
-            self.get_node(source_parent_id).ok_or(PoolError::ParentNotFound(source_parent_id.clone()))?;
+        let source_parent = self
+            .get_node(source_parent_id)
+            .ok_or(PoolError::ParentNotFound(source_parent_id.clone()))?;
         // 检查目标父节点是否存在
-        let target_parent =
-            self.get_node(target_parent_id).ok_or(PoolError::ParentNotFound(target_parent_id.clone()))?;
+        let target_parent = self
+            .get_node(target_parent_id)
+            .ok_or(PoolError::ParentNotFound(target_parent_id.clone()))?;
         // 检查要移动的节点是否存在
-        let _node = self.get_node(node_id).ok_or(PoolError::NodeNotFound(node_id.clone()))?;
+        let _node = self
+            .get_node(node_id)
+            .ok_or(PoolError::NodeNotFound(node_id.clone()))?;
         // 检查节点是否是源父节点的子节点
         if !source_parent.content.contains(node_id) {
             return Err(PoolError::InvalidParenting {
@@ -472,7 +513,12 @@ impl Draft {
         }
         // 从源父节点中移除该节点
         let mut new_source_parent = source_parent.as_ref().clone();
-        new_source_parent.content = new_source_parent.content.iter().filter(|&id| id != node_id).cloned().collect();
+        new_source_parent.content = new_source_parent
+            .content
+            .iter()
+            .filter(|&id| id != node_id)
+            .cloned()
+            .collect();
 
         // 准备将节点添加到目标父节点
         let mut new_target_parent = target_parent.as_ref().clone();
@@ -481,7 +527,9 @@ impl Draft {
             if pos <= new_target_parent.content.len() {
                 // 在指定位置插入
                 let mut new_content = im::Vector::new();
-                for (i, child_id) in new_target_parent.content.iter().enumerate() {
+                for (i, child_id) in
+                    new_target_parent.content.iter().enumerate()
+                {
                     if i == pos {
                         new_content.push_back(node_id.clone());
                     }
@@ -501,8 +549,12 @@ impl Draft {
             new_target_parent.content.push_back(node_id.clone());
         }
 
-        self.inner.nodes.insert(source_parent_id.clone(), Arc::new(new_source_parent));
-        self.inner.nodes.insert(target_parent_id.clone(), Arc::new(new_target_parent));
+        self.inner
+            .nodes
+            .insert(source_parent_id.clone(), Arc::new(new_source_parent));
+        self.inner
+            .nodes
+            .insert(target_parent_id.clone(), Arc::new(new_target_parent));
         // 更新父子关系映射
         self.inner.parent_map.insert(node_id.clone(), target_parent_id.clone());
         // 记录移动节点的补丁
@@ -561,11 +613,18 @@ impl Draft {
         parent_id: &NodeId,
         nodes: Vec<NodeId>,
     ) -> Result<(), PoolError> {
-        let parent = self.get_node(parent_id).ok_or(PoolError::ParentNotFound(parent_id.clone()))?;
+        let parent = self
+            .get_node(parent_id)
+            .ok_or(PoolError::ParentNotFound(parent_id.clone()))?;
 
         // 过滤掉不在节点池中的子节点
-        let filtered_children: im::Vector<NodeId> =
-            parent.as_ref().content.iter().filter(|&id| !nodes.contains(id)).cloned().collect();
+        let filtered_children: im::Vector<NodeId> = parent
+            .as_ref()
+            .content
+            .iter()
+            .filter(|&id| !nodes.contains(id))
+            .cloned()
+            .collect();
 
         // 这里的逻辑需要进一步完善，例如如何处理新节点的添加
         // 以下是示例代码，实际逻辑可能需要根据需求调整
@@ -620,15 +679,32 @@ impl Draft {
                     self.add_mark(node_id, mark.clone())?;
                 },
                 Patch::RemoveNode { path: _, parent_id, nodes } => {
-                    self.remove_node(parent_id, nodes.iter().map(|n: &Arc<Node>| n.id.clone()).collect())?;
+                    self.remove_node(
+                        parent_id,
+                        nodes
+                            .iter()
+                            .map(|n: &Arc<Node>| n.id.clone())
+                            .collect(),
+                    )?;
                 },
                 Patch::RemoveMark { path: _, parent_id, marks } => {
                     for mark in marks {
                         self.remove_mark(parent_id, mark.as_ref().clone())?;
                     }
                 },
-                Patch::MoveNode { path: _, node_id, source_parent_id, target_parent_id, position } => {
-                    self.move_node(source_parent_id, target_parent_id, node_id, position.clone())?;
+                Patch::MoveNode {
+                    path: _,
+                    node_id,
+                    source_parent_id,
+                    target_parent_id,
+                    position,
+                } => {
+                    self.move_node(
+                        source_parent_id,
+                        target_parent_id,
+                        node_id,
+                        position.clone(),
+                    )?;
                 },
                 Patch::ReplaceNode { path: _, old, new } => {
                     self.replace_node(old.id.clone(), new.clone())?;
@@ -666,8 +742,19 @@ impl Draft {
                         self.add_mark(&parent_id, mark.as_ref().clone())?;
                     }
                 },
-                Patch::MoveNode { path: _, node_id, source_parent_id, target_parent_id, position } => {
-                    self.move_node(&target_parent_id, &source_parent_id, &node_id, position.clone())?;
+                Patch::MoveNode {
+                    path: _,
+                    node_id,
+                    source_parent_id,
+                    target_parent_id,
+                    position,
+                } => {
+                    self.move_node(
+                        &target_parent_id,
+                        &source_parent_id,
+                        &node_id,
+                        position.clone(),
+                    )?;
                 },
                 Patch::ReplaceNode { path: _, old, new } => {
                     self.replace_node(new.id.clone(), old.clone())?;
@@ -689,10 +776,17 @@ impl Draft {
     /// 提交修改，生成新 NodePool 和补丁列表
     pub fn commit(&self) -> StepResult {
         match self.begin {
-            true => StepResult { doc: None, failed: Some("事务操作".to_string()), patches: Vec::new() },
+            true => StepResult {
+                doc: None,
+                failed: Some("事务操作".to_string()),
+                patches: Vec::new(),
+            },
             false => {
                 let new_pool = NodePool { inner: Arc::new(self.inner.clone()) };
-                StepResult::ok(Arc::new(new_pool), self.patches.iter().cloned().collect())
+                StepResult::ok(
+                    Arc::new(new_pool),
+                    self.patches.iter().cloned().collect(),
+                )
             },
         }
     }

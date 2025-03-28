@@ -32,14 +32,30 @@ impl Step for ConcreteStep {
         schema: std::sync::Arc<crate::model::schema::Schema>,
     ) -> Result<step::StepResult, transform::TransformError> {
         match self {
-            ConcreteStep::UpdateAttrs(attr_step) => attr_step.apply(dart, schema),
-            ConcreteStep::AddNodeStep(add_node_step) => add_node_step.apply(dart, schema),
-            ConcreteStep::AddMarkStep(add_mark_step) => add_mark_step.apply(dart, schema),
-            ConcreteStep::RemoveNodeStep(remove_node_step) => remove_node_step.apply(dart, schema),
-            ConcreteStep::PatchStep(patch_step) => patch_step.apply(dart, schema),
-            ConcreteStep::MoveNodeStep(move_node_step) => move_node_step.apply(dart, schema),
-            ConcreteStep::BatchStep(batch_step) => batch_step.apply(dart, schema),
-            ConcreteStep::ReplaceNodeStep(replace_node_step) => replace_node_step.apply(dart, schema),
+            ConcreteStep::UpdateAttrs(attr_step) => {
+                attr_step.apply(dart, schema)
+            },
+            ConcreteStep::AddNodeStep(add_node_step) => {
+                add_node_step.apply(dart, schema)
+            },
+            ConcreteStep::AddMarkStep(add_mark_step) => {
+                add_mark_step.apply(dart, schema)
+            },
+            ConcreteStep::RemoveNodeStep(remove_node_step) => {
+                remove_node_step.apply(dart, schema)
+            },
+            ConcreteStep::PatchStep(patch_step) => {
+                patch_step.apply(dart, schema)
+            },
+            ConcreteStep::MoveNodeStep(move_node_step) => {
+                move_node_step.apply(dart, schema)
+            },
+            ConcreteStep::BatchStep(batch_step) => {
+                batch_step.apply(dart, schema)
+            },
+            ConcreteStep::ReplaceNodeStep(replace_node_step) => {
+                replace_node_step.apply(dart, schema)
+            },
         }
     }
     fn to_concrete(&self) -> ConcreteStep {
@@ -87,14 +103,30 @@ impl Step for BatchStep {
         for step in &self.steps {
             let schema = schema.clone();
             let result = match step {
-                ConcreteStep::UpdateAttrs(attr_step) => attr_step.apply(dart, schema),
-                ConcreteStep::AddNodeStep(add_node_step) => add_node_step.apply(dart, schema),
-                ConcreteStep::AddMarkStep(add_mark_step) => add_mark_step.apply(dart, schema),
-                ConcreteStep::RemoveNodeStep(remove_node_step) => remove_node_step.apply(dart, schema),
-                ConcreteStep::PatchStep(patch_step) => patch_step.apply(dart, schema),
-                ConcreteStep::MoveNodeStep(move_node_step) => move_node_step.apply(dart, schema),
-                ConcreteStep::ReplaceNodeStep(replace_node_step) => replace_node_step.apply(dart, schema),
-                ConcreteStep::BatchStep(batch_setp) => batch_setp.apply(dart, schema),
+                ConcreteStep::UpdateAttrs(attr_step) => {
+                    attr_step.apply(dart, schema)
+                },
+                ConcreteStep::AddNodeStep(add_node_step) => {
+                    add_node_step.apply(dart, schema)
+                },
+                ConcreteStep::AddMarkStep(add_mark_step) => {
+                    add_mark_step.apply(dart, schema)
+                },
+                ConcreteStep::RemoveNodeStep(remove_node_step) => {
+                    remove_node_step.apply(dart, schema)
+                },
+                ConcreteStep::PatchStep(patch_step) => {
+                    patch_step.apply(dart, schema)
+                },
+                ConcreteStep::MoveNodeStep(move_node_step) => {
+                    move_node_step.apply(dart, schema)
+                },
+                ConcreteStep::ReplaceNodeStep(replace_node_step) => {
+                    replace_node_step.apply(dart, schema)
+                },
+                ConcreteStep::BatchStep(batch_setp) => {
+                    batch_setp.apply(dart, schema)
+                },
             };
             match result {
                 Ok(result) => {

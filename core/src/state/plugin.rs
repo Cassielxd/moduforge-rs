@@ -113,7 +113,9 @@ impl PluginSpec {
         new_state: &State,
     ) -> Option<Transaction> {
         match &self.tr {
-            Some(transaction) => transaction.append_transaction(trs, old_state, new_state).await,
+            Some(transaction) => {
+                transaction.append_transaction(trs, old_state, new_state).await
+            },
             None => None,
         }
     }
@@ -138,7 +140,9 @@ impl PluginSpec {
     ) -> Result<(), Box<dyn std::error::Error>> {
         // 默认实现为空，由具体插件重写
         if let Some(transaction) = &self.tr {
-            transaction.after_apply_transaction(new_state, tr, old_state).await?;
+            transaction
+                .after_apply_transaction(new_state, tr, old_state)
+                .await?;
         }
         Ok(())
     }

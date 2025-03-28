@@ -1,4 +1,8 @@
-use std::{fmt::Display, sync::Arc, time::{Duration, Instant}};
+use std::{
+    fmt::Display,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use moduforge_core::debug;
 use tokio::sync::{mpsc, oneshot};
 use async_trait::async_trait;
@@ -45,11 +49,19 @@ impl Display for ProcessorError {
     ) -> std::fmt::Result {
         match self {
             ProcessorError::QueueFull => write!(f, "Task queue is full"),
-            ProcessorError::TaskFailed(msg) => write!(f, "Task failed: {}", msg),
-            ProcessorError::InternalError(msg) => write!(f, "Internal error: {}", msg),
-            ProcessorError::TaskTimeout => write!(f, "Task execution timed out"),
+            ProcessorError::TaskFailed(msg) => {
+                write!(f, "Task failed: {}", msg)
+            },
+            ProcessorError::InternalError(msg) => {
+                write!(f, "Internal error: {}", msg)
+            },
+            ProcessorError::TaskTimeout => {
+                write!(f, "Task execution timed out")
+            },
             ProcessorError::TaskCancelled => write!(f, "Task was cancelled"),
-            ProcessorError::RetryExhausted(msg) => write!(f, "Retry attempts exhausted: {}", msg),
+            ProcessorError::RetryExhausted(msg) => {
+                write!(f, "Retry attempts exhausted: {}", msg)
+            },
         }
     }
 }
@@ -73,7 +85,13 @@ pub struct ProcessorConfig {
 
 impl Default for ProcessorConfig {
     fn default() -> Self {
-        Self { max_queue_size: 1000, max_concurrent_tasks: 10, task_timeout: Duration::from_secs(30), max_retries: 3, retry_delay: Duration::from_secs(1) }
+        Self {
+            max_queue_size: 1000,
+            max_concurrent_tasks: 10,
+            task_timeout: Duration::from_secs(30),
+            max_retries: 3,
+            retry_delay: Duration::from_secs(1),
+        }
     }
 }
 
@@ -153,7 +171,9 @@ where
     stats: Arc<tokio::sync::Mutex<ProcessorStats>>,
 }
 
-impl<T: Clone + Send + Sync + 'static, O: Clone + Send + Sync + 'static> TaskQueue<T, O> {
+impl<T: Clone + Send + Sync + 'static, O: Clone + Send + Sync + 'static>
+    TaskQueue<T, O>
+{
     pub fn new(config: &ProcessorConfig) -> Self {
         let (tx, rx) = mpsc::channel(config.max_queue_size);
         Self {
@@ -182,7 +202,10 @@ impl<T: Clone + Send + Sync + 'static, O: Clone + Send + Sync + 'static> TaskQue
             retry_count: 0,
         };
 
-        self.queue.send(queued_task).await.map_err(|_| ProcessorError::QueueFull)?;
+        self.queue
+            .send(queued_task)
+            .await
+            .map_err(|_| ProcessorError::QueueFull)?;
 
         let mut stats = self.stats.lock().await;
         stats.total_tasks += 1;
@@ -191,14 +214,22 @@ impl<T: Clone + Send + Sync + 'static, O: Clone + Send + Sync + 'static> TaskQue
         Ok((current_id, result_rx))
     }
 
-    pub async fn get_next_ready(&self) -> Option<(T, u64, mpsc::Sender<TaskResult<T, O>>, u32, u32)> {
+    pub async fn get_next_ready(
+        &self
+    ) -> Option<(T, u64, mpsc::Sender<TaskResult<T, O>>, u32, u32)> {
         let mut rx_guard = self.queue_rx.lock().await;
         if let Some(rx) = rx_guard.as_mut() {
             if let Some(queued) = rx.recv().await {
                 let mut stats = self.stats.lock().await;
                 stats.current_queue_size -= 1;
                 stats.current_processing_tasks += 1;
-                return Some((queued.task, queued.task_id, queued.result_tx, queued.priority, queued.retry_count));
+                return Some((
+                    queued.task,
+                    queued.task_id,
+                    queued.result_tx,
+                    queued.priority,
+                    queued.retry_count,
+                ));
             }
         }
         None
@@ -208,19 +239,23 @@ impl<T: Clone + Send + Sync + 'static, O: Clone + Send + Sync + 'static> TaskQue
         self.stats.lock().await.clone()
     }
 
-    pub async fn update_stats(&self, result: &TaskResult<T, O>) {
+    pub async fn update_stats(
+        &self,
+        result: &TaskResult<T, O>,
+    ) {
         let mut stats = self.stats.lock().await;
         match result.status {
             TaskStatus::Completed => {
                 stats.completed_tasks += 1;
                 if let Some(processing_time) = result.processing_time {
-                    stats.average_processing_time = (stats.average_processing_time + processing_time) / 2;
+                    stats.average_processing_time =
+                        (stats.average_processing_time + processing_time) / 2;
                 }
-            }
+            },
             TaskStatus::Failed(_) => stats.failed_tasks += 1,
             TaskStatus::Timeout => stats.timeout_tasks += 1,
             TaskStatus::Cancelled => stats.cancelled_tasks += 1,
-            _ => {}
+            _ => {},
         }
         stats.current_processing_tasks -= 1;
     }
@@ -270,7 +305,13 @@ where
         processor: P,
     ) -> Self {
         let task_queue = Arc::new(TaskQueue::new(&config));
-        Self { task_queue, config, processor: Arc::new(processor), shutdown_tx: None, handle: None }
+        Self {
+            task_queue,
+            config,
+            processor: Arc::new(processor),
+            shutdown_tx: None,
+            handle: None,
+        }
     }
 
     /// 提交新任务到处理器
@@ -389,14 +430,19 @@ where
     /// 等待所有正在处理的任务完成后再关闭
     pub async fn shutdown(&mut self) -> Result<(), ProcessorError> {
         if let Some(shutdown_tx) = self.shutdown_tx.take() {
-            shutdown_tx
-                .send(())
-                .map_err(|_| ProcessorError::InternalError("Failed to send shutdown signal".to_string()))?;
+            shutdown_tx.send(()).map_err(|_| {
+                ProcessorError::InternalError(
+                    "Failed to send shutdown signal".to_string(),
+                )
+            })?;
 
             if let Some(handle) = self.handle.take() {
-                handle
-                    .await
-                    .map_err(|e| ProcessorError::InternalError(format!("Failed to join processor task: {}", e)))?;
+                handle.await.map_err(|e| {
+                    ProcessorError::InternalError(format!(
+                        "Failed to join processor task: {}",
+                        e
+                    ))
+                })?;
             }
         }
         Ok(())

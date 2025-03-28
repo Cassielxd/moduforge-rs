@@ -30,11 +30,18 @@ pub struct Editor {
 impl Editor {
     /// 创建新的编辑器实例
     /// options: 编辑器配置选项
-    pub async fn create(options: EditorOptions) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn create(
+        options: EditorOptions
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         debug!("正在创建新的编辑器实例");
-        let extension_manager = ExtensionManager::new(&options.get_extensions());
+        let extension_manager =
+            ExtensionManager::new(&options.get_extensions());
         debug!("已初始化扩展管理器");
-        let doc = create_doc::create_doc(&extension_manager.get_schema(),&options.get_content()).await;
+        let doc = create_doc::create_doc(
+            &extension_manager.get_schema(),
+            &options.get_content(),
+        )
+        .await;
         let event_bus = EventBus::new();
         debug!("已创建文档和事件总线");
         let state: State = State::create(StateConfig {
@@ -50,7 +57,10 @@ impl Editor {
             event_bus,
             state: state.clone(),
             extension_manager,
-            history_manager: HistoryManager::new(state, options.get_history_limit()),
+            history_manager: HistoryManager::new(
+                state,
+                options.get_history_limit(),
+            ),
             options,
         };
 
@@ -62,9 +72,14 @@ impl Editor {
 
     /// 初始化编辑器，设置事件处理器并启动事件循环
     async fn init(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        self.base.event_bus.add_event_handlers(self.base.options.get_event_handlers()).await?;
+        self.base
+            .event_bus
+            .add_event_handlers(self.base.options.get_event_handlers())
+            .await?;
         self.base.event_bus.start_event_loop();
-        self.base.event_bus.broadcast_blocking(Event::Create(self.base.state.clone()))?;
+        self.base
+            .event_bus
+            .broadcast_blocking(Event::Create(self.base.state.clone()))?;
         Ok(())
     }
 }
@@ -109,12 +124,17 @@ impl EditorCore for Editor {
         &mut self,
         transaction: Transaction,
     ) -> Result<(), Self::Error> {
-        let (_id, mut rx) = self.flow_engine.submit_transaction((self.base.state.clone(), transaction)).await?;
+        let (_id, mut rx) = self
+            .flow_engine
+            .submit_transaction((self.base.state.clone(), transaction))
+            .await?;
 
         let Some(task_result) = rx.recv().await else {
             return Ok(());
         };
-        let Some(ProcessorResult { result: Some(mut result), .. }) = task_result.output else {
+        let Some(ProcessorResult { result: Some(mut result), .. }) =
+            task_result.output
+        else {
             return Ok(());
         };
 
@@ -123,7 +143,13 @@ impl EditorCore for Editor {
         if let Some(tr) = result.transactions.pop() {
             if tr.doc_changed() {
                 self.base.history_manager.insert(self.base.state.clone());
-                self.base.event_bus.broadcast(Event::TrApply(Arc::new(tr), self.base.state.clone())).await?;
+                self.base
+                    .event_bus
+                    .broadcast(Event::TrApply(
+                        Arc::new(tr),
+                        self.base.state.clone(),
+                    ))
+                    .await?;
             }
         }
         Ok(())
@@ -147,7 +173,13 @@ impl EditorCore for Editor {
         &mut self,
         plugin_key: String,
     ) -> Result<(), Self::Error> {
-        let ps = self.get_state().plugins().iter().filter(|p| p.key != plugin_key).cloned().collect();
+        let ps = self
+            .get_state()
+            .plugins()
+            .iter()
+            .filter(|p| p.key != plugin_key)
+            .cloned()
+            .collect();
         let state = self
             .get_state()
             .reconfigure(StateConfig {

@@ -1,6 +1,6 @@
 edition="2021"
 # 最大行宽
-max_width = 120
+max_width = 80
 # 硬性限制行宽
 hard_tabs = false
 # 缩进宽度
@@ -15,4 +15,4 @@ force_explicit_abi=false
 # 将多个 Derive 宏合并为同一行
 merge_derives = true
 reorder_imports = false
-fn_call_width=80
+

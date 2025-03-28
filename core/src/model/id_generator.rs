@@ -30,9 +30,12 @@ impl IdGenerator {
             data_center_id: 0,
         };
 
-        let data_center_id_shift = options.worker_id_bits + options.sequence_bits;
+        let data_center_id_shift =
+            options.worker_id_bits + options.sequence_bits;
         let worker_id_shift = options.sequence_bits;
-        let timestamp_left_shift = options.worker_id_bits + options.sequence_bits + options.data_center_id_bits;
+        let timestamp_left_shift = options.worker_id_bits
+            + options.sequence_bits
+            + options.data_center_id_bits;
         IdGenerator {
             data_center_id_shift,
             worker_id_shift,
@@ -94,14 +97,17 @@ impl IdGenerator {
         timestamp: i64,
     ) -> String {
         let mut id = (timestamp as u128) << self.timestamp_left_shift;
-        id |= (self.options.data_center_id as u128) << self.data_center_id_shift;
+        id |=
+            (self.options.data_center_id as u128) << self.data_center_id_shift;
         id |= (self.options.worker_id as u128) << self.worker_id_shift;
         id |= self.sequence as u128;
         id.to_string()
     }
 
     fn get_timestamp(&self) -> i64 {
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards");
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards");
         now.as_millis() as i64 - self.options.start_time
     }
 

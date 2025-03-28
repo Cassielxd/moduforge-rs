@@ -52,14 +52,21 @@ impl ContentMatch {
         dfa(arr)
     }
     pub fn empty() -> Self {
-        ContentMatch { next: Vec::new(), wrap_cache: Vec::new(), valid_end: true }
+        ContentMatch {
+            next: Vec::new(),
+            wrap_cache: Vec::new(),
+            valid_end: true,
+        }
     }
 
     pub fn match_type(
         &self,
         node_type: &NodeType,
     ) -> Option<&ContentMatch> {
-        self.next.iter().find(|edge| &edge.node_type == node_type).map(|edge| &edge.next)
+        self.next
+            .iter()
+            .find(|edge| &edge.node_type == node_type)
+            .map(|edge| &edge.next)
     }
 
     pub fn match_fragment(
@@ -70,7 +77,9 @@ impl ContentMatch {
         let mut current: &ContentMatch = self;
 
         for content in frag.iter() {
-            if let Some(next) = current.match_type(schema.nodes.get(&content.r#type).unwrap()) {
+            if let Some(next) =
+                current.match_type(schema.nodes.get(&content.r#type).unwrap())
+            {
                 current = next;
             }
         }
@@ -117,10 +126,14 @@ impl ContentMatch {
 
             // 然后尝试按顺序匹配每个边
             for edge in &match_.next {
-                if !edge.node_type.has_required_attrs() && !seen.contains(&edge.next) {
+                if !edge.node_type.has_required_attrs()
+                    && !seen.contains(&edge.next)
+                {
                     seen.push(edge.next.clone());
                     types.push(edge.node_type.clone());
-                    if let Some(found) = search(seen, to_end, after, &edge.next, types, schema) {
+                    if let Some(found) =
+                        search(seen, to_end, after, &edge.next, types, schema)
+                    {
                         return Some(found);
                     }
                     types.pop();
@@ -133,7 +146,10 @@ impl ContentMatch {
     }
 
     pub fn default_type(&self) -> Option<&NodeType> {
-        self.next.iter().find(|edge| !edge.node_type.has_required_attrs()).map(|edge| &edge.node_type)
+        self.next
+            .iter()
+            .find(|edge| !edge.node_type.has_required_attrs())
+            .map(|edge| &edge.node_type)
     }
 
     pub fn compatible(
@@ -158,7 +174,11 @@ impl ContentMatch {
         &self,
         n: usize,
     ) -> Result<&MatchEdge, String> {
-        if n >= self.next.len() { Err(format!("{} 超出了 {}", n, self.next.len())) } else { Ok(&self.next[n]) }
+        if n >= self.next.len() {
+            Err(format!("{} 超出了 {}", n, self.next.len()))
+        } else {
+            Ok(&self.next[n])
+        }
     }
 }
 impl fmt::Display for ContentMatch {
@@ -184,7 +204,8 @@ impl fmt::Display for ContentMatch {
             .iter()
             .enumerate()
             .map(|(i, m)| {
-                let mut out = format!("{} ", if m.valid_end { i + 1 } else { i });
+                let mut out =
+                    format!("{} ", if m.valid_end { i + 1 } else { i });
                 for (j, edge) in m.next.iter().enumerate() {
                     if j > 0 {
                         out.push_str(", ");
@@ -377,10 +398,16 @@ fn parse_expr_atom(stream: &mut TokenStream) -> Expr {
         expr
     } else if let Some(next) = stream.next() {
         if next.chars().all(|c| c.is_alphanumeric()) {
-            let exprs: Vec<Expr> =
-                resolve_name(stream, next).into_iter().map(|type_| Expr::Name { value: type_ }).collect();
+            let exprs: Vec<Expr> = resolve_name(stream, next)
+                .into_iter()
+                .map(|type_| Expr::Name { value: type_ })
+                .collect();
             stream.pos += 1;
-            if exprs.len() == 1 { exprs.into_iter().next().unwrap() } else { Expr::Choice { exprs } }
+            if exprs.len() == 1 {
+                exprs.into_iter().next().unwrap()
+            } else {
+                Expr::Choice { exprs }
+            }
         } else {
             stream.err(&format!("Unexpected token '{}'", next));
         }
@@ -426,15 +453,26 @@ fn dfa(nfa: Vec<Vec<Rc<RefCell<Edge>>>>) -> ContentMatch {
                 }
             }
         }
-        let mut state =
-            ContentMatch { next: Vec::new(), wrap_cache: vec![], valid_end: states.contains(&(nfa.len() - 1)) };
+        let mut state = ContentMatch {
+            next: Vec::new(),
+            wrap_cache: vec![],
+            valid_end: states.contains(&(nfa.len() - 1)),
+        };
 
-        let state_key = states.iter().map(|&x| x.to_string()).collect::<Vec<_>>().join(",");
+        let state_key =
+            states.iter().map(|&x| x.to_string()).collect::<Vec<_>>().join(",");
         labeled.insert(state_key.clone(), state.clone());
 
         for (term, states) in out {
-            let states_key = states.iter().map(|&x| x.to_string()).collect::<Vec<_>>().join(",");
-            let next_state = labeled.get(&states_key).cloned().unwrap_or_else(|| explore(states, nfa, labeled));
+            let states_key = states
+                .iter()
+                .map(|&x| x.to_string())
+                .collect::<Vec<_>>()
+                .join(",");
+            let next_state = labeled
+                .get(&states_key)
+                .cloned()
+                .unwrap_or_else(|| explore(states, nfa, labeled));
             labeled.insert(states_key, next_state.clone());
             state.next.push(MatchEdge { node_type: term, next: next_state });
         }
@@ -496,7 +534,8 @@ fn edge(
     term: Option<NodeType>,
     nfa: &mut [Vec<Rc<RefCell<Edge>>>],
 ) -> Rc<RefCell<Edge>> {
-    let edge = Rc::new(RefCell::new(Edge { term, to: Option::from(to.unwrap_or(0)) }));
+    let edge =
+        Rc::new(RefCell::new(Edge { term, to: Option::from(to.unwrap_or(0)) }));
     nfa[from].push(edge.clone());
     edge.clone()
 }
@@ -514,19 +553,18 @@ fn compile(
     nfa: &mut Vec<Vec<Rc<RefCell<Edge>>>>,
 ) -> Vec<Rc<RefCell<Edge>>> {
     match expr {
-        Expr::Choice { exprs } => exprs.into_iter().flat_map(|expr| compile(expr, from, nfa)).collect(),
+        Expr::Choice { exprs } => exprs
+            .into_iter()
+            .flat_map(|expr| compile(expr, from, nfa))
+            .collect(),
         Expr::Seq { exprs } => {
             let mut cur = from;
             let mut last_edges = Vec::new();
             let exprs_len = exprs.len();
-            
+
             for (i, expr) in exprs.into_iter().enumerate() {
-                let next = if i == exprs_len - 1 {
-                    cur
-                } else {
-                    node(nfa)
-                };
-                
+                let next = if i == exprs_len - 1 { cur } else { node(nfa) };
+
                 let mut edges = compile(expr, cur, nfa);
                 if i < exprs_len - 1 {
                     connect(&mut edges, next);
@@ -535,7 +573,7 @@ fn compile(
                     last_edges = edges;
                 }
             }
-            
+
             if last_edges.is_empty() {
                 vec![edge(cur, None, None, nfa)]
             } else {

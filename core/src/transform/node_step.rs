@@ -100,7 +100,12 @@ impl Step for MoveNodeStep {
     ) -> Result<StepResult, TransformError> {
         let _ = schema;
 
-        match dart.move_node(&self.source_parent_id, &self.target_parent_id, &self.node_id, self.position) {
+        match dart.move_node(
+            &self.source_parent_id,
+            &self.target_parent_id,
+            &self.node_id,
+            self.position,
+        ) {
             Ok(()) => Ok(dart.commit()),
             Err(err) => Err(TransformError::new(err.to_string())),
         }
@@ -133,7 +138,9 @@ impl Step for ReplaceNodeStep {
     ) -> Result<StepResult, TransformError> {
         let _ = schema;
 
-        match dart.replace_node(self.node_id.clone(), Arc::new(self.node.clone())) {
+        match dart
+            .replace_node(self.node_id.clone(), Arc::new(self.node.clone()))
+        {
             Ok(()) => Ok(dart.commit()),
             Err(err) => Err(TransformError::new(err.to_string())),
         }

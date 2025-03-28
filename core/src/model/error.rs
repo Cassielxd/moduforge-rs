@@ -24,11 +24,15 @@ pub enum PoolError {
     OrphanNode(NodeId),
 
     /// Error occurs when attempting to establish an invalid parent-child relationship.
-    #[error("无效的父子关系: 子节点 {child} 不是父节点 {alleged_parent} 的子节点")]
+    #[error(
+        "无效的父子关系: 子节点 {child} 不是父节点 {alleged_parent} 的子节点"
+    )]
     InvalidParenting { child: NodeId, alleged_parent: NodeId },
 
     /// Error occurs when attempting to replace a node with a different ID.
-    #[error("节点ID不匹配: 新节点ID({nodeid})与要替换的节点ID({new_node_id})不一致")]
+    #[error(
+        "节点ID不匹配: 新节点ID({nodeid})与要替换的节点ID({new_node_id})不一致"
+    )]
     InvalidNodeId { nodeid: NodeId, new_node_id: NodeId },
 
     /// Error occurs when attempting to perform operations on an empty pool.

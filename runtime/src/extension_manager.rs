@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
-use moduforge_core::{ model::schema::Schema, state::plugin::Plugin};
+use moduforge_core::{model::schema::Schema, state::plugin::Plugin};
 
-use crate::{helpers::get_schema_by_resolved_extensions::get_schema_by_resolved_extensions, types::Extensions};
+use crate::{
+    helpers::get_schema_by_resolved_extensions::get_schema_by_resolved_extensions,
+    types::Extensions,
+};
 /// 扩展管理器
 pub struct ExtensionManager {
     plugins: Vec<Arc<Plugin>>,
@@ -10,9 +13,11 @@ pub struct ExtensionManager {
 }
 impl ExtensionManager {
     pub fn new(extensions: &Vec<Extensions>) -> Self {
-        let schema = Arc::new(get_schema_by_resolved_extensions(extensions).unwrap_or_else(|e| {
-            panic!("schema 构建失败: {}", e);
-        }));
+        let schema = Arc::new(
+            get_schema_by_resolved_extensions(extensions).unwrap_or_else(|e| {
+                panic!("schema 构建失败: {}", e);
+            }),
+        );
         let mut plugins = vec![];
         for extension in extensions {
             if let Extensions::E(extension) = extension {
@@ -21,7 +26,7 @@ impl ExtensionManager {
                 }
             }
         }
-        
+
         ExtensionManager { schema, plugins }
     }
 

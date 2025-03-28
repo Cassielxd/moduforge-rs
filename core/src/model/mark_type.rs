@@ -16,11 +16,16 @@ pub struct MarkType {
 }
 
 impl MarkType {
-    pub(crate) fn compile(marks: HashMap<String, MarkSpec>) -> HashMap<String, MarkType> {
+    pub(crate) fn compile(
+        marks: HashMap<String, MarkSpec>
+    ) -> HashMap<String, MarkType> {
         let mut result = HashMap::new();
 
         for (rank, (name, spec)) in marks.into_iter().enumerate() {
-            result.insert(name.clone(), MarkType::new(name.clone(), rank, None, spec.clone()));
+            result.insert(
+                name.clone(),
+                MarkType::new(name.clone(), rank, None, spec.clone()),
+            );
         }
 
         result
@@ -33,7 +38,12 @@ impl MarkType {
         spec: MarkSpec,
     ) -> Self {
         let attrs = spec.attrs.as_ref().map_or_else(HashMap::new, |attrs| {
-            attrs.iter().map(|(name, spec)| (name.clone(), Attribute::new(spec.clone()))).collect()
+            attrs
+                .iter()
+                .map(|(name, spec)| {
+                    (name.clone(), Attribute::new(spec.clone()))
+                })
+                .collect()
         });
 
         MarkType { name, rank, schema, spec, attrs, excluded: None }

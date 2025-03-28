@@ -31,10 +31,15 @@ impl Editor {
     /// options: 编辑器配置选项
     pub async fn create(options: EditorOptions) -> EditorResult<Self> {
         info!("正在创建新的编辑器实例");
-        let extension_manager = ExtensionManager::new(&options.get_extensions());
+        let extension_manager =
+            ExtensionManager::new(&options.get_extensions());
         debug!("已初始化扩展管理器");
 
-        let doc = create_doc::create_doc(&extension_manager.get_schema(),&options.get_content()).await;
+        let doc = create_doc::create_doc(
+            &extension_manager.get_schema(),
+            &options.get_content(),
+        )
+        .await;
         let event_bus = EventBus::new();
         debug!("已创建文档和事件总线");
 
@@ -57,7 +62,10 @@ impl Editor {
             event_bus,
             state: state.clone(),
             extension_manager,
-            history_manager: HistoryManager::new(state, options.get_history_limit()),
+            history_manager: HistoryManager::new(
+                state,
+                options.get_history_limit(),
+            ),
             options,
         };
 
@@ -70,14 +78,23 @@ impl Editor {
     /// 初始化编辑器，设置事件处理器并启动事件循环
     async fn init(&mut self) -> EditorResult<()> {
         debug!("正在初始化编辑器");
-        self.base.event_bus.add_event_handlers(self.base.options.get_event_handlers()).await?;
+        self.base
+            .event_bus
+            .add_event_handlers(self.base.options.get_event_handlers())
+            .await?;
         self.base.event_bus.start_event_loop();
         debug!("事件总线已启动");
 
-        self.base.event_bus.broadcast_blocking(Event::Create(self.base.state.clone())).map_err(|e| {
-            error!("广播创建事件失败: {}", e);
-            error_utils::event_error(format!("Failed to broadcast create event: {}", e))
-        })?;
+        self.base
+            .event_bus
+            .broadcast_blocking(Event::Create(self.base.state.clone()))
+            .map_err(|e| {
+                error!("广播创建事件失败: {}", e);
+                error_utils::event_error(format!(
+                    "Failed to broadcast create event: {}",
+                    e
+                ))
+            })?;
         debug!("已广播创建事件");
         Ok(())
     }
@@ -125,12 +142,13 @@ impl EditorCore for Editor {
         &mut self,
         transaction: Transaction,
     ) -> EditorResult<()> {
-        let TransactionResult { state, mut transactions } = self
-            .base
-            .state
-            .apply(transaction)
-            .await
-            .map_err(|e| error_utils::state_error(format!("Failed to apply transaction: {}", e)))?;
+        let TransactionResult { state, mut transactions } =
+            self.base.state.apply(transaction).await.map_err(|e| {
+                error_utils::state_error(format!(
+                    "Failed to apply transaction: {}",
+                    e
+                ))
+            })?;
 
         if let Some(tr) = transactions.pop() {
             if tr.doc_changed() {
@@ -139,9 +157,17 @@ impl EditorCore for Editor {
 
                 self.base
                     .event_bus
-                    .broadcast(Event::TrApply(Arc::new(tr), self.base.state.clone()))
+                    .broadcast(Event::TrApply(
+                        Arc::new(tr),
+                        self.base.state.clone(),
+                    ))
                     .await
-                    .map_err(|e| error_utils::event_error(format!("Failed to broadcast transaction event: {}", e)))?;
+                    .map_err(|e| {
+                        error_utils::event_error(format!(
+                            "Failed to broadcast transaction event: {}",
+                            e
+                        ))
+                    })?;
             }
         }
 
@@ -161,7 +187,10 @@ impl EditorCore for Editor {
             .await
             .map_err(|e| {
                 error!("重新配置状态失败: {}", e);
-                error_utils::state_error(format!("Failed to reconfigure state: {}", e))
+                error_utils::state_error(format!(
+                    "Failed to reconfigure state: {}",
+                    e
+                ))
             })?;
         self.base.state = Arc::new(state);
         info!("插件注册成功");
@@ -173,7 +202,13 @@ impl EditorCore for Editor {
         plugin_key: String,
     ) -> EditorResult<()> {
         info!("正在注销插件: {}", plugin_key);
-        let ps = self.get_state().plugins().iter().filter(|p| p.key != plugin_key).cloned().collect();
+        let ps = self
+            .get_state()
+            .plugins()
+            .iter()
+            .filter(|p| p.key != plugin_key)
+            .cloned()
+            .collect();
         let state = self
             .get_state()
             .reconfigure(StateConfig {
@@ -185,7 +220,10 @@ impl EditorCore for Editor {
             .await
             .map_err(|e| {
                 error!("重新配置状态失败: {}", e);
-                error_utils::state_error(format!("Failed to reconfigure state: {}", e))
+                error_utils::state_error(format!(
+                    "Failed to reconfigure state: {}",
+                    e
+                ))
             })?;
         self.base.state = Arc::new(state);
         info!("插件注销成功");

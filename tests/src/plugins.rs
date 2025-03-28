@@ -29,7 +29,8 @@ async fn p1_init(
     _config: &StateConfig,
     _instance: Option<&State>,
 ) -> PluginState {
-    let map: HashMap<String, String> = HashMap::from([("k".to_string(), "v".to_string())]);
+    let map: HashMap<String, String> =
+        HashMap::from([("k".to_string(), "v".to_string())]);
     Arc::new(map)
 }
 

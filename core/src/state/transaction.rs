@@ -101,7 +101,10 @@ impl Transaction {
             Ok(_) => {
                 info!("事务执行成功，正在提交更改");
                 let result = self.draft.commit();
-                self.add_step(Arc::new(PatchStep { patches: result.patches.clone() }), result);
+                self.add_step(
+                    Arc::new(PatchStep { patches: result.patches.clone() }),
+                    result,
+                );
             },
             Err(e) => {
                 error!("事务执行失败: {}", e);
@@ -113,7 +116,6 @@ impl Transaction {
     /// state: 当前状态对象
     /// 返回: Transaction 实例
     pub fn new(state: &State) -> Self {
-
         let node = state.doc();
         Transaction {
             meta: im::HashMap::new(),

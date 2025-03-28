@@ -38,22 +38,28 @@ impl NodeType {
     ///
     /// # 返回值
     /// 返回[HashMap]<String, [NodeType]> 类型节点集合
-    pub fn compile(nodes: HashMap<String, NodeSpec>) -> HashMap<String, NodeType> {
+    pub fn compile(
+        nodes: HashMap<String, NodeSpec>
+    ) -> HashMap<String, NodeType> {
         let mut result = HashMap::new();
-        
+
         // First create all node types without content_match
         for (name, spec) in &nodes {
-            result.insert(name.clone(), NodeType::new(name.clone(), spec.clone()));
+            result.insert(
+                name.clone(),
+                NodeType::new(name.clone(), spec.clone()),
+            );
         }
-        
+
         // Then set up content_match for each node type
         let result_clone = result.clone();
         for (_, node_type) in result.iter_mut() {
             if let Some(content) = &node_type.spec.content {
-                node_type.content_match = Some(ContentMatch::parse(content.clone(), &result_clone));
+                node_type.content_match =
+                    Some(ContentMatch::parse(content.clone(), &result_clone));
             }
         }
-        
+
         result
     }
     /// 创建新的节点类型实例
@@ -69,16 +75,23 @@ impl NodeType {
         spec: NodeSpec,
     ) -> Self {
         let attrs = spec.attrs.as_ref().map_or_else(HashMap::new, |attrs| {
-            attrs.iter().map(|(name, spec)| (name.clone(), Attribute::new(spec.clone()))).collect()
+            attrs
+                .iter()
+                .map(|(name, spec)| {
+                    (name.clone(), Attribute::new(spec.clone()))
+                })
+                .collect()
         });
 
         let default_attrs = attrs
             .iter()
-            .filter_map(
-                |(name, attr)| {
-                    if attr.has_default { Some((name.clone(), attr.default.clone().unwrap())) } else { None }
-                },
-            )
+            .filter_map(|(name, attr)| {
+                if attr.has_default {
+                    Some((name.clone(), attr.default.clone().unwrap()))
+                } else {
+                    None
+                }
+            })
             .collect();
 
         NodeType {
@@ -106,7 +119,8 @@ impl NodeType {
         schema: &Schema,
     ) -> bool {
         if let Some(content_match) = &self.content_match {
-            if let Some(result) = content_match.match_fragment(content, schema) {
+            if let Some(result) = content_match.match_fragment(content, schema)
+            {
                 if !result.valid_end {
                     return false;
                 }
@@ -163,16 +177,19 @@ impl NodeType {
     ) -> Vec<Node> {
         let id: String = id.unwrap_or_else(IdGenerator::get_id);
         let attrs = self.compute_attrs(attrs);
-        
+
         // 首先创建需要填充的内容
         let mut filled_nodes = Vec::new();
-        let mut content_ids =Vec::new();
+        let mut content_ids = Vec::new();
         if let Some(content_match) = &self.content_match {
-            if let Some(matched) = content_match.match_fragment(&content, schema) {
+            if let Some(matched) =
+                content_match.match_fragment(&content, schema)
+            {
                 if let Some(filled) = matched.fill(&content, true, schema) {
                     // 对每个填充的节点，递归创建其子节点
                     for node in filled {
-                        if let Some(node_type) = schema.nodes.get(&node.r#type) {
+                        if let Some(node_type) = schema.nodes.get(&node.r#type)
+                        {
                             content_ids.push(node.id.clone());
                             // 递归创建节点及其子节点
                             let mut child_nodes = node_type.create_and_fill(
@@ -188,10 +205,16 @@ impl NodeType {
                 }
             }
         }
-        
-        let mut nodes = vec![Node::new(&id, self.name.clone(), attrs, content_ids, Mark::set_from(marks))];
+
+        let mut nodes = vec![Node::new(
+            &id,
+            self.name.clone(),
+            attrs,
+            content_ids,
+            Mark::set_from(marks),
+        )];
         nodes.append(&mut filled_nodes);
-        
+
         nodes
     }
     /// 创建节点
@@ -204,7 +227,8 @@ impl NodeType {
     ) -> Node {
         // 实现...
         let id: String = id.unwrap_or_else(|| {
-            let mut id_generator: std::sync::MutexGuard<'_, IdGenerator> = IdGenerator::get_instance().lock().unwrap();
+            let mut id_generator: std::sync::MutexGuard<'_, IdGenerator> =
+                IdGenerator::get_instance().lock().unwrap();
             id_generator.get_next_id()
         });
         Node::new(
