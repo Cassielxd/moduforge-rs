@@ -16,7 +16,7 @@ use super::{
     transaction::Transaction,
 };
 
-static VERSION: AtomicU64 = AtomicU64::new(0);
+static VERSION: AtomicU64 = AtomicU64::new(1);
 pub fn get_state_version() -> u64 {
     //生成 全局自增的版本号，用于兼容性
     VERSION.fetch_add(1, Ordering::SeqCst)
