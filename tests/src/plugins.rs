@@ -11,11 +11,11 @@ use moduforge_core::{
 };
 use moduforge_runtime::{impl_plugin, impl_state_field};
 async fn p1_append(
-    tr: &Transaction,
+    trs: &[Transaction],
     _: &State,
     _: &State,
 ) -> Option<Transaction> {
-    let mut tr = tr.clone();
+    let mut tr = trs.last().unwrap().clone();
     tr.add_node(
         tr.doc().inner.root_id.to_string(),
         tr.schema.nodes.get("DW").unwrap().create(None, None, vec![], None),
@@ -47,11 +47,11 @@ async fn p1_apply(
 impl_state_field!(P1State, p1_init, p1_apply);
 
 async fn p2_append(
-    tr: &Transaction,
+    trs: &[Transaction],
     _: &State,
     _: &State,
 ) -> Option<Transaction> {
-    let mut tr = tr.clone();
+    let mut tr = trs.last().unwrap().clone();
     let size = tr.doc.size();
     debug!("P2Plugin开始节点个数：{}", tr.doc.size());
     if size < 10 {

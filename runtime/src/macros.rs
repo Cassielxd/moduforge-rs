@@ -77,11 +77,11 @@ macro_rules! impl_plugin {
         {
             async fn append_transaction(
                 &self,
-                tr: &Transaction,
+                trs: &[Transaction],
                 old_state: &State,
                 new_state: &State,
             ) -> Option<Transaction> {
-                $append_fn(tr, old_state, new_state).await
+                $append_fn(trs, old_state, new_state).await
             }
 
             async fn filter_transaction(

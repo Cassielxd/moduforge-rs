@@ -150,7 +150,7 @@ impl EditorCore for Editor {
                 ))
             })?;
 
-        if let Some(tr) = transactions.pop() {
+        if let Some(tr) = transactions.last() {
             if tr.doc_changed() {
                 self.base.state = Arc::new(state);
                 self.base.history_manager.insert(self.base.state.clone());
@@ -158,7 +158,7 @@ impl EditorCore for Editor {
                 self.base
                     .event_bus
                     .broadcast(Event::TrApply(
-                        Arc::new(tr),
+                        Arc::new(transactions),
                         self.base.state.clone(),
                     ))
                     .await

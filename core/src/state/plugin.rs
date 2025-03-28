@@ -12,7 +12,7 @@ pub trait PluginTrait: Send + Sync + Debug {
     /// 允许插件在事务执行前修改或扩展事务内容
     async fn append_transaction(
         &self,
-        _: &Transaction,
+        _: &[Transaction],
         _: &State,
         _: &State,
     ) -> Option<Transaction> {
@@ -108,7 +108,7 @@ impl PluginSpec {
     /// 执行事务追加
     async fn append_transaction<'a>(
         &self,
-        trs: &Transaction,
+        trs: &'a [Transaction],
         old_state: &State,
         new_state: &State,
     ) -> Option<Transaction> {
@@ -208,7 +208,7 @@ impl Plugin {
     /// 应用事务追加逻辑
     pub async fn apply_append_transaction(
         &self,
-        trs: &Transaction,
+        trs: &[Transaction],
         old_state: &State,
         new_state: &State,
     ) -> Option<Transaction> {

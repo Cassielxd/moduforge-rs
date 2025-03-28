@@ -249,7 +249,7 @@ impl State {
                 if n < trs.len() {
                     if let Some(tr) = plugin
                         .apply_append_transaction(
-                            trs.get(n).unwrap(),
+                            &trs[n..],
                             old_state,
                             &new_state,
                         )
@@ -257,7 +257,7 @@ impl State {
                     {
                         if new_state.filter_transaction(&tr, Some(i)).await? {
                             if seen.is_none() {
-                                let mut s = Vec::new();
+                                let mut s: Vec<SeenState> = Vec::new();
                                 for j in 0..self.config.plugins.len() {
                                     s.push(if j < i {
                                         SeenState {
