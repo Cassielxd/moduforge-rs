@@ -1,4 +1,5 @@
 use serde::Serialize;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -51,14 +52,14 @@ impl MarkType {
 
     fn create(
         &self,
-        attrs: Option<&HashMap<String, String>>,
+        attrs: Option<&HashMap<String, Value>>,
     ) -> Mark {
         Mark { r#type: self.name.clone(), attrs: self.compute_attrs(attrs) }
     }
     fn compute_attrs(
         &self,
-        attrs: Option<&HashMap<String, String>>,
-    ) -> ImHashMap<String, String> {
+        attrs: Option<&HashMap<String, Value>>,
+    ) -> ImHashMap<String, Value> {
         match attrs {
             Some(attr) => compute_attrs(&self.attrs, Some(attr)),
             None => compute_attrs(&self.attrs, None),

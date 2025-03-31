@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use super::{mark::Mark, node::Node, types::NodeId};
 use std::{collections::HashMap, sync::Arc};
@@ -14,9 +15,9 @@ pub enum Patch {
         /// 目标节点的唯一标识符
         id: NodeId,
         /// 更新前的属性映射
-        old: HashMap<String, String>,
+        old: HashMap<String, Value>,
         /// 更新后的属性映射
-        new: HashMap<String, String>,
+        new: HashMap<String, Value>,
     },
     /// 添加新节点
     AddNode {

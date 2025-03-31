@@ -4,6 +4,7 @@ use super::mark_type::{MarkSpec, MarkType};
 use super::node_type::{NodeSpec, NodeType};
 use im::HashMap as ImHashMap;
 use serde::Serialize;
+use serde_json::Value;
 use std::any::Any;
 use std::collections::HashMap;
 use std::error::Error;
@@ -13,7 +14,7 @@ use std::sync::{Arc, Mutex};
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Serialize)]
 pub struct Attribute {
     pub has_default: bool,
-    pub default: Option<String>,
+    pub default: Option<Value>,
 }
 
 impl Attribute {
@@ -157,7 +158,7 @@ pub struct SchemaSpec {
 /// 如果任一属性没有默认值，返回 None
 pub fn default_attrs(
     attrs: &HashMap<String, Attribute>
-) -> Option<HashMap<String, String>> {
+) -> Option<HashMap<String, Value>> {
     let mut defaults = HashMap::new();
 
     for (attr_name, attr) in attrs {
@@ -174,7 +175,7 @@ pub fn default_attrs(
 #[derive(Clone, PartialEq, Debug, Eq, Hash, Serialize)]
 pub struct AttributeSpec {
     /// 属性的默认值
-    pub default: Option<String>,
+    pub default: Option<Value>,
 }
 /// 收集标记类型
 /// 根据给定的标记名称列表，收集对应的标记类型
@@ -211,7 +212,7 @@ fn gather_marks<'a>(
 /// 根据属性定义和提供的值计算最终的属性值
 pub fn compute_attrs(
     attrs: &HashMap<String, Attribute>,
-    value: Option<&HashMap<String, String>>,
+    value: Option<&HashMap<String, Value>>,
 ) -> Attrs {
     let mut built = ImHashMap::new();
 
@@ -226,7 +227,7 @@ pub fn compute_attrs(
                         panic!("没有为属性提供默认值 {}", name)
                     })
                 } else {
-                    "".to_string()
+                    Value::Null
                 }
             },
         };

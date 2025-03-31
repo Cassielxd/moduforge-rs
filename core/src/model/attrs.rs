@@ -1,3 +1,3 @@
 use im::HashMap;
-
-pub type Attrs = HashMap<String, String>;
+use serde_json::Value;
+pub type Attrs = HashMap<String, Value>;

@@ -2,6 +2,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use serde_json::Value;
 use tracing::{info, warn, error};
 
 use super::state::State;
@@ -141,7 +142,7 @@ impl Transaction {
     pub fn set_node_attribute(
         &mut self,
         id: String,
-        values: im::HashMap<String, String>,
+        values: im::HashMap<String, Value>,
     ) {
         let _ = self.step(Arc::new(AttrStep::new(id, values)));
     }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use moduforge_core::model::{node_type::NodeSpec, schema::AttributeSpec};
-
+use serde_json::Value;
 #[derive(Clone, PartialEq, Debug, Eq, Default)]
 pub struct Node {
     pub name: String,
@@ -59,7 +59,7 @@ impl Node {
     pub fn set_attr(
         &mut self,
         name: &str,
-        default: Option<String>,
+        default: Option<Value>,
     ) -> &mut Self {
         match &mut self.r#type.attrs {
             Some(map) => {

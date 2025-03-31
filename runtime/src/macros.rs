@@ -28,7 +28,7 @@ macro_rules! node {
                 .set_desc($desc)
                 .set_content($content);
             $(
-                node.set_attr($key, Some($value.to_string()));
+                node.set_attr($key, Some($value));
             )*
             node
         }

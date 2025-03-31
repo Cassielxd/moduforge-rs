@@ -3,6 +3,7 @@ use crate::transform::step::StepResult;
 use super::{error::PoolError, mark::Mark, node::Node, patch::Patch, types::NodeId};
 use im::HashMap;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::sync::Arc;
 /// 节点池内部数据结构，实现结构共享和高效克隆
 ///
@@ -308,7 +309,7 @@ impl Draft {
     pub fn update_attr(
         &mut self,
         id: &NodeId,
-        new_values: HashMap<String, String>,
+        new_values: HashMap<String, Value>,
     ) -> Result<(), PoolError> {
         let node =
             self.get_node(id).ok_or(PoolError::NodeNotFound(id.clone()))?;

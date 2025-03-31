@@ -7,6 +7,7 @@ use super::node::Node;
 use super::schema::{Attribute, AttributeSpec, Schema, compute_attrs};
 use super::types::NodeId;
 use im::HashMap as ImHashMap;
+use serde_json::Value;
 use std::collections::HashMap;
 
 /// 用于描述节点类型的行为规则和属性约束，通过[Schema](super::schema::Schema)进行统一管理
@@ -23,7 +24,7 @@ pub struct NodeType {
     /// 节点支持的属性集合（属性名 -> 属性定义）
     pub attrs: HashMap<String, Attribute>,
     /// 节点属性的默认值集合
-    pub default_attrs: HashMap<String, String>,
+    pub default_attrs: HashMap<String, Value>,
     /// 内容匹配规则，定义允许的子节点结构
     pub content_match: Option<ContentMatch>,
     /// 允许附加的Mark类型集合
@@ -170,7 +171,7 @@ impl NodeType {
     pub fn create_and_fill(
         &self,
         id: Option<String>,
-        attrs: Option<&HashMap<String, String>>,
+        attrs: Option<&HashMap<String, Value>>,
         content: Vec<Node>,
         marks: Option<Vec<Mark>>,
         schema: &Schema,
@@ -221,7 +222,7 @@ impl NodeType {
     pub fn create(
         &self,
         id: Option<String>,
-        attrs: Option<&HashMap<String, String>>,
+        attrs: Option<&HashMap<String, Value>>,
         content: Vec<NodeId>,
         marks: Option<Vec<Mark>>,
     ) -> Node {
@@ -241,8 +242,8 @@ impl NodeType {
     }
     fn compute_attrs(
         &self,
-        attrs: Option<&HashMap<String, String>>,
-    ) -> ImHashMap<String, String> {
+        attrs: Option<&HashMap<String, Value>>,
+    ) -> ImHashMap<String, Value> {
         match attrs {
             Some(attr) => compute_attrs(&self.attrs, Some(attr)),
             None => compute_attrs(&self.attrs, Some(&self.default_attrs)),

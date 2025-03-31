@@ -9,15 +9,16 @@ use super::{
 };
 use im::HashMap;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AttrStep {
     id: NodeId,
-    values: HashMap<String, String>,
+    values: HashMap<String, Value>,
 }
 impl AttrStep {
     pub fn new(
         id: String,
-        values: HashMap<String, String>,
+        values: HashMap<String, Value>,
     ) -> Self {
         AttrStep { id, values }
     }

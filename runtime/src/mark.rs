@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use moduforge_core::model::{mark_type::MarkSpec, schema::AttributeSpec};
+use serde_json::Value;
 
 #[derive(Clone, PartialEq, Debug, Eq)]
 pub struct Mark {
@@ -36,7 +37,7 @@ impl Mark {
     pub fn set_attr(
         &mut self,
         name: &str,
-        default: Option<String>,
+        default: Option<Value>,
     ) -> &mut Self {
         match &mut self.r#type.attrs {
             Some(map) => {

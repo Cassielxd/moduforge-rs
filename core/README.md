@@ -1,6 +1,6 @@
 # ModuForge Core
 
-ModuForge Core 是一个基于 Rust 实现的文档编辑器核心库，提供了灵活的文档模型和内容管理系统。
+ModuForge Core 是一个基于 Rust 实现的文档编辑器核心库，提供了灵活的文档模型和状态管理。
 
 ## 核心概念
 
