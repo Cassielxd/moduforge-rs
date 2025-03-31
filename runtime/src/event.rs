@@ -159,6 +159,32 @@ impl EventBus {
     }
 }
 
+impl Drop for EventBus {
+    fn drop(&mut self) {
+        // Create a new runtime to handle async operations during drop
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            // Broadcast Stop event to signal handlers to complete
+            if let Err(e) = self.broadcast_blocking(Event::Stop) {
+                debug!("Failed to broadcast stop event during drop: {}", e);
+            }
+            
+            // Wait for handlers to complete with a timeout
+            let handlers = self.event_handlers.read().await;
+            let mut pending_handles = Vec::new();
+            for handler in handlers.iter() {
+                let handle = handler.handle(&Event::Stop);
+                pending_handles.push(handle);
+            }
+            
+            // Wait up to 5 seconds for all handlers to complete
+            if let Err(e) = timeout(Duration::from_secs(5), join_all(pending_handles)).await {
+                debug!("Timeout waiting for handlers to complete during drop: {}", e);
+            }
+        });
+    }
+}
+
 // 事件处理器特征
 #[async_trait::async_trait]
 pub trait EventHandler: Send + Sync + Debug {

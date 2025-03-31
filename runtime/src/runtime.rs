@@ -153,7 +153,7 @@ impl EditorCore for Editor {
         &mut self,
         transaction: Transaction,
     ) -> EditorResult<()> {
-        let TransactionResult { state, mut transactions } =
+        let TransactionResult { state, transactions } =
             self.base.state.apply(transaction).await.map_err(|e| {
                 error_utils::state_error(format!(
                     "Failed to apply transaction: {}",
