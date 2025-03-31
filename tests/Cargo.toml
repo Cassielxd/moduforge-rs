@@ -12,6 +12,6 @@ serde_json = {workspace=true}
 thiserror= {workspace=true}
 async-trait= {workspace=true}
 tokio= {workspace=true}
-moduforge-core = {version = "0.1.2", path = "../core"}
+moduforge-core = {version = "0.2.0", path = "../core"}
 
 moduforge-runtime = {version = "0.1.2", path = "../runtime"}
