@@ -1,11 +1,12 @@
-use std::{fmt::Debug, sync::Arc};
+use std::{fmt::Debug, sync::Arc, time::Duration};
 
 use async_channel::{Receiver, Sender};
+use futures::future::join_all;
 use moduforge_core::{
     debug,
     state::{state::State, transaction::Transaction},
 };
-use tokio::{signal, sync::RwLock};
+use tokio::{signal, sync::RwLock, time::timeout};
 
 use crate::error::{EditorResult, error_utils};
 
@@ -14,6 +15,7 @@ use crate::error::{EditorResult, error_utils};
 pub enum Event {
     Create(Arc<State>),
     TrApply(Arc<Vec<Transaction>>, Arc<State>), // 事务应用后 + 是否成功
+    Destroy,                                     // 销毁事件
     Stop,                                       // 停止后需要重启
 }
 /// 事件总线
@@ -61,19 +63,44 @@ impl EventBus {
         tokio::spawn(async move {
             let handlers_clone = {
                 let handlers = event_handlers.read().await;
-                handlers.clone() // 克隆以避免长时间持有锁
+                handlers.clone()
             };
             loop {
                 tokio::select! {
                     event = rx.recv() => match event {
                         Ok(Event::Stop) => {
-                            debug!("接收到停止事件，正在退出...");
+                            debug!("接收到停止事件，等待所有处理器完成...");
+                            // 等待所有正在进行的处理完成
+                            let mut pending_handles = Vec::new();
+                            for handler in &handlers_clone {
+                                let handle = handler.handle(&Event::Stop);
+                                pending_handles.push(handle);
+                            }
+                            // 设置超时时间为5秒
+                            if let Err(e) = timeout(Duration::from_secs(5), join_all(pending_handles)).await {
+                                debug!("等待处理器完成超时: {}", e);
+                            }
                             break;
                         },
                         Ok(event) => {
+                            // 并发处理所有handler
+                            let mut handles = Vec::new();
                             for handler in &handlers_clone {
-                                if let Err(e) = handler.handle(&event).await {
-                                    debug!("事件处理错误: {}", e);
+                                let handle = handler.handle(&event);
+                                handles.push(handle);
+                            }
+                            
+                            // 设置每个handler的超时时间为3秒
+                            let results = join_all(handles.into_iter().map(|handle| {
+                                timeout(Duration::from_secs(3), handle)
+                            })).await;
+                            
+                            // 处理结果
+                            for result in results {
+                                match result {
+                                    Ok(Ok(())) => continue,
+                                    Ok(Err(e)) => debug!("事件处理错误: {}", e),
+                                    Err(e) => debug!("事件处理超时: {}", e),
                                 }
                             }
                         },

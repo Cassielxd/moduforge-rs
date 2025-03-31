@@ -98,6 +98,17 @@ impl Editor {
         debug!("已广播创建事件");
         Ok(())
     }
+
+    /// 销毁编辑器实例
+    pub async fn destroy(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        debug!("正在销毁编辑器实例");
+        // 广播销毁事件
+        self.base.event_bus.broadcast(Event::Destroy).await?;
+        // 停止事件循环
+        self.base.event_bus.broadcast(Event::Stop).await?;
+        debug!("编辑器实例销毁成功");
+        Ok(())
+    }
 }
 
 #[async_trait]

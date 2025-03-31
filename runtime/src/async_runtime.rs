@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use tokio::runtime::Runtime;
 
 use crate::{
     event::{Event, EventBus},
@@ -64,7 +65,10 @@ impl Editor {
             options,
         };
 
-        let mut runtime = Editor { base, flow_engine: FlowEngine::new()? };
+        let mut runtime = Editor { 
+            base, 
+            flow_engine: FlowEngine::new()?
+        };
         runtime.init().await?;
         debug!("编辑器实例创建成功");
         Ok(runtime)
@@ -82,7 +86,21 @@ impl Editor {
             .broadcast_blocking(Event::Create(self.base.state.clone()))?;
         Ok(())
     }
+
+    /// 销毁编辑器实例
+    pub async fn destroy(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        debug!("正在销毁编辑器实例");
+        // 广播销毁事件
+        self.base.event_bus.broadcast(Event::Destroy).await?;
+        // 停止事件循环
+        self.base.event_bus.broadcast(Event::Stop).await?;
+        debug!("编辑器实例销毁成功");
+        Ok(())
+    }
 }
+
+
+
 #[async_trait]
 impl EditorCore for Editor {
     type Error = Box<dyn std::error::Error>;
@@ -132,7 +150,7 @@ impl EditorCore for Editor {
         let Some(task_result) = rx.recv().await else {
             return Ok(());
         };
-        let Some(ProcessorResult { result: Some(mut result), .. }) =
+        let Some(ProcessorResult { result: Some(result), .. }) =
             task_result.output
         else {
             return Ok(());
