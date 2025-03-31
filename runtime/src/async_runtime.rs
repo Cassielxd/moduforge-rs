@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use tokio::runtime::Runtime;
 
 use crate::{
     event::{Event, EventBus},
