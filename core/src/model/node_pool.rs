@@ -223,6 +223,168 @@ impl NodePool {
     {
         self.inner.nodes.values().find(|n| predicate(n))
     }
+
+    /// 获取节点在树中的深度
+    /// 
+    /// # 参数
+    /// 
+    /// * `node_id` - 目标节点ID
+    /// 
+    /// # 返回值
+    /// 
+    /// 返回节点的深度，根节点深度为0
+    pub fn get_node_depth(&self, node_id: &NodeId) -> Option<usize> {
+        let mut depth = 0;
+        let mut current_id = node_id;
+        
+        while let Some(parent_id) = self.parent_id(current_id) {
+            depth += 1;
+            current_id = parent_id;
+        }
+        
+        Some(depth)
+    }
+
+    /// 获取从根节点到目标节点的完整路径
+    /// 
+    /// # 参数
+    /// 
+    /// * `node_id` - 目标节点ID
+    /// 
+    /// # 返回值
+    /// 
+    /// 返回从根节点到目标节点的节点ID路径
+    pub fn get_node_path(&self, node_id: &NodeId) -> Vec<NodeId> {
+        let mut path = Vec::new();
+        let mut current_id = node_id;
+        
+        while let Some(parent_id) = self.parent_id(current_id) {
+            path.push(current_id.clone());
+            current_id = parent_id;
+        }
+        path.push(current_id.clone());
+        path.reverse();
+        
+        path
+    }
+
+    /// 检查节点是否为叶子节点
+    /// 
+    /// # 参数
+    /// 
+    /// * `node_id` - 目标节点ID
+    /// 
+    /// # 返回值
+    /// 
+    /// 如果节点不存在或没有子节点则返回 true
+    pub fn is_leaf(&self, node_id: &NodeId) -> bool {
+        if let Some(children) = self.children(node_id) {
+            children.is_empty()
+        } else {
+            true
+        }
+    }
+
+    /// 获取节点的同级节点（具有相同父节点的节点）
+    /// 
+    /// # 参数
+    /// 
+    /// * `node_id` - 目标节点ID
+    /// 
+    /// # 返回值
+    /// 
+    /// 返回同级节点的ID列表
+    pub fn get_siblings(&self, node_id: &NodeId) -> Vec<NodeId> {
+        if let Some(parent_id) = self.parent_id(node_id) {
+            if let Some(children) = self.children(parent_id) {
+                return children.iter()
+                    .filter(|&id| id != node_id)
+                    .cloned()
+                    .collect();
+            }
+        }
+        Vec::new()
+    }
+
+    /// 获取节点的所有兄弟节点（包括自身）
+    /// 
+    /// # 参数
+    /// 
+    /// * `node_id` - 目标节点ID
+    /// 
+    /// # 返回值
+    /// 
+    /// 返回所有兄弟节点的ID列表（包括自身）
+    pub fn get_all_siblings(&self, node_id: &NodeId) -> Vec<NodeId> {
+        if let Some(parent_id) = self.parent_id(node_id) {
+            if let Some(children) = self.children(parent_id) {
+                return children.iter().cloned().collect();
+            }
+        }
+        Vec::new()
+    }
+
+    /// 获取节点的子树大小（包括自身和所有子节点）
+    /// 
+    /// # 参数
+    /// 
+    /// * `node_id` - 目标节点ID
+    /// 
+    /// # 返回值
+    /// 
+    /// 返回子树中的节点总数
+    pub fn get_subtree_size(&self, node_id: &NodeId) -> usize {
+        let mut size = 1; // 包含自身
+        if let Some(children) = self.children(node_id) {
+            for child_id in children {
+                size += self.get_subtree_size(child_id);
+            }
+        }
+        size
+    }
+
+    /// 检查一个节点是否是另一个节点的祖先
+    /// 
+    /// # 参数
+    /// 
+    /// * `ancestor_id` - 可能的祖先节点ID
+    /// * `descendant_id` - 可能的后代节点ID
+    /// 
+    /// # 返回值
+    /// 
+    /// 如果 ancestor_id 是 descendant_id 的祖先则返回 true
+    pub fn is_ancestor(&self, ancestor_id: &NodeId, descendant_id: &NodeId) -> bool {
+        let mut current_id = descendant_id;
+        while let Some(parent_id) = self.parent_id(current_id) {
+            if parent_id == ancestor_id {
+                return true;
+            }
+            current_id = parent_id;
+        }
+        false
+    }
+
+    /// 获取两个节点的最近公共祖先
+    /// 
+    /// # 参数
+    /// 
+    /// * `node1_id` - 第一个节点ID
+    /// * `node2_id` - 第二个节点ID
+    /// 
+    /// # 返回值
+    /// 
+    /// 返回两个节点的最近公共祖先ID
+    pub fn get_lowest_common_ancestor(&self, node1_id: &NodeId, node2_id: &NodeId) -> Option<NodeId> {
+        let path1 = self.get_node_path(node1_id);
+        let path2 = self.get_node_path(node2_id);
+        
+        for ancestor_id in path1.iter().rev() {
+            if path2.contains(ancestor_id) {
+                return Some(ancestor_id.clone());
+            }
+        }
+        None
+    }
 }
 /// 草稿修改上下文，用于安全地修改节点池
 ///
