@@ -11,14 +11,14 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AddMarkStep {
     id: NodeId,
-    mark: Mark,
+    marks: Vec<Mark>,
 }
 impl AddMarkStep {
     pub fn new(
         id: NodeId,
-        mark: Mark,
+        marks: Vec<Mark>,
     ) -> Self {
-        AddMarkStep { id, mark }
+        AddMarkStep { id, marks }
     }
 }
 impl Step for AddMarkStep {
@@ -29,7 +29,7 @@ impl Step for AddMarkStep {
     ) -> Result<StepResult, TransformError> {
         let _ = schema;
 
-        match dart.add_mark(&self.id, self.mark.clone()) {
+        match dart.add_mark(&self.id, &self.marks) {
             Ok(_) => Ok(dart.commit()),
             Err(err) => Err(TransformError::new(err.to_string())),
         }

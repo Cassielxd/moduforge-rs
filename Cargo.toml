@@ -8,7 +8,7 @@ members = [
 
 [workspace.package]
 name = "moduforge"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2024"
 authors = ["String <348040933@qq.com>"]
 license = "MIT"
@@ -27,10 +27,9 @@ im = { version = "15.1", features = ["serde"] }
 thiserror = "1.0"
 # 异步 trait
 async-trait = "0.1"
-flate2 = { version = "1.0", features = ["zlib"] }
 lru = "0.12"
 chrono = "0.4"
-async-channel = "1.8"
+async-channel = "2.3.1"
 
 # 日志系统
 tracing = "0.1"
@@ -38,14 +37,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2"
 time = { version = "0.3", features = ["formatting"] }
 
-itertools = "0.13.0"
-rust_decimal = "1.33.1"
-rust_decimal_macros = "1.33.1"
-json_dotpath = "1.1.0"
-once_cell = "1.19.0"
-petgraph = "0.7.0"
-ahash = "0.8.11"
-criterion = "0.5.1"
 metrics = "0.21"
 metrics-exporter-prometheus = "0.13"
 

@@ -225,59 +225,68 @@ impl NodePool {
     }
 
     /// 获取节点在树中的深度
-    /// 
+    ///
     /// # 参数
-    /// 
+    ///
     /// * `node_id` - 目标节点ID
-    /// 
+    ///
     /// # 返回值
-    /// 
+    ///
     /// 返回节点的深度，根节点深度为0
-    pub fn get_node_depth(&self, node_id: &NodeId) -> Option<usize> {
+    pub fn get_node_depth(
+        &self,
+        node_id: &NodeId,
+    ) -> Option<usize> {
         let mut depth = 0;
         let mut current_id = node_id;
-        
+
         while let Some(parent_id) = self.parent_id(current_id) {
             depth += 1;
             current_id = parent_id;
         }
-        
+
         Some(depth)
     }
 
     /// 获取从根节点到目标节点的完整路径
-    /// 
+    ///
     /// # 参数
-    /// 
+    ///
     /// * `node_id` - 目标节点ID
-    /// 
+    ///
     /// # 返回值
-    /// 
+    ///
     /// 返回从根节点到目标节点的节点ID路径
-    pub fn get_node_path(&self, node_id: &NodeId) -> Vec<NodeId> {
+    pub fn get_node_path(
+        &self,
+        node_id: &NodeId,
+    ) -> Vec<NodeId> {
         let mut path = Vec::new();
         let mut current_id = node_id;
-        
+
         while let Some(parent_id) = self.parent_id(current_id) {
             path.push(current_id.clone());
             current_id = parent_id;
         }
         path.push(current_id.clone());
         path.reverse();
-        
+
         path
     }
 
     /// 检查节点是否为叶子节点
-    /// 
+    ///
     /// # 参数
-    /// 
+    ///
     /// * `node_id` - 目标节点ID
-    /// 
+    ///
     /// # 返回值
-    /// 
+    ///
     /// 如果节点不存在或没有子节点则返回 true
-    pub fn is_leaf(&self, node_id: &NodeId) -> bool {
+    pub fn is_leaf(
+        &self,
+        node_id: &NodeId,
+    ) -> bool {
         if let Some(children) = self.children(node_id) {
             children.is_empty()
         } else {
@@ -286,18 +295,22 @@ impl NodePool {
     }
 
     /// 获取节点的同级节点（具有相同父节点的节点）
-    /// 
+    ///
     /// # 参数
-    /// 
+    ///
     /// * `node_id` - 目标节点ID
-    /// 
+    ///
     /// # 返回值
-    /// 
+    ///
     /// 返回同级节点的ID列表
-    pub fn get_siblings(&self, node_id: &NodeId) -> Vec<NodeId> {
+    pub fn get_siblings(
+        &self,
+        node_id: &NodeId,
+    ) -> Vec<NodeId> {
         if let Some(parent_id) = self.parent_id(node_id) {
             if let Some(children) = self.children(parent_id) {
-                return children.iter()
+                return children
+                    .iter()
                     .filter(|&id| id != node_id)
                     .cloned()
                     .collect();
@@ -307,15 +320,18 @@ impl NodePool {
     }
 
     /// 获取节点的所有兄弟节点（包括自身）
-    /// 
+    ///
     /// # 参数
-    /// 
+    ///
     /// * `node_id` - 目标节点ID
-    /// 
+    ///
     /// # 返回值
-    /// 
+    ///
     /// 返回所有兄弟节点的ID列表（包括自身）
-    pub fn get_all_siblings(&self, node_id: &NodeId) -> Vec<NodeId> {
+    pub fn get_all_siblings(
+        &self,
+        node_id: &NodeId,
+    ) -> Vec<NodeId> {
         if let Some(parent_id) = self.parent_id(node_id) {
             if let Some(children) = self.children(parent_id) {
                 return children.iter().cloned().collect();
@@ -325,15 +341,18 @@ impl NodePool {
     }
 
     /// 获取节点的子树大小（包括自身和所有子节点）
-    /// 
+    ///
     /// # 参数
-    /// 
+    ///
     /// * `node_id` - 目标节点ID
-    /// 
+    ///
     /// # 返回值
-    /// 
+    ///
     /// 返回子树中的节点总数
-    pub fn get_subtree_size(&self, node_id: &NodeId) -> usize {
+    pub fn get_subtree_size(
+        &self,
+        node_id: &NodeId,
+    ) -> usize {
         let mut size = 1; // 包含自身
         if let Some(children) = self.children(node_id) {
             for child_id in children {
@@ -344,16 +363,20 @@ impl NodePool {
     }
 
     /// 检查一个节点是否是另一个节点的祖先
-    /// 
+    ///
     /// # 参数
-    /// 
+    ///
     /// * `ancestor_id` - 可能的祖先节点ID
     /// * `descendant_id` - 可能的后代节点ID
-    /// 
+    ///
     /// # 返回值
-    /// 
+    ///
     /// 如果 ancestor_id 是 descendant_id 的祖先则返回 true
-    pub fn is_ancestor(&self, ancestor_id: &NodeId, descendant_id: &NodeId) -> bool {
+    pub fn is_ancestor(
+        &self,
+        ancestor_id: &NodeId,
+        descendant_id: &NodeId,
+    ) -> bool {
         let mut current_id = descendant_id;
         while let Some(parent_id) = self.parent_id(current_id) {
             if parent_id == ancestor_id {
@@ -365,19 +388,23 @@ impl NodePool {
     }
 
     /// 获取两个节点的最近公共祖先
-    /// 
+    ///
     /// # 参数
-    /// 
+    ///
     /// * `node1_id` - 第一个节点ID
     /// * `node2_id` - 第二个节点ID
-    /// 
+    ///
     /// # 返回值
-    /// 
+    ///
     /// 返回两个节点的最近公共祖先ID
-    pub fn get_lowest_common_ancestor(&self, node1_id: &NodeId, node2_id: &NodeId) -> Option<NodeId> {
+    pub fn get_lowest_common_ancestor(
+        &self,
+        node1_id: &NodeId,
+        node2_id: &NodeId,
+    ) -> Option<NodeId> {
         let path1 = self.get_node_path(node1_id);
         let path2 = self.get_node_path(node2_id);
-        
+
         for ancestor_id in path1.iter().rev() {
             if path2.contains(ancestor_id) {
                 return Some(ancestor_id.clone());
@@ -518,7 +545,7 @@ impl Draft {
         self.record_patch(Patch::RemoveMark {
             path: self.current_path.iter().cloned().collect(),
             parent_id: id.clone(),
-            marks: vec![Arc::new(mark)],
+            marks: vec![mark],
         });
         Ok(())
     }
@@ -527,7 +554,7 @@ impl Draft {
     /// # 参数
     ///
     /// * `id` - 目标节点ID
-    /// * `mark` - 要添加的标记
+    /// * `marks` - 要添加的标记列表
     ///
     /// # 错误
     ///
@@ -535,27 +562,37 @@ impl Draft {
     pub fn add_mark(
         &mut self,
         id: &NodeId,
-        mark: Mark,
+        marks: &Vec<Mark>,
     ) -> Result<(), PoolError> {
         let mut node = self
             .get_node(id)
             .ok_or(PoolError::NodeNotFound(id.clone()))?
             .as_ref()
             .clone();
-        node.marks.push_back(mark.clone());
+        node.marks.extend(marks.clone());
         self.inner.nodes.insert(id.clone(), Arc::new(node));
         // 记录补丁
         self.record_patch(Patch::AddMark {
             path: self.current_path.iter().cloned().collect(),
             node_id: id.clone(),
-            mark,
+            marks: marks.clone(),
         });
         Ok(())
     }
+    /// 对节点的子节点进行排序
+    ///
+    /// # 参数
+    ///
+    /// * `parent_id` - 父节点ID
+    /// * `compare` - 排序比较函数
+    ///
+    /// # 错误
+    ///
+    /// 当父节点不存在时返回 [`PoolError::ParentNotFound`]
     pub fn sort_children<
         F: FnMut(
-            &(String, &Arc<Node>),
-            &(String, &Arc<Node>),
+            &(NodeId, &Arc<Node>),
+            &(NodeId, &Arc<Node>),
         ) -> std::cmp::Ordering,
     >(
         &mut self,
@@ -584,67 +621,78 @@ impl Draft {
             children.into_iter().map(|(id, _)| id).collect();
         // 更新父节点
         let mut new_parent = parent.as_ref().clone();
-        new_parent.content = sorted_children;
-        self.record_patch(Patch::ReplaceNode {
+        new_parent.content = sorted_children.clone();
+
+        // 记录补丁
+        self.record_patch(Patch::SortChildren {
             path: self.current_path.iter().cloned().collect(),
-            old: parent.clone(),
-            new: Arc::new(new_parent.clone()),
+            parent_id: parent_id.clone(),
+            old_children: children_ids.iter().cloned().collect(),
+            new_children: sorted_children.iter().cloned().collect(),
         });
+
         self.inner.nodes.insert(parent_id.clone(), Arc::new(new_parent));
         Ok(())
     }
+
     /// 添加子节点
+    ///
+    /// # 参数
+    ///
+    /// * `parent_id` - 父节点ID
+    /// * `nodes` - 要添加的子节点列表
     pub fn add_node(
         &mut self,
         parent_id: &NodeId,
-        node: Node,
+        nodes: &Vec<Node>,
     ) -> Result<(), PoolError> {
-        let node = Arc::new(node);
         let parent = self
             .get_node(parent_id)
             .ok_or(PoolError::ParentNotFound(parent_id.clone()))?;
         let mut new_parent = parent.as_ref().clone();
-        new_parent.content.push_back(node.id.clone());
-
-        let id = node.id.clone();
+        new_parent.content.push_back(nodes[0].id.clone());
         self.inner.nodes.insert(parent_id.clone(), Arc::new(new_parent));
-        self.inner.nodes.insert(node.id.clone(), node.clone());
-        self.inner.parent_map.insert(id.clone(), parent_id.clone());
+        self.inner.parent_map.insert(nodes[0].id.clone(), parent_id.clone());
+        let mut new_nodes = vec![];
+        for node in nodes.into_iter() {
+            new_nodes.push(node.clone());
+            // 更新父节点映射
+            for child_id in &node.content {
+                self.inner.parent_map.insert(child_id.clone(), node.id.clone());
+            }
+            // 更新节点池
+            self.inner.nodes.insert(node.id.clone(), Arc::new(node.clone()));
+        }
         // 记录补丁
         self.record_patch(Patch::AddNode {
             path: self.current_path.iter().cloned().collect(),
             parent_id: parent_id.clone(),
-            node: node.clone(),
+            nodes: new_nodes,
         });
-
         Ok(())
     }
+
     pub fn replace_node(
         &mut self,
         node_id: NodeId,
-        new_node: Arc<Node>,
+        nodes: &Vec<Node>,
     ) -> Result<(), PoolError> {
         // 检查节点是否存在
         let old_node = self
             .get_node(&node_id)
             .ok_or(PoolError::NodeNotFound(node_id.clone()))?;
         // 确保新节点ID与原节点ID一致
-        if new_node.id != node_id {
+        if nodes[0].id != node_id {
             return Err(PoolError::InvalidNodeId {
                 nodeid: node_id,
-                new_node_id: new_node.id.clone(),
+                new_node_id: nodes[0].id.clone(),
             });
         }
-        // 保存旧节点用于记录补丁
-        let old_node_clone = old_node.clone();
-        // 更新节点
-        self.inner.nodes.insert(node_id.clone(), new_node.clone());
-        // 记录补丁
-        self.record_patch(Patch::ReplaceNode {
-            path: self.current_path.iter().cloned().collect(),
-            old: old_node_clone,
-            new: new_node,
-        });
+        let _ = self.remove_node(
+            &node_id,
+            old_node.content.iter().map(|id| id.clone()).collect(),
+        )?;
+        let _ = self.add_node(&node_id, nodes)?;
         Ok(())
     }
     /// 移动节点
@@ -742,25 +790,6 @@ impl Draft {
     ) -> Option<&im::Vector<NodeId>> {
         self.get_node(parent_id).map(|n| &n.content)
     }
-    fn remove_subtree(
-        &mut self,
-        parent_id: &NodeId,
-        node_id: &NodeId,
-    ) {
-        if let Some(children) = self.children(node_id).cloned() {
-            for child_id in children {
-                self.remove_subtree(node_id, &child_id);
-            }
-        }
-        self.inner.parent_map.remove(node_id);
-        if let Some(romove_node) = self.inner.nodes.remove(node_id) {
-            self.record_patch(Patch::RemoveNode {
-                path: self.current_path.iter().cloned().collect(),
-                parent_id: parent_id.clone(),
-                nodes: vec![romove_node],
-            });
-        }
-    }
     /// 移除子节点    
     ///
     /// # 参数
@@ -771,50 +800,106 @@ impl Draft {
     /// # 错误
     ///
     /// 当父节点不存在时返回 [`PoolError::ParentNotFound`]
+    /// 当尝试删除根节点时返回 [`PoolError::CannotRemoveRoot`]
+    /// 当要删除的节点不是父节点的直接子节点时返回 [`PoolError::InvalidParenting`]
     pub fn remove_node(
         &mut self,
         parent_id: &NodeId,
         nodes: Vec<NodeId>,
     ) -> Result<(), PoolError> {
+        // 检查父节点是否存在
         let parent = self
             .get_node(parent_id)
             .ok_or(PoolError::ParentNotFound(parent_id.clone()))?;
 
-        // 过滤掉不在节点池中的子节点
+        // 检查是否尝试删除根节点
+        if nodes.contains(&self.inner.root_id) {
+            return Err(PoolError::CannotRemoveRoot);
+        }
+
+        // 验证所有要删除的节点都是父节点的直接子节点
+        for node_id in &nodes {
+            if !parent.content.contains(node_id) {
+                return Err(PoolError::InvalidParenting {
+                    child: node_id.clone(),
+                    alleged_parent: parent_id.clone(),
+                });
+            }
+        }
+
+        // 使用 HashSet 优化查找性能
+        let nodes_to_remove: std::collections::HashSet<_> =
+            nodes.iter().collect();
+
+        // 过滤保留的子节点
         let filtered_children: im::Vector<NodeId> = parent
             .as_ref()
             .content
             .iter()
-            .filter(|&id| !nodes.contains(id))
+            .filter(|&id| !nodes_to_remove.contains(id))
             .cloned()
             .collect();
 
-        // 这里的逻辑需要进一步完善，例如如何处理新节点的添加
-        // 以下是示例代码，实际逻辑可能需要根据需求调整
+        // 更新父节点
         let mut parent_node = parent.as_ref().clone();
         parent_node.content = filtered_children;
-        // 更新节点池和父节点映射
         self.inner.nodes.insert(parent_id.clone(), Arc::new(parent_node));
-        // 移除指定的节点
-        let mut renoved_nodes = vec![];
+        let mut remove_nodes = Vec::new();
+        // 递归删除所有子节点
         for node_id in nodes {
-            if self.inner.nodes.contains_key(&node_id) {
-                self.remove_subtree(parent_id, &node_id);
-                self.inner.parent_map.remove(&node_id);
-                if let Some(romove_node) = self.inner.nodes.remove(&node_id) {
-                    renoved_nodes.push(romove_node);
-                }
-            }
+            self.remove_subtree(&node_id, &mut remove_nodes)?;
         }
-        // 记录补丁
         self.record_patch(Patch::RemoveNode {
             path: self.current_path.iter().cloned().collect(),
             parent_id: parent_id.clone(),
-            nodes: renoved_nodes,
+            nodes: remove_nodes,
         });
-
         Ok(())
     }
+
+    /// 递归删除子树
+    ///
+    /// # 参数
+    ///
+    /// * `parent_id` - 父节点ID
+    /// * `node_id` - 要删除的节点ID
+    ///
+    /// # 错误
+    ///
+    /// 当节点不存在时返回 [`PoolError::NodeNotFound`]
+    /// 当尝试删除根节点时返回 [`PoolError::CannotRemoveRoot`]
+    fn remove_subtree(
+        &mut self,
+        node_id: &NodeId,
+        remove_nodes: &mut Vec<Node>,
+    ) -> Result<(), PoolError> {
+        // 检查是否是根节点
+        if node_id == &self.inner.root_id {
+            return Err(PoolError::CannotRemoveRoot);
+        }
+
+        // 获取要删除的节点
+        let _ = self
+            .get_node(node_id)
+            .ok_or(PoolError::NodeNotFound(node_id.clone()))?;
+
+        // 递归删除所有子节点
+        if let Some(children) = self.children(node_id).cloned() {
+            for child_id in children {
+                self.remove_subtree(&child_id, remove_nodes)?;
+            }
+        }
+
+        // 从父节点映射中移除
+        self.inner.parent_map.remove(node_id);
+
+        // 从节点池中移除并记录补丁
+        if let Some(remove_node) = self.inner.nodes.remove(node_id) {
+            remove_nodes.push(remove_node.as_ref().clone());
+        }
+        Ok(())
+    }
+
     /// 应用补丁集合并更新节点池
     ///
     /// # 参数
@@ -835,24 +920,21 @@ impl Draft {
                 Patch::UpdateAttr { path: _, id, old: _, new } => {
                     self.update_attr(id, new.clone().into())?;
                 },
-                Patch::AddNode { path: _, parent_id, node } => {
-                    self.add_node(parent_id, node.as_ref().clone())?;
+                Patch::AddNode { path: _, parent_id, nodes } => {
+                    self.add_node(parent_id, nodes)?;
                 },
-                Patch::AddMark { path: _, node_id, mark } => {
-                    self.add_mark(node_id, mark.clone())?;
+                Patch::AddMark { path: _, node_id, marks } => {
+                    self.add_mark(node_id, marks)?;
                 },
                 Patch::RemoveNode { path: _, parent_id, nodes } => {
                     self.remove_node(
                         parent_id,
-                        nodes
-                            .iter()
-                            .map(|n: &Arc<Node>| n.id.clone())
-                            .collect(),
+                        nodes.iter().map(|n| n.id.clone()).collect(),
                     )?;
                 },
                 Patch::RemoveMark { path: _, parent_id, marks } => {
                     for mark in marks {
-                        self.remove_mark(parent_id, mark.as_ref().clone())?;
+                        self.remove_mark(&parent_id, mark.clone())?;
                     }
                 },
                 Patch::MoveNode {
@@ -869,8 +951,20 @@ impl Draft {
                         position.clone(),
                     )?;
                 },
-                Patch::ReplaceNode { path: _, old, new } => {
-                    self.replace_node(old.id.clone(), new.clone())?;
+                Patch::SortChildren {
+                    path: _,
+                    parent_id,
+                    old_children: _,
+                    new_children,
+                } => {
+                    let parent = self
+                        .get_node(parent_id)
+                        .ok_or(PoolError::ParentNotFound(parent_id.clone()))?;
+                    let mut new_parent = parent.as_ref().clone();
+                    new_parent.content = new_children.iter().cloned().collect();
+                    self.inner
+                        .nodes
+                        .insert(parent_id.clone(), Arc::new(new_parent));
                 },
             }
         }
@@ -889,21 +983,20 @@ impl Draft {
                 Patch::UpdateAttr { path: _, id, old, new: _ } => {
                     self.update_attr(&id, old.clone().into())?;
                 },
-                Patch::AddNode { path: _, parent_id, node } => {
-                    self.remove_node(&parent_id, vec![node.id.clone()])?;
+                Patch::AddNode { path: _, parent_id, nodes } => {
+                    self.remove_node(
+                        &parent_id,
+                        nodes.iter().map(|f| f.id.clone()).collect(),
+                    )?;
                 },
-                Patch::AddMark { path: _, node_id, mark } => {
-                    self.remove_mark(&node_id, mark)?;
+                Patch::AddMark { path: _, node_id, marks } => {
+                    self.remove_mark(&node_id, marks[0].clone())?;
                 },
                 Patch::RemoveNode { path: _, parent_id, nodes } => {
-                    for node in nodes {
-                        self.add_node(&parent_id, node.as_ref().clone())?;
-                    }
+                    self.add_node(&parent_id, &nodes)?;
                 },
                 Patch::RemoveMark { path: _, parent_id, marks } => {
-                    for mark in marks {
-                        self.add_mark(&parent_id, mark.as_ref().clone())?;
-                    }
+                    self.add_mark(&parent_id, &marks)?;
                 },
                 Patch::MoveNode {
                     path: _,
@@ -919,8 +1012,20 @@ impl Draft {
                         position.clone(),
                     )?;
                 },
-                Patch::ReplaceNode { path: _, old, new } => {
-                    self.replace_node(new.id.clone(), old.clone())?;
+                Patch::SortChildren {
+                    path: _,
+                    parent_id,
+                    old_children,
+                    new_children: _,
+                } => {
+                    let parent = self
+                        .get_node(&parent_id)
+                        .ok_or(PoolError::ParentNotFound(parent_id.clone()))?;
+                    let mut new_parent = parent.as_ref().clone();
+                    new_parent.content = old_children.iter().cloned().collect();
+                    self.inner
+                        .nodes
+                        .insert(parent_id.clone(), Arc::new(new_parent));
                 },
             }
         }

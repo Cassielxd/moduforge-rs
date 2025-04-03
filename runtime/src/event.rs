@@ -15,7 +15,7 @@ use crate::error::{EditorResult, error_utils};
 pub enum Event {
     Create(Arc<State>),
     TrApply(Arc<Vec<Transaction>>, Arc<State>), // 事务应用后 + 是否成功
-    Destroy,                                     // 销毁事件
+    Destroy,                                    // 销毁事件
     Stop,                                       // 停止后需要重启
 }
 /// 事件总线
@@ -89,12 +89,12 @@ impl EventBus {
                                 let handle = handler.handle(&event);
                                 handles.push(handle);
                             }
-                            
+
                             // 设置每个handler的超时时间为3秒
                             let results = join_all(handles.into_iter().map(|handle| {
                                 timeout(Duration::from_secs(3), handle)
                             })).await;
-                            
+
                             // 处理结果
                             for result in results {
                                 match result {
@@ -168,7 +168,7 @@ impl Drop for EventBus {
             if let Err(e) = self.broadcast_blocking(Event::Stop) {
                 debug!("Failed to broadcast stop event during drop: {}", e);
             }
-            
+
             // Wait for handlers to complete with a timeout
             let handlers = self.event_handlers.read().await;
             let mut pending_handles = Vec::new();
@@ -176,10 +176,15 @@ impl Drop for EventBus {
                 let handle = handler.handle(&Event::Stop);
                 pending_handles.push(handle);
             }
-            
+
             // Wait up to 5 seconds for all handlers to complete
-            if let Err(e) = timeout(Duration::from_secs(5), join_all(pending_handles)).await {
-                debug!("Timeout waiting for handlers to complete during drop: {}", e);
+            if let Err(e) =
+                timeout(Duration::from_secs(5), join_all(pending_handles)).await
+            {
+                debug!(
+                    "Timeout waiting for handlers to complete during drop: {}",
+                    e
+                );
             }
         });
     }

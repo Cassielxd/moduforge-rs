@@ -18,7 +18,12 @@ async fn p1_append(
     let mut tr = trs.last().unwrap().clone();
     tr.add_node(
         tr.doc().inner.root_id.to_string(),
-        tr.schema.nodes.get("DW").unwrap().create(None, None, vec![], None),
+        vec![tr.schema.nodes.get("DW").unwrap().create(
+            None,
+            None,
+            vec![],
+            None,
+        )],
     );
     Some(tr)
 }
@@ -57,7 +62,12 @@ async fn p2_append(
     if size < 10 {
         tr.add_node(
             tr.doc().inner.root_id.to_string(),
-            tr.schema.nodes.get("DW").unwrap().create(None, None, vec![], None),
+            vec![tr.schema.nodes.get("DW").unwrap().create(
+                None,
+                None,
+                vec![],
+                None,
+            )],
         );
         debug!("P2Plugin节点个数：{}", tr.doc.size());
         return Some(tr);

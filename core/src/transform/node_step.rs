@@ -12,14 +12,14 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AddNodeStep {
     parent_id: NodeId,
-    node: Node,
+    nodes: Vec<Node>,
 }
 impl AddNodeStep {
     pub fn new(
         parent_id: NodeId,
-        node: Node,
+        nodes: Vec<Node>,
     ) -> Self {
-        AddNodeStep { parent_id, node }
+        AddNodeStep { parent_id, nodes }
     }
 }
 impl Step for AddNodeStep {
@@ -30,7 +30,7 @@ impl Step for AddNodeStep {
     ) -> Result<StepResult, TransformError> {
         let _ = schema;
 
-        match dart.add_node(&self.parent_id, self.node.clone()) {
+        match dart.add_node(&self.parent_id, &self.nodes) {
             Ok(()) => Ok(dart.commit()),
             Err(err) => Err(TransformError::new(err.to_string())),
         }
@@ -120,14 +120,14 @@ impl Step for MoveNodeStep {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ReplaceNodeStep {
     node_id: NodeId,
-    node: Node,
+    nodes: Vec<Node>,
 }
 impl ReplaceNodeStep {
     pub fn new(
         node_id: NodeId,
-        node: Node,
+        nodes: Vec<Node>,
     ) -> Self {
-        ReplaceNodeStep { node_id, node }
+        ReplaceNodeStep { node_id, nodes }
     }
 }
 impl Step for ReplaceNodeStep {
@@ -138,9 +138,7 @@ impl Step for ReplaceNodeStep {
     ) -> Result<StepResult, TransformError> {
         let _ = schema;
 
-        match dart
-            .replace_node(self.node_id.clone(), Arc::new(self.node.clone()))
-        {
+        match dart.replace_node(self.node_id.clone(), &self.nodes) {
             Ok(()) => Ok(dart.commit()),
             Err(err) => Err(TransformError::new(err.to_string())),
         }

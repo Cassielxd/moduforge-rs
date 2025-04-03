@@ -54,6 +54,10 @@ pub enum PoolError {
     /// Error occurs when attempting to perform operations on a deleted node.
     #[error("节点 {0} 已被删除")]
     NodeDeleted(NodeId),
+
+    /// Error occurs when attempting to remove the root node.
+    #[error("无法删除根节点")]
+    CannotRemoveRoot,
 }
 
 impl PoolError {
@@ -72,6 +76,7 @@ impl PoolError {
             PoolError::NodeLocked(id) => Some(id),
             PoolError::NodeDeleted(id) => Some(id),
             PoolError::EmptyPool => None,
+            PoolError::CannotRemoveRoot => None,
         }
     }
 }

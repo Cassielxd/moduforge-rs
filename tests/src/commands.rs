@@ -27,7 +27,12 @@ impl Command for MyCommand {
         //  数据库的查询
         tr.add_node(
             tr.doc().inner.root_id.to_string(),
-            tr.schema.nodes.get("DW").unwrap().create(None, None, vec![], None),
+            vec![tr.schema.nodes.get("DW").unwrap().create(
+                None,
+                None,
+                vec![],
+                None,
+            )],
         );
 
         Ok(())
@@ -39,7 +44,12 @@ impl_command!(
     async |tr: &mut Transaction| -> Result<(), TransformError> {
         tr.add_node(
             tr.doc().inner.root_id.to_string(),
-            tr.schema.nodes.get("DW").unwrap().create(None, None, vec![], None),
+            vec![tr.schema.nodes.get("DW").unwrap().create(
+                None,
+                None,
+                vec![],
+                None,
+            )],
         );
         Ok(())
     },

@@ -314,7 +314,6 @@ fn parse_expr(stream: &mut TokenStream) -> Expr {
     if exprs.len() == 1 { exprs.pop().unwrap() } else { Expr::Choice { exprs } }
 }
 fn parse_expr_seq(stream: &mut TokenStream) -> Expr {
-    
     let mut exprs = Vec::new();
 
     while let Some(next) = stream.next() {

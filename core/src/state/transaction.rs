@@ -152,9 +152,9 @@ impl Transaction {
     pub fn add_node(
         &mut self,
         parent_id: String,
-        node: Node,
+        nodes: Vec<Node>,
     ) {
-        let _ = self.step(Arc::new(AddNodeStep::new(parent_id, node)));
+        let _ = self.step(Arc::new(AddNodeStep::new(parent_id, nodes)));
     }
     /// 设置事务时间戳
     pub fn set_time(

@@ -64,10 +64,7 @@ impl Editor {
             options,
         };
 
-        let mut runtime = Editor { 
-            base, 
-            flow_engine: FlowEngine::new()?
-        };
+        let mut runtime = Editor { base, flow_engine: FlowEngine::new()? };
         runtime.init().await?;
         debug!("编辑器实例创建成功");
         Ok(runtime)
@@ -97,8 +94,6 @@ impl Editor {
         Ok(())
     }
 }
-
-
 
 #[async_trait]
 impl EditorCore for Editor {

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::{mark::Mark, node::Node, types::NodeId};
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 /// 文档补丁枚举
 /// 用于描述对文档树的各种修改操作
@@ -26,7 +26,7 @@ pub enum Patch {
         /// 父节点的唯一标识符
         parent_id: NodeId,
         /// 要添加的节点
-        node: Arc<Node>,
+        nodes: Vec<Node>,
     },
     /// 添加标记
     AddMark {
@@ -35,7 +35,7 @@ pub enum Patch {
         /// 目标节点的唯一标识符
         node_id: NodeId,
         /// 要添加的标记
-        mark: Mark,
+        marks: Vec<Mark>,
     },
     /// 移除标记
     RemoveMark {
@@ -44,7 +44,7 @@ pub enum Patch {
         /// 父节点的唯一标识符
         parent_id: NodeId,
         /// 要移除的标记列表
-        marks: Vec<Arc<Mark>>,
+        marks: Vec<Mark>,
     },
     /// 移除节点
     RemoveNode {
@@ -53,7 +53,7 @@ pub enum Patch {
         /// 父节点的唯一标识符
         parent_id: NodeId,
         /// 要移除的节点列表
-        nodes: Vec<Arc<Node>>,
+        nodes: Vec<Node>,
     },
     /// 移动节点
     MoveNode {
@@ -63,9 +63,15 @@ pub enum Patch {
         target_parent_id: NodeId,
         position: Option<usize>,
     },
-    ReplaceNode {
+    /// 排序子节点
+    SortChildren {
+        /// 目标节点的路径
         path: Vec<String>,
-        old: Arc<Node>,
-        new: Arc<Node>,
+        /// 父节点的唯一标识符
+        parent_id: NodeId,
+        /// 排序前的子节点列表
+        old_children: Vec<NodeId>,
+        /// 排序后的子节点列表
+        new_children: Vec<NodeId>,
     },
 }
