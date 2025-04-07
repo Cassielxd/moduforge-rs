@@ -37,9 +37,5 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2"
 time = { version = "0.3", features = ["formatting"] }
 
-metrics = "0.21"
-metrics-exporter-prometheus = "0.13"
-
-
 uuid="1"
 futures="0.3"

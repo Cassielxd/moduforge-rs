@@ -115,7 +115,7 @@ impl State {
     /// 异步应用事务到当前状态
     pub async fn apply(
         &self,
-        mut transaction: Transaction,
+        transaction: Transaction,
     ) -> StateResult<TransactionResult> {
         let start_time = Instant::now();
         let initial_step_count = transaction.steps.len();
