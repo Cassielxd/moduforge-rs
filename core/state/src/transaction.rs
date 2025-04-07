@@ -1,3 +1,4 @@
+use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -42,52 +43,24 @@ pub struct Transaction {
     pub meta: im::HashMap<String, Arc<dyn std::any::Any>>,
     /// 事务的时间戳
     pub id: u64,
-    /// 存储所有操作步骤
-    pub steps: im::Vector<Arc<dyn Step>>,
-    /// 存储每个步骤对应的补丁列表
-    pub patches: im::Vector<Vec<Patch>>,
-    /// 当前文档状态
-    pub doc: Arc<NodePool>,
-    /// 文档的草稿状态，用于临时修改
-    pub draft: Draft,
-    /// 文档的模式定义
-    pub schema: Arc<Schema>,
+    transform:Transform
 }
 unsafe impl Send for Transaction {}
 unsafe impl Sync for Transaction {}
+impl Deref for Transaction {
+    type Target = Transform;
 
-impl Transform for Transaction {
-    /// 执行一个修改步骤
-    /// step: 要执行的步骤
-    /// 返回: Result，表示执行成功或失败
-    fn step(
-        &mut self,
-        step: Arc<dyn Step>,
-    ) -> Result<(), TransformError> {
-        let result = step.apply(&mut self.draft, self.schema.clone())?;
-        match result.failed {
-            Some(message) => Err(TransformError::new(message)),
-            None => {
-                self.add_step(step, result);
-                Ok(())
-            },
-        }
-    }
-    /// 检查文档是否被修改
-    fn doc_changed(&self) -> bool {
-        !self.steps.is_empty()
-    }
-    /// 添加一个步骤及其结果到事务中
-    fn add_step(
-        &mut self,
-        step: Arc<dyn Step>,
-        result: StepResult,
-    ) {
-        self.steps.push_back(step);
-        self.patches.push_back(result.patches);
-        self.doc = result.doc.unwrap();
+    fn deref(&self) -> &Self::Target {
+        &self.transform
     }
 }
+
+impl DerefMut for Transaction {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.transform
+    }
+}
+
 impl Transaction {
     /// 执行一个事务操作
     /// call_back: 要执行的命令
@@ -119,14 +92,17 @@ impl Transaction {
     /// 返回: Transaction 实例
     pub fn new(state: &State) -> Self {
         let node = state.doc();
+        let schema = state.schema();
         Transaction {
             meta: im::HashMap::new(),
             id: get_transaction_id(),
-            steps: im::Vector::new(),
-            doc: node,
-            schema: state.schema(),
-            draft: Draft::new(state.doc()),
-            patches: im::Vector::new(),
+            transform: Transform {
+                doc: node.clone(),
+                draft: Draft::new(node),
+                steps: im::Vector::new(),
+                patches: im::Vector::new(),
+                schema,
+            },
         }
     }
     /// 获取当前文档状态
