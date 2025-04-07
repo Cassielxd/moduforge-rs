@@ -8,6 +8,7 @@ use super::transaction::Transaction;
 /// 定义插件的核心行为，包括事务处理和过滤功能
 #[async_trait]
 pub trait PluginTrait: Send + Sync + Debug {
+
     /// 追加事务处理
     /// 允许插件在事务执行前修改或扩展事务内容
     async fn append_transaction(
@@ -69,6 +70,7 @@ pub struct PluginSpec {
     pub state: Option<Arc<dyn StateField>>,
     pub key: PluginKey,
     pub tr: Option<Arc<dyn PluginTrait>>,
+    pub priority: i32,
 }
 
 unsafe impl Send for PluginSpec {}

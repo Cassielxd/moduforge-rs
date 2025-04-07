@@ -112,6 +112,13 @@ impl State {
         &self.config.plugins
     }
 
+    /// 获取已排序的插件列表
+    /// 按照优先级排序，优先级低的先执行
+    pub fn sorted_plugins(&self) -> &Vec<Arc<Plugin>> {
+        // 由于在 Configuration::new 中已经排序，这里直接返回即可
+        &self.config.plugins
+    }
+
     /// 异步应用事务到当前状态
     pub async fn apply(
         &self,
@@ -136,7 +143,10 @@ impl State {
         tr: &Transaction,
         ignore: Option<usize>,
     ) -> StateResult<bool> {
-        for (i, plugin) in self.config.plugins.iter().enumerate() {
+        // 获取已排序的插件列表
+        let sorted_plugins = self.sorted_plugins();
+        
+        for (i, plugin) in sorted_plugins.iter().enumerate() {
             if Some(i) != ignore
                 && !plugin.apply_filter_transaction(tr, self).await
             {
@@ -165,9 +175,12 @@ impl State {
         trs.push(root_tr);
         let mut seen: Option<Vec<SeenState>> = None;
 
+        // 获取排序后的插件列表
+        let sorted_plugins = self.sorted_plugins();
+
         loop {
             let mut have_new = false;
-            for (i, plugin) in self.config.plugins.iter().enumerate() {
+            for (i, plugin) in sorted_plugins.iter().enumerate() {
                 let n: usize = seen.as_ref().map(|s| s[i].n).unwrap_or(0);
                 let old_state =
                     seen.as_ref().map(|s| &s[i].state).unwrap_or(self);
@@ -183,7 +196,7 @@ impl State {
                         if new_state.filter_transaction(&tr, Some(i)).await? {
                             if seen.is_none() {
                                 let mut s: Vec<SeenState> = Vec::new();
-                                for j in 0..self.config.plugins.len() {
+                                for j in 0..sorted_plugins.len() {
                                     s.push(if j < i {
                                         SeenState {
                                             state: new_state.clone(),
@@ -229,7 +242,11 @@ impl State {
         let mut config = self.config.as_ref().clone();
         config.doc = Some(tr.doc.clone());
         let mut new_instance = State::new(Arc::new(config));
-        for plugin in &self.config.plugins {
+        
+        // 获取已排序的插件列表
+        let sorted_plugins = self.sorted_plugins();
+        
+        for plugin in sorted_plugins.iter() {
             if let Some(field) = &plugin.spec.state {
                 if let Some(old_plugin_state) = self.get_field(&plugin.key) {
                     let value = field
@@ -353,7 +370,11 @@ impl Configuration {
         };
 
         if let Some(plugin_list) = plugins {
-            for plugin in plugin_list {
+            // 按照优先级排序插件
+            let mut sorted_plugins = plugin_list;
+            sorted_plugins.sort_by(|a, b| a.spec.priority.cmp(&b.spec.priority));
+            
+            for plugin in sorted_plugins {
                 let key = plugin.key.clone();
                 if config.plugins_by_key.contains_key(&key) {
                     panic!("插件请不要重复添加 ({})", key);

@@ -11,12 +11,15 @@ pub fn get_extension() -> Extension {
         state: Some(Arc::new(P1State)),
         key: ("name".to_owned(), "测试插件一".to_owned()),
         tr: Some(Arc::new(P1Plugin {})),
+        priority: 1,
     });
     extension.add_plugin(Arc::new(plugin1));
     extension.add_plugin(Arc::new(Plugin::new(PluginSpec {
         state: None,
         key: ("name1".to_owned(), "测试插件二".to_owned()),
         tr: Some(Arc::new(P2Plugin {})),
+        priority: 2,
     })));
     extension
 }
+
