@@ -17,7 +17,6 @@ use moduforge_state::{
     transaction::{Command, Transaction},
     {info, debug, error},
 };
-use moduforge_transform::transform::Transform;
 
 /// Editor 结构体代表编辑器的核心功能实现
 /// 负责管理文档状态、事件处理、插件系统和存储等核心功能
