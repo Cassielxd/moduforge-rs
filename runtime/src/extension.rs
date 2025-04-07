@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use moduforge_core::state::plugin::Plugin;
+use moduforge_state::plugin::Plugin;
 
 use crate::types::GlobalAttributeItem;
 ///扩展实现

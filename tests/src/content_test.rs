@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
-use moduforge_core::model::content::ContentMatch;
-use moduforge_core::model::id_generator::IdGenerator;
-use moduforge_core::model::node_type::NodeSpec;
-use moduforge_core::model::schema::{Schema, SchemaSpec};
+use moduforge_model::{
+    content::ContentMatch,
+    id_generator::IdGenerator,
+    node_type::NodeSpec,
+    schema::{Schema, SchemaSpec},
+};
 #[warn(dead_code)]
 fn create_test_schema() -> Schema {
     let mut nodes = HashMap::new();

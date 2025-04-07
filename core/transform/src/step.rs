@@ -1,13 +1,9 @@
 use std::sync::Arc;
 
-use crate::model::{
-    node_pool::{Draft, NodePool},
-    patch::Patch,
-    schema::Schema,
-};
+use moduforge_model::{node_pool::NodePool, schema::Schema};
 use std::fmt::Debug;
 
-use super::{ConcreteStep, transform::TransformError};
+use super::{draft::Draft, patch::Patch, transform::TransformError, ConcreteStep};
 
 pub trait Step: Send + Sync + Debug {
     fn apply(

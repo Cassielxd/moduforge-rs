@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use moduforge_core::model::schema::{AttributeSpec, Schema, SchemaSpec};
+use moduforge_model::schema::{AttributeSpec, Schema, SchemaSpec};
 
 use crate::types::{Extensions, GlobalAttributeItem};
 

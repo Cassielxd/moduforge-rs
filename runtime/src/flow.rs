@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use moduforge_core::state::{
+use moduforge_state::{
     state::{State, TransactionResult},
     transaction::Transaction,
 };

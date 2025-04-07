@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use moduforge_core::debug;
+use moduforge_state::debug;
 use tokio::sync::{mpsc, oneshot};
 use async_trait::async_trait;
 use tokio::select;

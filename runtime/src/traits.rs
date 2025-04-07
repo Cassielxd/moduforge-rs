@@ -4,14 +4,12 @@ use crate::{
     history_manager::HistoryManager, types::EditorOptions,
 };
 use async_trait::async_trait;
-use moduforge_core::{
-    model::{node_pool::NodePool, schema::Schema},
-    state::{
-        state::State,
-        transaction::{Command, Transaction},
-    },
-};
 
+use moduforge_state::{
+    state::State,
+    transaction::{Command, Transaction},
+};
+use moduforge_model::{node_pool::NodePool, schema::Schema};
 /// 定义编辑器核心功能的基础特征
 #[async_trait]
 pub trait EditorCore {

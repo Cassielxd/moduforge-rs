@@ -1,41 +1,43 @@
 use std::sync::Arc;
 
-use crate::model::{mark::Mark, node_pool::Draft, schema::Schema, types::NodeId};
+use crate::draft::Draft;
 
 use super::{
     ConcreteStep,
     step::{Step, StepResult},
     transform::TransformError,
 };
+use im::HashMap;
+use moduforge_model::{schema::Schema, types::NodeId};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct AddMarkStep {
+pub struct AttrStep {
     id: NodeId,
-    marks: Vec<Mark>,
+    values: HashMap<String, Value>,
 }
-impl AddMarkStep {
+impl AttrStep {
     pub fn new(
-        id: NodeId,
-        marks: Vec<Mark>,
+        id: String,
+        values: HashMap<String, Value>,
     ) -> Self {
-        AddMarkStep { id, marks }
+        AttrStep { id, values }
     }
 }
-impl Step for AddMarkStep {
+impl Step for AttrStep {
     fn apply(
         &self,
         dart: &mut Draft,
         schema: Arc<Schema>,
     ) -> Result<StepResult, TransformError> {
         let _ = schema;
-
-        match dart.add_mark(&self.id, &self.marks) {
+        match dart.update_attr(&self.id, self.values.clone()) {
             Ok(_) => Ok(dart.commit()),
             Err(err) => Err(TransformError::new(err.to_string())),
         }
     }
 
     fn to_concrete(&self) -> super::ConcreteStep {
-        ConcreteStep::AddMarkStep(self.clone())
+        ConcreteStep::UpdateAttrs(self.clone())
     }
 }

@@ -2,10 +2,7 @@ use std::{fmt::Debug, sync::Arc, time::Duration};
 
 use async_channel::{Receiver, Sender};
 use futures::future::join_all;
-use moduforge_core::{
-    debug,
-    state::{state::State, transaction::Transaction},
-};
+use moduforge_state::{debug, state::State, Transaction};
 use tokio::{signal, sync::RwLock, time::timeout};
 
 use crate::error::{EditorResult, error_utils};

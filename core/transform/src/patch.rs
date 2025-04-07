@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::{mark::Mark, node::Node, types::NodeId};
 use std::collections::HashMap;
+
+use moduforge_model::{mark::Mark, node::Node, types::NodeId};
 
 /// 文档补丁枚举
 /// 用于描述对文档树的各种修改操作

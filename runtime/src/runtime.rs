@@ -10,15 +10,14 @@ use crate::{
     traits::{EditorCore, EditorBase},
 };
 use async_trait::async_trait;
-use moduforge_core::{
-    model::{node_pool::NodePool, schema::Schema},
-    state::{
-        state::{State, StateConfig, TransactionResult},
-        transaction::{Command, Transaction},
-    },
-    transform::transform::Transform,
+
+use moduforge_model::{node_pool::NodePool, schema::Schema};
+use moduforge_state::{
+    state::{State, StateConfig, TransactionResult},
+    transaction::{Command, Transaction},
     {info, debug, error},
 };
+use moduforge_transform::transform::Transform;
 
 /// Editor 结构体代表编辑器的核心功能实现
 /// 负责管理文档状态、事件处理、插件系统和存储等核心功能

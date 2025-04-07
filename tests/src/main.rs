@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use moduforge_core::{init_logging, state::transaction::Transaction};
+use moduforge_state::{init_logging, transaction::Transaction};
 use moduforge_runtime::{
     async_runtime::Editor, traits::EditorCore, types::EditorOptions,
 };

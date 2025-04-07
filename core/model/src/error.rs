@@ -1,4 +1,4 @@
-use crate::model::types::NodeId;
+use crate::types::NodeId;
 
 /// Represents all possible errors that can occur in the node pool operations.
 #[derive(Debug, thiserror::Error)]

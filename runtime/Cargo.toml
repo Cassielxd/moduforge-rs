@@ -23,5 +23,7 @@ serde_json = {workspace=true}
 thiserror= {workspace=true}
 async-trait= {workspace=true}
 futures = {workspace=true}
-moduforge-core = {version = "0.2.3", path = "../core"}
+moduforge-model = {version = "0.2.4", path = "../core/model"}
+moduforge-state = {version = "0.2.4", path = "../core/state"}
+moduforge-transform = {version = "0.2.4", path = "../core/transform"}
 

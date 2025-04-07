@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use moduforge_core::model::{mark_type::MarkSpec, schema::AttributeSpec};
+use moduforge_model::{mark_type::MarkSpec, schema::AttributeSpec};
 use serde_json::Value;
 
 #[derive(Clone, PartialEq, Debug, Eq)]

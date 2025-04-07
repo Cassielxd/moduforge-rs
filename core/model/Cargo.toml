@@ -1,12 +1,12 @@
 [package]
-name = "moduforge-core"
+name = "moduforge-model"
 version = {workspace=true}
 edition = {workspace=true}
 description = "不可变数据结构与事务系统基础"
 authors = {workspace=true}
 license = {workspace=true}
 [lib]
-lib="./src/lib.rs"
+lib="src/lib.rs"
 
 [dependencies]
 im= {workspace=true}

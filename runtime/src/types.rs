@@ -2,7 +2,7 @@ use std::{collections::HashMap, env::current_dir, path::PathBuf, sync::Arc};
 use async_trait::async_trait;
 
 use crate::{event::EventHandler, extension::Extension, mark::Mark, node::Node};
-use moduforge_core::model::{
+use moduforge_model::{
     node_pool::NodePool,
     schema::{AttributeSpec, Schema},
 };

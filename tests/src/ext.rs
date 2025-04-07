@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use moduforge_core::state::plugin::{Plugin, PluginSpec};
+use moduforge_state::plugin::{Plugin, PluginSpec};
 use moduforge_runtime::extension::Extension;
 
 use crate::plugins::{P1Plugin, P1State, P2Plugin};
@@ -22,4 +22,3 @@ pub fn get_extension() -> Extension {
     })));
     extension
 }
-

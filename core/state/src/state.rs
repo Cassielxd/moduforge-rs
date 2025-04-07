@@ -1,4 +1,4 @@
-use crate::model::{
+use moduforge_model::{
     id_generator::IdGenerator, mark::Mark, node_pool::NodePool, schema::Schema,
 };
 
@@ -131,10 +131,7 @@ impl State {
         let result = self.apply_transaction(transaction).await?;
         // 检查是否需要重新应用事务
         let duration = start_time.elapsed();
-        tracing::debug!(
-            "事务应用成功，步骤数保持不变，耗时: {:?}",
-            duration
-        );
+        tracing::debug!("事务应用成功，步骤数保持不变，耗时: {:?}", duration);
         Ok(result)
     }
 
@@ -145,7 +142,7 @@ impl State {
     ) -> StateResult<bool> {
         // 获取已排序的插件列表
         let sorted_plugins = self.sorted_plugins();
-        
+
         for (i, plugin) in sorted_plugins.iter().enumerate() {
             if Some(i) != ignore
                 && !plugin.apply_filter_transaction(tr, self).await
@@ -242,10 +239,10 @@ impl State {
         let mut config = self.config.as_ref().clone();
         config.doc = Some(tr.doc.clone());
         let mut new_instance = State::new(Arc::new(config));
-        
+
         // 获取已排序的插件列表
         let sorted_plugins = self.sorted_plugins();
-        
+
         for plugin in sorted_plugins.iter() {
             if let Some(field) = &plugin.spec.state {
                 if let Some(old_plugin_state) = self.get_field(&plugin.key) {
@@ -372,8 +369,9 @@ impl Configuration {
         if let Some(plugin_list) = plugins {
             // 按照优先级排序插件
             let mut sorted_plugins = plugin_list;
-            sorted_plugins.sort_by(|a, b| a.spec.priority.cmp(&b.spec.priority));
-            
+            sorted_plugins
+                .sort_by(|a, b| a.spec.priority.cmp(&b.spec.priority));
+
             for plugin in sorted_plugins {
                 let key = plugin.key.clone();
                 if config.plugins_by_key.contains_key(&key) {

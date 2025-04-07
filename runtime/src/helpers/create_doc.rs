@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use moduforge_core::model::{node_pool::NodePool, schema::Schema};
+use moduforge_model::{node_pool::NodePool, schema::Schema};
 
 use crate::types::Content;
 

@@ -10,16 +10,13 @@ use crate::{
     types::EditorOptions,
 };
 use async_trait::async_trait;
-use moduforge_core::{
+use moduforge_model::{node_pool::NodePool, schema::Schema};
+use moduforge_state::{
     debug,
-    model::{node_pool::NodePool, schema::Schema},
-    state::{
-        state::{State, StateConfig},
-        transaction::{Command, Transaction},
-    },
-    transform::transform::Transform,
+    state::{State, StateConfig},
+    transaction::{Command, Transaction},
 };
-
+use moduforge_transform::transform::Transform;
 /// Editor 结构体代表编辑器的核心功能实现
 /// 负责管理文档状态、事件处理、插件系统和存储等核心功能
 pub struct Editor {

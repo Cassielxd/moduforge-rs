@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use crate::model::{node::Node, node_pool::Draft, schema::Schema, types::NodeId};
+use moduforge_model::{node::Node, schema::Schema, types::NodeId};
+use crate::draft::Draft;
 
 use super::{
     ConcreteStep,

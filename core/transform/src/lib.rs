@@ -1,16 +1,20 @@
 use std::sync::Arc;
 
 use attr_step::AttrStep;
+use draft::Draft;
 use mark_step::AddMarkStep;
 use node_step::{AddNodeStep, MoveNodeStep, RemoveNodeStep, ReplaceNodeStep};
+use patch::Patch;
 use serde::{Deserialize, Serialize};
 use step::{Step, StepResult};
 use transform::TransformError;
 
-use crate::model::{node_pool::Draft, patch::Patch, schema::Schema};
+use moduforge_model::schema::Schema;
 pub mod attr_step;
+pub mod draft;
 pub mod mark_step;
 pub mod node_step;
+pub mod patch;
 pub mod step;
 pub mod transform;
 
@@ -29,7 +33,7 @@ impl Step for ConcreteStep {
     fn apply(
         &self,
         dart: &mut Draft,
-        schema: std::sync::Arc<crate::model::schema::Schema>,
+        schema: std::sync::Arc<moduforge_model::schema::Schema>,
     ) -> Result<step::StepResult, transform::TransformError> {
         match self {
             ConcreteStep::UpdateAttrs(attr_step) => {
@@ -70,7 +74,7 @@ impl Step for PatchStep {
     fn apply(
         &self,
         dart: &mut Draft,
-        _: std::sync::Arc<crate::model::schema::Schema>,
+        _: std::sync::Arc<moduforge_model::schema::Schema>,
     ) -> Result<step::StepResult, transform::TransformError> {
         match dart.apply_patches(&self.patches) {
             Ok(()) => Ok(dart.commit()),
