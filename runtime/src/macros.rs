@@ -91,23 +91,6 @@ macro_rules! impl_plugin {
             ) -> bool {
                 true
             }
-
-            async fn before_apply_transaction(
-                &self,
-                _tr: &mut Transaction,
-                _state: &State,
-            ) -> Result<(), Box<dyn std::error::Error>> {
-                Ok(())
-            }
-
-            async fn after_apply_transaction(
-                &self,
-                _new_state: &State,
-                _tr: &mut Transaction,
-                _old_state: &State,
-            ) -> Result<(), Box<dyn std::error::Error>> {
-                Ok(())
-            }
         }
     };
     ($name:ident, $append_fn:expr, $filter_fn:expr) => {
@@ -134,111 +117,6 @@ macro_rules! impl_plugin {
                 state: &State,
             ) -> bool {
                 $filter_fn(tr, state)
-            }
-
-            async fn before_apply_transaction(
-                &self,
-                _tr: &mut Transaction,
-                _state: &State,
-            ) -> Result<(), Box<dyn std::error::Error>> {
-                Ok(())
-            }
-
-            async fn after_apply_transaction(
-                &self,
-                _new_state: &State,
-                _tr: &mut Transaction,
-                _old_state: &State,
-            ) -> Result<(), Box<dyn std::error::Error>> {
-                Ok(())
-            }
-        }
-    };
-    ($name:ident, $append_fn:expr, $filter_fn:expr, $before_fn:expr) => {
-        #[derive(Debug)]
-        pub struct $name {}
-
-        #[async_trait]
-        impl PluginTrait for $name
-        where
-            Self: Send + Sync,
-        {
-            async fn append_transaction(
-                &self,
-                tr: &Transaction,
-                old_state: &State,
-                new_state: &State,
-            ) -> Option<Transaction> {
-                $append_fn(tr, old_state, new_state).await
-            }
-
-            async fn filter_transaction(
-                &self,
-                tr: &Transaction,
-                state: &State,
-            ) -> bool {
-                $filter_fn(tr, state).await
-            }
-
-            async fn before_apply_transaction(
-                &self,
-                tr: &mut Transaction,
-                state: &State,
-            ) -> Result<(), Box<dyn std::error::Error>> {
-                $before_fn(tr, state).await
-            }
-
-            async fn after_apply_transaction(
-                &self,
-                _new_state: &State,
-                _tr: &mut Transaction,
-                _old_state: &State,
-            ) -> Result<(), Box<dyn std::error::Error>> {
-                Ok(())
-            }
-        }
-    };
-    ($name:ident, $append_fn:expr, $filter_fn:expr, $before_fn:expr, $after_fn:expr) => {
-        #[derive(Debug)]
-        pub struct $name {}
-
-        #[async_trait]
-        impl PluginTrait for $name
-        where
-            Self: Send + Sync,
-        {
-            async fn append_transaction(
-                &self,
-                tr: &Transaction,
-                old_state: &State,
-                new_state: &State,
-            ) -> Option<Transaction> {
-                $append_fn(tr, old_state, new_state).await
-            }
-
-            async fn filter_transaction(
-                &self,
-                tr: &Transaction,
-                state: &State,
-            ) -> bool {
-                $filter_fn(tr, state).await
-            }
-
-            async fn before_apply_transaction(
-                &self,
-                tr: &mut Transaction,
-                state: &State,
-            ) -> Result<(), Box<dyn std::error::Error>> {
-                $before_fn(tr, state).await
-            }
-
-            async fn after_apply_transaction(
-                &self,
-                new_state: &State,
-                tr: &mut Transaction,
-                old_state: &State,
-            ) -> Result<(), Box<dyn std::error::Error>> {
-                $after_fn(new_state, tr, old_state).await
             }
         }
     };

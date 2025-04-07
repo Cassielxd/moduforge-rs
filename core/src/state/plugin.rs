@@ -27,25 +27,6 @@ pub trait PluginTrait: Send + Sync + Debug {
     ) -> bool {
         true
     }
-
-    /// 事务应用前的处理
-    async fn before_apply_transaction(
-        &self,
-        _tr: &mut Transaction,
-        _state: &State,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
-    }
-
-    /// 事务应用后的处理
-    async fn after_apply_transaction(
-        &self,
-        _new_state: &State,
-        _tr: &mut Transaction,
-        _old_state: &State,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
-    }
 }
 /// 状态字段特征
 /// 定义插件状态的管理方式，包括初始化、应用更改和序列化
@@ -119,33 +100,6 @@ impl PluginSpec {
             None => None,
         }
     }
-    pub async fn before_apply_transaction(
-        &self,
-        tr: &mut Transaction,
-        state: &State,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        // 默认实现为空，由具体插件重写
-        if let Some(transaction) = &self.tr {
-            transaction.before_apply_transaction(tr, state).await?;
-        }
-        Ok(())
-    }
-
-    /// 事务应用后的处理
-    pub async fn after_apply_transaction(
-        &self,
-        new_state: &State,
-        tr: &mut Transaction,
-        old_state: &State,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        // 默认实现为空，由具体插件重写
-        if let Some(transaction) = &self.tr {
-            transaction
-                .after_apply_transaction(new_state, tr, old_state)
-                .await?;
-        }
-        Ok(())
-    }
 }
 /// 插件实例结构体
 /// 表示一个具体的插件实例
@@ -180,29 +134,6 @@ impl Plugin {
         state: &State,
     ) -> bool {
         self.spec.filter_transaction(tr, state).await
-    }
-
-    /// 事务应用前的处理
-    pub async fn before_apply_transaction(
-        &self,
-        tr: &mut Transaction,
-        state: &State,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        // 默认实现为空，由具体插件重写
-        self.spec.before_apply_transaction(tr, state).await?;
-        Ok(())
-    }
-
-    /// 事务应用后的处理
-    pub async fn after_apply_transaction(
-        &self,
-        new_state: &State,
-        tr: &mut Transaction,
-        old_state: &State,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        // 默认实现为空，由具体插件重写
-        self.spec.after_apply_transaction(new_state, tr, old_state).await?;
-        Ok(())
     }
 
     /// 应用事务追加逻辑

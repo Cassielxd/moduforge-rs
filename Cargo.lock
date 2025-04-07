@@ -718,7 +718,7 @@ dependencies = [
 
 [[package]]
 name = "moduforge-core"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -736,7 +736,7 @@ dependencies = [
 
 [[package]]
 name = "moduforge-runtime"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "async-channel",
  "async-trait",

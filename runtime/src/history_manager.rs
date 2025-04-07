@@ -34,6 +34,7 @@ impl<T: Clone> HistoryManager<T> {
             limit: history_limit,
             history: History::new(Vec::new(), initial_state, Vec::new()),
         }
+
     }
 
     pub fn get_present(&self) -> T {
