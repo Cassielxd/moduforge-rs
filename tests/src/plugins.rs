@@ -7,7 +7,7 @@ use moduforge_state::{
     state::{State, StateConfig},
     transaction::Transaction,
 };
-use moduforge_runtime::{impl_plugin, impl_state_field};
+use moduforge_core::{impl_plugin, impl_state_field};
 async fn p1_append(
     trs: &[Transaction],
     _: &State,

@@ -5,7 +5,7 @@ use moduforge_state::{
     transaction::{Command, Transaction},
 };
 use moduforge_transform::transform::TransformError;
-use moduforge_runtime::impl_command;
+use moduforge_core::impl_command;
 
 #[derive(Clone, Default, Debug)]
 pub struct MyCommand;

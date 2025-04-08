@@ -1,448 +1,198 @@
-# ModuForge Core
+# ModuForge Runtime
 
-ModuForge Core 是一个基于 Rust 实现的文档编辑器核心库，提供了灵活的文档模型和状态管理。
+ModuForge Runtime 是一个强大的 Rust 编辑器运行时框架，提供了插件加载、热更新、依赖管理等核心功能。该框架设计用于构建可扩展的编辑器系统，支持异步操作和事件驱动架构。
 
-## 核心概念
+## 主要特性
 
-### 1. 文档模型 (Document Model)
+- **插件系统**
+  - 支持动态插件加载和卸载
+  - 插件生命周期管理
+  - 插件间通信机制
 
-文档模型是 ModuForge 的核心，它定义了文档的结构和行为。主要包含以下几个关键组件：
+- **异步运行时**
+  - 基于 Tokio 的异步操作支持
+  - 事件驱动的架构设计
+  - 高性能的并发处理
 
-#### 1.1 节点类型 (NodeType)
+- **状态管理**
+  - 事务性状态更新
+  - 撤销/重做支持
+  - 历史记录管理
+
+- **事件系统**
+  - 事件总线设计
+  - 发布-订阅模式
+  - 异步事件处理
+
+- **扩展性**
+  - 模块化设计
+  - 可自定义的扩展点
+  - 灵活的配置选项
+
+## 运行时实现
+
+ModuForge Runtime 提供了两种运行时实现，以满足不同的使用场景：
+
+### Runtime
+同步运行时实现，适用于：
+- 简单的编辑器场景
+- 不需要复杂异步操作的应用
+- 对性能要求不是特别高的场景
+
+特点：
+- 同步操作处理
+- 简单的状态管理
+- 基础的事件处理
+- 适合快速开发和原型验证
+
+### AsyncRuntime
+异步运行时实现，适用于：
+- 复杂的编辑器场景
+- 需要处理大量并发操作
+- 高性能要求的应用
+
+特点：
+- 基于 Tokio 的异步操作
+- 流式处理引擎（FlowEngine）
+- 高级状态管理
+- 异步事件处理
+- 更好的性能和扩展性
+
+### 使用场景对比
+
+| 特性 | Runtime | AsyncRuntime |
+|------|---------|--------------|
+| 并发处理 | 基础 | 高级 |
+| 性能 | 一般 | 优秀 |
+| 复杂度 | 低 | 高 |
+| 适用场景 | 简单应用 | 复杂应用 |
+| 资源消耗 | 较低 | 较高 |
+| 开发难度 | 简单 | 较复杂 |
+
+## 核心组件
+
+### Editor
+编辑器核心实现，负责：
+- 文档状态管理
+- 事件处理
+- 插件系统集成
+- 存储管理
+
+### ExtensionManager
+扩展管理器，处理：
+- 插件加载和卸载
+- 插件生命周期管理
+- 插件配置管理
+
+### HistoryManager
+历史记录管理器，提供：
+- 操作历史追踪
+- 撤销/重做功能
+- 状态快照管理
+
+### EventBus
+事件总线，实现：
+- 事件分发
+- 事件订阅
+- 异步事件处理
+
+## 依赖项
+
+主要依赖包括：
+- tokio: 异步运行时
+- metrics: 性能指标收集
+- serde: 序列化/反序列化
+- async-trait: 异步特征支持
+- moduforge-core: 核心功能库
+
+## 使用示例
+
+### 同步运行时示例
 ```rust
-pub struct NodeType {
-    pub name: String,           // 节点类型标识符
-    pub spec: NodeSpec,         // 节点规范定义
-    pub desc: String,           // 节点描述
-    pub groups: Vec<String>,    // 节点所属分组
-    pub attrs: HashMap<String, Attribute>,  // 节点属性定义
-    pub default_attrs: HashMap<String, String>,  // 默认属性值
-    pub content_match: Option<ContentMatch>,  // 内容匹配规则
-    pub mark_set: Option<Vec<MarkType>>,     // 允许的标记类型
-}
-```
-
-节点类型定义了：
-- 节点的基本属性（名称、描述、分组）
-- 节点的属性约束
-- 节点的内容结构规则
-- 节点支持的标记类型
-
-#### 1.2 节点规范 (NodeSpec)
-```rust
-pub struct NodeSpec {
-    pub content: Option<String>,    // 内容约束表达式
-    pub marks: Option<String>,      // 标记类型表达式
-    pub group: Option<String>,      // 分组信息
-    pub desc: Option<String>,       // 描述信息
-    pub attrs: Option<HashMap<String, AttributeSpec>>,  // 属性规范
-}
-```
-
-节点规范用于配置节点类型的行为和约束。
-
-### 2. 内容匹配系统 (Content Matching System)
-
-内容匹配系统负责验证和构建文档结构，确保文档内容符合预定义的规则。
-
-#### 2.1 内容匹配规则 (ContentMatch)
-```rust
-pub struct ContentMatch {
-    pub next: Vec<MatchEdge>,       // 可能的下一节点类型
-    pub wrap_cache: Vec<Option<NodeType>>,  // 包装节点缓存
-    pub valid_end: bool,            // 是否为有效的结束状态
-}
-```
-
-内容匹配规则定义了：
-- 允许的节点序列
-- 节点的重复规则
-- 节点的可选性
-
-#### 2.2 内容表达式语法
-
-支持以下内容表达式：
-- `*` - 零个或多个节点
-- `+` - 一个或多个节点
-- `?` - 零个或一个节点
-- `|` - 节点类型选择
-- 空格分隔的序列
-
-例如：
-```rust
-"DW+"      // 一个或多个 DW 节点
-"DW*"      // 零个或多个 DW 节点
-"DW djgc"  // DW 节点后跟 djgc 节点
-```
-
-### 3. 状态流转系统 (State Transition System)
-
-#### 3.1 状态定义
-```rust
-pub struct State {
-    pub config: Arc<Configuration>,           // 编辑器配置
-    pub fields_instances: ImHashMap<String, PluginState>,  // 插件状态实例
-    pub node_pool: Arc<NodePool>,             // 文档节点池
-    pub version: u64,                         // 状态版本号
-}
-```
-
-#### 3.2 状态转换流程
-
-1. **初始化状态**
-```rust
-let state = State::create(state_config).await?;
-```
-
-2. **状态转换规则**
-- 每个操作都会产生新的状态
-- 状态转换必须保持文档一致性
-- 状态转换必须记录在历史中
-- 状态转换必须经过插件验证
-
-3. **状态验证**
-- 文档结构验证
-- 插件状态验证
-- 事务过滤验证
-
-#### 3.3 核心 apply_transaction 方法
-
-`apply_transaction` 是状态转换系统的核心方法，负责处理事务的应用和插件的交互。其执行流程如下：
-
-```
-+------------------+
-|      开始        |
-+------------------+
-         ↓
-+------------------+
-|    事务过滤      |
-+------------------+
-         ↓
-    +----------+
-    |过滤失败?  |
-    +----------+
-         ↓
-    +----------+     +------------------+
-    |  是      |     |    初始化事务    |
-    +----------+     |    列表和状态    |
-         ↓          |    追踪          |
-+------------------+     +------------------+
-|   返回原始状态    |     ↓
-+------------------+     +------------------+
-                        |  插件事务处理循环  |
-                        +------------------+
-                                 ↓
-                        +------------------+
-                        |   检查所有插件    |
-                        +------------------+
-                                 ↓
-                        +------------------+
-                        |   有新事务?      |
-                        +------------------+
-                                 ↓
-                    +----------+     +------------------+
-                    |  是      |     |    事务后处理    |
-                    +----------+     +------------------+
-                         ↓          ↓
-                    +------------------+     +------------------+
-                    |   应用新事务     |     |  遍历所有插件    |
-                    +------------------+     +------------------+
-                         ↓          ↓
-                    +------------------+     +------------------+
-                    |   更新状态追踪   |     |  执行插件后处理  |
-                    +------------------+     +------------------+
-                         ↓          ↓
-                    +------------------+     +------------------+
-                    |   添加到事务列表 |     |  更新插件状态    |
-                    +------------------+     +------------------+
-                         ↓          ↓
-                    +------------------+     +------------------+
-                    |      结束       |     |      结束       |
-                    +------------------+     +------------------+
-```
-
-这个方法的主要特点：
-
-1. **事务过滤机制**
-   - 在应用事务前进行过滤
-   - 支持插件自定义过滤规则
-   - 可以阻止不合法的事务
-
-2. **插件事务追加**
-   - 支持插件追加新事务
-   - 维护事务处理顺序
-   - 防止循环依赖
-
-3. **状态追踪**
-   - 记录每个插件的处理状态
-   - 追踪事务处理进度
-   - 确保状态一致性
-
-4. **事务后处理**
-   - 允许插件进行清理工作
-   - 更新插件状态
-   - 维护系统一致性
-
-### 4. 事务系统 (Transaction System)
-
-#### 4.1 事务定义
-```rust
-pub struct Transaction {
-    pub steps: Vec<Step>,          // 事务步骤
-    pub doc: Arc<NodePool>,        // 文档节点池
-    pub metadata: TransactionMeta, // 事务元数据
-}
-```
-
-#### 4.2 事务执行流程
-
-1. **事务开始**
-```rust
-let tr = state.tr();
-```
-
-2. **事务应用流程**
-```rust
-// 1. 事务前处理
-state.before_apply_transaction(&mut tr).await?;
-
-// 2. 事务过滤
-if !state.filter_transaction(&tr, None).await? {
-    return Ok(TransactionResult { 
-        state: self.clone(), 
-        trs: vec![tr] 
-    });
-}
-
-// 3. 应用事务
-let mut new_state = state.apply_inner(&tr).await?;
-
-// 4. 事务后处理
-state.after_apply_transaction(&new_state, &mut tr).await?;
-```
-
-3. **事务类型**
-
-a. **简单事务**
-- 单个编辑操作
-- 直接执行和回滚
-- 不包含子事务
-
-b. **复合事务**
-- 多个编辑操作
-- 可以包含子事务
-- 原子性保证
-
-c. **插件事务**
-- 由插件产生的事务
-- 可以修改或扩展原有事务
-- 可以过滤事务执行
-
-#### 4.3 核心 apply 方法分析
-
-`apply` 方法是状态转换的核心，它负责将事务应用到当前状态。主要流程如下：
-
-1. **事务前处理**
-```rust
-pub async fn before_apply_transaction(&self, tr: &mut Transaction) -> StateResult<()> {
-    // 调用所有插件的 before_apply_transaction 钩子
-    for plugin in &self.config.plugins {
-        plugin.before_apply_transaction(tr, self).await?;
-    }
-    Ok(())
-}
-```
-
-2. **事务过滤**
-```rust
-pub async fn filter_transaction(&self, tr: &Transaction, ignore: Option<usize>) -> StateResult<bool> {
-    // 检查所有插件是否允许事务执行
-    for (i, plugin) in self.config.plugins.iter().enumerate() {
-        if Some(i) != ignore && !plugin.apply_filter_transaction(tr, self).await {
-            return Ok(false);
-        }
-    }
-    Ok(true)
-}
-```
-
-3. **事务应用**
-```rust
-pub async fn apply_inner(&self, tr: &Transaction) -> StateResult<State> {
-    // 1. 创建新的配置
-    let mut config = self.config.as_ref().clone();
-    config.doc = Some(tr.doc.clone());
-    
-    // 2. 创建新状态
-    let mut new_instance = State::new(Arc::new(config));
-    
-    // 3. 应用插件状态
-    for plugin in &self.config.plugins {
-        if let Some(field) = &plugin.spec.state {
-            if let Some(old_plugin_state) = self.get_field(&plugin.key) {
-                let value = field.apply(tr, old_plugin_state, self, &new_instance).await;
-                new_instance.set_field(&plugin.key, value)?;
-            }
-        }
-    }
-    
-    Ok(new_instance)
-}
-```
-
-4. **事务后处理**
-```rust
-async fn after_apply_transaction(&self, new_state: &State, tr: &mut Transaction) -> StateResult<()> {
-    // 调用所有插件的 after_apply_transaction 钩子
-    for plugin in &self.config.plugins {
-        plugin.after_apply_transaction(new_state, tr, self).await?;
-    }
-    Ok(())
-}
-```
-
-#### 4.4 插件系统集成
-
-插件系统通过以下方式与状态转换集成：
-
-1. **插件特征**
-```rust
-pub trait PluginTrait: Send + Sync + Debug {
-    async fn append_transaction(&self, tr: &Transaction, old_state: &State, new_state: &State) -> Option<Transaction>;
-    async fn filter_transaction(&self, tr: &Transaction, state: &State) -> bool;
-    async fn before_apply_transaction(&self, tr: &mut Transaction, state: &State) -> Result<(), Box<dyn std::error::Error>>;
-    async fn after_apply_transaction(&self, new_state: &State, tr: &mut Transaction, old_state: &State) -> Result<(), Box<dyn std::error::Error>>;
-}
-```
-
-2. **状态字段特征**
-```rust
-pub trait StateField: Send + Sync + Debug {
-    async fn init(&self, config: &StateConfig, instance: Option<&State>) -> PluginState;
-    async fn apply(&self, tr: &Transaction, value: PluginState, old_state: &State, new_state: &State) -> PluginState;
-}
-```
-
-这种设计允许：
-- 插件可以修改事务内容
-- 插件可以过滤事务执行
-- 插件可以在事务前后执行自定义逻辑
-- 插件可以维护自己的状态
-
-### 5. 执行流程
-
-#### 5.1 文档创建流程
-
-1. **初始化 Schema**
-```rust
-let schema = Schema::compile(schema_spec)?;
-```
-
-2. **创建根节点**
-```rust
-let root = schema.top_node_type.create_and_fill(
-    Some(id),
-    None,
-    vec![],
-    None,
-    &schema,
-);
-```
-
-3. **内容填充过程**
-- 检查内容匹配规则
-- 创建缺失的必需节点
-- 递归创建子节点
-- 建立节点间的引用关系
-
-#### 5.2 内容验证流程
-
-1. **节点内容验证**
-```rust
-node_type.check_content(content, schema)
-```
-
-2. **属性验证**
-```rust
-node_type.check_attrs(attrs)
-```
-
-3. **内容匹配验证**
-```rust
-content_match.match_fragment(fragment, schema)
-```
-
-### 6. 示例
-
-#### 6.1 定义文档结构
-```rust
-let schema_spec = SchemaSpec {
-    nodes: {
-        let mut nodes = HashMap::new();
-        nodes.insert(
-            "doc".to_string(),
-            NodeSpec {
-                content: Some("DW+".to_string()),
-                marks: None,
-                group: None,
-                desc: None,
-                attrs: None,
-            },
-        );
-        // ... 其他节点定义
-        nodes
-    },
-    marks: HashMap::new(),
-    top_node: Some("doc".to_string()),
+use moduforge_runtime::{
+    Editor,
+    EditorOptions,
+    EditorResult,
 };
+
+fn main() -> EditorResult<()> {
+    // 创建编辑器配置
+    let options = EditorOptions::new()
+        .with_extensions(vec![])
+        .with_content("初始内容");
+
+    // 创建编辑器实例
+    let mut editor = Editor::create(options)?;
+
+    // 初始化编辑器
+    editor.init()?;
+
+    // 使用编辑器...
+    
+    Ok(())
+}
 ```
 
-#### 6.2 创建文档
+### 异步运行时示例
 ```rust
-let schema = Schema::compile(schema_spec)?;
-let id = IdGenerator::get_id();
-let nodes = schema.top_node_type.create_and_fill(
-    Some(id),
-    None,
-    vec![],
-    None,
-    &schema,
-);
+use moduforge_runtime::{
+    Editor,
+    EditorOptions,
+    EditorResult,
+};
+
+#[tokio::main]
+async fn main() -> EditorResult<()> {
+    // 创建编辑器配置
+    let options = EditorOptions::new()
+        .with_extensions(vec![])
+        .with_content("初始内容");
+
+    // 创建异步编辑器实例
+    let mut editor = Editor::create(options).await?;
+
+    // 初始化编辑器
+    editor.init().await?;
+
+    // 使用异步编辑器...
+    
+    Ok(())
+}
 ```
 
-## 使用说明
+## 项目结构
 
-1. 首先定义文档的 Schema，包括：
-   - 节点类型定义
-   - 内容规则
-   - 属性约束
-   - 标记类型
+```
+src/
+├── async_processor.rs    // 异步处理器实现
+├── async_runtime.rs      // 异步运行时实现
+├── error.rs             // 错误处理
+├── event.rs             // 事件系统
+├── extension.rs         // 扩展接口
+├── extension_manager.rs // 扩展管理器
+├── flow.rs             // 流程控制
+├── history_manager.rs   // 历史记录管理
+├── macros.rs           // 宏定义
+├── node.rs             // 节点实现
+├── runtime.rs          // 运行时核心
+├── traits.rs           // 特征定义
+└── types.rs            // 类型定义
+```
 
-2. 使用 Schema 创建文档：
-   - 创建根节点
-   - 添加子节点
-   - 设置节点属性
-   - 应用标记
+## 开发指南
 
-3. 验证文档结构：
-   - 检查内容规则
-   - 验证属性
-   - 确保标记正确
+1. 克隆仓库
+2. 安装 Rust 工具链
+3. 运行测试：`cargo test`
+4. 构建项目：`cargo build`
 
-## 注意事项
+## 贡献指南
 
-1. 内容匹配规则必须是无歧义的
-2. 节点属性必须满足规范要求
-3. 标记类型必须在节点类型允许的范围内
-4. 文档结构必须符合预定义的规则
-5. 状态转换必须保持一致性
-6. 事务必须正确处理回滚
+欢迎提交 Pull Request 和 Issue。在提交代码前，请确保：
+1. 代码符合 Rust 代码规范
+2. 添加了必要的测试
+3. 更新了相关文档
 
-## 性能考虑
+## 许可证
 
-1. 内容匹配使用 DFA 实现，确保高效的匹配过程
-2. 节点引用使用 ID 而不是直接引用，减少内存占用
-3. 使用缓存优化重复操作
-4. 延迟创建子节点，避免不必要的开销
-5. 状态转换使用不可变数据结构
-6. 事务使用增量更新策略 
+本项目采用 MIT 许可证 

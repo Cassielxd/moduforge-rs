@@ -1,5 +1,5 @@
 [package]
-name = "moduforge-runtime"
+name = "moduforge-core"
 version = {workspace=true}
 edition = {workspace=true}
 description = "插件加载、热更新、依赖管理"
@@ -23,7 +23,7 @@ serde_json = {workspace=true}
 thiserror= {workspace=true}
 async-trait= {workspace=true}
 futures = {workspace=true}
-moduforge-model = {version = "0.2.5", path = "../core/model"}
-moduforge-state = {version = "0.2.5", path = "../core/state"}
-moduforge-transform = {version = "0.2.5", path = "../core/transform"}
+moduforge-model = {version = "0.3.0", path = "../model"}
+moduforge-state = {version = "0.3.0", path = "../state"}
+moduforge-transform = {version = "0.3.0", path = "../transform"}
 

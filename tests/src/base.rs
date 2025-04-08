@@ -1,4 +1,4 @@
-use moduforge_runtime::{node, types::Extensions};
+use moduforge_core::{node, types::Extensions};
 
 use crate::ext::get_extension;
 
