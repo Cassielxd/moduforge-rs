@@ -18,27 +18,27 @@ use moduforge_state::{
     state::{State, StateConfig},
     transaction::Transaction,
 };
-use crate::runtime::Editor as EditorCore;
+use crate::runtime::Editor;
 /// Editor 结构体代表编辑器的核心功能实现
 /// 负责管理文档状态、事件处理、插件系统和存储等核心功能
-pub struct Editor {
-    base: EditorCore,
+pub struct AsyncEditor {
+    base: Editor,
     flow_engine: FlowEngine,
 }
-impl Deref for Editor {
-    type Target = EditorCore;
+impl Deref for AsyncEditor {
+    type Target = Editor;
 
     fn deref(&self) -> &Self::Target {
         &self.base
     }
 }
 
-impl DerefMut for Editor {
+impl DerefMut for AsyncEditor {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
     }
 }
-impl Editor {
+impl AsyncEditor {
     /// 创建新的编辑器实例
     /// options: 编辑器配置选项
     pub async fn create(
@@ -64,7 +64,7 @@ impl Editor {
         .await?;
         let state: Arc<State> = Arc::new(state);
 
-        let base = EditorCore {
+        let base = Editor {
             event_bus,
             state: state.clone(),
             extension_manager,
@@ -76,7 +76,7 @@ impl Editor {
             middleware_stack: MiddlewareStack::new(),
         };
 
-        let mut runtime = Editor { base, flow_engine: FlowEngine::new()? };
+        let mut runtime = AsyncEditor { base, flow_engine: FlowEngine::new()? };
         runtime.init().await?;
         debug!("编辑器实例创建成功");
         Ok(runtime)

@@ -175,7 +175,7 @@ impl Editor {
         }
         Ok(())
     }
-    pub async fn command(
+    async fn command(
         &mut self,
         command: Arc<dyn Command>,
     ) -> EditorResult<()> {
@@ -192,7 +192,7 @@ impl Editor {
     ///
     /// # 返回值
     /// * `EditorResult<()>` - 处理结果，成功返回 Ok(()), 失败返回错误
-    pub async fn dispatch(
+    async fn dispatch(
         &mut self,
         transaction: Transaction,
     ) -> EditorResult<()> {
@@ -247,7 +247,7 @@ impl Editor {
         Ok(())
     }
 
-    pub async fn register_plugin(&mut self) -> EditorResult<()> {
+    async fn register_plugin(&mut self) -> EditorResult<()> {
         info!("正在注册新插件");
         let state = self
             .get_state()
@@ -270,7 +270,7 @@ impl Editor {
         Ok(())
     }
 
-    pub async fn unregister_plugin(
+    async fn unregister_plugin(
         &mut self,
         plugin_key: String,
     ) -> EditorResult<()> {

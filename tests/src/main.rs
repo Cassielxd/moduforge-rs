@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use moduforge_state::{init_logging, transaction::Transaction};
 use moduforge_core::{
-    async_runtime::Editor, types::EditorOptions,
+    async_runtime::AsyncEditor, types::EditorOptions,
 };
 use moduforge_test::{base::get_base, commands::MyCommand1};
 
@@ -9,7 +9,7 @@ use moduforge_test::{base::get_base, commands::MyCommand1};
 async fn main() {
     init_logging("debug", None).unwrap();
     let mut runtime =
-        Editor::create(EditorOptions::default().set_extensions(get_base()))
+    AsyncEditor::create(EditorOptions::default().set_extensions(get_base()))
             .await
             .unwrap();
     let mut tr: Transaction = runtime.get_tr();

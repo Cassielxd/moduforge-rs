@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env::current_dir, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use async_trait::async_trait;
 
 use crate::{event::EventHandler, extension::Extension, mark::Mark, node::Node};
@@ -40,18 +40,7 @@ pub enum Content {
     None,
 }
 
-#[derive(Clone, Debug)]
-pub struct StorageOptions {
-    pub storage_path: PathBuf,
 
-    pub l2_path: PathBuf,
-}
-impl Default for StorageOptions {
-    fn default() -> Self {
-        let path = current_dir().unwrap().join("./data");
-        Self { l2_path: path.join("db"), storage_path: path }
-    }
-}
 
 #[derive(Clone, Debug, Default)]
 pub struct EditorOptions {
