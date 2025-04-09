@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use moduforge_state::{init_logging, transaction::Transaction};
 use moduforge_core::{
-    async_runtime::Editor, traits::EditorCore, types::EditorOptions,
+    async_runtime::Editor, types::EditorOptions,
 };
 use moduforge_test::{base::get_base, commands::MyCommand1};
 

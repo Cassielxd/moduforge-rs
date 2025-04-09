@@ -1,16 +1,14 @@
 use std::sync::Arc;
 
 use crate::{
-    error::{EditorError, EditorResult, error_utils},
+    error::{EditorResult, error_utils},
     event::{Event, EventBus},
     extension_manager::ExtensionManager,
     helpers::create_doc,
     history_manager::HistoryManager,
     types::EditorOptions,
-    traits::{EditorCore, EditorBase},
     middleware::{Middleware, MiddlewareStack},
 };
-use async_trait::async_trait;
 
 use moduforge_model::{node_pool::NodePool, schema::Schema};
 use moduforge_state::{
@@ -22,8 +20,12 @@ use moduforge_state::{
 /// Editor 结构体代表编辑器的核心功能实现
 /// 负责管理文档状态、事件处理、插件系统和存储等核心功能
 pub struct Editor {
-    base: EditorBase,
-    middleware_stack: MiddlewareStack,
+    pub event_bus: EventBus,
+    pub state: Arc<State>,
+    pub extension_manager: ExtensionManager,
+    pub history_manager: HistoryManager<Arc<State>>,
+    pub options: EditorOptions,
+    pub middleware_stack: MiddlewareStack,
 }
 
 impl Editor {
@@ -58,7 +60,7 @@ impl Editor {
         let state: Arc<State> = Arc::new(state);
         debug!("已创建编辑器状态");
 
-        let base = EditorBase {
+        let mut runtime = Editor {
             event_bus,
             state: state.clone(),
             extension_manager,
@@ -67,10 +69,8 @@ impl Editor {
                 options.get_history_limit(),
             ),
             options,
+            middleware_stack: MiddlewareStack::new(),
         };
-
-        let mut runtime =
-            Editor { base, middleware_stack: MiddlewareStack::new() };
         runtime.init().await?;
         info!("编辑器实例创建成功");
         Ok(runtime)
@@ -79,16 +79,14 @@ impl Editor {
     /// 初始化编辑器，设置事件处理器并启动事件循环
     async fn init(&mut self) -> EditorResult<()> {
         debug!("正在初始化编辑器");
-        self.base
-            .event_bus
-            .add_event_handlers(self.base.options.get_event_handlers())
+        self.event_bus
+            .add_event_handlers(self.options.get_event_handlers())
             .await?;
-        self.base.event_bus.start_event_loop();
+        self.event_bus.start_event_loop();
         debug!("事件总线已启动");
 
-        self.base
-            .event_bus
-            .broadcast_blocking(Event::Create(self.base.state.clone()))
+        self.event_bus
+            .broadcast_blocking(Event::Create(self.state.clone()))
             .map_err(|e| {
                 error!("广播创建事件失败: {}", e);
                 error_utils::event_error(format!(
@@ -104,9 +102,9 @@ impl Editor {
     pub async fn destroy(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         debug!("正在销毁编辑器实例");
         // 广播销毁事件
-        self.base.event_bus.broadcast(Event::Destroy).await?;
+        self.event_bus.broadcast(Event::Destroy).await?;
         // 停止事件循环
-        self.base.event_bus.broadcast(Event::Stop).await?;
+        self.event_bus.broadcast(Event::Stop).await?;
         debug!("编辑器实例销毁成功");
         Ok(())
     }
@@ -120,37 +118,64 @@ impl Editor {
     {
         self.middleware_stack.add(middleware);
     }
-}
-
-#[async_trait]
-impl EditorCore for Editor {
-    type Error = EditorError;
-
-    fn doc(&self) -> Arc<NodePool> {
-        self.base.doc()
+    pub async fn run_before_middleware(
+        &mut self,
+        transaction: &mut Transaction,
+    ) -> EditorResult<()> {
+        debug!("执行前置中间件链");
+        for middleware in &self.middleware_stack.middlewares {
+            let timeout = std::time::Duration::from_millis(100);
+            if let Err(e) = tokio::time::timeout(
+                timeout,
+                middleware.before_dispatch(transaction),
+            )
+            .await
+            {
+                return Err(error_utils::middleware_error(format!(
+                    "Middleware execution timeout: {}",
+                    e
+                )));
+            }
+        }
+        Ok(())
     }
+    pub async fn run_after_middleware(
+        &mut self,
+        state: &mut Option<Arc<State>>,
+    ) -> EditorResult<()> {
+        debug!("执行后置中间件链");
+        for middleware in &self.middleware_stack.middlewares {
+            let timeout = std::time::Duration::from_millis(100);
+            let middleware_result = match tokio::time::timeout(
+                timeout,
+                middleware.after_dispatch(state.clone()),
+            )
+            .await
+            {
+                Ok(result) => result?,
+                Err(e) => {
+                    return Err(error_utils::middleware_error(format!(
+                        "Middleware execution timeout: {}",
+                        e
+                    )));
+                },
+            };
 
-    fn get_options(&self) -> &EditorOptions {
-        self.base.get_options()
+            if let Some(transaction) = middleware_result.additional_transaction
+            {
+                let TransactionResult { state: new_state, transactions: _ } =
+                    self.state.apply(transaction).await.map_err(|e| {
+                        error_utils::state_error(format!(
+                            "Failed to apply additional transaction: {}",
+                            e
+                        ))
+                    })?;
+                *state = Some(Arc::new(new_state));
+            }
+        }
+        Ok(())
     }
-
-    fn get_state(&self) -> &Arc<State> {
-        self.base.get_state()
-    }
-
-    fn get_schema(&self) -> Arc<Schema> {
-        self.base.get_schema()
-    }
-
-    fn get_event_bus(&self) -> &EventBus {
-        self.base.get_event_bus()
-    }
-
-    fn get_tr(&self) -> Transaction {
-        self.base.get_tr()
-    }
-
-    async fn command(
+    pub async fn command(
         &mut self,
         command: Arc<dyn Command>,
     ) -> EditorResult<()> {
@@ -167,33 +192,17 @@ impl EditorCore for Editor {
     ///
     /// # 返回值
     /// * `EditorResult<()>` - 处理结果，成功返回 Ok(()), 失败返回错误
-    async fn dispatch(
+    pub async fn dispatch(
         &mut self,
         transaction: Transaction,
     ) -> EditorResult<()> {
         // 保存当前事务的副本，用于中间件处理
         let mut current_transaction = transaction;
-
-        // 执行前置中间件链，允许中间件在事务应用前修改事务
-        for middleware in &self.middleware_stack.middlewares {
-            // 添加超时保护，防止中间件执行时间过长
-            let timeout = std::time::Duration::from_millis(100);
-            if let Err(e) = tokio::time::timeout(
-                timeout,
-                middleware.before_dispatch(&mut current_transaction),
-            )
-            .await
-            {
-                return Err(error_utils::middleware_error(format!(
-                    "Middleware execution timeout: {}",
-                    e
-                )));
-            }
-        }
+        self.run_before_middleware(&mut current_transaction).await?;
 
         // 应用事务到编辑器状态，获取新的状态和产生的事务列表
         let TransactionResult { state, transactions } =
-            self.base.state.apply(current_transaction).await.map_err(|e| {
+            self.state.apply(current_transaction).await.map_err(|e| {
                 error_utils::state_error(format!(
                     "Failed to apply transaction: {}",
                     e
@@ -211,10 +220,9 @@ impl EditorCore for Editor {
 
                 // 使用 clone 的引用计数而不是深度克隆
                 let transactions = Arc::new(transactions);
-                let current_state = self.base.state.clone();
+                let current_state = self.state.clone();
 
-                self.base
-                    .event_bus
+                self.event_bus
                     .broadcast(Event::TrApply(transactions, current_state))
                     .await
                     .map_err(|e| {
@@ -227,49 +235,19 @@ impl EditorCore for Editor {
         }
 
         // 执行后置中间件链，允许中间件在事务应用后执行额外操作
-        for middleware in &self.middleware_stack.middlewares {
-            // 调用中间件的 after_dispatch 方法，添加超时保护
-            let timeout = std::time::Duration::from_millis(100);
-            let middleware_result = match tokio::time::timeout(
-                timeout,
-                middleware.after_dispatch(state_update.clone()),
-            )
-            .await
-            {
-                Ok(result) => result?,
-                Err(e) => {
-                    return Err(error_utils::middleware_error(format!(
-                        "Middleware execution timeout: {}",
-                        e
-                    )));
-                },
-            };
-
-            // 如果中间件返回了额外的事务，则应用该事务
-            if let Some(transaction) = middleware_result.additional_transaction
-            {
-                let TransactionResult { state, transactions: _ } =
-                    self.base.state.apply(transaction).await.map_err(|e| {
-                        error_utils::state_error(format!(
-                            "Failed to apply additional transaction: {}",
-                            e
-                        ))
-                    })?;
-                state_update = Some(Arc::new(state));
-            }
-        }
+        self.run_after_middleware(&mut state_update).await?;
 
         // 如果有新的状态，更新编辑器状态并记录到历史记录
         if let Some(state) = state_update {
-            self.base.state = state;
+            self.state = state;
             // 使用 clone 的引用计数
-            self.base.history_manager.insert(self.base.state.clone());
+            self.history_manager.insert(self.state.clone());
         }
 
         Ok(())
     }
 
-    async fn register_plugin(&mut self) -> EditorResult<()> {
+    pub async fn register_plugin(&mut self) -> EditorResult<()> {
         info!("正在注册新插件");
         let state = self
             .get_state()
@@ -287,12 +265,12 @@ impl EditorCore for Editor {
                     e
                 ))
             })?;
-        self.base.state = Arc::new(state);
+        self.state = Arc::new(state);
         info!("插件注册成功");
         Ok(())
     }
 
-    async fn unregister_plugin(
+    pub async fn unregister_plugin(
         &mut self,
         plugin_key: String,
     ) -> EditorResult<()> {
@@ -320,18 +298,44 @@ impl EditorCore for Editor {
                     e
                 ))
             })?;
-        self.base.state = Arc::new(state);
+        self.state = Arc::new(state);
         info!("插件注销成功");
         Ok(())
     }
 
-    fn undo(&mut self) {
-        debug!("执行撤销操作");
-        self.base.undo()
+    /// 共享的基础实现方法
+    pub fn doc(&self) -> Arc<NodePool> {
+        self.state.doc()
     }
 
-    fn redo(&mut self) {
-        debug!("执行重做操作");
-        self.base.redo()
+    pub fn get_options(&self) -> &EditorOptions {
+        &self.options
+    }
+
+    pub fn get_state(&self) -> &Arc<State> {
+        &self.state
+    }
+
+    pub fn get_schema(&self) -> Arc<Schema> {
+        self.extension_manager.get_schema()
+    }
+
+    pub fn get_event_bus(&self) -> &EventBus {
+        &self.event_bus
+    }
+
+    pub fn get_tr(&self) -> Transaction {
+        let tr = self.get_state().tr();
+        tr
+    }
+
+    pub fn undo(&mut self) {
+        self.history_manager.jump(-1);
+        self.state = self.history_manager.get_present();
+    }
+
+    pub fn redo(&mut self) {
+        self.history_manager.jump(1);
+        self.state = self.history_manager.get_present();
     }
 }

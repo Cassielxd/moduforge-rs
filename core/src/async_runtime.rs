@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    ops::{Deref, DerefMut},
+    sync::Arc,
+};
 
 use crate::{
     event::{Event, EventBus},
@@ -6,25 +9,35 @@ use crate::{
     flow::{FlowEngine, ProcessorResult},
     helpers::create_doc,
     history_manager::HistoryManager,
-    traits::{EditorBase, EditorCore},
+    middleware::MiddlewareStack,
     types::EditorOptions,
-    middleware::{Middleware, MiddlewareStack},
+    EditorResult,
 };
-use async_trait::async_trait;
-use moduforge_model::{node_pool::NodePool, schema::Schema};
 use moduforge_state::{
     debug,
     state::{State, StateConfig},
-    transaction::{Command, Transaction},
+    transaction::Transaction,
 };
+use crate::runtime::Editor as EditorCore;
 /// Editor 结构体代表编辑器的核心功能实现
 /// 负责管理文档状态、事件处理、插件系统和存储等核心功能
 pub struct Editor {
-    base: EditorBase,
+    base: EditorCore,
     flow_engine: FlowEngine,
-    middleware_stack: MiddlewareStack,
+}
+impl Deref for Editor {
+    type Target = EditorCore;
+
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
 }
 
+impl DerefMut for Editor {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.base
+    }
+}
 impl Editor {
     /// 创建新的编辑器实例
     /// options: 编辑器配置选项
@@ -51,7 +64,7 @@ impl Editor {
         .await?;
         let state: Arc<State> = Arc::new(state);
 
-        let base = EditorBase {
+        let base = EditorCore {
             event_bus,
             state: state.clone(),
             extension_manager,
@@ -60,13 +73,10 @@ impl Editor {
                 options.get_history_limit(),
             ),
             options,
-        };
-
-        let mut runtime = Editor {
-            base,
-            flow_engine: FlowEngine::new()?,
             middleware_stack: MiddlewareStack::new(),
         };
+
+        let mut runtime = Editor { base, flow_engine: FlowEngine::new()? };
         runtime.init().await?;
         debug!("编辑器实例创建成功");
         Ok(runtime)
@@ -96,84 +106,13 @@ impl Editor {
         Ok(())
     }
 
-    /// 添加中间件到中间件栈
-    pub fn add_middleware<M>(
-        &mut self,
-        middleware: M,
-    ) where
-        M: Middleware + 'static,
-    {
-        self.middleware_stack.add(middleware);
-    }
-}
-
-#[async_trait]
-impl EditorCore for Editor {
-    type Error = Box<dyn std::error::Error>;
-
-    fn doc(&self) -> Arc<NodePool> {
-        self.base.doc()
-    }
-
-    fn get_options(&self) -> &EditorOptions {
-        self.base.get_options()
-    }
-
-    fn get_state(&self) -> &Arc<State> {
-        self.base.get_state()
-    }
-
-    fn get_schema(&self) -> Arc<Schema> {
-        self.base.get_schema()
-    }
-
-    fn get_event_bus(&self) -> &EventBus {
-        self.base.get_event_bus()
-    }
-
-    fn get_tr(&self) -> Transaction {
-        self.base.get_tr()
-    }
-
-    async fn command(
-        &mut self,
-        command: Arc<dyn Command>,
-    ) -> Result<(), Self::Error> {
-        let mut tr = self.get_tr();
-        tr.transaction(command).await;
-        self.dispatch(tr).await
-    }
-
-    /// 处理编辑器事务的核心方法
-    ///
-    /// # 参数
-    /// * `transaction` - 要处理的事务对象
-    ///
-    /// # 返回值
-    /// * `Result<(), Self::Error>` - 处理结果，成功返回 Ok(()), 失败返回错误
-    async fn dispatch(
+    pub async fn dispatch(
         &mut self,
         transaction: Transaction,
-    ) -> Result<(), Self::Error> {
+    ) -> EditorResult<()> {
         // 保存当前事务的副本，用于中间件处理
         let mut current_transaction = transaction;
-
-        // 执行前置中间件链，允许中间件在事务应用前修改事务
-        for middleware in &self.middleware_stack.middlewares {
-            // 添加超时保护，防止中间件执行时间过长
-            let timeout = std::time::Duration::from_millis(100);
-            if let Err(e) = tokio::time::timeout(
-                timeout,
-                middleware.before_dispatch(&mut current_transaction),
-            )
-            .await
-            {
-                return Err(Box::new(std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    format!("中间件执行超时: {}", e),
-                )));
-            }
-        }
+        self.run_before_middleware(&mut current_transaction).await?;
 
         // 使用 flow_engine 提交事务
         let (_id, mut rx) = self
@@ -214,102 +153,12 @@ impl EditorCore for Editor {
                     .await?;
             }
         }
-
         // 执行后置中间件链，允许中间件在事务应用后执行额外操作
-        for middleware in &self.middleware_stack.middlewares {
-            // 调用中间件的 after_dispatch 方法，添加超时保护
-            let timeout = std::time::Duration::from_millis(100);
-            let middleware_result = match tokio::time::timeout(
-                timeout,
-                middleware.after_dispatch(current_state.clone()),
-            )
-            .await
-            {
-                Ok(result) => result.map_err(|e| {
-                    Box::new(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        format!("中间件错误: {}", e),
-                    ))
-                })?,
-                Err(e) => {
-                    return Err(Box::new(std::io::Error::new(
-                        std::io::ErrorKind::TimedOut,
-                        format!("中间件执行超时: {}", e),
-                    )));
-                },
-            };
-
-            // 如果中间件返回了额外的事务，则应用该事务
-            if let Some(transaction) = middleware_result.additional_transaction
-            {
-                let (_id, mut rx) = self
-                    .flow_engine
-                    .submit_transaction((self.base.state.clone(), transaction))
-                    .await?;
-
-                let Some(task_result) = rx.recv().await else {
-                    continue;
-                };
-
-                let Some(ProcessorResult { result: Some(result), .. }) =
-                    task_result.output
-                else {
-                    continue;
-                };
-
-                current_state = Some(Arc::new(result.state));
-            }
-        }
+        self.run_after_middleware(&mut current_state).await?;
         if let Some(state) = current_state {
             self.base.state = state;
             self.base.history_manager.insert(self.base.state.clone());
         }
         Ok(())
-    }
-
-    async fn register_plugin(&mut self) -> Result<(), Self::Error> {
-        let state = self
-            .get_state()
-            .reconfigure(StateConfig {
-                schema: Some(self.get_schema()),
-                doc: Some(self.get_state().doc()),
-                stored_marks: None,
-                plugins: Some(self.get_state().plugins().clone()),
-            })
-            .await?;
-        self.base.state = Arc::new(state);
-        Ok(())
-    }
-
-    async fn unregister_plugin(
-        &mut self,
-        plugin_key: String,
-    ) -> Result<(), Self::Error> {
-        let ps = self
-            .get_state()
-            .plugins()
-            .iter()
-            .filter(|p| p.key != plugin_key)
-            .cloned()
-            .collect();
-        let state = self
-            .get_state()
-            .reconfigure(StateConfig {
-                schema: Some(self.get_schema().clone()),
-                doc: Some(self.get_state().doc()),
-                stored_marks: None,
-                plugins: Some(ps),
-            })
-            .await?;
-        self.base.state = Arc::new(state);
-        Ok(())
-    }
-
-    fn undo(&mut self) {
-        self.base.undo()
-    }
-
-    fn redo(&mut self) {
-        self.base.redo()
     }
 }

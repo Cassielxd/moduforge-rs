@@ -12,7 +12,7 @@ use moduforge_model::node::Node;
 use moduforge_model::node_pool::{NodePool};
 use moduforge_transform::attr_step::AttrStep;
 use moduforge_transform::node_step::AddNodeStep;
-use moduforge_transform::step::{Step, StepResult};
+use moduforge_transform::step::Step;
 use moduforge_transform::transform::{Transform, TransformError};
 use moduforge_transform::{ConcreteStep, PatchStep};
 use std::fmt::Debug;

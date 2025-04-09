@@ -1,10 +1,7 @@
 use std::collections::HashMap;
 
 use moduforge_model::{
-    content::ContentMatch,
-    id_generator::IdGenerator,
-    node_type::NodeSpec,
-    schema::{Schema, SchemaSpec},
+    content::ContentMatch, id_generator::IdGenerator, node_type::NodeSpec, schema::{Schema, SchemaSpec}
 };
 #[warn(dead_code)]
 fn create_test_schema() -> Schema {

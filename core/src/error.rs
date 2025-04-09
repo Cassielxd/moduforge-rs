@@ -1,5 +1,6 @@
 use std::fmt;
 use std::io;
+use crate::flow::FlowError;
 
 /// 编辑器核心错误类型
 #[derive(Debug)]
@@ -26,6 +27,10 @@ pub enum EditorError {
     CacheError(String),
     /// 未知错误
     Unknown(String),
+    /// 其他错误
+    Other(String),
+    /// 流程错误
+    Flow(FlowError),
 }
 
 impl fmt::Display for EditorError {
@@ -51,6 +56,8 @@ impl fmt::Display for EditorError {
             EditorError::EngineError(msg) => write!(f, "Engine error: {}", msg),
             EditorError::CacheError(msg) => write!(f, "Cache error: {}", msg),
             EditorError::Unknown(msg) => write!(f, "Unknown error: {}", msg),
+            EditorError::Other(msg) => write!(f, "Other error: {}", msg),
+            EditorError::Flow(err) => write!(f, "Flow error: {}", err),
         }
     }
 }
@@ -72,6 +79,12 @@ impl From<String> for EditorError {
 impl From<&str> for EditorError {
     fn from(err: &str) -> Self {
         EditorError::Unknown(err.to_string())
+    }
+}
+
+impl From<FlowError> for EditorError {
+    fn from(err: FlowError) -> Self {
+        EditorError::Flow(err)
     }
 }
 
