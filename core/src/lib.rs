@@ -13,7 +13,5 @@ pub mod metrics;
 pub mod middleware;
 pub mod node;
 pub mod runtime;
-pub mod tr;
-pub mod traits;
 pub mod types;
 pub use error::{EditorError, EditorResult, error_utils};
