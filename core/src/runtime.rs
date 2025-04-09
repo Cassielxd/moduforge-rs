@@ -132,7 +132,7 @@ impl Editor {
             .await
             {
                 return Err(error_utils::middleware_error(format!(
-                    "Middleware execution timeout: {}",
+                    "中间件执行超时: {}",
                     e
                 )));
             }
@@ -155,7 +155,7 @@ impl Editor {
                 Ok(result) => result?,
                 Err(e) => {
                     return Err(error_utils::middleware_error(format!(
-                        "Middleware execution timeout: {}",
+                        "中间件执行超时: {}",
                         e
                     )));
                 },
@@ -166,7 +166,7 @@ impl Editor {
                 let TransactionResult { state: new_state, transactions: _ } =
                     self.state.apply(transaction).await.map_err(|e| {
                         error_utils::state_error(format!(
-                            "Failed to apply additional transaction: {}",
+                            "附加事务应用失败: {}",
                             e
                         ))
                     })?;
@@ -331,9 +331,16 @@ impl Editor {
         self.history_manager.jump(-1);
         self.state = self.history_manager.get_present();
     }
+    
 
     pub fn redo(&mut self) {
         self.history_manager.jump(1);
         self.state = self.history_manager.get_present();
     }
+
+    pub fn jump(&mut self, n: isize) {
+        self.history_manager.jump(n);
+        self.state = self.history_manager.get_present();
+    }
+
 }
