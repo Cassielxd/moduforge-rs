@@ -1,13 +1,13 @@
 [package]
 name = "moduforge-test"
-version = "0.1.1"
-edition = "2024"
+version = {workspace=true}
+edition = {workspace=true}
 description = "用于测试"
-authors = ["String <348040933@qq.com>"]
-license = "MIT"
-documentation = "https://gitee.com/stringlxd/moduforge-rs"
-homepage = "https://gitee.com/stringlxd/moduforge-rs"
-repository = "https://gitee.com/stringlxd/moduforge-rs"
+authors = {workspace=true}
+license = {workspace=true}
+documentation = {workspace=true}
+homepage = {workspace=true}
+repository = {workspace=true}
 
 [dependencies]
 log = {workspace=true}
