@@ -459,7 +459,7 @@ dependencies = [
 
 [[package]]
 name = "moduforge-core"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -481,7 +481,7 @@ dependencies = [
 
 [[package]]
 name = "moduforge-model"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -499,7 +499,7 @@ dependencies = [
 
 [[package]]
 name = "moduforge-state"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -519,7 +519,7 @@ dependencies = [
 
 [[package]]
 name = "moduforge-test"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "async-trait",
  "log",
@@ -535,7 +535,7 @@ dependencies = [
 
 [[package]]
 name = "moduforge-transform"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "anyhow",
  "async-trait",
