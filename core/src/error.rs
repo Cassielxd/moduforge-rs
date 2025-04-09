@@ -134,4 +134,9 @@ pub mod error_utils {
     pub fn cache_error(msg: impl Into<String>) -> EditorError {
         EditorError::CacheError(msg.into())
     }
+
+    /// 创建中间件错误
+    pub fn middleware_error(msg: impl Into<String>) -> EditorError {
+        EditorError::PluginError(msg.into())
+    }
 }

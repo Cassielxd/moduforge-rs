@@ -28,16 +28,16 @@ impl TransformError {
 }
 #[derive(Debug, Clone)]
 pub struct Transform {
-     /// 当前文档状态
-     pub doc: Arc<NodePool>,
-     /// 文档的草稿状态，用于临时修改
-     pub draft: Draft,
-     /// 存储所有操作步骤
-     pub steps: im::Vector<Arc<dyn Step>>,
-     /// 存储每个步骤对应的补丁列表
-     pub patches: im::Vector<Vec<Patch>>,
-     /// 文档的模式定义
-     pub schema: Arc<Schema>,
+    /// 当前文档状态
+    pub doc: Arc<NodePool>,
+    /// 文档的草稿状态，用于临时修改
+    pub draft: Draft,
+    /// 存储所有操作步骤
+    pub steps: im::Vector<Arc<dyn Step>>,
+    /// 存储每个步骤对应的补丁列表
+    pub patches: im::Vector<Vec<Patch>>,
+    /// 文档的模式定义
+    pub schema: Arc<Schema>,
 }
 impl Transform {
     pub fn step(
@@ -54,7 +54,7 @@ impl Transform {
         }
     }
     /// 检查文档是否被修改
-    pub  fn doc_changed(&self) -> bool {
+    pub fn doc_changed(&self) -> bool {
         !self.steps.is_empty()
     }
     /// 添加一个步骤及其结果到事务中

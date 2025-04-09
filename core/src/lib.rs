@@ -10,6 +10,7 @@ pub mod history_manager;
 pub mod macros;
 pub mod mark;
 pub mod metrics;
+pub mod middleware;
 pub mod node;
 pub mod runtime;
 pub mod tr;

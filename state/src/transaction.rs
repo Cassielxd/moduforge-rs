@@ -41,7 +41,7 @@ pub struct Transaction {
     pub meta: im::HashMap<String, Arc<dyn std::any::Any>>,
     /// 事务的时间戳
     pub id: u64,
-    transform:Transform
+    transform: Transform,
 }
 unsafe impl Send for Transaction {}
 unsafe impl Sync for Transaction {}
