@@ -1,6 +1,4 @@
 use std::sync::Arc;
-use std::future::Future;
-use std::pin::Pin;
 
 use crate::error::EditorResult;
 use moduforge_state::{transaction::Transaction, state::State};

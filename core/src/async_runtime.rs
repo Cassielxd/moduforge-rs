@@ -195,7 +195,7 @@ impl EditorCore for Editor {
 
         // 更新编辑器状态
         let mut current_state = Some(Arc::new(result.state));
-        self.base.state = current_state.clone().unwrap();
+
 
         // 检查最后一个事务是否改变了文档
         if let Some(tr) = result.transactions.last() {
@@ -205,13 +205,13 @@ impl EditorCore for Editor {
                 
                 // 使用 clone 的引用计数而不是深度克隆
                 let transactions = Arc::new(result.transactions);
-                let current_state = self.base.state.clone();
+                
                 
                 self.base
                     .event_bus
                     .broadcast(Event::TrApply(
                         transactions,
-                        current_state,
+                        current_state.clone().unwrap(),
                     ))
                     .await?;
             }
