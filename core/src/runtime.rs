@@ -175,7 +175,7 @@ impl Editor {
         }
         Ok(())
     }
-    async fn command(
+    pub async fn command(
         &mut self,
         command: Arc<dyn Command>,
     ) -> EditorResult<()> {
@@ -192,7 +192,7 @@ impl Editor {
     ///
     /// # 返回值
     /// * `EditorResult<()>` - 处理结果，成功返回 Ok(()), 失败返回错误
-    async fn dispatch(
+    pub async fn dispatch(
         &mut self,
         transaction: Transaction,
     ) -> EditorResult<()> {
@@ -220,10 +220,9 @@ impl Editor {
 
                 // 使用 clone 的引用计数而不是深度克隆
                 let transactions = Arc::new(transactions);
-                let current_state = self.state.clone();
 
                 self.event_bus
-                    .broadcast(Event::TrApply(transactions, current_state))
+                    .broadcast(Event::TrApply(transactions, state_update.clone().unwrap()))
                     .await
                     .map_err(|e| {
                         error_utils::event_error(format!(
@@ -233,7 +232,6 @@ impl Editor {
                     })?;
             }
         }
-
         // 执行后置中间件链，允许中间件在事务应用后执行额外操作
         self.run_after_middleware(&mut state_update).await?;
 
@@ -247,7 +245,7 @@ impl Editor {
         Ok(())
     }
 
-    async fn register_plugin(&mut self) -> EditorResult<()> {
+    pub async fn register_plugin(&mut self) -> EditorResult<()> {
         info!("正在注册新插件");
         let state = self
             .get_state()
@@ -270,7 +268,7 @@ impl Editor {
         Ok(())
     }
 
-    async fn unregister_plugin(
+    pub async fn unregister_plugin(
         &mut self,
         plugin_key: String,
     ) -> EditorResult<()> {

@@ -133,14 +133,12 @@ impl AsyncEditor {
         };
 
         // 更新编辑器状态
-        let mut current_state = Some(Arc::new(result.state));
+        let mut current_state = None;
 
         // 检查最后一个事务是否改变了文档
         if let Some(tr) = result.transactions.last() {
             if tr.doc_changed() {
-                // 如果文档发生变化，更新历史记录并广播事务应用事件
-                self.base.history_manager.insert(self.base.state.clone());
-
+                current_state = Some(Arc::new(result.state));
                 // 使用 clone 的引用计数而不是深度克隆
                 let transactions = Arc::new(result.transactions);
 
