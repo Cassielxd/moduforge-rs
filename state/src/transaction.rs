@@ -103,6 +103,11 @@ impl Transaction {
             },
         }
     }
+    pub fn merge(&mut self, other: &mut Self) {
+        self.steps.extend(other.steps.iter().cloned());
+        self.patches.extend(other.patches.iter().cloned());
+        self.doc = other.doc.clone();
+    }
     /// 获取当前文档状态
     pub fn doc(&self) -> Arc<NodePool> {
         self.doc.clone()
@@ -131,14 +136,7 @@ impl Transaction {
     ) {
         let _ = self.step(Arc::new(AddNodeStep::new(parent_id, nodes)));
     }
-    /// 设置事务时间戳
-    pub fn set_time(
-        &mut self,
-        id: u64,
-    ) -> &mut Self {
-        self.id = id;
-        self
-    }
+
     /// 设置元数据
     /// key: 键
     /// value: 值（支持任意类型）
