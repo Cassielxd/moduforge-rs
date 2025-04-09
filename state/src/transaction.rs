@@ -160,11 +160,11 @@ impl Transaction {
     pub fn get_meta<T: 'static, K>(
         &self,
         key: K,
-    ) -> Option<&T>
+    ) -> Option<&Arc<T>>
     where
         K: Into<String>,
     {
         let key_str = key.into();
-        self.meta.get(&key_str)?.downcast_ref::<T>()
+        self.meta.get(&key_str)?.downcast_ref::<Arc<T>>()
     }
 }

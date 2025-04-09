@@ -185,7 +185,7 @@ impl EditorCore for Editor {
         let Some(task_result) = rx.recv().await else {
             return Ok(());
         };
-        
+
         // 获取处理结果
         let Some(ProcessorResult { result: Some(result), .. }) =
             task_result.output
@@ -196,17 +196,15 @@ impl EditorCore for Editor {
         // 更新编辑器状态
         let mut current_state = Some(Arc::new(result.state));
 
-
         // 检查最后一个事务是否改变了文档
         if let Some(tr) = result.transactions.last() {
             if tr.doc_changed() {
                 // 如果文档发生变化，更新历史记录并广播事务应用事件
                 self.base.history_manager.insert(self.base.state.clone());
-                
+
                 // 使用 clone 的引用计数而不是深度克隆
                 let transactions = Arc::new(result.transactions);
-                
-                
+
                 self.base
                     .event_bus
                     .broadcast(Event::TrApply(
@@ -227,20 +225,23 @@ impl EditorCore for Editor {
             )
             .await
             {
-                Ok(result) => result.map_err(|e| Box::new(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("中间件错误: {}", e),
-                )))?,
+                Ok(result) => result.map_err(|e| {
+                    Box::new(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("中间件错误: {}", e),
+                    ))
+                })?,
                 Err(e) => {
                     return Err(Box::new(std::io::Error::new(
                         std::io::ErrorKind::TimedOut,
                         format!("中间件执行超时: {}", e),
                     )));
-                }
+                },
             };
 
             // 如果中间件返回了额外的事务，则应用该事务
-            if let Some(transaction) = middleware_result.additional_transaction {
+            if let Some(transaction) = middleware_result.additional_transaction
+            {
                 let (_id, mut rx) = self
                     .flow_engine
                     .submit_transaction((self.base.state.clone(), transaction))
@@ -249,7 +250,7 @@ impl EditorCore for Editor {
                 let Some(task_result) = rx.recv().await else {
                     continue;
                 };
-                
+
                 let Some(ProcessorResult { result: Some(result), .. }) =
                     task_result.output
                 else {
@@ -257,7 +258,6 @@ impl EditorCore for Editor {
                 };
 
                 current_state = Some(Arc::new(result.state));
-               
             }
         }
         if let Some(state) = current_state {
