@@ -48,19 +48,19 @@ impl Display for ProcessorError {
         f: &mut std::fmt::Formatter<'_>,
     ) -> std::fmt::Result {
         match self {
-            ProcessorError::QueueFull => write!(f, "Task queue is full"),
+            ProcessorError::QueueFull => write!(f, "任务队列已满"),
             ProcessorError::TaskFailed(msg) => {
-                write!(f, "Task failed: {}", msg)
+                write!(f, "任务执行失败: {}", msg)
             },
             ProcessorError::InternalError(msg) => {
-                write!(f, "Internal error: {}", msg)
+                write!(f, "内部错误: {}", msg)
             },
             ProcessorError::TaskTimeout => {
-                write!(f, "Task execution timed out")
+                write!(f, "任务执行超时")
             },
-            ProcessorError::TaskCancelled => write!(f, "Task was cancelled"),
+            ProcessorError::TaskCancelled => write!(f, "任务被取消"),
             ProcessorError::RetryExhausted(msg) => {
-                write!(f, "Retry attempts exhausted: {}", msg)
+                write!(f, "重试次数耗尽: {}", msg)
             },
         }
     }
@@ -220,7 +220,7 @@ impl<T: Clone + Send + Sync + 'static, O: Clone + Send + Sync + 'static>
         let mut rx_guard = self.queue_rx.lock().await;
         if let Some(rx) = rx_guard.as_mut() {
             if let Some(queued) = rx.recv().await {
-                let mut stats = self.stats.lock().await;
+                let mut stats: tokio::sync::MutexGuard<'_, ProcessorStats> = self.stats.lock().await;
                 stats.current_queue_size -= 1;
                 stats.current_processing_tasks += 1;
                 return Some((
@@ -347,7 +347,7 @@ where
                     // 处理任务完成
                     Some(result) = join_set.join_next() => {
                         if let Err(e) = result {
-                            debug!("Task failed: {}", e);
+                            debug!("任务执行失败: {}", e);
                         }
                     }
 
@@ -407,7 +407,7 @@ where
                                                 status: TaskStatus::Timeout,
                                                 task: Some(task),
                                                 output: None,
-                                                error: Some("Task execution timed out".to_string()),
+                                                error: Some("任务执行超时".to_string()),
                                                 processing_time: Some(start_time.elapsed()),
                                             };
                                             queue.update_stats(&task_result).await;
