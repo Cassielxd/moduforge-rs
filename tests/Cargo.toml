@@ -1,12 +1,8 @@
 [package]
 name = "moduforge-test"
-version = "0.1.2"
+version = "0.1.0"
 edition = "2024"
 description = "用于测试"
-license = "MIT"
-documentation = "https://gitee.com/stringlxd/moduforge-rs"
-homepage = "https://gitee.com/stringlxd/moduforge-rs"
-repository = "https://gitee.com/stringlxd/moduforge-rs"
 
 
 [dependencies]
@@ -19,5 +15,4 @@ tokio= {workspace=true}
 moduforge-model = {version = "0.3.2", path = "../model"}
 moduforge-state = {version = "0.3.2", path = "../state"}
 moduforge-transform = {version = "0.3.2", path = "../transform"}
-
 moduforge-core = {version = "0.3.2", path = "../core"}
