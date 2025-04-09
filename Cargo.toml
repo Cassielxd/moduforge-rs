@@ -10,7 +10,7 @@ members = [
 
 [workspace.package]
 name = "moduforge"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 authors = ["String <348040933@qq.com>"]
 license = "MIT"
