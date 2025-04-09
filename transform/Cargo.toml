@@ -5,6 +5,9 @@ edition = {workspace=true}
 description = "不可变数据结构与事务系统基础"
 authors = {workspace=true}
 license = {workspace=true}
+documentation = {workspace=true}
+homepage = {workspace=true}
+repository = {workspace=true}
 [lib]
 lib="src/lib.rs"
 

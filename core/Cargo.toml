@@ -5,6 +5,9 @@ edition = {workspace=true}
 description = "插件加载、热更新、依赖管理"
 authors = {workspace=true}
 license = {workspace=true}
+documentation = {workspace=true}
+homepage = {workspace=true}
+repository = {workspace=true}
 [lib]
 lib="./src/lib.rs"
 

@@ -3,6 +3,10 @@ name = "moduforge-test"
 version = "0.1.0"
 edition = "2024"
 description = "用于测试"
+license = "MIT"
+documentation = "https://gitee.com/stringlxd/moduforge-rs"
+homepage = "https://gitee.com/stringlxd/moduforge-rs"
+repository = "https://gitee.com/stringlxd/moduforge-rs"
 
 
 [dependencies]
