@@ -3,7 +3,11 @@ name = "moduforge-test"
 version = "0.1.0"
 edition = "2024"
 description = "用于测试"
-
+authors = ["String <348040933@qq.com>"]
+license = "MIT"
+documentation = "https://gitee.com/stringlxd/moduforge-rs"
+homepage = "https://gitee.com/stringlxd/moduforge-rs"
+repository = "https://gitee.com/stringlxd/moduforge-rs"
 
 [dependencies]
 log = {workspace=true}
