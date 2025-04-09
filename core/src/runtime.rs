@@ -124,7 +124,7 @@ impl Editor {
     ) -> EditorResult<()> {
         debug!("执行前置中间件链");
         for middleware in &self.middleware_stack.middlewares {
-            let timeout = std::time::Duration::from_millis(100);
+            let timeout = std::time::Duration::from_millis(500);
             if let Err(e) = tokio::time::timeout(
                 timeout,
                 middleware.before_dispatch(transaction),
@@ -145,7 +145,7 @@ impl Editor {
     ) -> EditorResult<()> {
         debug!("执行后置中间件链");
         for middleware in &self.middleware_stack.middlewares {
-            let timeout = std::time::Duration::from_millis(100);
+            let timeout = std::time::Duration::from_millis(500);
             let middleware_result = match tokio::time::timeout(
                 timeout,
                 middleware.after_dispatch(state.clone()),
