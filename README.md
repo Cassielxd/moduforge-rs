@@ -6,13 +6,74 @@ Moduforge是一个不含任何业务绑定的 计价编辑器默认实现，它�
 
 - **工作方式:** 定义基础节点和标记和约束，然后定义扩展添加行为。
 
-  - **core/model:** 基础数据的定义，包括节点(Node)，标记(Mark)，约束(Schema)等。
+  - **model:** 基础数据的定义，包括节点(Node)，标记(Mark)，约束(Schema)等。
 
-  - **core/state:** 状态管理，主要负责状态的更新，插件的调度。
+  - **state:** 状态管理，主要负责状态的更新，插件的调度。
 
-  - **core/transform:** 事务的实现，类似java 的DB事务。保证操作的原子性，保证数据的一致性。可以扩展最小的操作单元。
+  - **transform:** 事务的实现，类似java 的DB事务。保证操作的原子性，保证数据的一致性。可以扩展最小的操作单元。
 
-  - **core/runtime:** 组合model,state,transform 进一步实现编辑器的核心功能，添加并收集扩展.
+  - **core:** 组合model,state,transform 进一步实现编辑器的核心功能，添加并收集扩展.
+
+### 核心组件详解
+
+#### State 状态管理
+
+State 是编辑器的核心状态管理组件，负责维护编辑器的整体状态。它包含以下关键特性：
+
+- **配置管理**: 通过 `Configuration` 结构体管理编辑器的配置信息，包括插件列表、文档结构定义等
+- **插件状态**: 通过 `fields_instances` 管理所有插件的状态数据
+- **文档管理**: 通过 `node_pool` 管理文档的节点池
+- **版本控制**: 通过 `version` 字段追踪状态变更
+- **资源管理**: 通过 `resource_manager` 管理全局资源
+
+State 提供了以下主要功能：
+- 创建和初始化新的编辑器状态
+- 管理插件状态
+- 处理事务和状态更新
+- 重新配置状态以适应新的需求
+
+#### GlobalResourceManager 全局资源管理器
+
+GlobalResourceManager 是编辑器运行时的全局资源管理器，负责管理所有注册的资源和状态。它包含以下关键特性：
+
+- **资源表管理**: 通过 `ResourceTable` 管理所有注册的资源
+- **Gotham状态管理**: 通过 `GothamState` 管理特定于Gotham框架的状态
+- **线程安全**: 实现了 `Send` 和 `Sync` trait，确保可以在线程间安全传递和共享
+- **资源清理**: 提供 `clear` 方法用于清理所有资源
+
+GlobalResourceManager 的主要使用场景：
+- 插件间共享资源
+- 管理全局状态
+- 处理跨插件的数据交换
+- 管理编辑器运行时的全局配置
+
+#### State 与 GlobalResourceManager 的区别
+
+虽然 State 和 GlobalResourceManager 都涉及状态管理，但它们在职责和使用场景上有明显区别：
+
+1. **管理范围不同**
+   - State 管理编辑器的整体状态，包括文档内容、插件状态、配置等
+   - GlobalResourceManager 专注于管理运行时资源和全局共享状态
+
+2. **生命周期不同**
+   - State 的生命周期与编辑器实例绑定，随编辑器的创建而创建，销毁而销毁
+   - GlobalResourceManager 的生命周期更灵活，可以在不同 State 实例间共享
+
+3. **访问方式不同**
+   - State 通过事务（Transaction）进行状态更新，保证操作的原子性和一致性
+   - GlobalResourceManager 提供直接的资源访问接口，适合快速读写共享资源
+
+4. **使用场景不同**
+   - State 用于管理编辑器的核心状态，如文档内容、插件配置等
+   - GlobalResourceManager 用于管理跨插件共享的资源，如缓存、配置等
+
+5. **线程安全性不同**
+   - State 的状态更新是单线程的，通过事务保证一致性
+   - GlobalResourceManager 是线程安全的，可以在多线程环境下安全访问
+
+6. **扩展性不同**
+   - State 的状态结构相对固定，主要围绕文档和插件
+   - GlobalResourceManager 可以动态注册和管理任意类型的资源，扩展性更强
 
 ### Moduforge使用了哪些技术框架？
 
