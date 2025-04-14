@@ -103,7 +103,10 @@ impl Transaction {
             },
         }
     }
-    pub fn merge(&mut self, other: &mut Self) {
+    pub fn merge(
+        &mut self,
+        other: &mut Self,
+    ) {
         self.steps.extend(other.steps.iter().cloned());
         self.patches.extend(other.patches.iter().cloned());
         self.doc = other.doc.clone();

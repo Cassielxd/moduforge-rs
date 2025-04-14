@@ -1,6 +1,6 @@
 use std::{
     ops::{Deref, DerefMut},
-    sync::Arc,
+    sync::{Arc, RwLock},
 };
 
 use crate::{
@@ -15,6 +15,7 @@ use crate::{
 };
 use moduforge_state::{
     debug,
+    ops::OpState,
     state::{State, StateConfig},
     transaction::Transaction,
 };
@@ -55,11 +56,16 @@ impl AsyncEditor {
         .await;
         let event_bus = EventBus::new();
         debug!("已创建文档和事件总线");
+        let mut op_state = OpState::new();
+        for op_fn in extension_manager.get_op_fns() {
+            op_fn(&mut op_state)?;
+        }
         let state: State = State::create(StateConfig {
             schema: Some(extension_manager.get_schema()),
             doc,
             stored_marks: None,
             plugins: Some(extension_manager.get_plugins().clone()),
+            op_state: Some(Arc::new(RwLock::new(op_state))),
         })
         .await?;
         let state: Arc<State> = Arc::new(state);

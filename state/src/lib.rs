@@ -1,6 +1,10 @@
 pub mod error;
+pub mod gotham_state;
 pub mod logging;
+pub mod ops;
 pub mod plugin;
+pub mod resource;
+pub mod resource_table;
 pub mod state;
 pub mod transaction;
 pub use state::{State, StateConfig, Configuration};

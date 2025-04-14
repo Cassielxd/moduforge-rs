@@ -19,7 +19,7 @@ serde_json = {workspace=true}
 thiserror= {workspace=true}
 async-trait= {workspace=true}
 tokio= {workspace=true}
-
+crossbeam = {workspace=true}
 # 日志系统
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

@@ -1,14 +1,15 @@
 use std::sync::Arc;
 
-use moduforge_state::plugin::Plugin;
+use moduforge_state::{ops::OpState, plugin::Plugin};
 
-use crate::types::GlobalAttributeItem;
+use crate::{types::GlobalAttributeItem, EditorResult};
 ///扩展实现
 /// 组装全局属性和插件
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default)]
 pub struct Extension {
     global_attributes: Vec<GlobalAttributeItem>,
     plugins: Vec<Arc<Plugin>>,
+    op_fn: Option<Vec<Arc<dyn Fn(&mut OpState) -> EditorResult<()>>>>,
 }
 
 unsafe impl Send for Extension {}
@@ -16,7 +17,23 @@ unsafe impl Sync for Extension {}
 
 impl Extension {
     pub fn new() -> Self {
-        Extension { global_attributes: vec![], plugins: vec![] }
+        Extension {
+            global_attributes: vec![],
+            plugins: vec![],
+            op_fn: Some(vec![]),
+        }
+    }
+    pub fn add_op_fn(
+        &mut self,
+        op_fn: Arc<dyn Fn(&mut OpState) -> EditorResult<()>>,
+    ) -> &mut Self {
+        self.op_fn.get_or_insert(vec![]).push(op_fn);
+        self
+    }
+    pub fn get_op_fns(
+        &self
+    ) -> Vec<Arc<dyn Fn(&mut OpState) -> EditorResult<()>>> {
+        self.op_fn.clone().unwrap_or(vec![])
     }
     pub fn add_global_attribute(
         &mut self,

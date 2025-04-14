@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, default, sync::Arc};
 use async_trait::async_trait;
 
 use crate::{event::EventHandler, extension::Extension, mark::Mark, node::Node};
@@ -25,14 +25,14 @@ pub struct GlobalAttributeItem {
 unsafe impl Send for GlobalAttributeItem {}
 unsafe impl Sync for GlobalAttributeItem {}
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum Extensions {
     N(Node),
     M(Mark),
     E(Extension),
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub enum Content {
     NodePool(NodePool),
     NodePoolFn(Arc<dyn NodePoolFnTrait>),
@@ -40,9 +40,7 @@ pub enum Content {
     None,
 }
 
-
-
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct EditorOptions {
     content: Content,
     extensions: Vec<Extensions>,

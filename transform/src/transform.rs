@@ -67,5 +67,4 @@ impl Transform {
         self.patches.push_back(result.patches);
         self.doc = result.doc.unwrap();
     }
-    
 }

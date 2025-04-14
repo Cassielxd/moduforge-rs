@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use crate::{
     error::{EditorResult, error_utils},
@@ -12,9 +12,10 @@ use crate::{
 
 use moduforge_model::{node_pool::NodePool, schema::Schema};
 use moduforge_state::{
+    debug, error, info,
+    ops::OpState,
     state::{State, StateConfig, TransactionResult},
     transaction::{Command, Transaction},
-    {info, debug, error},
 };
 
 /// Editor 结构体代表编辑器的核心功能实现
@@ -44,12 +45,16 @@ impl Editor {
         .await;
         let event_bus = EventBus::new();
         debug!("已创建文档和事件总线");
-
+        let mut op_state = OpState::new();
+        for op_fn in extension_manager.get_op_fns() {
+            op_fn(&mut op_state)?;
+        }
         let state: State = State::create(StateConfig {
             schema: Some(extension_manager.get_schema()),
             doc,
             stored_marks: None,
             plugins: Some(extension_manager.get_plugins().clone()),
+            op_state: Some(Arc::new(RwLock::new(op_state))),
         })
         .await
         .map_err(|e| {
@@ -222,7 +227,10 @@ impl Editor {
                 let transactions = Arc::new(transactions);
 
                 self.event_bus
-                    .broadcast(Event::TrApply(transactions, state_update.clone().unwrap()))
+                    .broadcast(Event::TrApply(
+                        transactions,
+                        state_update.clone().unwrap(),
+                    ))
                     .await
                     .map_err(|e| {
                         error_utils::event_error(format!(
@@ -254,6 +262,7 @@ impl Editor {
                 doc: Some(self.get_state().doc()),
                 stored_marks: None,
                 plugins: Some(self.get_state().plugins().clone()),
+                op_state: Some(self.get_state().op_state().clone()),
             })
             .await
             .map_err(|e| {
@@ -287,6 +296,7 @@ impl Editor {
                 doc: Some(self.get_state().doc()),
                 stored_marks: None,
                 plugins: Some(ps),
+                op_state: Some(self.get_state().op_state().clone()),
             })
             .await
             .map_err(|e| {
@@ -331,16 +341,17 @@ impl Editor {
         self.history_manager.jump(-1);
         self.state = self.history_manager.get_present();
     }
-    
 
     pub fn redo(&mut self) {
         self.history_manager.jump(1);
         self.state = self.history_manager.get_present();
     }
 
-    pub fn jump(&mut self, n: isize) {
+    pub fn jump(
+        &mut self,
+        n: isize,
+    ) {
         self.history_manager.jump(n);
         self.state = self.history_manager.get_present();
     }
-
 }

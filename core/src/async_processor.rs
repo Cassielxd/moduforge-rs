@@ -220,7 +220,8 @@ impl<T: Clone + Send + Sync + 'static, O: Clone + Send + Sync + 'static>
         let mut rx_guard = self.queue_rx.lock().await;
         if let Some(rx) = rx_guard.as_mut() {
             if let Some(queued) = rx.recv().await {
-                let mut stats: tokio::sync::MutexGuard<'_, ProcessorStats> = self.stats.lock().await;
+                let mut stats: tokio::sync::MutexGuard<'_, ProcessorStats> =
+                    self.stats.lock().await;
                 stats.current_queue_size -= 1;
                 stats.current_processing_tasks += 1;
                 return Some((
