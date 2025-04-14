@@ -1,10 +1,8 @@
-use std::{
-    ops::{Deref, DerefMut},
-};
+use std::ops::{Deref, DerefMut};
 
 use crate::{
     gotham_state::GothamState,
-    resource_table::{ResourceTable},
+    resource_table::ResourceTable,
 };
 
 #[derive(Default, Debug)]
@@ -21,7 +19,7 @@ impl GlobalResourceManager {
             gotham_state: GothamState::default()
         }
     }
-    pub(crate) fn clear(&mut self) {
+    pub fn clear(&mut self) {
         std::mem::take(&mut self.gotham_state);
         std::mem::take(&mut self.resource_table);
     }
