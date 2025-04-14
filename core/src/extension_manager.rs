@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use moduforge_model::schema::Schema;
-use moduforge_state::{ops::OpState, plugin::Plugin};
+use moduforge_state::{ops::GlobalResourceManager, plugin::Plugin};
 
 use crate::{
     helpers::get_schema_by_resolved_extensions::get_schema_by_resolved_extensions,
@@ -11,7 +11,7 @@ use crate::{
 pub struct ExtensionManager {
     plugins: Vec<Arc<Plugin>>,
     schema: Arc<Schema>,
-    op_fns: Vec<Arc<dyn Fn(&mut OpState) -> EditorResult<()>>>,
+    op_fns: Vec<Arc<dyn Fn(&mut GlobalResourceManager) -> EditorResult<()>>>,
 }
 impl ExtensionManager {
     pub fn new(extensions: &Vec<Extensions>) -> Self {
@@ -37,7 +37,7 @@ impl ExtensionManager {
     }
     pub fn get_op_fns(
         &self
-    ) -> &Vec<Arc<dyn Fn(&mut OpState) -> EditorResult<()>>> {
+    ) -> &Vec<Arc<dyn Fn(&mut GlobalResourceManager) -> EditorResult<()>>> {
         &self.op_fns
     }
 

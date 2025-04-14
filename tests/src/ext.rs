@@ -20,5 +20,21 @@ pub fn get_extension() -> Extension {
         tr: Some(Arc::new(P2Plugin {})),
         priority: 2,
     })));
+    extension.add_op_fn(Arc::new(move |op_state| {
+        op_state.put(MyGlobalTest);
+        Ok(())
+    }));
     extension
+}
+
+
+#[derive(Clone, Default, Debug)]
+pub struct MyGlobalTest;
+impl MyGlobalTest {
+    pub fn new() -> MyGlobalTest {
+        MyGlobalTest
+    }
+    pub fn print(&self) {
+        println!("MyGlobalTest");
+    }
 }

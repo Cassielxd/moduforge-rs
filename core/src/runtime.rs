@@ -13,7 +13,7 @@ use crate::{
 use moduforge_model::{node_pool::NodePool, schema::Schema};
 use moduforge_state::{
     debug, error, info,
-    ops::OpState,
+    ops::GlobalResourceManager,
     state::{State, StateConfig, TransactionResult},
     transaction::{Command, Transaction},
 };
@@ -45,7 +45,7 @@ impl Editor {
         .await;
         let event_bus = EventBus::new();
         debug!("已创建文档和事件总线");
-        let mut op_state = OpState::new();
+        let mut op_state = GlobalResourceManager::new();
         for op_fn in extension_manager.get_op_fns() {
             op_fn(&mut op_state)?;
         }

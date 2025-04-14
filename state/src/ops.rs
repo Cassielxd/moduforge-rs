@@ -1,27 +1,24 @@
 use std::{
-    collections::HashSet,
     ops::{Deref, DerefMut},
 };
 
 use crate::{
     gotham_state::GothamState,
-    resource_table::{ResourceId, ResourceTable},
+    resource_table::{ResourceTable},
 };
 
 #[derive(Default, Debug)]
-pub struct OpState {
+pub struct GlobalResourceManager {
     pub resource_table: ResourceTable,
-    pub gotham_state: GothamState,
-    pub unrefed_resources: HashSet<ResourceId>,
+    pub gotham_state: GothamState
 }
-unsafe impl Send for OpState {}
-unsafe impl Sync for OpState {}
-impl OpState {
+unsafe impl Send for GlobalResourceManager {}
+unsafe impl Sync for GlobalResourceManager {}
+impl GlobalResourceManager {
     pub fn new() -> Self {
         Self {
             resource_table: ResourceTable::default(),
-            gotham_state: GothamState::default(),
-            unrefed_resources: Default::default(),
+            gotham_state: GothamState::default()
         }
     }
     pub(crate) fn clear(&mut self) {
@@ -29,15 +26,9 @@ impl OpState {
         std::mem::take(&mut self.resource_table);
     }
 
-    pub fn has_ref(
-        &self,
-        resource_id: ResourceId,
-    ) -> bool {
-        !self.unrefed_resources.contains(&resource_id)
-    }
 }
 
-impl Deref for OpState {
+impl Deref for GlobalResourceManager {
     type Target = GothamState;
 
     fn deref(&self) -> &Self::Target {
@@ -45,7 +36,7 @@ impl Deref for OpState {
     }
 }
 
-impl DerefMut for OpState {
+impl DerefMut for GlobalResourceManager {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.gotham_state
     }

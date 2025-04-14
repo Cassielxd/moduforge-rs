@@ -8,11 +8,16 @@ use moduforge_state::{
     transaction::Transaction,
 };
 use moduforge_core::{impl_plugin, impl_state_field};
+
+use crate::ext::MyGlobalTest;
 async fn p1_append(
     trs: &[Transaction],
     _: &State,
-    _: &State,
+    new_state: &State,
 ) -> Option<Transaction> {
+    let op_state_arc = new_state.op_state();
+    let op_state = op_state_arc.read().unwrap();
+    op_state.borrow::<MyGlobalTest>().print();
     let mut tr = trs.last().unwrap().clone();
     tr.add_node(
         tr.doc().inner.root_id.to_string(),

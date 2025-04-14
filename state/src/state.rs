@@ -12,7 +12,7 @@ use std::{
     time::Instant,
 };
 
-use crate::ops::OpState;
+use crate::ops::GlobalResourceManager;
 
 use super::{
     error::{StateError, StateResult},
@@ -106,7 +106,7 @@ impl State {
     pub fn doc(&self) -> Arc<NodePool> {
         Arc::clone(&self.node_pool)
     }
-    pub fn op_state(&self) -> Arc<RwLock<OpState>> {
+    pub fn op_state(&self) -> Arc<RwLock<GlobalResourceManager>> {
         Arc::clone(&self.config.op_state)
     }
     pub fn schema(&self) -> Arc<Schema> {
@@ -336,7 +336,7 @@ pub struct StateConfig {
     pub doc: Option<Arc<NodePool>>,
     pub stored_marks: Option<Vec<Mark>>,
     pub plugins: Option<Vec<Arc<Plugin>>>,
-    pub op_state: Option<Arc<RwLock<OpState>>>,
+    pub op_state: Option<Arc<RwLock<GlobalResourceManager>>>,
 }
 
 pub struct SeenState {
@@ -359,7 +359,7 @@ pub struct Configuration {
     plugins_by_key: HashMap<String, Arc<Plugin>>,
     pub doc: Option<Arc<NodePool>>,
     schema: Arc<Schema>,
-    pub op_state: Arc<RwLock<OpState>>,
+    pub op_state: Arc<RwLock<GlobalResourceManager>>,
 }
 
 impl Configuration {
@@ -367,7 +367,7 @@ impl Configuration {
         schema: Arc<Schema>,
         plugins: Option<Vec<Arc<Plugin>>>,
         doc: Option<Arc<NodePool>>,
-        op_state: Option<Arc<RwLock<OpState>>>,
+        op_state: Option<Arc<RwLock<GlobalResourceManager>>>,
     ) -> Self {
         let mut config = Configuration {
             doc,
@@ -375,7 +375,7 @@ impl Configuration {
             plugins_by_key: HashMap::new(),
             schema,
             op_state: op_state
-                .unwrap_or_else(|| Arc::new(RwLock::new(OpState::default()))),
+                .unwrap_or_else(|| Arc::new(RwLock::new(GlobalResourceManager::default()))),
         };
 
         if let Some(plugin_list) = plugins {

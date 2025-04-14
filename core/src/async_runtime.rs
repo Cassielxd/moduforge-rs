@@ -9,13 +9,13 @@ use crate::{
     flow::{FlowEngine, ProcessorResult},
     helpers::create_doc,
     history_manager::HistoryManager,
-    middleware::MiddlewareStack,
+    middleware::MiddlewareStack,    
     types::EditorOptions,
     EditorResult,
 };
 use moduforge_state::{
     debug,
-    ops::OpState,
+    ops::GlobalResourceManager,
     state::{State, StateConfig},
     transaction::Transaction,
 };
@@ -56,7 +56,7 @@ impl AsyncEditor {
         .await;
         let event_bus = EventBus::new();
         debug!("已创建文档和事件总线");
-        let mut op_state = OpState::new();
+        let mut op_state = GlobalResourceManager::new();
         for op_fn in extension_manager.get_op_fns() {
             op_fn(&mut op_state)?;
         }
