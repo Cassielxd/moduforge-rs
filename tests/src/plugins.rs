@@ -15,9 +15,9 @@ async fn p1_append(
     _: &State,
     new_state: &State,
 ) -> Option<Transaction> {
-    let op_state_arc = new_state.op_state();
-    let op_state = op_state_arc.read().unwrap();
-    op_state.borrow::<MyGlobalTest>().print();
+    let resource_manager = new_state.resource_manager();
+    let resource_manager = resource_manager.read().unwrap();
+    resource_manager.borrow::<MyGlobalTest>().print();
     let mut tr = trs.last().unwrap().clone();
     tr.add_node(
         tr.doc().inner.root_id.to_string(),

@@ -54,7 +54,7 @@ impl Editor {
             doc,
             stored_marks: None,
             plugins: Some(extension_manager.get_plugins().clone()),
-            op_state: Some(Arc::new(RwLock::new(op_state))),
+            resource_manager: Some(Arc::new(RwLock::new(op_state))),
         })
         .await
         .map_err(|e| {
@@ -262,7 +262,7 @@ impl Editor {
                 doc: Some(self.get_state().doc()),
                 stored_marks: None,
                 plugins: Some(self.get_state().plugins().clone()),
-                op_state: Some(self.get_state().op_state().clone()),
+                resource_manager: Some(self.get_state().resource_manager().clone()),
             })
             .await
             .map_err(|e| {
@@ -296,7 +296,7 @@ impl Editor {
                 doc: Some(self.get_state().doc()),
                 stored_marks: None,
                 plugins: Some(ps),
-                op_state: Some(self.get_state().op_state().clone()),
+                resource_manager: Some(self.get_state().resource_manager().clone()),
             })
             .await
             .map_err(|e| {

@@ -65,7 +65,7 @@ impl AsyncEditor {
             doc,
             stored_marks: None,
             plugins: Some(extension_manager.get_plugins().clone()),
-            op_state: Some(Arc::new(RwLock::new(op_state))),
+            resource_manager: Some(Arc::new(RwLock::new(op_state))),
         })
         .await?;
         let state: Arc<State> = Arc::new(state);

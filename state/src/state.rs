@@ -55,8 +55,8 @@ impl State {
             schema,
             state_config.plugins.clone(),
             state_config.doc.clone(),
-            state_config.op_state.clone(),
-        );
+            state_config.resource_manager.clone(),
+        );  
         let mut instance = State::new(Arc::new(config));
         let mut field_values = Vec::new();
         for plugin in &instance.config.plugins {
@@ -106,8 +106,8 @@ impl State {
     pub fn doc(&self) -> Arc<NodePool> {
         Arc::clone(&self.node_pool)
     }
-    pub fn op_state(&self) -> Arc<RwLock<GlobalResourceManager>> {
-        Arc::clone(&self.config.op_state)
+    pub fn resource_manager(&self) -> Arc<RwLock<GlobalResourceManager>> {
+        Arc::clone(&self.config.resource_manager)
     }
     pub fn schema(&self) -> Arc<Schema> {
         Arc::clone(&self.config.schema)
@@ -276,7 +276,7 @@ impl State {
             self.schema(),
             state_config.plugins.clone(),
             state_config.doc.clone(),
-            state_config.op_state.clone(),
+            state_config.resource_manager.clone(),
         );
         let mut instance = State::new(Arc::new(config));
         let mut field_values = Vec::new();
@@ -336,7 +336,7 @@ pub struct StateConfig {
     pub doc: Option<Arc<NodePool>>,
     pub stored_marks: Option<Vec<Mark>>,
     pub plugins: Option<Vec<Arc<Plugin>>>,
-    pub op_state: Option<Arc<RwLock<GlobalResourceManager>>>,
+    pub resource_manager: Option<Arc<RwLock<GlobalResourceManager>>>,
 }
 
 pub struct SeenState {
@@ -359,7 +359,7 @@ pub struct Configuration {
     plugins_by_key: HashMap<String, Arc<Plugin>>,
     pub doc: Option<Arc<NodePool>>,
     schema: Arc<Schema>,
-    pub op_state: Arc<RwLock<GlobalResourceManager>>,
+    pub resource_manager: Arc<RwLock<GlobalResourceManager>>,
 }
 
 impl Configuration {
@@ -367,14 +367,14 @@ impl Configuration {
         schema: Arc<Schema>,
         plugins: Option<Vec<Arc<Plugin>>>,
         doc: Option<Arc<NodePool>>,
-        op_state: Option<Arc<RwLock<GlobalResourceManager>>>,
+        resource_manager: Option<Arc<RwLock<GlobalResourceManager>>>,
     ) -> Self {
         let mut config = Configuration {
             doc,
             plugins: Vec::new(),
             plugins_by_key: HashMap::new(),
             schema,
-            op_state: op_state
+            resource_manager: resource_manager
                 .unwrap_or_else(|| Arc::new(RwLock::new(GlobalResourceManager::default()))),
         };
 
