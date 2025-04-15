@@ -47,6 +47,71 @@ GlobalResourceManager 的主要使用场景：
 - 处理跨插件的数据交换
 - 管理编辑器运行时的全局配置
 
+#### GlobalResourceManager 使用案例
+
+以下是一个使用 GlobalResourceManager 的典型场景：
+
+```rust
+// 1. 定义自定义资源类型
+#[derive(Debug)]
+struct CacheManager {
+    data: HashMap<String, String>,
+}
+
+impl Resource for CacheManager {
+    fn name(&self) -> Cow<str> {
+        "CacheManager".into()
+    }
+}
+
+// 2. 在插件初始化时注册资源
+async fn plugin_init(config: &StateConfig, instance: Option<&State>) -> PluginState {
+    // 获取资源管理器
+    let resource_manager = instance.unwrap().resource_manager();
+    let mut resource_manager = resource_manager.write().unwrap();
+    
+    // 创建并注册缓存管理器
+    let cache_manager = CacheManager {
+        data: HashMap::new(),
+    };
+    resource_manager.resource_table.add(cache_manager);
+    
+    // 返回插件状态
+    Arc::new(HashMap::new())
+}
+
+// 3. 在插件中使用共享资源
+async fn plugin_operation(state: &State) {
+    // 获取资源管理器
+    let resource_manager = state.resource_manager();
+    let resource_manager = resource_manager.read().unwrap();
+    
+    // 获取缓存管理器
+    let cache_manager = resource_manager.resource_table.get::<CacheManager>(0).unwrap();
+    
+    // 使用缓存管理器
+    cache_manager.data.insert("key".to_string(), "value".to_string());
+}
+
+// 4. 在另一个插件中访问相同资源
+async fn another_plugin_operation(state: &State) {
+    let resource_manager = state.resource_manager();
+    let resource_manager = resource_manager.read().unwrap();
+    
+    let cache_manager = resource_manager.resource_table.get::<CacheManager>(0).unwrap();
+    let value = cache_manager.data.get("key").unwrap();
+    println!("获取到的值: {}", value);
+}
+```
+
+这个案例展示了：
+1. 如何定义自定义资源类型
+2. 如何在插件初始化时注册资源
+3. 如何在插件中使用共享资源
+4. 如何在多个插件间共享和访问同一资源
+
+通过 GlobalResourceManager，不同插件可以安全地共享和访问全局资源，而不需要直接依赖其他插件。
+
 #### State 与 GlobalResourceManager 的区别
 
 虽然 State 和 GlobalResourceManager 都涉及状态管理，但它们在职责和使用场景上有明显区别：
