@@ -56,7 +56,7 @@ impl State {
             state_config.plugins.clone(),
             state_config.doc.clone(),
             state_config.resource_manager.clone(),
-        );  
+        );
         let mut instance = State::new(Arc::new(config));
         let mut field_values = Vec::new();
         for plugin in &instance.config.plugins {
@@ -374,8 +374,9 @@ impl Configuration {
             plugins: Vec::new(),
             plugins_by_key: HashMap::new(),
             schema,
-            resource_manager: resource_manager
-                .unwrap_or_else(|| Arc::new(RwLock::new(GlobalResourceManager::default()))),
+            resource_manager: resource_manager.unwrap_or_else(|| {
+                Arc::new(RwLock::new(GlobalResourceManager::default()))
+            }),
         };
 
         if let Some(plugin_list) = plugins {

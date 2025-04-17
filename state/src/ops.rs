@@ -1,9 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use crate::{
-    gotham_state::GothamState,
-    resource_table::ResourceTable,
-};
+use crate::{gotham_state::GothamState, resource_table::ResourceTable};
 
 /// 全局资源管理器
 /// 用于管理编辑器运行时的全局资源和状态
@@ -12,7 +9,7 @@ use crate::{
 #[derive(Default, Debug)]
 pub struct GlobalResourceManager {
     pub resource_table: ResourceTable,
-    pub gotham_state: GothamState
+    pub gotham_state: GothamState,
 }
 
 // 实现Send和Sync trait，表明GlobalResourceManager可以在线程间安全传递和共享
@@ -24,7 +21,7 @@ impl GlobalResourceManager {
     pub fn new() -> Self {
         Self {
             resource_table: ResourceTable::default(),
-            gotham_state: GothamState::default()
+            gotham_state: GothamState::default(),
         }
     }
 

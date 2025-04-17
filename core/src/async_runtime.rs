@@ -1,23 +1,20 @@
 use std::{
     ops::{Deref, DerefMut},
-    sync::{Arc, RwLock},
+    sync::{Arc},
 };
 
 use crate::{
-    event::{Event, EventBus},
-    extension_manager::ExtensionManager,
+    error_utils,
+    event::Event,
     flow::{FlowEngine, ProcessorResult},
-    helpers::create_doc,
-    history_manager::HistoryManager,
-    middleware::MiddlewareStack,    
     types::EditorOptions,
     EditorResult,
 };
 use moduforge_state::{
     debug,
-    ops::GlobalResourceManager,
-    state::{State, StateConfig},
-    transaction::Transaction,
+    state::TransactionResult,
+    transaction::{Command, Transaction},
+    State,
 };
 use crate::runtime::Editor;
 /// Editor 结构体代表编辑器的核心功能实现
@@ -45,71 +42,18 @@ impl AsyncEditor {
     pub async fn create(
         options: EditorOptions
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        debug!("正在创建新的编辑器实例");
-        let extension_manager =
-            ExtensionManager::new(&options.get_extensions());
-        debug!("已初始化扩展管理器");
-        let doc = create_doc::create_doc(
-            &extension_manager.get_schema(),
-            &options.get_content(),
-        )
-        .await;
-        let event_bus = EventBus::new();
-        debug!("已创建文档和事件总线");
-        let mut op_state = GlobalResourceManager::new();
-        for op_fn in extension_manager.get_op_fns() {
-            op_fn(&mut op_state)?;
-        }
-        let state: State = State::create(StateConfig {
-            schema: Some(extension_manager.get_schema()),
-            doc,
-            stored_marks: None,
-            plugins: Some(extension_manager.get_plugins().clone()),
-            resource_manager: Some(Arc::new(RwLock::new(op_state))),
-        })
-        .await?;
-        let state: Arc<State> = Arc::new(state);
-
-        let base = Editor {
-            event_bus,
-            state: state.clone(),
-            extension_manager,
-            history_manager: HistoryManager::new(
-                state,
-                options.get_history_limit(),
-            ),
-            options,
-            middleware_stack: MiddlewareStack::new(),
-        };
-
-        let mut runtime = AsyncEditor { base, flow_engine: FlowEngine::new()? };
-        runtime.init().await?;
-        debug!("编辑器实例创建成功");
-        Ok(runtime)
+        let base = Editor::create(options).await?;
+        Ok(AsyncEditor { base, flow_engine: FlowEngine::new()? })
     }
 
-    /// 初始化编辑器，设置事件处理器并启动事件循环
-    async fn init(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        self.base
-            .event_bus
-            .add_event_handlers(self.base.options.get_event_handlers())
-            .await?;
-        self.base.event_bus.start_event_loop();
-        self.base
-            .event_bus
-            .broadcast_blocking(Event::Create(self.base.state.clone()))?;
-        Ok(())
-    }
-
-    /// 销毁编辑器实例
-    pub async fn destroy(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        debug!("正在销毁编辑器实例");
-        // 广播销毁事件
-        self.base.event_bus.broadcast(Event::Destroy).await?;
-        // 停止事件循环
-        self.base.event_bus.broadcast(Event::Stop).await?;
-        debug!("编辑器实例销毁成功");
-        Ok(())
+    pub async fn command(
+        &mut self,
+        command: Arc<dyn Command>,
+    ) -> EditorResult<()> {
+        debug!("正在执行命令: {}", command.name());
+        let mut tr = self.get_tr();
+        tr.transaction(command).await;
+        self.dispatch(tr).await
     }
 
     pub async fn dispatch(
@@ -123,7 +67,10 @@ impl AsyncEditor {
         // 使用 flow_engine 提交事务
         let (_id, mut rx) = self
             .flow_engine
-            .submit_transaction((self.base.state.clone(), current_transaction))
+            .submit_transaction((
+                self.base.get_state().clone(),
+                current_transaction,
+            ))
             .await?;
 
         // 等待任务结果
@@ -140,28 +87,92 @@ impl AsyncEditor {
 
         // 更新编辑器状态
         let mut current_state = None;
-
+        let mut transactions = Vec::new();
+        transactions.extend(result.transactions);
         // 检查最后一个事务是否改变了文档
-        if let Some(tr) = result.transactions.last() {
+        if let Some(tr) = transactions.last() {
             if tr.doc_changed() {
                 current_state = Some(Arc::new(result.state));
-                // 使用 clone 的引用计数而不是深度克隆
-                let transactions = Arc::new(result.transactions);
-
-                self.base
-                    .event_bus
-                    .broadcast(Event::TrApply(
-                        transactions,
-                        current_state.clone().unwrap(),
-                    ))
-                    .await?;
             }
         }
         // 执行后置中间件链，允许中间件在事务应用后执行额外操作
-        self.run_after_middleware(&mut current_state).await?;
+        self.run_after_middleware(&mut current_state, &mut transactions)
+            .await?;
         if let Some(state) = current_state {
-            self.base.state = state;
-            self.base.history_manager.insert(self.base.state.clone());
+            self.base.update_state(state.clone()).await?;
+            self.base
+                .emmit_event(Event::TrApply(Arc::new(transactions), state))
+                .await?;
+        }
+        Ok(())
+    }
+
+    pub async fn run_before_middleware(
+        &mut self,
+        transaction: &mut Transaction,
+    ) -> EditorResult<()> {
+        debug!("执行前置中间件链");
+        for middleware in &self.base.get_middleware_stack().middlewares {
+            let timeout = std::time::Duration::from_millis(500);
+            if let Err(e) = tokio::time::timeout(
+                timeout,
+                middleware.before_dispatch(transaction),
+            )
+            .await
+            {
+                return Err(error_utils::middleware_error(format!(
+                    "中间件执行超时: {}",
+                    e
+                )));
+            }
+        }
+        Ok(())
+    }
+    pub async fn run_after_middleware(
+        &mut self,
+        state: &mut Option<Arc<State>>,
+        transactions: &mut Vec<Transaction>,
+    ) -> EditorResult<()> {
+        debug!("执行后置中间件链");
+        for middleware in &self.base.get_middleware_stack().middlewares {
+            let timeout = std::time::Duration::from_millis(500);
+            let middleware_result = match tokio::time::timeout(
+                timeout,
+                middleware.after_dispatch(state.clone()),
+            )
+            .await
+            {
+                Ok(result) => result?,
+                Err(e) => {
+                    return Err(error_utils::middleware_error(format!(
+                        "中间件执行超时: {}",
+                        e
+                    )));
+                },
+            };
+
+            if let Some(transaction) = middleware_result.additional_transaction
+            {
+                let (_id, mut rx) = self
+                    .flow_engine
+                    .submit_transaction((
+                        self.base.get_state().clone(),
+                        transaction,
+                    ))
+                    .await?;
+                let Some(task_result) = rx.recv().await else {
+                    return Ok(());
+                };
+                let Some(ProcessorResult { result: Some(result), .. }) =
+                    task_result.output
+                else {
+                    return Ok(());
+                };
+                let TransactionResult { state: new_state, transactions: trs } =
+                    result;
+                *state = Some(Arc::new(new_state));
+                transactions.extend(trs);
+            }
         }
         Ok(())
     }

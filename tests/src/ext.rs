@@ -27,7 +27,6 @@ pub fn get_extension() -> Extension {
     extension
 }
 
-
 #[derive(Clone, Default, Debug)]
 pub struct MyGlobalTest;
 impl MyGlobalTest {

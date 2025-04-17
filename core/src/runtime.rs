@@ -21,12 +21,12 @@ use moduforge_state::{
 /// Editor 结构体代表编辑器的核心功能实现
 /// 负责管理文档状态、事件处理、插件系统和存储等核心功能
 pub struct Editor {
-    pub event_bus: EventBus,
-    pub state: Arc<State>,
-    pub extension_manager: ExtensionManager,
-    pub history_manager: HistoryManager<Arc<State>>,
-    pub options: EditorOptions,
-    pub middleware_stack: MiddlewareStack,
+    event_bus: EventBus,
+    state: Arc<State>,
+    extension_manager: ExtensionManager,
+    history_manager: HistoryManager<Arc<State>>,
+    options: EditorOptions,
+    middleware_stack: MiddlewareStack,
 }
 
 impl Editor {
@@ -123,6 +123,16 @@ impl Editor {
     {
         self.middleware_stack.add(middleware);
     }
+    pub fn get_middleware_stack(&self) -> &MiddlewareStack {
+        &self.middleware_stack
+    }
+    pub async fn emmit_event(
+        &mut self,
+        event: Event,
+    ) -> EditorResult<()> {
+        self.event_bus.broadcast(event).await?;
+        Ok(())
+    }
     pub async fn run_before_middleware(
         &mut self,
         transaction: &mut Transaction,
@@ -147,6 +157,7 @@ impl Editor {
     pub async fn run_after_middleware(
         &mut self,
         state: &mut Option<Arc<State>>,
+        transactions: &mut Vec<Transaction>,
     ) -> EditorResult<()> {
         debug!("执行后置中间件链");
         for middleware in &self.middleware_stack.middlewares {
@@ -168,7 +179,7 @@ impl Editor {
 
             if let Some(transaction) = middleware_result.additional_transaction
             {
-                let TransactionResult { state: new_state, transactions: _ } =
+                let TransactionResult { state: new_state, transactions: trs } =
                     self.state.apply(transaction).await.map_err(|e| {
                         error_utils::state_error(format!(
                             "附加事务应用失败: {}",
@@ -176,6 +187,7 @@ impl Editor {
                         ))
                     })?;
                 *state = Some(Arc::new(new_state));
+                transactions.extend(trs);
             }
         }
         Ok(())
@@ -206,7 +218,7 @@ impl Editor {
         self.run_before_middleware(&mut current_transaction).await?;
 
         // 应用事务到编辑器状态，获取新的状态和产生的事务列表
-        let TransactionResult { state, transactions } =
+        let TransactionResult { state, mut transactions } =
             self.state.apply(current_transaction).await.map_err(|e| {
                 error_utils::state_error(format!(
                     "Failed to apply transaction: {}",
@@ -222,34 +234,26 @@ impl Editor {
             if tr.doc_changed() {
                 // 如果文档发生变化，更新当前状态并广播事务应用事件
                 state_update = Some(Arc::new(state));
-
-                // 使用 clone 的引用计数而不是深度克隆
-                let transactions = Arc::new(transactions);
-
-                self.event_bus
-                    .broadcast(Event::TrApply(
-                        transactions,
-                        state_update.clone().unwrap(),
-                    ))
-                    .await
-                    .map_err(|e| {
-                        error_utils::event_error(format!(
-                            "Failed to broadcast event: {}",
-                            e
-                        ))
-                    })?;
             }
         }
         // 执行后置中间件链，允许中间件在事务应用后执行额外操作
-        self.run_after_middleware(&mut state_update).await?;
+        self.run_after_middleware(&mut state_update, &mut transactions).await?;
 
         // 如果有新的状态，更新编辑器状态并记录到历史记录
         if let Some(state) = state_update {
-            self.state = state;
-            // 使用 clone 的引用计数
-            self.history_manager.insert(self.state.clone());
+            self.update_state(state.clone()).await?;
+            self.emmit_event(Event::TrApply(Arc::new(transactions), state))
+                .await?;
         }
 
+        Ok(())
+    }
+    pub async fn update_state(
+        &mut self,
+        state: Arc<State>,
+    ) -> EditorResult<()> {
+        self.state = state;
+        self.history_manager.insert(self.state.clone());
         Ok(())
     }
 
@@ -262,7 +266,9 @@ impl Editor {
                 doc: Some(self.get_state().doc()),
                 stored_marks: None,
                 plugins: Some(self.get_state().plugins().clone()),
-                resource_manager: Some(self.get_state().resource_manager().clone()),
+                resource_manager: Some(
+                    self.get_state().resource_manager().clone(),
+                ),
             })
             .await
             .map_err(|e| {
@@ -272,7 +278,7 @@ impl Editor {
                     e
                 ))
             })?;
-        self.state = Arc::new(state);
+        self.update_state(Arc::new(state)).await?;
         info!("插件注册成功");
         Ok(())
     }
@@ -296,7 +302,9 @@ impl Editor {
                 doc: Some(self.get_state().doc()),
                 stored_marks: None,
                 plugins: Some(ps),
-                resource_manager: Some(self.get_state().resource_manager().clone()),
+                resource_manager: Some(
+                    self.get_state().resource_manager().clone(),
+                ),
             })
             .await
             .map_err(|e| {
@@ -306,7 +314,7 @@ impl Editor {
                     e
                 ))
             })?;
-        self.state = Arc::new(state);
+        self.update_state(Arc::new(state)).await?;
         info!("插件注销成功");
         Ok(())
     }
