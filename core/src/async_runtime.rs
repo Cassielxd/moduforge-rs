@@ -46,25 +46,73 @@ impl AsyncEditor {
         Ok(AsyncEditor { base, flow_engine: FlowEngine::new()? })
     }
 
+    /// 执行命令并生成相应的事务
+    ///
+    /// 此方法封装了命令到事务的转换过程，并使用高性能的`dispatch_flow`来处理生成的事务。
+    /// 适用于需要执行编辑器命令而不直接构建事务的场景。
+    ///
+    /// # 参数
+    /// * `command` - 要执行的命令
+    ///
+    /// # 返回值
+    /// * `EditorResult<()>` - 命令执行结果
     pub async fn command(
         &mut self,
         command: Arc<dyn Command>,
     ) -> EditorResult<()> {
-        debug!("正在执行命令: {}", command.name());
+        let cmd_name = command.name();
+        debug!("正在执行命令: {}", cmd_name);
+
+        // 创建事务并应用命令
         let mut tr = self.get_tr();
         tr.transaction(command).await;
-        self.dispatch_flow(tr).await
+
+        // 使用高性能处理引擎处理事务
+        match self.dispatch_flow(tr).await {
+            Ok(_) => {
+                debug!("命令 '{}' 执行成功", cmd_name);
+                Ok(())
+            },
+            Err(e) => {
+                debug!("命令 '{}' 执行失败: {}", cmd_name, e);
+                Err(e)
+            },
+        }
     }
 
+    /// 高性能事务处理方法，使用FlowEngine处理事务
+    ///
+    /// 与标准的dispatch方法相比，此方法具有以下优势：
+    /// 1. 利用FlowEngine提供的并行处理能力
+    /// 2. 通过异步流水线处理提高性能
+    /// 3. 减少阻塞操作，提升UI响应性
+    /// 4. 更好地处理大型文档的编辑操作
+    ///
+    /// # 参数
+    /// * `transaction` - 要处理的事务对象
+    ///
+    /// # 返回值
+    /// * `EditorResult<()>` - 处理结果，成功返回Ok(()), 失败返回错误
     pub async fn dispatch_flow(
         &mut self,
         transaction: Transaction,
     ) -> EditorResult<()> {
+        // 记录开始时间用于性能监控
+        let start_time = std::time::Instant::now();
+
         // 保存当前事务的副本，用于中间件处理
         let mut current_transaction = transaction;
+
+        // 前置中间件处理
+        let middleware_start = std::time::Instant::now();
         self.run_before_middleware(&mut current_transaction).await?;
+        let middleware_time = middleware_start.elapsed();
+        if middleware_time.as_millis() > 100 {
+            debug!("前置中间件处理耗时: {}ms", middleware_time.as_millis());
+        }
 
         // 使用 flow_engine 提交事务
+        let flow_start = std::time::Instant::now();
         let (_id, mut rx) = self
             .flow_engine
             .submit_transaction((
@@ -72,16 +120,27 @@ impl AsyncEditor {
                 current_transaction,
             ))
             .await?;
+        let submit_time = flow_start.elapsed();
+        if submit_time.as_millis() > 50 {
+            debug!("提交事务耗时: {}ms", submit_time.as_millis());
+        }
 
         // 等待任务结果
+        let recv_start = std::time::Instant::now();
         let Some(task_result) = rx.recv().await else {
+            debug!("无法接收任务结果");
             return Ok(());
         };
+        let recv_time = recv_start.elapsed();
+        if recv_time.as_millis() > 50 {
+            debug!("接收任务结果耗时: {}ms", recv_time.as_millis());
+        }
 
         // 获取处理结果
         let Some(ProcessorResult { result: Some(result), .. }) =
             task_result.output
         else {
+            debug!("任务处理结果无效");
             return Ok(());
         };
 
@@ -89,21 +148,46 @@ impl AsyncEditor {
         let mut current_state = None;
         let mut transactions = Vec::new();
         transactions.extend(result.transactions);
+
         // 检查最后一个事务是否改变了文档
         if let Some(tr) = transactions.last() {
             if tr.doc_changed() {
                 current_state = Some(Arc::new(result.state));
             }
         }
+
         // 执行后置中间件链，允许中间件在事务应用后执行额外操作
+        let after_start = std::time::Instant::now();
         self.run_after_middleware(&mut current_state, &mut transactions)
             .await?;
+        let after_time = after_start.elapsed();
+        if after_time.as_millis() > 100 {
+            debug!("后置中间件处理耗时: {}ms", after_time.as_millis());
+        }
+
+        // 更新状态并广播事件
         if let Some(state) = current_state {
+            let update_start = std::time::Instant::now();
             self.base.update_state(state.clone()).await?;
+            let update_time = update_start.elapsed();
+            if update_time.as_millis() > 20 {
+                debug!("状态更新耗时: {}ms", update_time.as_millis());
+            }
+
+            let event_start = std::time::Instant::now();
             self.base
                 .emmit_event(Event::TrApply(Arc::new(transactions), state))
                 .await?;
+            let event_time = event_start.elapsed();
+            if event_time.as_millis() > 20 {
+                debug!("事件广播耗时: {}ms", event_time.as_millis());
+            }
         }
+
+        // 记录总处理时间
+        let total_time = start_time.elapsed();
+        debug!("事务处理总耗时: {}ms", total_time.as_millis());
+
         Ok(())
     }
 
@@ -135,15 +219,33 @@ impl AsyncEditor {
     ) -> EditorResult<()> {
         debug!("执行后置中间件链");
         for middleware in &self.base.get_middleware_stack().middlewares {
-            let timeout = std::time::Duration::from_millis(500);
+            // 使用常量定义超时时间，便于配置调整
+            const MIDDLEWARE_TIMEOUT_MS: u64 = 500;
+            let timeout =
+                std::time::Duration::from_millis(MIDDLEWARE_TIMEOUT_MS);
+
+            // 记录中间件执行开始时间，用于性能监控
+            let start_time = std::time::Instant::now();
+
             let middleware_result = match tokio::time::timeout(
                 timeout,
                 middleware.after_dispatch(state.clone()),
             )
             .await
             {
-                Ok(result) => result?,
+                Ok(result) => match result {
+                    Ok(r) => r,
+                    Err(e) => {
+                        // 记录更详细的错误信息
+                        debug!("中间件执行失败: {}", e);
+                        return Err(error_utils::middleware_error(format!(
+                            "中间件执行失败: {}",
+                            e
+                        )));
+                    },
+                },
                 Err(e) => {
+                    debug!("中间件执行超时: {}", e);
                     return Err(error_utils::middleware_error(format!(
                         "中间件执行超时: {}",
                         e
@@ -151,27 +253,62 @@ impl AsyncEditor {
                 },
             };
 
+            // 记录中间件执行时间，用于性能监控
+            let elapsed = start_time.elapsed();
+            if elapsed.as_millis() > 100 {
+                debug!("中间件执行时间较长: {}ms", elapsed.as_millis());
+            }
+
             if let Some(transaction) = middleware_result.additional_transaction
             {
-                let (_id, mut rx) = self
+                // 记录额外事务处理开始时间
+                let tx_start_time = std::time::Instant::now();
+
+                let result = match self
                     .flow_engine
                     .submit_transaction((
                         self.base.get_state().clone(),
                         transaction,
                     ))
-                    .await?;
+                    .await
+                {
+                    Ok(result) => result,
+                    Err(e) => {
+                        debug!("附加事务提交失败: {}", e);
+                        return Err(error_utils::state_error(format!(
+                            "附加事务提交失败: {}",
+                            e
+                        )));
+                    },
+                };
+
+                let (_id, mut rx) = result;
+
                 let Some(task_result) = rx.recv().await else {
+                    debug!("接收事务处理结果失败");
                     return Ok(());
                 };
+
                 let Some(ProcessorResult { result: Some(result), .. }) =
                     task_result.output
                 else {
+                    debug!("处理结果无效");
                     return Ok(());
                 };
+
                 let TransactionResult { state: new_state, transactions: trs } =
                     result;
                 *state = Some(Arc::new(new_state));
                 transactions.extend(trs);
+
+                // 记录额外事务处理时间
+                let tx_elapsed = tx_start_time.elapsed();
+                if tx_elapsed.as_millis() > 50 {
+                    debug!(
+                        "附加事务处理时间较长: {}ms",
+                        tx_elapsed.as_millis()
+                    );
+                }
             }
         }
         Ok(())
