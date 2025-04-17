@@ -15,7 +15,7 @@ async fn main() {
     tr.transaction(Arc::new(MyCommand1)).await;
     tr.set_meta("add_node", true);
     let before_doc = runtime.doc();
-    let _ = runtime.dispatch(tr).await;
+    let _ = runtime.dispatch_flow(tr).await;
     let after_doc = runtime.doc();
     dbg!(before_doc);
     dbg!(after_doc);

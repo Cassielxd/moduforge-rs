@@ -53,10 +53,10 @@ impl AsyncEditor {
         debug!("正在执行命令: {}", command.name());
         let mut tr = self.get_tr();
         tr.transaction(command).await;
-        self.dispatch(tr).await
+        self.dispatch_flow(tr).await
     }
 
-    pub async fn dispatch(
+    pub async fn dispatch_flow(
         &mut self,
         transaction: Transaction,
     ) -> EditorResult<()> {
