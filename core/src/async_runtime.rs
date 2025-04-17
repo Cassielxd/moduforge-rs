@@ -229,7 +229,7 @@ impl AsyncEditor {
 
             let middleware_result = match tokio::time::timeout(
                 timeout,
-                middleware.after_dispatch(state.clone()),
+                middleware.after_dispatch(state.clone(),transactions),
             )
             .await
             {

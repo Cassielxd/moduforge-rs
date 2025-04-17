@@ -40,6 +40,7 @@ pub trait Middleware: Send + Sync {
     async fn after_dispatch(
         &self,
         state: Option<Arc<State>>,
+        transactions: &[Transaction]
     ) -> EditorResult<MiddlewareResult>;
 }
 

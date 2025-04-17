@@ -164,7 +164,7 @@ impl Editor {
             let timeout = std::time::Duration::from_millis(500);
             let middleware_result = match tokio::time::timeout(
                 timeout,
-                middleware.after_dispatch(state.clone()),
+                middleware.after_dispatch(state.clone(),transactions),
             )
             .await
             {
