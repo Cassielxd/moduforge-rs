@@ -7,7 +7,7 @@ use moduforge_state::{
     state::{State, StateConfig},
     transaction::Transaction,
 };
-use moduforge_core::{impl_plugin, impl_state_field};
+use moduforge_macros::{impl_plugin, impl_state_field};
 
 use crate::ext::MyGlobalTest;
 async fn p1_append(

@@ -1,8 +1,8 @@
 [package]
-name = "moduforge-core"
+name = "moduforge-macros"
 version = {workspace=true}
 edition = {workspace=true}
-description = "moduforge 核心模块"
+description = "moduforge 宏定义"
 authors = {workspace=true}
 license = {workspace=true}
 documentation = {workspace=true}
@@ -13,20 +13,8 @@ lib="./src/lib.rs"
 
 
 [dependencies]
-tokio = {workspace=true}
-tokio-util = {workspace=true}
-lazy_static= {workspace=true}
-async-channel= {workspace=true}
-im= {workspace=true}
-chrono= {workspace=true}
-log = {workspace=true}
-lru = {workspace=true}
-serde = {workspace=true}
-serde_json = {workspace=true}
-thiserror= {workspace=true}
-async-trait= {workspace=true}
-futures = {workspace=true}
 moduforge-model = {version = "0.3.6", path = "../model"}
 moduforge-state = {version = "0.3.6", path = "../state"}
 moduforge-transform = {version = "0.3.6", path = "../transform"}
+moduforge-core = {version = "0.3.6", path = "../core"}
 

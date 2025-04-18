@@ -7,7 +7,7 @@ pub mod extension_manager;
 pub mod flow;
 pub mod helpers;
 pub mod history_manager;
-pub mod macros;
+
 pub mod mark;
 pub mod metrics;
 pub mod middleware;

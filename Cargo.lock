@@ -521,6 +521,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "moduforge-macros"
+version = "0.3.6"
+dependencies = [
+ "moduforge-core",
+ "moduforge-model",
+ "moduforge-state",
+ "moduforge-transform",
+]
+
+[[package]]
 name = "moduforge-model"
 version = "0.3.6"
 dependencies = [
@@ -566,6 +576,7 @@ dependencies = [
  "async-trait",
  "log",
  "moduforge-core",
+ "moduforge-macros",
  "moduforge-model",
  "moduforge-state",
  "moduforge-transform",
