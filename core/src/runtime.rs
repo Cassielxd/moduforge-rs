@@ -126,7 +126,7 @@ impl Editor {
     pub fn get_middleware_stack(&self) -> &MiddlewareStack {
         &self.middleware_stack
     }
-    pub async fn emmit_event(
+    pub async fn emit_event(
         &mut self,
         event: Event,
     ) -> EditorResult<()> {
@@ -242,7 +242,7 @@ impl Editor {
         // 如果有新的状态，更新编辑器状态并记录到历史记录
         if let Some(state) = state_update {
             self.update_state(state.clone()).await?;
-            self.emmit_event(Event::TrApply(Arc::new(transactions), state))
+            self.emit_event(Event::TrApply(Arc::new(transactions), state))
                 .await?;
         }
 

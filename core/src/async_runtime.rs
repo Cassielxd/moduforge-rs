@@ -176,7 +176,7 @@ impl AsyncEditor {
 
             let event_start = std::time::Instant::now();
             self.base
-                .emmit_event(Event::TrApply(Arc::new(transactions), state))
+                .emit_event(Event::TrApply(Arc::new(transactions), state))
                 .await?;
             let event_time = event_start.elapsed();
             if event_time.as_millis() > 20 {

@@ -11,7 +11,7 @@ pub struct MiddlewareResult {
     pub additional_transaction: Option<Transaction>,
 }
 
-impl MiddlewareResult {
+impl MiddlewareResult { 
     /// 创建一个只包含结果的处理结果
     pub fn new(result: EditorResult<()>) -> Self {
         Self { result, additional_transaction: None }
@@ -45,7 +45,7 @@ pub trait Middleware: Send + Sync {
 }
 
 /// Type alias for a boxed middleware
-pub type BoxedMiddleware = Box<dyn Middleware>;
+pub type BoxedMiddleware = Arc<dyn Middleware>;
 
 /// Middleware stack that holds multiple middleware
 pub struct MiddlewareStack {
@@ -63,7 +63,7 @@ impl MiddlewareStack {
     ) where
         M: Middleware + 'static,
     {
-        self.middlewares.push(Box::new(middleware));
+        self.middlewares.push(Arc::new(middleware));
     }
 
     pub fn is_empty(&self) -> bool {
