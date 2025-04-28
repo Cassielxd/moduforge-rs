@@ -112,17 +112,6 @@ impl ResourceTable {
         self.index.remove(&rid).ok_or(ResourceError::BadResourceId)
     }
 
-    // 已废弃：关闭指定ID的资源
-    #[deprecated = "This method may deadlock. Use take() and close() instead."]
-    pub fn close(
-        &mut self,
-        rid: ResourceId,
-    ) -> Result<(), ResourceError> {
-        self.index
-            .remove(&rid)
-            .ok_or(ResourceError::BadResourceId)
-            .map(|resource| resource.close())
-    }
 
     // 获取所有资源的名称
     pub fn names(&self) -> impl Iterator<Item = (ResourceId, Cow<str>)> {
