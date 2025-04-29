@@ -1,6 +1,7 @@
 use std::{
     ops::{Deref, DerefMut},
     sync::{Arc},
+    time::Duration,
 };
 
 use crate::{
@@ -17,11 +18,31 @@ use moduforge_state::{
     State,
 };
 use crate::runtime::Editor;
+
+/// 性能监控配置
+#[derive(Debug, Clone)]
+pub struct PerformanceConfig {
+    pub enable_monitoring: bool,
+    pub middleware_timeout_ms: u64,
+    pub log_threshold_ms: u64,
+}
+
+impl Default for PerformanceConfig {
+    fn default() -> Self {
+        Self {
+            enable_monitoring: false,
+            middleware_timeout_ms: 500,
+            log_threshold_ms: 50,
+        }
+    }
+}
+
 /// Editor 结构体代表编辑器的核心功能实现
 /// 负责管理文档状态、事件处理、插件系统和存储等核心功能
 pub struct AsyncEditor {
     base: Editor,
     flow_engine: FlowEngine,
+    perf_config: PerformanceConfig,
 }
 impl Deref for AsyncEditor {
     type Target = Editor;
@@ -43,7 +64,23 @@ impl AsyncEditor {
         options: EditorOptions
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let base = Editor::create(options).await?;
-        Ok(AsyncEditor { base, flow_engine: FlowEngine::new()? })
+        Ok(AsyncEditor { 
+            base, 
+            flow_engine: FlowEngine::new()?,
+            perf_config: PerformanceConfig::default(),
+        })
+    }
+
+    /// 设置性能监控配置
+    pub fn set_performance_config(&mut self, config: PerformanceConfig) {
+        self.perf_config = config;
+    }
+
+    /// 记录性能指标
+    fn log_performance(&self, operation: &str, duration: Duration) {
+        if self.perf_config.enable_monitoring && duration.as_millis() > self.perf_config.log_threshold_ms as u128 {
+            debug!("{} 耗时: {}ms", operation, duration.as_millis());
+        }
     }
 
     /// 执行命令并生成相应的事务
@@ -97,19 +134,13 @@ impl AsyncEditor {
         &mut self,
         transaction: Transaction,
     ) -> EditorResult<()> {
-        // 记录开始时间用于性能监控
         let start_time = std::time::Instant::now();
-
-        // 保存当前事务的副本，用于中间件处理
         let mut current_transaction = transaction;
 
         // 前置中间件处理
         let middleware_start = std::time::Instant::now();
         self.run_before_middleware(&mut current_transaction).await?;
-        let middleware_time = middleware_start.elapsed();
-        if middleware_time.as_millis() > 100 {
-            debug!("前置中间件处理耗时: {}ms", middleware_time.as_millis());
-        }
+        self.log_performance("前置中间件处理", middleware_start.elapsed());
 
         // 使用 flow_engine 提交事务
         let flow_start = std::time::Instant::now();
@@ -120,28 +151,18 @@ impl AsyncEditor {
                 current_transaction,
             ))
             .await?;
-        let submit_time = flow_start.elapsed();
-        if submit_time.as_millis() > 50 {
-            debug!("提交事务耗时: {}ms", submit_time.as_millis());
-        }
+        self.log_performance("提交事务", flow_start.elapsed());
 
         // 等待任务结果
         let recv_start = std::time::Instant::now();
         let Some(task_result) = rx.recv().await else {
-            debug!("无法接收任务结果");
-            return Ok(());
+            return Err(error_utils::state_error("无法接收任务结果".to_string()));
         };
-        let recv_time = recv_start.elapsed();
-        if recv_time.as_millis() > 50 {
-            debug!("接收任务结果耗时: {}ms", recv_time.as_millis());
-        }
+        self.log_performance("接收任务结果", recv_start.elapsed());
 
         // 获取处理结果
-        let Some(ProcessorResult { result: Some(result), .. }) =
-            task_result.output
-        else {
-            debug!("任务处理结果无效");
-            return Ok(());
+        let Some(ProcessorResult { result: Some(result), .. }) = task_result.output else {
+            return Err(error_utils::state_error("任务处理结果无效".to_string()));
         };
 
         // 更新编辑器状态
@@ -156,38 +177,25 @@ impl AsyncEditor {
             }
         }
 
-        // 执行后置中间件链，允许中间件在事务应用后执行额外操作
+        // 执行后置中间件链
         let after_start = std::time::Instant::now();
-        self.run_after_middleware(&mut current_state, &mut transactions)
-            .await?;
-        let after_time = after_start.elapsed();
-        if after_time.as_millis() > 100 {
-            debug!("后置中间件处理耗时: {}ms", after_time.as_millis());
-        }
+        self.run_after_middleware(&mut current_state, &mut transactions).await?;
+        self.log_performance("后置中间件处理", after_start.elapsed());
 
         // 更新状态并广播事件
         if let Some(state) = current_state {
             let update_start = std::time::Instant::now();
             self.base.update_state(state.clone()).await?;
-            let update_time = update_start.elapsed();
-            if update_time.as_millis() > 20 {
-                debug!("状态更新耗时: {}ms", update_time.as_millis());
-            }
+            self.log_performance("状态更新", update_start.elapsed());
 
             let event_start = std::time::Instant::now();
             self.base
                 .emit_event(Event::TrApply(Arc::new(transactions), state))
                 .await?;
-            let event_time = event_start.elapsed();
-            if event_time.as_millis() > 20 {
-                debug!("事件广播耗时: {}ms", event_time.as_millis());
-            }
+            self.log_performance("事件广播", event_start.elapsed());
         }
 
-        // 记录总处理时间
-        let total_time = start_time.elapsed();
-        debug!("事务处理总耗时: {}ms", total_time.as_millis());
-
+        self.log_performance("事务处理总耗时", start_time.elapsed());
         Ok(())
     }
 
@@ -220,9 +228,9 @@ impl AsyncEditor {
         debug!("执行后置中间件链");
         for middleware in &self.base.get_middleware_stack().middlewares {
             // 使用常量定义超时时间，便于配置调整
-            const MIDDLEWARE_TIMEOUT_MS: u64 = 500;
+            
             let timeout =
-                std::time::Duration::from_millis(MIDDLEWARE_TIMEOUT_MS);
+                std::time::Duration::from_millis(self.perf_config.middleware_timeout_ms);
 
             // 记录中间件执行开始时间，用于性能监控
             let start_time = std::time::Instant::now();

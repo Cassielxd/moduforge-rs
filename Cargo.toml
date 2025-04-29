@@ -34,6 +34,7 @@ anyhow="1"
 # im 不可变数据实现
 im = { version = "15.1", features = ["serde"] }
 thiserror = "1.0"
+dashmap = "6.1.0"
 # 异步 trait
 async-trait = "0.1"
 lru = "0.12"
