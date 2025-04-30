@@ -34,6 +34,6 @@ impl MyGlobalTest {
         MyGlobalTest
     }
     pub fn print(&self) {
-        println!("MyGlobalTest");
+        println!("全局 MyGlobalTest");
     }
 }

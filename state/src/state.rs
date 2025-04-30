@@ -7,7 +7,7 @@ use std::{
     collections::HashMap,
     sync::{
         atomic::{AtomicU64, Ordering},
-        Arc, RwLock,
+        Arc,
     },
     time::Instant,
 };
@@ -79,6 +79,7 @@ impl State {
         let doc: Arc<NodePool> = match &config.doc {
             Some(doc) => doc.clone(),
             None => {
+                
                 let id = IdGenerator::get_id();
                 let nodes = config
                     .schema

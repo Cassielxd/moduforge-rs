@@ -28,7 +28,7 @@ impl ResourceTable {
 
     // 添加一个新资源到资源表，返回分配的资源ID
     pub fn add<T: Resource>(
-        &mut self,
+        &self,
         rid: ResourceId,
         resource: T,
     ) {
@@ -37,7 +37,7 @@ impl ResourceTable {
 
     // 添加一个Arc包装的资源到资源表
     pub fn add_arc<T: Resource>(
-        &mut self,
+        &self,
         rid: ResourceId,
         resource: Arc<T>,
     ) {
@@ -47,7 +47,7 @@ impl ResourceTable {
 
     // 添加一个动态类型的Arc资源到资源表
     pub fn add_arc_dyn(
-        &mut self,
+        &self,
         rid: ResourceId,
         resource: Arc<dyn Resource>,
     ){
@@ -86,7 +86,7 @@ impl ResourceTable {
 
     // 替换指定ID的资源
     pub fn replace<T: Resource>(
-        &mut self,
+        &self,
         rid: ResourceId,
         resource: T,
     ) {
@@ -97,7 +97,7 @@ impl ResourceTable {
 
     // 从资源表中移除并返回指定ID的特定类型资源
     pub fn take<T: Resource>(
-        &mut self,
+        &self,
         rid: ResourceId,
     ) -> Option<Arc<T>> {
         let resource = self.get::<T>(rid.clone())?;
@@ -107,7 +107,7 @@ impl ResourceTable {
 
     // 从资源表中移除并返回指定ID的任意类型资源
     pub fn take_any(
-        &mut self,
+        &self,
         rid: ResourceId,
     ) -> Option<Arc<dyn Resource>> {
         self.index.remove(&rid).map(|rc| rc.1)

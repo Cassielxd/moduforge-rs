@@ -37,7 +37,6 @@ impl Editor {
         let extension_manager =
             ExtensionManager::new(&options.get_extensions());
         debug!("已初始化扩展管理器");
-
         let doc = create_doc::create_doc(
             &extension_manager.get_schema(),
             &options.get_content(),
