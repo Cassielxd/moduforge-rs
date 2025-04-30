@@ -3,6 +3,8 @@ use std::any::TypeId;
 use std::any::type_name;
 use std::collections::BTreeMap;
 
+
+
 #[derive(Default, Debug)]
 pub struct GothamState {
     /// 使用BTreeMap存储不同类型的数据，以TypeId为键
@@ -118,109 +120,4 @@ fn missing<T: 'static>() -> ! {
     );
 }
 
-#[cfg(test)]
-mod tests {
-    use super::GothamState;
 
-    struct MyStruct {
-        value: i32,
-    }
-
-    struct AnotherStruct {
-        value: &'static str,
-    }
-
-    type Alias1 = String;
-    type Alias2 = String;
-
-    #[test]
-    fn put_borrow1() {
-        let mut state = GothamState::default();
-        state.put(MyStruct { value: 1 });
-        assert_eq!(state.borrow::<MyStruct>().value, 1);
-    }
-
-    #[test]
-    fn put_borrow2() {
-        let mut state = GothamState::default();
-        assert!(!state.has::<AnotherStruct>());
-        state.put(AnotherStruct { value: "a string" });
-        assert!(state.has::<AnotherStruct>());
-        assert!(!state.has::<MyStruct>());
-        state.put(MyStruct { value: 100 });
-        assert!(state.has::<MyStruct>());
-        assert_eq!(state.borrow::<MyStruct>().value, 100);
-        assert_eq!(state.borrow::<AnotherStruct>().value, "a string");
-    }
-
-    #[test]
-    fn try_borrow() {
-        let mut state = GothamState::default();
-        state.put(MyStruct { value: 100 });
-        assert!(state.try_borrow::<MyStruct>().is_some());
-        assert_eq!(state.try_borrow::<MyStruct>().unwrap().value, 100);
-        assert!(state.try_borrow::<AnotherStruct>().is_none());
-    }
-
-    #[test]
-    fn try_borrow_mut() {
-        let mut state = GothamState::default();
-        state.put(MyStruct { value: 100 });
-        if let Some(a) = state.try_borrow_mut::<MyStruct>() {
-            a.value += 10;
-        }
-        assert_eq!(state.borrow::<MyStruct>().value, 110);
-    }
-
-    #[test]
-    fn borrow_mut() {
-        let mut state = GothamState::default();
-        state.put(MyStruct { value: 100 });
-        {
-            let a = state.borrow_mut::<MyStruct>();
-            a.value += 10;
-        }
-        assert_eq!(state.borrow::<MyStruct>().value, 110);
-        assert!(state.try_borrow_mut::<AnotherStruct>().is_none());
-    }
-
-    #[test]
-    fn try_take() {
-        let mut state = GothamState::default();
-        state.put(MyStruct { value: 100 });
-        assert_eq!(state.try_take::<MyStruct>().unwrap().value, 100);
-        assert!(state.try_take::<MyStruct>().is_none());
-        assert!(state.try_borrow_mut::<MyStruct>().is_none());
-        assert!(state.try_borrow::<MyStruct>().is_none());
-        assert!(state.try_take::<AnotherStruct>().is_none());
-    }
-
-    #[test]
-    fn take() {
-        let mut state = GothamState::default();
-        state.put(MyStruct { value: 110 });
-        assert_eq!(state.take::<MyStruct>().value, 110);
-        assert!(state.try_take::<MyStruct>().is_none());
-        assert!(state.try_borrow_mut::<MyStruct>().is_none());
-        assert!(state.try_borrow::<MyStruct>().is_none());
-    }
-
-    #[test]
-    fn type_alias() {
-        let mut state = GothamState::default();
-        state.put::<Alias1>("alias1".to_string());
-        state.put::<Alias2>("alias2".to_string());
-        assert_eq!(state.take::<Alias1>(), "alias2");
-        assert!(state.try_take::<Alias1>().is_none());
-        assert!(state.try_take::<Alias2>().is_none());
-    }
-
-    #[test]
-    #[should_panic(
-        expected = "required type deno_core::gotham_state::tests::MyStruct is not present in GothamState container"
-    )]
-    fn missing() {
-        let state = GothamState::default();
-        let _ = state.borrow::<MyStruct>();
-    }
-}

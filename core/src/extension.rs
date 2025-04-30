@@ -10,7 +10,7 @@ pub struct Extension {
     global_attributes: Vec<GlobalAttributeItem>,
     plugins: Vec<Arc<Plugin>>,
     op_fn: Option<
-        Vec<Arc<dyn Fn(&mut GlobalResourceManager) -> EditorResult<()>>>,
+        Vec<Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()>>>,
     >,
 }
 
@@ -27,14 +27,14 @@ impl Extension {
     }
     pub fn add_op_fn(
         &mut self,
-        op_fn: Arc<dyn Fn(&mut GlobalResourceManager) -> EditorResult<()>>,
+        op_fn: Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()>>,
     ) -> &mut Self {
         self.op_fn.get_or_insert(vec![]).push(op_fn);
         self
     }
     pub fn get_op_fns(
         &self
-    ) -> Vec<Arc<dyn Fn(&mut GlobalResourceManager) -> EditorResult<()>>> {
+    ) -> Vec<Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()>>> {
         self.op_fn.clone().unwrap_or(vec![])
     }
     pub fn add_global_attribute(

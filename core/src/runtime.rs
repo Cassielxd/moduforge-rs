@@ -45,16 +45,16 @@ impl Editor {
         .await;
         let event_bus = EventBus::new();
         debug!("已创建文档和事件总线");
-        let mut op_state = GlobalResourceManager::new();
+        let  op_state = GlobalResourceManager::new();
         for op_fn in extension_manager.get_op_fns() {
-            op_fn(&mut op_state)?;
+            op_fn(&op_state)?;
         }
         let state: State = State::create(StateConfig {
             schema: Some(extension_manager.get_schema()),
             doc,
             stored_marks: None,
             plugins: Some(extension_manager.get_plugins().clone()),
-            resource_manager: Some(Arc::new(RwLock::new(op_state))),
+            resource_manager: Some(Arc::new(op_state)),
         })
         .await
         .map_err(|e| {

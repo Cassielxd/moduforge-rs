@@ -1,6 +1,7 @@
-use std::borrow::Cow;
-use std::collections::BTreeMap;
+
 use std::sync::Arc;
+
+use dashmap::DashMap;
 
 use crate::resource::Resource;
 
@@ -11,7 +12,7 @@ pub type ResourceId = String;
 #[derive(Default, Debug)]
 pub struct ResourceTable {
     // 使用BTreeMap存储资源ID到资源的映射
-    index: BTreeMap<ResourceId, Arc<dyn Resource>>,
+    index: DashMap<ResourceId, Arc<dyn Resource>>,
 }
 
 impl ResourceTable {
@@ -67,20 +68,20 @@ impl ResourceTable {
     pub fn get<T: Resource>(
         &self,
         rid: ResourceId,
-    ) -> Result<Arc<T>, ResourceError> {
-        self.index
+    ) -> Option<Arc<T>> {
+       let data = self.index
             .get(&rid)
-            .and_then(|rc| rc.downcast_arc::<T>())
-            .cloned()
-            .ok_or(ResourceError::BadResourceId)
+            .map(|rc| rc.value().clone())
+            .and_then(|rc| rc.downcast_arc::<T>().cloned());
+            data
     }
 
     // 获取指定ID的任意类型资源
     pub fn get_any(
         &self,
         rid: ResourceId,
-    ) -> Result<Arc<dyn Resource>, ResourceError> {
-        self.index.get(&rid).cloned().ok_or(ResourceError::BadResourceId)
+    ) -> Option<Arc<dyn Resource>> {
+        self.index.get(&rid).map(|rc| rc.value().clone())
     }
 
     // 替换指定ID的资源
@@ -98,24 +99,18 @@ impl ResourceTable {
     pub fn take<T: Resource>(
         &mut self,
         rid: ResourceId,
-    ) -> Result<Arc<T>, ResourceError> {
+    ) -> Option<Arc<T>> {
         let resource = self.get::<T>(rid.clone())?;
         self.index.remove(&rid);
-        Ok(resource)
+        Some(resource)
     }
 
     // 从资源表中移除并返回指定ID的任意类型资源
     pub fn take_any(
         &mut self,
         rid: ResourceId,
-    ) -> Result<Arc<dyn Resource>, ResourceError> {
-        self.index.remove(&rid).ok_or(ResourceError::BadResourceId)
-    }
-
-
-    // 获取所有资源的名称
-    pub fn names(&self) -> impl Iterator<Item = (ResourceId, Cow<str>)> {
-        self.index.iter().map(|(id, resource)| (id.clone(), resource.name()))
+    ) -> Option<Arc<dyn Resource>> {
+        self.index.remove(&rid).map(|rc| rc.1)
     }
 }
 

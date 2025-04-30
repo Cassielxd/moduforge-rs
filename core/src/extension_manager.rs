@@ -11,7 +11,7 @@ use crate::{
 pub struct ExtensionManager {
     plugins: Vec<Arc<Plugin>>,
     schema: Arc<Schema>,
-    op_fns: Vec<Arc<dyn Fn(&mut GlobalResourceManager) -> EditorResult<()>>>,
+    op_fns: Vec<Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()>>>,
 }
 impl ExtensionManager {
     pub fn new(extensions: &Vec<Extensions>) -> Self {
@@ -37,7 +37,7 @@ impl ExtensionManager {
     }
     pub fn get_op_fns(
         &self
-    ) -> &Vec<Arc<dyn Fn(&mut GlobalResourceManager) -> EditorResult<()>>> {
+    ) -> &Vec<Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()>>> {
         &self.op_fns
     }
 

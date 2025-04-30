@@ -16,9 +16,8 @@ async fn p1_append(
     new_state: &State,
 ) -> Option<Transaction> {
     let resource_manager = new_state.resource_manager();
-    let resource_manager = resource_manager.read().unwrap();
-    resource_manager.borrow::<MyGlobalTest>().print();
-    let mut tr = trs.last().unwrap().clone();
+    resource_manager.get::<MyGlobalTest>().print();
+    let mut tr: Transaction = trs.last().unwrap().clone();
     tr.add_node(
         tr.doc().inner.root_id.to_string(),
         vec![tr.schema.nodes.get("DW").unwrap().create(

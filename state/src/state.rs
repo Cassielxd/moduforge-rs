@@ -106,7 +106,7 @@ impl State {
     pub fn doc(&self) -> Arc<NodePool> {
         Arc::clone(&self.node_pool)
     }
-    pub fn resource_manager(&self) -> Arc<RwLock<GlobalResourceManager>> {
+    pub fn resource_manager(&self) -> Arc<GlobalResourceManager> {
         Arc::clone(&self.config.resource_manager)
     }
     pub fn schema(&self) -> Arc<Schema> {
@@ -336,7 +336,7 @@ pub struct StateConfig {
     pub doc: Option<Arc<NodePool>>,
     pub stored_marks: Option<Vec<Mark>>,
     pub plugins: Option<Vec<Arc<Plugin>>>,
-    pub resource_manager: Option<Arc<RwLock<GlobalResourceManager>>>,
+    pub resource_manager: Option<Arc<GlobalResourceManager>>,
 }
 
 pub struct SeenState {
@@ -359,7 +359,7 @@ pub struct Configuration {
     plugins_by_key: HashMap<String, Arc<Plugin>>,
     pub doc: Option<Arc<NodePool>>,
     schema: Arc<Schema>,
-    pub resource_manager: Arc<RwLock<GlobalResourceManager>>,
+    pub resource_manager: Arc<GlobalResourceManager>,
 }
 
 impl Configuration {
@@ -367,7 +367,7 @@ impl Configuration {
         schema: Arc<Schema>,
         plugins: Option<Vec<Arc<Plugin>>>,
         doc: Option<Arc<NodePool>>,
-        resource_manager: Option<Arc<RwLock<GlobalResourceManager>>>,
+        resource_manager: Option<Arc<GlobalResourceManager>>,
     ) -> Self {
         let mut config = Configuration {
             doc,
@@ -375,7 +375,7 @@ impl Configuration {
             plugins_by_key: HashMap::new(),
             schema,
             resource_manager: resource_manager.unwrap_or_else(|| {
-                Arc::new(RwLock::new(GlobalResourceManager::default()))
+                Arc::new(GlobalResourceManager::default())
             }),
         };
 
