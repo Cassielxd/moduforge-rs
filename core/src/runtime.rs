@@ -44,7 +44,7 @@ impl Editor {
         .await;
         let event_bus = EventBus::new();
         debug!("已创建文档和事件总线");
-        let  op_state = GlobalResourceManager::new();
+        let op_state = GlobalResourceManager::new();
         for op_fn in extension_manager.get_op_fns() {
             op_fn(&op_state)?;
         }
@@ -163,7 +163,7 @@ impl Editor {
             let timeout = std::time::Duration::from_millis(500);
             let middleware_result = match tokio::time::timeout(
                 timeout,
-                middleware.after_dispatch(state.clone(),transactions),
+                middleware.after_dispatch(state.clone(), transactions),
             )
             .await
             {

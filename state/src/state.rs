@@ -79,7 +79,6 @@ impl State {
         let doc: Arc<NodePool> = match &config.doc {
             Some(doc) => doc.clone(),
             None => {
-                
                 let id = IdGenerator::get_id();
                 let nodes = config
                     .schema
@@ -375,9 +374,8 @@ impl Configuration {
             plugins: Vec::new(),
             plugins_by_key: HashMap::new(),
             schema,
-            resource_manager: resource_manager.unwrap_or_else(|| {
-                Arc::new(GlobalResourceManager::default())
-            }),
+            resource_manager: resource_manager
+                .unwrap_or_else(|| Arc::new(GlobalResourceManager::default())),
         };
 
         if let Some(plugin_list) = plugins {

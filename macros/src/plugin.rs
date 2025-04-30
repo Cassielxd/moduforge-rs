@@ -1,4 +1,3 @@
-
 #[macro_export]
 macro_rules! impl_plugin {
     ($name:ident, $append_fn:expr) => {

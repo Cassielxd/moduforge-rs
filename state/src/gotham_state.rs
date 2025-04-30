@@ -5,16 +5,14 @@ use std::sync::Arc;
 
 use dashmap::DashMap;
 
-
-
-
 #[derive(Default, Debug)]
 pub struct GothamState {
     /// 使用BTreeMap存储不同类型的数据，以TypeId为键
     data: DashMap<TypeId, Arc<dyn Any + Send + Sync>>,
 }
 
-impl GothamState {  /// 将数据存入状态容器中
+impl GothamState {
+    /// 将数据存入状态容器中
     ///
     /// # 参数
     /// * `t` - 要存储的数据，必须是'static生命周期
@@ -40,7 +38,7 @@ impl GothamState {  /// 将数据存入状态容器中
     pub fn get<T: Clone + Send + Sync + 'static>(&self) -> Arc<T> {
         self.try_get::<T>().unwrap_or_else(|| missing::<T>())
     }
-    
+
     pub fn try_get<T: Clone + Send + Sync + 'static>(&self) -> Option<Arc<T>> {
         let type_id = TypeId::of::<T>();
         if let Some(v) = self.data.get(&type_id) {
@@ -54,9 +52,7 @@ impl GothamState {  /// 将数据存入状态容器中
     pub fn try_take<T: Send + Sync + 'static>(&self) -> Option<Arc<T>> {
         let type_id = TypeId::of::<T>();
         match self.data.remove(&type_id) {
-            Some((_, v)) => {
-                Arc::downcast(v).ok()
-            }
+            Some((_, v)) => Arc::downcast(v).ok(),
             None => None,
         }
     }
@@ -80,9 +76,5 @@ impl GothamState {  /// 将数据存入状态容器中
 /// # 返回值
 /// * 永不返回，总是panic
 fn missing<T: 'static>() -> ! {
-    panic!(
-        " 请求的类型 {} 不存在于 GothamState 容器中",
-        type_name::<T>()
-    );
+    panic!(" 请求的类型 {} 不存在于 GothamState 容器中", type_name::<T>());
 }
-

@@ -64,21 +64,30 @@ impl AsyncEditor {
         options: EditorOptions
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let base = Editor::create(options).await?;
-        Ok(AsyncEditor { 
-            base, 
+        Ok(AsyncEditor {
+            base,
             flow_engine: FlowEngine::new()?,
             perf_config: PerformanceConfig::default(),
         })
     }
 
     /// 设置性能监控配置
-    pub fn set_performance_config(&mut self, config: PerformanceConfig) {
+    pub fn set_performance_config(
+        &mut self,
+        config: PerformanceConfig,
+    ) {
         self.perf_config = config;
     }
 
     /// 记录性能指标
-    fn log_performance(&self, operation: &str, duration: Duration) {
-        if self.perf_config.enable_monitoring && duration.as_millis() > self.perf_config.log_threshold_ms as u128 {
+    fn log_performance(
+        &self,
+        operation: &str,
+        duration: Duration,
+    ) {
+        if self.perf_config.enable_monitoring
+            && duration.as_millis() > self.perf_config.log_threshold_ms as u128
+        {
             debug!("{} 耗时: {}ms", operation, duration.as_millis());
         }
     }
@@ -156,13 +165,19 @@ impl AsyncEditor {
         // 等待任务结果
         let recv_start = std::time::Instant::now();
         let Some(task_result) = rx.recv().await else {
-            return Err(error_utils::state_error("无法接收任务结果".to_string()));
+            return Err(error_utils::state_error(
+                "无法接收任务结果".to_string(),
+            ));
         };
         self.log_performance("接收任务结果", recv_start.elapsed());
 
         // 获取处理结果
-        let Some(ProcessorResult { result: Some(result), .. }) = task_result.output else {
-            return Err(error_utils::state_error("任务处理结果无效".to_string()));
+        let Some(ProcessorResult { result: Some(result), .. }) =
+            task_result.output
+        else {
+            return Err(error_utils::state_error(
+                "任务处理结果无效".to_string(),
+            ));
         };
 
         // 更新编辑器状态
@@ -179,7 +194,8 @@ impl AsyncEditor {
 
         // 执行后置中间件链
         let after_start = std::time::Instant::now();
-        self.run_after_middleware(&mut current_state, &mut transactions).await?;
+        self.run_after_middleware(&mut current_state, &mut transactions)
+            .await?;
         self.log_performance("后置中间件处理", after_start.elapsed());
 
         // 更新状态并广播事件
@@ -228,16 +244,17 @@ impl AsyncEditor {
         debug!("执行后置中间件链");
         for middleware in &self.base.get_middleware_stack().middlewares {
             // 使用常量定义超时时间，便于配置调整
-            
-            let timeout =
-                std::time::Duration::from_millis(self.perf_config.middleware_timeout_ms);
+
+            let timeout = std::time::Duration::from_millis(
+                self.perf_config.middleware_timeout_ms,
+            );
 
             // 记录中间件执行开始时间，用于性能监控
             let start_time = std::time::Instant::now();
 
             let middleware_result = match tokio::time::timeout(
                 timeout,
-                middleware.after_dispatch(state.clone(),transactions),
+                middleware.after_dispatch(state.clone(), transactions),
             )
             .await
             {

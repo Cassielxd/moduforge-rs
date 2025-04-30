@@ -11,7 +11,7 @@ pub struct MiddlewareResult {
     pub additional_transaction: Option<Transaction>,
 }
 
-impl MiddlewareResult { 
+impl MiddlewareResult {
     /// 创建一个只包含结果的处理结果
     pub fn new(result: EditorResult<()>) -> Self {
         Self { result, additional_transaction: None }
@@ -40,7 +40,7 @@ pub trait Middleware: Send + Sync {
     async fn after_dispatch(
         &self,
         state: Option<Arc<State>>,
-        transactions: &[Transaction]
+        transactions: &[Transaction],
     ) -> EditorResult<MiddlewareResult>;
 }
 

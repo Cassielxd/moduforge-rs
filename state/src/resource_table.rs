@@ -1,4 +1,3 @@
-
 use std::sync::Arc;
 
 use dashmap::DashMap;
@@ -50,10 +49,9 @@ impl ResourceTable {
         &self,
         rid: ResourceId,
         resource: Arc<dyn Resource>,
-    ){
+    ) {
         let removed_resource = self.index.insert(rid, resource);
         assert!(removed_resource.is_none());
-
     }
 
     // 检查指定ID的资源是否存在
@@ -69,11 +67,12 @@ impl ResourceTable {
         &self,
         rid: ResourceId,
     ) -> Option<Arc<T>> {
-       let data = self.index
+        let data = self
+            .index
             .get(&rid)
             .map(|rc| rc.value().clone())
             .and_then(|rc| rc.downcast_arc::<T>().cloned());
-            data
+        data
     }
 
     // 获取指定ID的任意类型资源

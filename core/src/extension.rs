@@ -9,9 +9,7 @@ use crate::{types::GlobalAttributeItem, EditorResult};
 pub struct Extension {
     global_attributes: Vec<GlobalAttributeItem>,
     plugins: Vec<Arc<Plugin>>,
-    op_fn: Option<
-        Vec<Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()>>>,
-    >,
+    op_fn: Option<Vec<Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()>>>>,
 }
 
 unsafe impl Send for Extension {}

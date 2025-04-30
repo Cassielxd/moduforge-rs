@@ -409,6 +409,4 @@ impl NodePool {
         }
         None
     }
-
-    
 }

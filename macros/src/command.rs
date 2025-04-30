@@ -1,4 +1,3 @@
-
 #[macro_export]
 macro_rules! impl_command {
     ($name:ident, $execute_fn:expr) => {

@@ -129,16 +129,14 @@ impl Schema {
         }
         schema.nodes = updated_nodes;
         schema.marks = marks;
-        schema.top_node_type = schema
-            .nodes
-            .get(
-                &schema
-                    .spec
-                    .top_node
-                    .clone()
-                    .unwrap_or_else(|| "doc".to_string()),
-            )
-            .cloned();
+        schema.top_node_type = match schema.nodes.get(
+            &schema.spec.top_node.clone().unwrap_or_else(|| "doc".to_string()),
+        ) {
+            Some(node) => Some(node.clone()),
+            None => {
+                return Err("未找到顶级节点类型定义".to_string().into());
+            },
+        };
 
         Ok(schema)
     }

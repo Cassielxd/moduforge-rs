@@ -1,6 +1,5 @@
 use std::ops::{Deref, DerefMut};
 
-
 use crate::{gotham_state::GothamState, resource_table::ResourceTable};
 
 /// 全局资源管理器
@@ -31,8 +30,7 @@ impl GlobalResourceManager {
     pub fn clear(&mut self) {
         std::mem::take(&mut self.gotham_state);
         std::mem::take(&mut self.resource_table);
-    }    
-  
+    }
 }
 impl Deref for GlobalResourceManager {
     type Target = GothamState;
