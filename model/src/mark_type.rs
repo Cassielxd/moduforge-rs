@@ -50,13 +50,13 @@ impl MarkType {
         MarkType { name, rank, schema, spec, attrs, excluded: None }
     }
 
-    fn create(
+    pub fn create(
         &self,
         attrs: Option<&HashMap<String, Value>>,
     ) -> Mark {
         Mark { r#type: self.name.clone(), attrs: self.compute_attrs(attrs) }
     }
-    fn compute_attrs(
+    pub fn compute_attrs(
         &self,
         attrs: Option<&HashMap<String, Value>>,
     ) -> ImHashMap<String, Value> {

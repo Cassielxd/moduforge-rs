@@ -1,4 +1,4 @@
-use std::{collections::HashMap, default, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use async_trait::async_trait;
 
 use crate::{event::EventHandler, extension::Extension, mark::Mark, node::Node};
