@@ -19,8 +19,6 @@ lazy_static= {workspace=true}
 async-channel= {workspace=true}
 im= {workspace=true}
 chrono= {workspace=true}
-log = {workspace=true}
-lru = {workspace=true}
 serde = {workspace=true}
 serde_json = {workspace=true}
 thiserror= {workspace=true}

@@ -25,7 +25,6 @@ repository = "https://gitee.com/stringlxd/moduforge-rs"
 [workspace.dependencies]
 tokio = { version = "1.0", features = ["full"] }
 tokio-util = "0.7.14"
-log = "0.4"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 # lazy_static 线程安全全局变量
@@ -37,7 +36,6 @@ thiserror = "1.0"
 dashmap = "6.1.0"
 # 异步 trait
 async-trait = "0.1"
-lru = "0.12"
 chrono = "0.4"
 async-channel = "2.3.1"
 crossbeam = "0.8"
@@ -49,3 +47,4 @@ time = { version = "0.3", features = ["formatting"] }
 
 uuid="1"
 futures="0.3"
+

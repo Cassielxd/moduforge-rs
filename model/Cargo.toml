@@ -14,16 +14,11 @@ lib="src/lib.rs"
 
 [dependencies]
 im= {workspace=true}
-log = {workspace=true}
 serde = {workspace=true}
 serde_json = {workspace=true}
 thiserror= {workspace=true}
 async-trait= {workspace=true}
 tokio= {workspace=true}
-rayon = "1.8"
-tempfile = "3.8"
-crossbeam-channel = "0.5"
-indicatif = "0.17"
 
 # 日志系统
 tracing = { workspace = true }
