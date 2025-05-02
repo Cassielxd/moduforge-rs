@@ -11,15 +11,15 @@ pub struct Middleware1;
 impl Middleware for Middleware1 {
     async fn before_dispatch(
         &self,
-        transaction: &mut Transaction,
+        _transaction: &mut Transaction,
     ) -> EditorResult<()> {
         println!("Middleware1 before_dispatch");
         Ok(())
     }
     async fn after_dispatch(
         &self,
-        state: Option<Arc<State>>,
-        transactions: &[Transaction],
+        _state: Option<Arc<State>>,
+        _transactions: &[Transaction],
     ) -> EditorResult<MiddlewareResult> {
         println!("Middleware1 after_dispatch");
         Ok(MiddlewareResult::new(EditorResult::Ok(())))
@@ -31,15 +31,15 @@ pub struct Middleware2;
 impl Middleware for Middleware2 {
     async fn before_dispatch(
         &self,
-        transaction: &mut Transaction,
+        _transaction: &mut Transaction,
     ) -> EditorResult<()> {
         println!("Middleware2 before_dispatch");
         Ok(())
     }
     async fn after_dispatch(
         &self,
-        state: Option<Arc<State>>,
-        transactions: &[Transaction],
+        _state: Option<Arc<State>>,
+        _transactions: &[Transaction],
     ) -> EditorResult<MiddlewareResult> {
         println!("Middleware2 after_dispatch");
         Ok(MiddlewareResult::new(EditorResult::Ok(())))
