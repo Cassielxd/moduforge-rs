@@ -5,7 +5,7 @@ use crate::{
     event::EventHandler,
     extension::Extension,
     mark::Mark,
-    middleware::{BoxedMiddleware, Middleware, MiddlewareStack},
+    middleware::{Middleware, MiddlewareStack},
     node::Node,
 };
 use moduforge_model::{

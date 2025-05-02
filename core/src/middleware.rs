@@ -26,17 +26,17 @@ impl MiddlewareResult {
     }
 }
 
-/// Middleware trait that can be implemented for transaction processing
+/// 可以用于事务处理的中间件 trait
 #[async_trait::async_trait]
 pub trait Middleware: Send + Sync {
-    /// Process the transaction before it reaches the core dispatch
+    /// 在事务到达核心分发之前处理事务
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,
     ) -> EditorResult<()>;
 
-    /// Process the result after the core dispatch
-    /// Returns a MiddlewareResult that may contain additional transactions to be processed
+    /// 在核心分发之后处理结果
+    /// 返回一个可能包含需要额外处理的事务的 MiddlewareResult
     async fn after_dispatch(
         &self,
         state: Option<Arc<State>>,
@@ -44,13 +44,13 @@ pub trait Middleware: Send + Sync {
     ) -> EditorResult<MiddlewareResult>;
 }
 
-/// Type alias for a boxed middleware
-pub type BoxedMiddleware = Arc<dyn Middleware>;
+/// 用于事务处理的中间件类型别名
+pub type ArcMiddleware = Arc<dyn Middleware>;
 
 /// Middleware stack that holds multiple middleware
 #[derive(Clone)]
 pub struct MiddlewareStack {
-    pub middlewares: Vec<BoxedMiddleware>,
+    pub middlewares: Vec<ArcMiddleware>,
 }
 
 impl MiddlewareStack {

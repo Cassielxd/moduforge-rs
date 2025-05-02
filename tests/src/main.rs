@@ -1,9 +1,6 @@
 use std::sync::Arc;
 use moduforge_state::{init_logging, transaction::Transaction};
-use moduforge_core::{
-    async_runtime::AsyncEditor,
-    types::EditorOptionsBuilder,
-};
+use moduforge_core::{async_runtime::AsyncEditor, types::EditorOptionsBuilder};
 use moduforge_test::{
     base::get_base,
     commands::MyCommand1,
