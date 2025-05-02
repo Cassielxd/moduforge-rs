@@ -48,6 +48,7 @@ pub trait Middleware: Send + Sync {
 pub type BoxedMiddleware = Arc<dyn Middleware>;
 
 /// Middleware stack that holds multiple middleware
+#[derive(Clone)]
 pub struct MiddlewareStack {
     pub middlewares: Vec<BoxedMiddleware>,
 }

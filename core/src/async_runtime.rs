@@ -220,7 +220,9 @@ impl AsyncEditor {
         transaction: &mut Transaction,
     ) -> EditorResult<()> {
         debug!("执行前置中间件链");
-        for middleware in &self.base.get_middleware_stack().middlewares {
+        for middleware in
+            &self.base.get_options().get_middleware_stack().middlewares
+        {
             let timeout = std::time::Duration::from_millis(500);
             if let Err(e) = tokio::time::timeout(
                 timeout,
@@ -242,7 +244,9 @@ impl AsyncEditor {
         transactions: &mut Vec<Transaction>,
     ) -> EditorResult<()> {
         debug!("执行后置中间件链");
-        for middleware in &self.base.get_middleware_stack().middlewares {
+        for middleware in
+            &self.base.get_options().get_middleware_stack().middlewares
+        {
             // 使用常量定义超时时间，便于配置调整
 
             let timeout = std::time::Duration::from_millis(

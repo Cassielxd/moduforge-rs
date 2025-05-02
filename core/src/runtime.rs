@@ -26,7 +26,6 @@ pub struct Editor {
     extension_manager: ExtensionManager,
     history_manager: HistoryManager<Arc<State>>,
     options: EditorOptions,
-    middleware_stack: MiddlewareStack,
 }
 
 impl Editor {
@@ -73,7 +72,6 @@ impl Editor {
                 options.get_history_limit(),
             ),
             options,
-            middleware_stack: MiddlewareStack::new(),
         };
         runtime.init().await?;
         info!("编辑器实例创建成功");
@@ -113,18 +111,6 @@ impl Editor {
         Ok(())
     }
 
-    /// Add a middleware to the stack
-    pub fn add_middleware<M>(
-        &mut self,
-        middleware: M,
-    ) where
-        M: Middleware + 'static,
-    {
-        self.middleware_stack.add(middleware);
-    }
-    pub fn get_middleware_stack(&self) -> &MiddlewareStack {
-        &self.middleware_stack
-    }
     pub async fn emit_event(
         &mut self,
         event: Event,
@@ -137,7 +123,7 @@ impl Editor {
         transaction: &mut Transaction,
     ) -> EditorResult<()> {
         debug!("执行前置中间件链");
-        for middleware in &self.middleware_stack.middlewares {
+        for middleware in &self.options.get_middleware_stack().middlewares {
             let timeout = std::time::Duration::from_millis(500);
             if let Err(e) = tokio::time::timeout(
                 timeout,
@@ -159,7 +145,7 @@ impl Editor {
         transactions: &mut Vec<Transaction>,
     ) -> EditorResult<()> {
         debug!("执行后置中间件链");
-        for middleware in &self.middleware_stack.middlewares {
+        for middleware in &self.options.get_middleware_stack().middlewares {
             let timeout = std::time::Duration::from_millis(500);
             let middleware_result = match tokio::time::timeout(
                 timeout,

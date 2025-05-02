@@ -1,7 +1,13 @@
 use std::{collections::HashMap, sync::Arc};
 use async_trait::async_trait;
 
-use crate::{event::EventHandler, extension::Extension, mark::Mark, node::Node};
+use crate::{
+    event::EventHandler,
+    extension::Extension,
+    mark::Mark,
+    middleware::{BoxedMiddleware, Middleware, MiddlewareStack},
+    node::Node,
+};
 use moduforge_model::{
     node_pool::NodePool,
     schema::{AttributeSpec, Schema},
@@ -46,8 +52,19 @@ pub struct EditorOptions {
     extensions: Vec<Extensions>,
     history_limit: Option<usize>,
     event_handlers: Vec<Arc<dyn EventHandler>>,
+    middleware_stack: MiddlewareStack,
 }
 impl EditorOptions {
+    pub fn get_middleware_stack(&self) -> MiddlewareStack {
+        self.middleware_stack.clone()
+    }
+    pub fn set_middleware_stack(
+        mut self,
+        middleware_stack: MiddlewareStack,
+    ) -> Self {
+        self.middleware_stack = middleware_stack;
+        self
+    }
     pub fn get_content(&self) -> Content {
         self.content.clone()
     }
@@ -66,6 +83,13 @@ impl EditorOptions {
         extensions: Vec<Extensions>,
     ) -> Self {
         self.extensions = extensions;
+        self
+    }
+    pub fn add_extension(
+        mut self,
+        extension: Extensions,
+    ) -> Self {
+        self.extensions.push(extension);
         self
     }
     pub fn get_history_limit(&self) -> Option<usize> {
@@ -88,5 +112,85 @@ impl EditorOptions {
     ) -> Self {
         self.event_handlers = event_handlers;
         self
+    }
+}
+
+#[derive(Default)]
+pub struct EditorOptionsBuilder {
+    content: Content,
+    extensions: Vec<Extensions>,
+    history_limit: Option<usize>,
+    event_handlers: Vec<Arc<dyn EventHandler>>,
+    middleware_stack: MiddlewareStack,
+}
+
+impl EditorOptionsBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn content(
+        mut self,
+        content: Content,
+    ) -> Self {
+        self.content = content;
+        self
+    }
+
+    pub fn add_extension(
+        mut self,
+        extension: Extensions,
+    ) -> Self {
+        self.extensions.push(extension);
+        self
+    }
+
+    pub fn history_limit(
+        mut self,
+        limit: usize,
+    ) -> Self {
+        self.history_limit = Some(limit);
+        self
+    }
+
+    pub fn event_handlers(
+        mut self,
+        handlers: Vec<Arc<dyn EventHandler>>,
+    ) -> Self {
+        self.event_handlers = handlers;
+        self
+    }
+
+    pub fn add_event_handler(
+        mut self,
+        handler: Arc<dyn EventHandler>,
+    ) -> Self {
+        self.event_handlers.push(handler);
+        self
+    }
+
+    pub fn middleware_stack(
+        mut self,
+        stack: MiddlewareStack,
+    ) -> Self {
+        self.middleware_stack = stack;
+        self
+    }
+    pub fn add_middleware<T: Middleware + 'static>(
+        mut self,
+        middleware: T,
+    ) -> Self {
+        self.middleware_stack.add(middleware);
+        self
+    }
+
+    pub fn build(self) -> EditorOptions {
+        EditorOptions {
+            content: self.content,
+            extensions: self.extensions,
+            history_limit: self.history_limit,
+            event_handlers: self.event_handlers,
+            middleware_stack: self.middleware_stack,
+        }
     }
 }
