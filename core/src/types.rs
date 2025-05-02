@@ -136,7 +136,13 @@ impl EditorOptionsBuilder {
         self.content = content;
         self
     }
-
+    pub fn extensions(
+        mut self,
+        extensions: Vec<Extensions>,
+    ) -> Self {
+        self.extensions = extensions;
+        self
+    }
     pub fn add_extension(
         mut self,
         extension: Extensions,
