@@ -2,7 +2,6 @@ use super::attrs::Attrs;
 use super::content::ContentMatch;
 use super::mark_type::{MarkSpec, MarkType};
 use super::node_type::{NodeSpec, NodeType};
-use im::HashMap as ImHashMap;
 use serde::Serialize;
 use serde_json::Value;
 use std::any::Any;

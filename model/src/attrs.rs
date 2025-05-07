@@ -20,14 +20,20 @@ impl Attrs {
     pub fn from(new_values: HashMap<String, Value>) -> Self {
         Self { attrs: new_values }
     }
-    pub fn get_value<T: serde::de::DeserializeOwned>(&self, key: &str) -> Option<T> {
+    pub fn get_value<T: serde::de::DeserializeOwned>(
+        &self,
+        key: &str,
+    ) -> Option<T> {
         self.attrs.get(key).and_then(|v| serde_json::from_value(v.clone()).ok())
     }
-    pub fn update(&self,new_values: HashMap<String, Value>,)->Self{
+    pub fn update(
+        &self,
+        new_values: HashMap<String, Value>,
+    ) -> Self {
         let mut attrs = self.attrs.clone();
         for (key, value) in new_values {
             attrs.insert(key, value);
-        }   
+        }
         Attrs { attrs }
     }
 }

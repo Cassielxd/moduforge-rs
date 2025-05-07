@@ -2,7 +2,11 @@ use std::sync::Arc;
 use im::HashMap;
 use serde_json::Value;
 use moduforge_model::{
-    attrs::Attrs, error::PoolError, mark::Mark, node::Node, node_pool::{NodePool, NodePoolInner}, types::NodeId
+    error::PoolError,
+    mark::Mark,
+    node::Node,
+    node_pool::{NodePool, NodePoolInner},
+    types::NodeId,
 };
 
 use crate::step::StepResult;
@@ -103,7 +107,7 @@ impl Draft {
         // 更新节点属性
         let mut new_node = node.as_ref().clone();
         let new_attrs = old_values.update(new_values);
-        new_node.attrs = new_attrs.clone(); 
+        new_node.attrs = new_attrs.clone();
         self.inner.nodes =
             self.inner.nodes.update(id.clone(), Arc::new(new_node));
         // 记录补丁
