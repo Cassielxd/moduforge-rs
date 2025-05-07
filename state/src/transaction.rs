@@ -9,7 +9,7 @@ use tracing::{info, warn, error};
 use super::state::State;
 use moduforge_transform::draft::Draft;
 use moduforge_model::node::Node;
-use moduforge_model::node_pool::{NodePool};
+use moduforge_model::node_pool::NodePool;
 use moduforge_transform::attr_step::AttrStep;
 use moduforge_transform::node_step::AddNodeStep;
 use moduforge_transform::step::Step;
