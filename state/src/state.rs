@@ -309,8 +309,13 @@ impl State {
     ) -> Option<PluginState> {
         self.fields_instances.get(name).cloned()
     }
+    pub fn get<T: Send + Sync + 'static>(&self, name: &str) -> Option<Arc<T>> {
+        self.fields_instances.get(name).cloned().and_then(|state| {
+            state.downcast::<T>().ok()
+        })
+    }
 
-    pub fn set_field(
+    fn set_field(
         &mut self,
         name: &str,
         value: PluginState,
