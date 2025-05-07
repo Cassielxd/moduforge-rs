@@ -6,7 +6,6 @@ use super::mark_type::MarkType;
 use super::node::Node;
 use super::schema::{Attribute, AttributeSpec, Schema, compute_attrs};
 use super::types::NodeId;
-use im::HashMap as ImHashMap;
 use serde_json::Value;
 use std::collections::HashMap;
 

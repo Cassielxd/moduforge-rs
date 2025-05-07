@@ -7,7 +7,6 @@ use crate::attrs::Attrs;
 
 use super::mark::Mark;
 use super::schema::{Attribute, AttributeSpec, Schema, compute_attrs};
-use im::HashMap as ImHashMap;
 #[derive(Clone, PartialEq, Debug, Eq)]
 pub struct MarkType {
     pub name: String,

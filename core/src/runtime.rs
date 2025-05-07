@@ -7,7 +7,6 @@ use crate::{
     helpers::create_doc,
     history_manager::HistoryManager,
     types::EditorOptions,
-    middleware::{Middleware, MiddlewareStack},
 };
 
 use moduforge_model::{node_pool::NodePool, schema::Schema};
