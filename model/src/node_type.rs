@@ -142,7 +142,7 @@ impl NodeType {
         &self,
         values: &Attrs,
     ) {
-        for (key, _value) in values {
+        for (key, _value) in values.attrs.iter() {
             if !self.attrs.contains_key(key) {
                 panic!("节点 {} 属性 {}没有定义", self.name, key);
             }
@@ -243,7 +243,7 @@ impl NodeType {
     fn compute_attrs(
         &self,
         attrs: Option<&HashMap<String, Value>>,
-    ) -> ImHashMap<String, Value> {
+    ) -> Attrs {
         match attrs {
             Some(attr) => compute_attrs(&self.attrs, Some(attr)),
             None => compute_attrs(&self.attrs, Some(&self.default_attrs)),

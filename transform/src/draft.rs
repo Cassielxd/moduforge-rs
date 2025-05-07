@@ -2,11 +2,7 @@ use std::sync::Arc;
 use im::HashMap;
 use serde_json::Value;
 use moduforge_model::{
-    error::PoolError,
-    mark::Mark,
-    node::Node,
-    node_pool::{NodePool, NodePoolInner},
-    types::NodeId,
+    attrs::Attrs, error::PoolError, mark::Mark, node::Node, node_pool::{NodePool, NodePoolInner}, types::NodeId
 };
 
 use crate::step::StepResult;
@@ -106,15 +102,16 @@ impl Draft {
 
         // 更新节点属性
         let mut new_node = node.as_ref().clone();
-        new_node.attrs = new_values.clone();
+        let new_attrs = old_values.update(new_values);
+        new_node.attrs = new_attrs.clone(); 
         self.inner.nodes =
             self.inner.nodes.update(id.clone(), Arc::new(new_node));
         // 记录补丁
         self.record_patch(Patch::UpdateAttr {
             path: self.current_path.iter().cloned().collect(),
             id: id.clone(),
-            old: old_values.into_iter().collect(),
-            new: new_values.into_iter().collect(),
+            old: old_values.clone(),
+            new: new_attrs,
         });
         Ok(())
     }
@@ -518,7 +515,7 @@ impl Draft {
         for patch in patches {
             match patch {
                 Patch::UpdateAttr { path: _, id, old: _, new } => {
-                    self.update_attr(id, new.clone().into())?;
+                    self.update_attr(id, new.attrs.clone().into())?;
                 },
                 Patch::AddNode { path: _, parent_id, nodes } => {
                     self.add_node(parent_id, nodes)?;
@@ -581,7 +578,7 @@ impl Draft {
         for patch in patches {
             match patch {
                 Patch::UpdateAttr { path: _, id, old, new: _ } => {
-                    self.update_attr(&id, old.clone().into())?;
+                    self.update_attr(&id, old.attrs.clone().into())?;
                 },
                 Patch::AddNode { path: _, parent_id, nodes } => {
                     self.remove_node(

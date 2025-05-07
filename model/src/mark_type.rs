@@ -3,6 +3,8 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::attrs::Attrs;
+
 use super::mark::Mark;
 use super::schema::{Attribute, AttributeSpec, Schema, compute_attrs};
 use im::HashMap as ImHashMap;
@@ -59,7 +61,7 @@ impl MarkType {
     pub fn compute_attrs(
         &self,
         attrs: Option<&HashMap<String, Value>>,
-    ) -> ImHashMap<String, Value> {
+    ) -> Attrs {
         match attrs {
             Some(attr) => compute_attrs(&self.attrs, Some(attr)),
             None => compute_attrs(&self.attrs, None),

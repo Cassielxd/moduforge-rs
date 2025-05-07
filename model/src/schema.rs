@@ -212,7 +212,7 @@ pub fn compute_attrs(
     attrs: &HashMap<String, Attribute>,
     value: Option<&HashMap<String, Value>>,
 ) -> Attrs {
-    let mut built = ImHashMap::new();
+    let mut built = Attrs::default();
 
     for (name, attr) in attrs {
         let given = value.and_then(|v| v.get(name));

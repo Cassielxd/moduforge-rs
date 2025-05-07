@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use moduforge_state::{
-    transaction::{Command, Transaction},
-};
+use moduforge_state::transaction::{Command, Transaction};
 use moduforge_transform::transform::TransformError;
 use moduforge_macros::impl_command;
 

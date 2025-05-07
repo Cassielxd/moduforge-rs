@@ -3,7 +3,7 @@ use serde_json::Value;
 
 use std::collections::HashMap;
 
-use moduforge_model::{mark::Mark, node::Node, types::NodeId};
+use moduforge_model::{attrs::Attrs, mark::Mark, node::Node, types::NodeId};
 
 /// 文档补丁枚举
 /// 用于描述对文档树的各种修改操作
@@ -16,9 +16,9 @@ pub enum Patch {
         /// 目标节点的唯一标识符
         id: NodeId,
         /// 更新前的属性映射
-        old: HashMap<String, Value>,
+        old: Attrs,
         /// 更新后的属性映射
-        new: HashMap<String, Value>,
+        new: Attrs,
     },
     /// 添加新节点
     AddNode {

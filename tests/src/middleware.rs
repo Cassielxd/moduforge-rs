@@ -5,7 +5,7 @@ use moduforge_core::{
     EditorResult,
 };
 use moduforge_state::{State, Transaction};
-
+/// Middleware1 是一个在调度前后打印消息的中间件。用于案例测试
 pub struct Middleware1;
 #[async_trait::async_trait]
 impl Middleware for Middleware1 {
@@ -26,6 +26,7 @@ impl Middleware for Middleware1 {
     }
 }
 
+/// Middleware2 是一个在调度前后打印消息的中间件。用于案例测试
 pub struct Middleware2;
 #[async_trait::async_trait]
 impl Middleware for Middleware2 {
