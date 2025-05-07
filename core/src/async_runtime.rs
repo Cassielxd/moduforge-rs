@@ -1,6 +1,6 @@
 use std::{
     ops::{Deref, DerefMut},
-    sync::{Arc},
+    sync::Arc,
     time::Duration,
 };
 
