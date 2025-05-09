@@ -4,7 +4,7 @@ use super::id_generator::IdGenerator;
 use super::mark::Mark;
 use super::mark_type::MarkType;
 use super::node::Node;
-use super::schema::{Attribute, AttributeSpec, Schema, compute_attrs};
+use super::schema::{compute_attrs, Attribute, AttributeSpec, Schema};
 use super::types::NodeId;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -38,25 +38,19 @@ impl NodeType {
     ///
     /// # 返回值
     /// 返回[HashMap]<String, [NodeType]> 类型节点集合
-    pub fn compile(
-        nodes: HashMap<String, NodeSpec>
-    ) -> HashMap<String, NodeType> {
+    pub fn compile(nodes: HashMap<String, NodeSpec>) -> HashMap<String, NodeType> {
         let mut result = HashMap::new();
 
         // First create all node types without content_match
         for (name, spec) in &nodes {
-            result.insert(
-                name.clone(),
-                NodeType::new(name.clone(), spec.clone()),
-            );
+            result.insert(name.clone(), NodeType::new(name.clone(), spec.clone()));
         }
 
         // Then set up content_match for each node type
         let result_clone = result.clone();
         for (_, node_type) in result.iter_mut() {
             if let Some(content) = &node_type.spec.content {
-                node_type.content_match =
-                    Some(ContentMatch::parse(content.clone(), &result_clone));
+                node_type.content_match = Some(ContentMatch::parse(content.clone(), &result_clone));
             }
         }
 
@@ -70,16 +64,11 @@ impl NodeType {
     ///
     /// # 注意
     /// 自动从spec中推导默认属性和内容匹配规则
-    pub fn new(
-        name: String,
-        spec: NodeSpec,
-    ) -> Self {
+    pub fn new(name: String, spec: NodeSpec) -> Self {
         let attrs = spec.attrs.as_ref().map_or_else(HashMap::new, |attrs| {
             attrs
                 .iter()
-                .map(|(name, spec)| {
-                    (name.clone(), Attribute::new(spec.clone()))
-                })
+                .map(|(name, spec)| (name.clone(), Attribute::new(spec.clone())))
                 .collect()
         });
 
@@ -113,14 +102,9 @@ impl NodeType {
     ///
     /// # 返回值
     /// 返回`true`表示内容合法，`false`表示不合法
-    pub fn check_content(
-        &self,
-        content: &[Node],
-        schema: &Schema,
-    ) -> bool {
+    pub fn check_content(&self, content: &[Node], schema: &Schema) -> bool {
         if let Some(content_match) = &self.content_match {
-            if let Some(result) = content_match.match_fragment(content, schema)
-            {
+            if let Some(result) = content_match.match_fragment(content, schema) {
                 if !result.valid_end {
                     return false;
                 }
@@ -137,10 +121,7 @@ impl NodeType {
     /// 当遇到以下情况会panic：  
     /// - 包含未定义的属性  
     /// - 缺少必须的属性
-    pub fn check_attrs(
-        &self,
-        values: &Attrs,
-    ) {
+    pub fn check_attrs(&self, values: &Attrs) {
         for (key, _value) in values.attrs.iter() {
             if !self.attrs.contains_key(key) {
                 panic!("节点 {} 属性 {}没有定义", self.name, key);
@@ -154,7 +135,9 @@ impl NodeType {
     }
     /// 检查节点是否包含必须的属性
     pub fn has_required_attrs(&self) -> bool {
-        self.attrs.values().any(|attr: &Attribute| attr.is_required())
+        self.attrs
+            .values()
+            .any(|attr: &Attribute| attr.is_required())
     }
     /// 创建节点并填充内容
     ///
@@ -182,14 +165,11 @@ impl NodeType {
         let mut filled_nodes = Vec::new();
         let mut content_ids = Vec::new();
         if let Some(content_match) = &self.content_match {
-            if let Some(matched) =
-                content_match.match_fragment(&content, schema)
-            {
+            if let Some(matched) = content_match.match_fragment(&content, schema) {
                 if let Some(filled) = matched.fill(&content, true, schema) {
                     // 对每个填充的节点，递归创建其子节点
                     for node in filled {
-                        if let Some(node_type) = schema.nodes.get(&node.r#type)
-                        {
+                        if let Some(node_type) = schema.nodes.get(&node.r#type) {
                             content_ids.push(node.id.clone());
                             // 递归创建节点及其子节点
                             let mut child_nodes = node_type.create_and_fill(
@@ -239,10 +219,7 @@ impl NodeType {
             Mark::set_from(marks),
         )
     }
-    fn compute_attrs(
-        &self,
-        attrs: Option<&HashMap<String, Value>>,
-    ) -> Attrs {
+    fn compute_attrs(&self, attrs: Option<&HashMap<String, Value>>) -> Attrs {
         match attrs {
             Some(attr) => compute_attrs(&self.attrs, Some(attr)),
             None => compute_attrs(&self.attrs, Some(&self.default_attrs)),

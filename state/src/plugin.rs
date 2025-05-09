@@ -20,11 +20,7 @@ pub trait PluginTrait: Send + Sync + Debug {
     }
     /// 事务过滤
     /// 决定是否允许事务执行
-    async fn filter_transaction(
-        &self,
-        _: &Transaction,
-        _: &State,
-    ) -> bool {
+    async fn filter_transaction(&self, _: &Transaction, _: &State) -> bool {
         true
     }
 }
@@ -33,11 +29,7 @@ pub trait PluginTrait: Send + Sync + Debug {
 #[async_trait]
 pub trait StateField: Send + Sync + Debug {
     /// 初始化插件状态
-    async fn init(
-        &self,
-        config: &StateConfig,
-        instance: Option<&State>,
-    ) -> PluginState;
+    async fn init(&self, config: &StateConfig, instance: Option<&State>) -> PluginState;
     /// 应用状态变更
     /// 根据事务内容更新插件状态
     async fn apply(
@@ -48,17 +40,11 @@ pub trait StateField: Send + Sync + Debug {
         new_state: &State,
     ) -> PluginState;
     /// 序列化插件状态
-    fn serialize(
-        &self,
-        _value: PluginState,
-    ) -> Option<Vec<u8>> {
+    fn serialize(&self, _value: PluginState) -> Option<Vec<u8>> {
         None
     }
     /// 反序列化插件状态
-    fn deserialize(
-        &self,
-        _value: &Vec<u8>,
-    ) -> Option<PluginState> {
+    fn deserialize(&self, _value: &Vec<u8>) -> Option<PluginState> {
         None
     }
 }
@@ -77,11 +63,7 @@ unsafe impl Sync for PluginSpec {}
 
 impl PluginSpec {
     /// 插件状态管理器
-    async fn filter_transaction(
-        &self,
-        tr: &Transaction,
-        state: &State,
-    ) -> bool {
+    async fn filter_transaction(&self, tr: &Transaction, state: &State) -> bool {
         match &self.tr {
             Some(filter) => filter.filter_transaction(tr, state).await,
             None => false,
@@ -96,8 +78,10 @@ impl PluginSpec {
     ) -> Option<Transaction> {
         match &self.tr {
             Some(transaction) => {
-                transaction.append_transaction(trs, old_state, new_state).await
-            },
+                transaction
+                    .append_transaction(trs, old_state, new_state)
+                    .await
+            }
             None => None,
         }
     }
@@ -122,18 +106,11 @@ impl Plugin {
     }
 
     /// 从全局状态中获取插件状态
-    pub fn get_state(
-        &self,
-        state: &State,
-    ) -> Option<PluginState> {
+    pub fn get_state(&self, state: &State) -> Option<PluginState> {
         state.get_field(&self.key)
     }
     /// 应用事务过滤逻辑
-    pub async fn apply_filter_transaction(
-        &self,
-        tr: &Transaction,
-        state: &State,
-    ) -> bool {
+    pub async fn apply_filter_transaction(&self, tr: &Transaction, state: &State) -> bool {
         self.spec.filter_transaction(tr, state).await
     }
 
@@ -144,7 +121,9 @@ impl Plugin {
         old_state: &State,
         new_state: &State,
     ) -> Option<Transaction> {
-        self.spec.append_transaction(trs, old_state, new_state).await
+        self.spec
+            .append_transaction(trs, old_state, new_state)
+            .await
     }
 }
 
