@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::draft::Draft;
 
 use super::{
-    ConcreteStep,
     step::{Step, StepResult},
     transform::TransformError,
 };
@@ -25,6 +24,9 @@ impl AttrStep {
     }
 }
 impl Step for AttrStep {
+    fn name(&self) -> String {
+        "attr_step".to_string()
+    }
     fn apply(
         &self,
         dart: &mut Draft,
@@ -36,8 +38,8 @@ impl Step for AttrStep {
             Err(err) => Err(TransformError::new(err.to_string())),
         }
     }
-
-    fn to_concrete(&self) -> super::ConcreteStep {
-        ConcreteStep::UpdateAttrs(self.clone())
+    fn serialize(&self) -> Option<Vec<u8>> {
+        serde_json::to_vec(self).ok()
     }
+    
 }

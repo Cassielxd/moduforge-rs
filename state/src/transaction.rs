@@ -12,9 +12,8 @@ use moduforge_model::node::Node;
 use moduforge_model::node_pool::NodePool;
 use moduforge_transform::attr_step::AttrStep;
 use moduforge_transform::node_step::AddNodeStep;
-use moduforge_transform::step::Step;
 use moduforge_transform::transform::{Transform, TransformError};
-use moduforge_transform::{ConcreteStep, PatchStep};
+use moduforge_transform::PatchStep;
 use std::fmt::Debug;
 
 static IDS: AtomicU64 = AtomicU64::new(1);
@@ -114,10 +113,6 @@ impl Transaction {
     /// 获取当前文档状态
     pub fn doc(&self) -> Arc<NodePool> {
         self.doc.clone()
-    }
-    /// 将步骤转换为具体步骤
-    pub fn as_concrete(step: &Arc<dyn Step>) -> ConcreteStep {
-        step.to_concrete()
     }
     /// 设置节点属性
     /// id: 节点ID

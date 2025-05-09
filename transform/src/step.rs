@@ -3,15 +3,16 @@ use std::sync::Arc;
 use moduforge_model::{node_pool::NodePool, schema::Schema};
 use std::fmt::Debug;
 
-use super::{draft::Draft, patch::Patch, transform::TransformError, ConcreteStep};
+use super::{draft::Draft, patch::Patch, transform::TransformError};
 
 pub trait Step: Send + Sync + Debug {
+    fn name(&self) -> String;
     fn apply(
         &self,
         dart: &mut Draft,
         schema: Arc<Schema>,
     ) -> Result<StepResult, TransformError>;
-    fn to_concrete(&self) -> ConcreteStep;
+    fn serialize(&self) -> Option<Vec<u8>>;
 }
 
 #[derive(Debug, Clone)]
@@ -34,4 +35,3 @@ impl StepResult {
     }
 }
 
-pub enum Steps {}

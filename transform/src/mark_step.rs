@@ -4,7 +4,6 @@ use moduforge_model::{mark::Mark, schema::Schema, types::NodeId};
 use crate::draft::Draft;
 
 use super::{
-    ConcreteStep,
     step::{Step, StepResult},
     transform::TransformError,
 };
@@ -23,6 +22,9 @@ impl AddMarkStep {
     }
 }
 impl Step for AddMarkStep {
+    fn name(&self) -> String {
+        "add_mark_step".to_string()
+    }
     fn apply(
         &self,
         dart: &mut Draft,
@@ -35,8 +37,8 @@ impl Step for AddMarkStep {
             Err(err) => Err(TransformError::new(err.to_string())),
         }
     }
-
-    fn to_concrete(&self) -> super::ConcreteStep {
-        ConcreteStep::AddMarkStep(self.clone())
+    fn serialize(&self) -> Option<Vec<u8>> {
+        serde_json::to_vec(self).ok()
     }
+
 }

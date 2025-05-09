@@ -4,7 +4,6 @@ use moduforge_model::{node::Node, schema::Schema, types::NodeId};
 use crate::draft::Draft;
 
 use super::{
-    ConcreteStep,
     step::{Step, StepResult},
     transform::TransformError,
 };
@@ -24,6 +23,9 @@ impl AddNodeStep {
     }
 }
 impl Step for AddNodeStep {
+    fn name(&self) -> String {
+        "add_node_step".to_string()
+    }
     fn apply(
         &self,
         dart: &mut Draft,
@@ -36,10 +38,10 @@ impl Step for AddNodeStep {
             Err(err) => Err(TransformError::new(err.to_string())),
         }
     }
-
-    fn to_concrete(&self) -> super::ConcreteStep {
-        ConcreteStep::AddNodeStep(self.clone())
+    fn serialize(&self) -> Option<Vec<u8>> {
+        serde_json::to_vec(self).ok()
     }
+
 }
 /// 删除节点的步骤
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -56,6 +58,9 @@ impl RemoveNodeStep {
     }
 }
 impl Step for RemoveNodeStep {
+    fn name(&self) -> String {
+        "remove_node_step".to_string()
+    }
     fn apply(
         &self,
         dart: &mut Draft,
@@ -68,9 +73,8 @@ impl Step for RemoveNodeStep {
             Err(err) => Err(TransformError::new(err.to_string())),
         }
     }
-
-    fn to_concrete(&self) -> super::ConcreteStep {
-        ConcreteStep::RemoveNodeStep(self.clone())
+    fn serialize(&self) -> Option<Vec<u8>> {
+        serde_json::to_vec(self).ok()
     }
 }
 
@@ -94,6 +98,9 @@ impl MoveNodeStep {
 }
 
 impl Step for MoveNodeStep {
+    fn name(&self) -> String {
+        "move_node_step".to_string()
+    }
     fn apply(
         &self,
         dart: &mut Draft,
@@ -111,9 +118,8 @@ impl Step for MoveNodeStep {
             Err(err) => Err(TransformError::new(err.to_string())),
         }
     }
-
-    fn to_concrete(&self) -> super::ConcreteStep {
-        ConcreteStep::MoveNodeStep(self.clone())
+    fn serialize(&self) -> Option<Vec<u8>> {
+        serde_json::to_vec(self).ok()
     }
 }
 
@@ -132,6 +138,9 @@ impl ReplaceNodeStep {
     }
 }
 impl Step for ReplaceNodeStep {
+    fn name(&self) -> String {
+        "replace_node_step".to_string()
+    }
     fn apply(
         &self,
         dart: &mut Draft,
@@ -144,8 +153,7 @@ impl Step for ReplaceNodeStep {
             Err(err) => Err(TransformError::new(err.to_string())),
         }
     }
-
-    fn to_concrete(&self) -> super::ConcreteStep {
-        ConcreteStep::ReplaceNodeStep(self.clone())
+    fn serialize(&self) -> Option<Vec<u8>> {
+        serde_json::to_vec(self).ok()
     }
 }
