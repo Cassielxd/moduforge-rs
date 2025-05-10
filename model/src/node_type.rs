@@ -140,7 +140,7 @@ impl NodeType {
     pub fn check_attrs(
         &self,
         values: &Attrs,
-    ) {
+    ) {    
         for (key, _value) in values.attrs.iter() {
             if !self.attrs.contains_key(key) {
                 panic!("节点 {} 属性 {}没有定义", self.name, key);

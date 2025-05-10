@@ -2,6 +2,7 @@ use super::{error::PoolError, node::Node, types::NodeId};
 use im::HashMap;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+
 /// 节点池内部数据结构，实现结构共享和高效克隆
 ///
 /// # 字段
@@ -15,41 +16,7 @@ pub struct NodePoolInner {
     pub nodes: im::HashMap<NodeId, Arc<Node>>, // 节点数据共享
     pub parent_map: im::HashMap<NodeId, NodeId>,
 }
-impl NodePoolInner {
-    /// 更新节点属性（创建新版本的数据结构）
-    ///
-    /// # 参数
-    ///
-    /// * `id` - 目标节点ID
-    /// * `values` - 要更新的属性键值对
-    ///
-    /// # 返回值
-    ///
-    /// 返回包含新节点属性的新版本 `NodePoolInner`
-    ///
-    /// # 错误
-    ///
-    /// 当节点不存在时返回 [`PoolError::NodeNotFound`]
-    pub fn update_attr(
-        &self,
-        id: &NodeId,
-        values: &HashMap<String, String>,
-    ) -> Result<Self, PoolError> {
-        if !self.nodes.contains_key(id) {
-            return Err(PoolError::NodeNotFound(id.clone()));
-        }
-        let node = self.nodes.get(id).unwrap();
 
-        let mut cope_node = node.clone().as_ref().clone();
-        cope_node.attrs.extend(values.clone());
-        let nodes = self.nodes.update(id.clone(), Arc::new(cope_node));
-        Ok(NodePoolInner {
-            nodes,
-            parent_map: self.parent_map.clone(),
-            root_id: self.root_id.clone(),
-        })
-    }
-}
 /// 线程安全的节点池封装
 ///
 /// 使用 [`Arc`] 实现快速克隆，内部使用不可变数据结构保证线程安全

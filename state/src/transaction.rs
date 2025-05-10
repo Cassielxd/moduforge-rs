@@ -32,7 +32,6 @@ pub trait Command: Send + Sync + Debug {
     ) -> Result<(), TransformError>;
     fn name(&self) -> String;
 }
-
 /// 事务结构体，用于管理文档的修改操作
 #[derive(Debug, Clone)]
 pub struct Transaction {

@@ -170,6 +170,7 @@ impl Draft {
             .ok_or(PoolError::NodeNotFound(id.clone()))?
             .as_ref()
             .clone();
+        
         node.marks.extend(marks.clone());
         self.inner.nodes.insert(id.clone(), Arc::new(node));
         // 记录补丁
