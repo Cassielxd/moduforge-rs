@@ -4,6 +4,7 @@ use std::{
     time::Duration,
 };
 
+use crate::runtime::Editor;
 use crate::{
     error_utils,
     event::Event,
@@ -17,7 +18,6 @@ use moduforge_state::{
     transaction::{Command, Transaction},
     State,
 };
-use crate::runtime::Editor;
 
 /// 性能监控配置
 #[derive(Debug, Clone)]
@@ -44,6 +44,9 @@ pub struct AsyncEditor {
     flow_engine: FlowEngine,
     perf_config: PerformanceConfig,
 }
+unsafe impl Send for AsyncEditor {}
+unsafe impl Sync for AsyncEditor {}
+
 impl Deref for AsyncEditor {
     type Target = Editor;
 
@@ -112,10 +115,7 @@ impl AsyncEditor {
         // 创建事务并应用命令
         let mut tr = self.get_tr();
         command.execute(&mut tr).await.map_err(|e| {
-            error_utils::state_error(format!(
-                "命令执行失败: {}",
-                e
-            ))
+            error_utils::state_error(format!("命令执行失败: {}", e))
         })?;
 
         // 使用高性能处理引擎处理事务

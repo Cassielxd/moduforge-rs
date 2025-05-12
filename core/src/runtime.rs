@@ -26,7 +26,8 @@ pub struct Editor {
     history_manager: HistoryManager<Arc<State>>,
     options: EditorOptions,
 }
-
+unsafe impl Send for Editor {}
+unsafe impl Sync for Editor {}
 impl Editor {
     /// 创建新的编辑器实例
     /// options: 编辑器配置选项
@@ -183,10 +184,7 @@ impl Editor {
         debug!("正在执行命令: {}", command.name());
         let mut tr = self.get_tr();
         command.execute(&mut tr).await.map_err(|e| {
-            error_utils::state_error(format!(
-                "命令执行失败: {}",
-                e
-            ))
+            error_utils::state_error(format!("命令执行失败: {}", e))
         })?;
         self.dispatch(tr).await
     }
