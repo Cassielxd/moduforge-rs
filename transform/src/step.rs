@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
-use moduforge_model::{node_pool::NodePool, schema::Schema};
+use moduforge_model::{schema::Schema, tree::Tree};
 use std::fmt::Debug;
 
-use super::{draft::Draft, transform::TransformError};
+use super::transform::TransformError;
 
 pub trait Step: Send + Sync + Debug {
     fn name(&self) -> String;
     fn apply(
         &self,
-        dart: &mut Draft,
+        dart: &mut Tree,
         schema: Arc<Schema>,
     ) -> Result<StepResult, TransformError>;
     fn serialize(&self) -> Option<Vec<u8>>;
@@ -17,19 +17,18 @@ pub trait Step: Send + Sync + Debug {
 
 #[derive(Debug, Clone)]
 pub struct StepResult {
-    pub doc: Option<Arc<NodePool>>,
     pub failed: Option<String>
 }
 
 impl StepResult {
     pub fn ok(
-        doc: Arc<NodePool>
-    ) -> Self {
-        StepResult { doc: Some(doc), failed: None }
+      
+    ) -> Self { 
+        StepResult { failed: None }
     }
 
     pub fn fail(message: String) -> Self {
-        StepResult { doc: None, failed: Some(message) }
+        StepResult { failed: Some(message) }
     }
 }
 

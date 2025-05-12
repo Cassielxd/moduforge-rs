@@ -1,8 +1,8 @@
 use std::{fmt, sync::Arc};
 
-use moduforge_model::{node_pool::NodePool, schema::Schema};
+use moduforge_model::{node_pool::NodePool, schema::Schema, tree::Tree};
 
-use crate::draft::Draft;
+
 
 use super::step::{Step, StepResult};
 
@@ -31,22 +31,31 @@ pub struct Transform {
     /// 当前文档状态
     pub doc: Arc<NodePool>,
     /// 文档的草稿状态，用于临时修改
-    pub draft: Draft,
+    pub draft: Tree,
     /// 存储所有操作步骤
     pub steps: im::Vector<Arc<dyn Step>>,
     /// 文档的模式定义
     pub schema: Arc<Schema>,
 }
 impl Transform {
+    pub fn new (doc:Arc<NodePool>,schema: Arc<Schema>)->Transform{
+        Transform {
+            doc:doc.clone(),
+            draft: doc.inner.as_ref().clone(),
+            steps: im::Vector::new(),
+            schema,
+        }
+
+    }
     pub fn step(
         &mut self,
         step: Arc<dyn Step>,
     ) -> Result<(), TransformError> {
-        let result = step.apply(&mut self.draft, self.schema.clone())?;
+        let result: StepResult = step.apply(&mut self.draft, self.schema.clone())?;
         match result.failed {
             Some(message) => Err(TransformError::new(message)),
             None => {
-                self.add_step(step, result);
+                self.add_step(step);
                 Ok(())
             },
         }
@@ -56,12 +65,11 @@ impl Transform {
         !self.steps.is_empty()
     }
     /// 添加一个步骤及其结果到事务中
-    pub fn add_step(
+    fn add_step(
         &mut self,
         step: Arc<dyn Step>,
-        result: StepResult,
     ) {
         self.steps.push_back(step);
-        self.doc = result.doc.unwrap();
+        self.doc = Arc::new(NodePool{ inner: Arc::new(self.draft.clone()) });
     }
 }

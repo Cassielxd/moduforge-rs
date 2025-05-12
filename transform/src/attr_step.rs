@@ -1,13 +1,12 @@
 use std::sync::Arc;
 
-use crate::draft::Draft;
 
 use super::{
     step::{Step, StepResult},
     transform::TransformError,
 };
 use im::HashMap;
-use moduforge_model::{schema::Schema, types::NodeId};
+use moduforge_model::{schema::Schema, tree::Tree, types::NodeId};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -29,14 +28,12 @@ impl Step for AttrStep {
     }
     fn apply(
         &self,
-        dart: &mut Draft,
+        dart: &mut Tree,
         schema: Arc<Schema>,
     ) -> Result<StepResult, TransformError> {
         let _ = schema;
-        match dart.update_attr(&self.id, self.values.clone()) {
-            Ok(_) => Ok(dart.commit()),
-            Err(err) => Err(TransformError::new(err.to_string())),
-        }
+       let _ = dart.attrs(&self.id)+self.values.clone();
+        Ok(StepResult::ok())
     }
     fn serialize(&self) -> Option<Vec<u8>> {
         serde_json::to_vec(self).ok()

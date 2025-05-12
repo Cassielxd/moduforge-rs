@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
-use moduforge_model::{mark::Mark, schema::Schema, types::NodeId};
-use crate::draft::Draft;
+use moduforge_model::{mark::Mark, schema::Schema, tree::Tree, types::NodeId};
 
 use super::{
     step::{Step, StepResult},
@@ -27,15 +26,12 @@ impl Step for AddMarkStep {
     }
     fn apply(
         &self,
-        dart: &mut Draft,
+        dart: &mut Tree,
         schema: Arc<Schema>,
     ) -> Result<StepResult, TransformError> {
         let _ = schema;
-
-        match dart.add_mark(&self.id, &self.marks) {
-            Ok(_) => Ok(dart.commit()),
-            Err(err) => Err(TransformError::new(err.to_string())),
-        }
+        dart.mark(&self.id)+self.marks.clone();
+        Ok(StepResult::ok())
     }
     fn serialize(&self) -> Option<Vec<u8>> {
         serde_json::to_vec(self).ok()

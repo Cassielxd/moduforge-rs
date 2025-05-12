@@ -17,9 +17,9 @@ async fn main() {
         .build();
     let mut runtime = AsyncEditor::create(options).await.unwrap();
     let before_doc = runtime.doc();
+    dbg!(before_doc.size());
     let _ = runtime.command(Arc::new(MyCommand1)).await;
     let after_doc = runtime.doc();
-    dbg!(before_doc);
-    dbg!(after_doc);
+    dbg!(after_doc.size());
     tokio::time::sleep(std::time::Duration::from_secs(10)).await;
 }

@@ -1,16 +1,16 @@
-use std::ops::{Deref, DerefMut};
+use std::ops::{Add, Deref, DerefMut};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use moduforge_transform::mark_step::AddMarkStep;
 use serde_json::Value;
 
 use super::state::State;
-use moduforge_transform::draft::Draft;
 use moduforge_model::node::Node;
 use moduforge_model::node_pool::NodePool;
 use moduforge_transform::attr_step::AttrStep;
-use moduforge_transform::node_step::AddNodeStep;
+use moduforge_transform::node_step::{AddNodeStep, MoveNodeStep, RemoveNodeStep, ReplaceNodeStep};
 use moduforge_transform::transform::{Transform, TransformError};
 use std::fmt::Debug;
 
@@ -55,7 +55,7 @@ impl DerefMut for Transaction {
     }
 }
 
-impl Transaction {    
+impl Transaction {
     /// 创建新的事务实例
     /// state: 当前状态对象
     /// 返回: Transaction 实例
@@ -65,12 +65,7 @@ impl Transaction {
         Transaction {
             meta: im::HashMap::new(),
             id: get_transaction_id(),
-            transform: Transform {
-                doc: node.clone(),
-                draft: Draft::new(node),
-                steps: im::Vector::new(),
-                schema,
-            },
+            transform: Transform::new(node, schema),
         }
     }
     pub fn merge(
@@ -133,4 +128,8 @@ impl Transaction {
         let key_str = key.into();
         self.meta.get(&key_str)?.downcast_ref::<Arc<T>>()
     }
+    
+
 }
+
+

@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
-use moduforge_model::{node::Node, schema::Schema, types::NodeId};
-use crate::draft::Draft;
+use moduforge_model::{node::Node, schema::Schema, tree::Tree, types::NodeId};
 
 use super::{
     step::{Step, StepResult},
@@ -28,15 +27,12 @@ impl Step for AddNodeStep {
     }
     fn apply(
         &self,
-        dart: &mut Draft,
+        dart: &mut Tree,
         schema: Arc<Schema>,
     ) -> Result<StepResult, TransformError> {
         let _ = schema;
-
-        match dart.add_node(&self.parent_id, &self.nodes) {
-            Ok(()) => Ok(dart.commit()),
-            Err(err) => Err(TransformError::new(err.to_string())),
-        }
+        dart.node(&self.parent_id)+self.nodes.clone();
+        Ok(StepResult::ok())
     }
     fn serialize(&self) -> Option<Vec<u8>> {
         serde_json::to_vec(self).ok()
@@ -63,15 +59,12 @@ impl Step for RemoveNodeStep {
     }
     fn apply(
         &self,
-        dart: &mut Draft,
+        dart: &mut Tree,
         schema: Arc<Schema>,
     ) -> Result<StepResult, TransformError> {
         let _ = schema;
-
-        match dart.remove_node(&self.parent_id, self.node_ids.clone()) {
-            Ok(()) => Ok(dart.commit()),
-            Err(err) => Err(TransformError::new(err.to_string())),
-        }
+        dart.node(&self.parent_id)-self.node_ids.clone();
+        Ok(StepResult::ok())
     }
     fn serialize(&self) -> Option<Vec<u8>> {
         serde_json::to_vec(self).ok()
@@ -103,7 +96,7 @@ impl Step for MoveNodeStep {
     }
     fn apply(
         &self,
-        dart: &mut Draft,
+        dart: &mut Tree,
         schema: Arc<Schema>,
     ) -> Result<StepResult, TransformError> {
         let _ = schema;
@@ -114,7 +107,7 @@ impl Step for MoveNodeStep {
             &self.node_id,
             self.position,
         ) {
-            Ok(()) => Ok(dart.commit()),
+            Ok(()) => Ok(StepResult::ok()),    
             Err(err) => Err(TransformError::new(err.to_string())),
         }
     }
@@ -143,13 +136,13 @@ impl Step for ReplaceNodeStep {
     }
     fn apply(
         &self,
-        dart: &mut Draft,
+        dart: &mut Tree,
         schema: Arc<Schema>,
     ) -> Result<StepResult, TransformError> {
         let _ = schema;
 
         match dart.replace_node(self.node_id.clone(), &self.nodes) {
-            Ok(()) => Ok(dart.commit()),
+            Ok(()) => Ok(StepResult::ok()),
             Err(err) => Err(TransformError::new(err.to_string())),
         }
     }
