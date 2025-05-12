@@ -384,7 +384,7 @@ impl Draft {
         &self,
         id: &NodeId,
     ) -> Option<&Arc<Node>> {
-        self.inner.nodes.get(id)
+        self.inner.get_node(id)
     }
     pub fn children(
         &self,
