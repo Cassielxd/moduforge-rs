@@ -30,7 +30,40 @@ impl Step for AddMarkStep {
         schema: Arc<Schema>,
     ) -> Result<StepResult, TransformError> {
         let _ = schema;
-        dart.mark(&self.id)+self.marks.clone();
+        let _ = dart.mark(&self.id)+self.marks.clone();
+        Ok(StepResult::ok())
+    }
+    fn serialize(&self) -> Option<Vec<u8>> {
+        serde_json::to_vec(self).ok()
+    }
+
+}
+
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RemoveMarkStep {
+    id: NodeId,
+    marks: Vec<Mark>,
+}
+impl RemoveMarkStep {
+    pub fn new(
+        id: NodeId,
+        marks: Vec<Mark>,
+    ) -> Self {
+        RemoveMarkStep { id, marks }
+    }
+}
+impl Step for RemoveMarkStep {
+    fn name(&self) -> String {
+        "remove_mark_step".to_string()
+    }
+    fn apply(
+        &self,
+        dart: &mut Tree,
+        schema: Arc<Schema>,
+    ) -> Result<StepResult, TransformError> {
+        let _ = schema;
+        let _ = dart.mark(&self.id)-self.marks.clone();
         Ok(StepResult::ok())
     }
     fn serialize(&self) -> Option<Vec<u8>> {

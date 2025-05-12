@@ -3,14 +3,16 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use moduforge_transform::mark_step::AddMarkStep;
+use moduforge_model::mark::Mark;
+use moduforge_model::types::NodeId;
 use serde_json::Value;
 
 use super::state::State;
 use moduforge_model::node::Node;
 use moduforge_model::node_pool::NodePool;
 use moduforge_transform::attr_step::AttrStep;
-use moduforge_transform::node_step::{AddNodeStep, MoveNodeStep, RemoveNodeStep, ReplaceNodeStep};
+use moduforge_transform::node_step::{AddNodeStep, RemoveNodeStep};
+use moduforge_transform::mark_step::{AddMarkStep, RemoveMarkStep};
 use moduforge_transform::transform::{Transform, TransformError};
 use std::fmt::Debug;
 
@@ -99,7 +101,36 @@ impl Transaction {
     ) {
         let _ = self.step(Arc::new(AddNodeStep::new(parent_id, nodes)));
     }
-
+    /// 删除节点
+    /// id: 节点ID
+    /// nodes: 要删除的节点
+    pub fn remove_node(
+        &mut self,
+        parent_id: NodeId,
+        node_ids: Vec<NodeId>,
+    ) {
+        let _ = self.step(Arc::new(RemoveNodeStep::new(parent_id, node_ids)));
+    }
+    /// 添加标记
+    /// id: 节点ID
+    /// marks: 要添加的标记
+    pub fn add_mark(
+        &mut self,
+        id: NodeId,
+        marks: Vec<Mark>,
+    ) {
+        let _ = self.step(Arc::new(AddMarkStep::new(id, marks)));
+    }
+    /// 删除标记
+    /// id: 节点ID
+    /// marks: 要删除的标记
+    pub fn remove_mark(
+        &mut self,
+        id: NodeId,
+        marks: Vec<Mark>,
+    ) {
+        let _ = self.step(Arc::new(RemoveMarkStep::new(id, marks)));
+    }
     /// 设置元数据
     /// key: 键
     /// value: 值（支持任意类型）
