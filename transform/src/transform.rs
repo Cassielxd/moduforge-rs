@@ -2,7 +2,7 @@ use std::{fmt, sync::Arc};
 
 use moduforge_model::{node_pool::NodePool, schema::Schema};
 
-use crate::{draft::Draft, patch::Patch};
+use crate::draft::Draft;
 
 use super::step::{Step, StepResult};
 
@@ -34,8 +34,6 @@ pub struct Transform {
     pub draft: Draft,
     /// 存储所有操作步骤
     pub steps: im::Vector<Arc<dyn Step>>,
-    /// 存储每个步骤对应的补丁列表
-    pub patches: im::Vector<Vec<Patch>>,
     /// 文档的模式定义
     pub schema: Arc<Schema>,
 }
@@ -64,7 +62,6 @@ impl Transform {
         result: StepResult,
     ) {
         self.steps.push_back(step);
-        self.patches.push_back(result.patches);
         self.doc = result.doc.unwrap();
     }
 }

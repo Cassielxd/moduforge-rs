@@ -21,13 +21,6 @@
 //! - `PatchStep`: 补丁步骤，用于应用补丁
 //! - `BatchStep`: 批量步骤，用于执行多个转换操作
 
-
-use draft::Draft;
-use patch::Patch;
-use serde::{Deserialize, Serialize};
-use step::{Step};
-use transform::TransformError;
-
 pub mod attr_step;
 pub mod draft;
 pub mod mark_step;
@@ -35,26 +28,3 @@ pub mod node_step;
 pub mod patch;
 pub mod step;
 pub mod transform;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatchStep {
-    pub patches: Vec<Patch>,
-}
-impl Step for PatchStep {
-    fn name(&self) -> String {
-        "patch_step".to_string()
-    }
-    fn apply(
-        &self,
-        dart: &mut Draft,
-        _: std::sync::Arc<moduforge_model::schema::Schema>,
-    ) -> Result<step::StepResult, transform::TransformError> {
-        match dart.apply_patches(&self.patches) {
-            Ok(()) => Ok(dart.commit()),
-            Err(err) => Err(TransformError::new(err.to_string())),
-        }
-    }
-    fn serialize(&self) -> Option<Vec<u8>> {
-        serde_json::to_vec(self).ok()
-    }
-}

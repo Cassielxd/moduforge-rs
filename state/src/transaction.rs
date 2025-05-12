@@ -69,7 +69,6 @@ impl Transaction {
                 doc: node.clone(),
                 draft: Draft::new(node),
                 steps: im::Vector::new(),
-                patches: im::Vector::new(),
                 schema,
             },
         }
@@ -79,7 +78,6 @@ impl Transaction {
         other: &mut Self,
     ) {
         self.steps.extend(other.steps.iter().cloned());
-        self.patches.extend(other.patches.iter().cloned());
         self.doc = other.doc.clone();
     }
     /// 获取当前文档状态

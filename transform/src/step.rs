@@ -3,7 +3,7 @@ use std::sync::Arc;
 use moduforge_model::{node_pool::NodePool, schema::Schema};
 use std::fmt::Debug;
 
-use super::{draft::Draft, patch::Patch, transform::TransformError};
+use super::{draft::Draft, transform::TransformError};
 
 pub trait Step: Send + Sync + Debug {
     fn name(&self) -> String;
@@ -18,20 +18,18 @@ pub trait Step: Send + Sync + Debug {
 #[derive(Debug, Clone)]
 pub struct StepResult {
     pub doc: Option<Arc<NodePool>>,
-    pub failed: Option<String>,
-    pub patches: Vec<Patch>,
+    pub failed: Option<String>
 }
 
 impl StepResult {
     pub fn ok(
-        doc: Arc<NodePool>,
-        patches: Vec<Patch>,
+        doc: Arc<NodePool>
     ) -> Self {
-        StepResult { doc: Some(doc), failed: None, patches }
+        StepResult { doc: Some(doc), failed: None }
     }
 
     pub fn fail(message: String) -> Self {
-        StepResult { doc: None, failed: Some(message), patches: vec![] }
+        StepResult { doc: None, failed: Some(message) }
     }
 }
 

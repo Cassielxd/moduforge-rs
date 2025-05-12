@@ -1,64 +1,10 @@
+use crate::tree::Tree;
+
 use super::{error::PoolError, node::Node, types::NodeId};
 use im::HashMap;
 use serde::{Deserialize, Serialize};
-use std::{ops::{Deref, Index}, sync::Arc};
+use std::{ops::Deref, sync::Arc};
 
-/// 节点池内部数据结构，实现结构共享和高效克隆
-///
-/// # 字段
-///
-/// * `root_id` - 根节点标识符
-/// * `nodes` - 节点存储的不可变哈希表（使用结构共享）
-/// * `parent_map` - 父子关系映射表
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct NodePoolInner {
-    pub root_id: NodeId,
-    pub nodes: im::HashMap<NodeId, Arc<Node>>, // 节点数据共享
-    pub parent_map: im::HashMap<NodeId, NodeId>,
-}
-impl NodePoolInner{
-    pub fn get_node(
-        &self,
-        id: &NodeId,
-    ) -> Option<&Arc<Node>> {
-        self.nodes.get(id)
-    }
-    pub fn get_parent_node(
-        &self,
-        id: &NodeId,
-    ) -> Option<&Arc<Node>> {
-        self.parent_map.get(id).and_then(|id| self.nodes.get(id))
-    }
-
-    pub fn children(
-        &self,
-        parent_id: &NodeId,
-    ) -> Option<&im::Vector<NodeId>> {
-        self.get_node(parent_id).map(|n| &n.content)
-    }
-    pub fn children_node(
-        &self,
-        parent_id: &NodeId,
-    ) -> Option<im::Vector<&Arc<Node>>> {
-        self.children(parent_id).map(|ids| ids.iter().filter_map(|id| self.get_node(id)).collect())
-    }
-    pub fn children_count(
-        &self,
-        parent_id: &NodeId,
-    ) -> usize {
-        self.get_node(parent_id).map(|n| n.content.len()).unwrap_or(0)
-    }
-    
-
-}
-
-impl Index<&NodeId> for NodePoolInner {
-    type Output = Arc<Node>;
-
-    fn index(&self, index: &NodeId) -> &Self::Output {
-        self.get_node(index).unwrap()
-    }
-}
 
 /// 线程安全的节点池封装
 ///
@@ -66,10 +12,10 @@ impl Index<&NodeId> for NodePoolInner {
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct NodePool {
     // 使用 Arc 包裹内部结构，实现快速克隆
-    pub inner: Arc<NodePoolInner>,
+    pub inner: Arc<Tree>,
 }
 impl Deref for NodePool {
-    type Target = NodePoolInner;
+    type Target = Tree;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
@@ -108,7 +54,7 @@ impl NodePool {
         }
 
         NodePool {
-            inner: Arc::new(NodePoolInner {
+            inner: Arc::new(Tree {
                 nodes: nodes_ref,
                 parent_map: parent_map_ref,
                 root_id,
