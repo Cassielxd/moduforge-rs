@@ -4,7 +4,6 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use serde_json::Value;
-use tracing::{info, warn, error};
 
 use super::state::State;
 use moduforge_transform::draft::Draft;
@@ -13,7 +12,6 @@ use moduforge_model::node_pool::NodePool;
 use moduforge_transform::attr_step::AttrStep;
 use moduforge_transform::node_step::AddNodeStep;
 use moduforge_transform::transform::{Transform, TransformError};
-use moduforge_transform::PatchStep;
 use std::fmt::Debug;
 
 static IDS: AtomicU64 = AtomicU64::new(1);
@@ -57,32 +55,7 @@ impl DerefMut for Transaction {
     }
 }
 
-impl Transaction {
-    /// 执行一个事务操作
-    /// call_back: 要执行的命令
-    pub async fn transaction(
-        &mut self,
-        call_back: Arc<dyn Command>,
-    ) {
-        info!("开始执行事务: {}", call_back.name());
-        self.draft.begin = true;
-        let result = call_back.execute(self).await;
-        self.draft.begin = false;
-        match result {
-            Ok(_) => {
-                info!("事务执行成功，正在提交更改");
-                let result = self.draft.commit();
-                self.add_step(
-                    Arc::new(PatchStep { patches: result.patches.clone() }),
-                    result,
-                );
-            },
-            Err(e) => {
-                error!("事务执行失败: {}", e);
-                warn!("事务回滚");
-            },
-        }
-    }
+impl Transaction {    
     /// 创建新的事务实例
     /// state: 当前状态对象
     /// 返回: Transaction 实例

@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use moduforge_state::{init_logging, transaction::Transaction};
+use moduforge_state::init_logging;
 use moduforge_core::{async_runtime::AsyncEditor, types::EditorOptionsBuilder};
 use moduforge_test::{
     base::get_base,
@@ -16,11 +16,8 @@ async fn main() {
         .add_middleware(Middleware2)
         .build();
     let mut runtime = AsyncEditor::create(options).await.unwrap();
-    let mut tr: Transaction = runtime.get_tr();
-    tr.transaction(Arc::new(MyCommand1)).await;
-    tr.set_meta("add_node", true);
     let before_doc = runtime.doc();
-    let _ = runtime.dispatch_flow(tr).await;
+    let _ = runtime.command(Arc::new(MyCommand1)).await;
     let after_doc = runtime.doc();
     dbg!(before_doc);
     dbg!(after_doc);
