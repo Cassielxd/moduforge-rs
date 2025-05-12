@@ -3,15 +3,13 @@ use std::sync::Arc;
 use moduforge_model::schema::Schema;
 use moduforge_state::{ops::GlobalResourceManager, plugin::Plugin};
 
-use crate::{
-    helpers::get_schema_by_resolved_extensions::get_schema_by_resolved_extensions,
-    types::Extensions, EditorResult,
+use crate::{ helpers::get_schema_by_resolved_extensions::get_schema_by_resolved_extensions, types::Extensions, EditorResult
 };
 /// 扩展管理器
 pub struct ExtensionManager {
     plugins: Vec<Arc<Plugin>>,
     schema: Arc<Schema>,
-    op_fns: Vec<Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()>>>,
+    op_fns: Vec<Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()> + Send + Sync>>,
 }
 impl ExtensionManager {
     pub fn new(extensions: &Vec<Extensions>) -> Self {
@@ -37,7 +35,7 @@ impl ExtensionManager {
     }
     pub fn get_op_fns(
         &self
-    ) -> &Vec<Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()>>> {
+    ) -> &Vec<Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()> + Send + Sync>> {
         &self.op_fns
     }
 

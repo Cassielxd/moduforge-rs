@@ -3,13 +3,14 @@ use std::sync::Arc;
 use moduforge_state::{ops::GlobalResourceManager, plugin::Plugin};
 
 use crate::{types::GlobalAttributeItem, EditorResult};
+pub type OpFn = Vec<Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()>+ Send + Sync>>;
 ///扩展实现
 /// 组装全局属性和插件
 #[derive(Clone, Default)]
 pub struct Extension {
     global_attributes: Vec<GlobalAttributeItem>,
     plugins: Vec<Arc<Plugin>>,
-    op_fn: Option<Vec<Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()>>>>,
+    op_fn: Option<OpFn>,
 }
 
 unsafe impl Send for Extension {}
@@ -25,14 +26,14 @@ impl Extension {
     }
     pub fn add_op_fn(
         &mut self,
-        op_fn: Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()>>,
+        op_fn: Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()>+ Send + Sync>,
     ) -> &mut Self {
         self.op_fn.get_or_insert(vec![]).push(op_fn);
         self
     }
     pub fn get_op_fns(
         &self
-    ) -> Vec<Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()>>> {
+    ) -> Vec<Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()>+ Send + Sync>> {
         self.op_fn.clone().unwrap_or(vec![])
     }
     pub fn add_global_attribute(
