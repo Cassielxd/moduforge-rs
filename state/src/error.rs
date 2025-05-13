@@ -35,4 +35,12 @@ pub enum StateError {
     /// Error occurs when plugin state is invalid
     #[error("插件状态无效: {0}")]
     InvalidPluginState(String),
+
+    /// Error occurs when serialization fails
+    #[error("序列化失败: {0}")]
+    SerializeError(String),
+
+    /// Error occurs when deserialization fails
+    #[error("反序列化失败: {0}")]
+    DeserializeError(String),
 }

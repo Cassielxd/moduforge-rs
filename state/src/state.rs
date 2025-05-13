@@ -330,7 +330,55 @@ impl State {
     ) -> bool {
         self.fields_instances.contains_key(name)
     }
+    /// 序列化状态
+    pub fn serialize(&self) -> StateResult<StateSerialize> {
+        let mut state_fields: HashMap<String, Vec<u8>> = HashMap::new();
+        for plugin in self.plugins() {
+            if let Some(state_field) = &plugin.spec.state {
+                if let Some(value) = self.get_field(&plugin.key) {
+                    if let Some(json) = state_field.serialize(value) {
+                        state_fields.insert(plugin.key.clone(), json);
+                    }
+                };
+            }
+        }
+        let node_pool_str = serde_json::to_string(&self.doc()).map_err(|e| StateError::SerializeError(format!("Failed to serialize node pool: {}", e)))?;
+        let state_fields_str = serde_json::to_string(&state_fields).map_err(|e| StateError::SerializeError(format!("Failed to serialize state fields: {}", e)))?;
+        Ok(StateSerialize {
+            state_fields: state_fields_str.as_bytes().to_vec(),
+            node_pool: node_pool_str.as_bytes().to_vec(),
+        })
+    }
+    /// 反序列化状态
+    pub fn deserialize(s: &StateSerialize,configuration: &Configuration) -> StateResult<State> {
+        let state_fields: HashMap<String, Vec<u8>> = serde_json::from_slice(&s.state_fields).map_err(|e| StateError::DeserializeError(format!("Failed to deserialize state fields: {}", e)))?;
+        let node_pool: Arc<NodePool> = serde_json::from_slice(&s.node_pool).map_err(|e| StateError::DeserializeError(format!("Failed to deserialize node pool: {}", e)))?;
+        let mut config = configuration.clone();
+        config.doc = Some(node_pool);
+        let mut state = State::new(Arc::new(config));
+        
+        let mut map_instances = ImHashMap::new();
+                for plugin in &configuration.plugins {
+                    if let Some(state_field) = &plugin.spec.state {
+                        if let Some(value) = state_fields.get(&plugin.key) {
+                            if let Some(p_state) = state_field.deserialize(value) {
+                                let key = plugin.key.clone();
+                                map_instances.insert(key, p_state);
+                            }
+                        }
+                    }
+                }
+                state.fields_instances = map_instances;
+        Ok(state)
+    }
+    
 }
+
+pub struct StateSerialize {
+    pub state_fields:Vec<u8>,
+    pub node_pool: Vec<u8>,
+}
+
 /// 状态配置结构体，用于初始化编辑器状态
 /// - schema: 文档结构定义
 /// - doc: 初始文档内容
