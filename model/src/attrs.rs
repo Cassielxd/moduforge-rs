@@ -1,13 +1,32 @@
 use std::ops::{Deref, DerefMut};
 use std::ops::{Index, IndexMut};
 use im::HashMap;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Deserializer, Serializer};
 use serde_json::Value;
 //pub type Attrs = HashMap<String, Value>;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Attrs {
     pub attrs: HashMap<String, Value>,
+}
+
+impl Serialize for Attrs {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.attrs.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Attrs {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let map = HashMap::<String, Value>::deserialize(deserializer)?;
+        Ok(Attrs { attrs: map })
+    }
 }
 
 impl Default for Attrs {
@@ -70,6 +89,32 @@ impl Deref for Attrs {
 impl DerefMut for Attrs {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.attrs
+    }
+}
+
+/// 用于选择性序列化 Attrs 的包装器
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct FilteredAttrs<'a> {
+    attrs: &'a Attrs,
+    filter_key: &'a str,
+}
+
+impl<'a> FilteredAttrs<'a> {
+    pub fn new(attrs: &'a Attrs, filter_key: &'a str) -> Self {
+        Self { attrs, filter_key }
+    }
+}
+
+impl<'a> Serialize for FilteredAttrs<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut map = serde_json::Map::new();
+        if let Some(value) = self.attrs.get_safe(self.filter_key) {
+            map.insert(self.filter_key.to_string(), value.clone());
+        }
+        map.serialize(serializer)
     }
 }
 
