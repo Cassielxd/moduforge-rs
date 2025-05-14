@@ -483,9 +483,19 @@ impl NodePool {
     where
         P: Fn(&Node) -> bool + Send + Sync,
     {
-        self.get_all_nodes()
+        // 将分片转换为 Vec 以支持并行处理
+        let shards: Vec<_> = self.inner.nodes.iter().collect();
+        
+        // 对每个分片进行并行处理
+        shards
             .into_par_iter()
-            .filter(|node| predicate(node))
+            .flat_map(|shard| {
+                // 在每个分片内部进行顺序处理
+                shard.values()
+                    .filter(|node| predicate(node))
+                    .cloned()
+                    .collect::<Vec<_>>()
+            })
             .collect()
     }
 
@@ -507,10 +517,22 @@ impl NodePool {
     where
         P: Fn(&[Arc<Node>]) -> Vec<Arc<Node>> + Send + Sync,
     {
-        let nodes = self.get_all_nodes();
-        nodes
-            .par_chunks(batch_size)
-            .flat_map(|chunk| predicate(chunk))
+        // 将分片转换为 Vec 以支持并行处理
+        let shards: Vec<_> = self.inner.nodes.iter().collect();
+        
+        // 对每个分片进行并行处理
+        shards
+            .into_par_iter()
+            .flat_map(|shard| {
+                // 将分片中的节点收集到 Vec 中
+                let nodes: Vec<_> = shard.values().cloned().collect();
+                
+                // 按批次处理节点
+                nodes
+                    .chunks(batch_size)
+                    .flat_map(|chunk| predicate(chunk))
+                    .collect::<Vec<_>>()
+            })
             .collect()
     }
 
@@ -534,10 +556,19 @@ impl NodePool {
         F: Fn(&Arc<Node>) -> T + Send + Sync,
         T: Send,
     {
-        self.get_all_nodes()
-            .par_iter()
-            .filter(|node| predicate(node))
-            .map(transform)
+        // 将分片转换为 Vec 以支持并行处理
+        let shards: Vec<_> = self.inner.nodes.iter().collect();
+        
+        // 对每个分片进行并行处理
+        shards
+            .into_par_iter()
+            .flat_map(|shard| {
+                // 在每个分片内部进行顺序处理
+                shard.values()
+                    .filter(|node| predicate(node))
+                    .map(|node| transform(node))
+                    .collect::<Vec<T>>()
+            })
             .collect()
     }
 
@@ -570,10 +601,20 @@ impl NodePool {
             vec![],
             vec![],
         ));
-        self.get_all_nodes()
+        
+        // 将分片转换为 Vec 以支持并行处理
+        let shards: Vec<_> = self.inner.nodes.iter().collect();
+        
+        // 对每个分片进行并行处理
+        shards
             .into_par_iter()
-            .filter(|node| predicate(node))
-            .fold(|| init.clone(), |acc, node| fold(acc, &node))
+            .map(|shard| {
+                // 在每个分片内部进行顺序处理
+                shard.values()
+                    .filter(|node| predicate(node))
+                    .fold(init.clone(), |acc, node| fold(acc, node))
+            })
+            // 合并所有分片的结果
             .reduce(|| init.clone(), |a, b| fold(a, &dummy_node))
     }
 

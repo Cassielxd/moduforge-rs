@@ -9,6 +9,7 @@ use super::types::NodeId;
 use serde_json::Value;
 use std::collections::HashMap;
 
+#[derive(Clone)]
 pub struct NodeEnum(pub Node, pub Vec<NodeEnum>);
 
 impl NodeEnum {
@@ -161,10 +162,12 @@ impl NodeType {
             }
         }
     }
+
     /// 检查节点是否包含必须的属性
     pub fn has_required_attrs(&self) -> bool {
         self.attrs.values().any(|attr: &Attribute| attr.is_required())
     }
+
     /// 创建节点并填充内容
     ///
     /// # 参数
@@ -226,6 +229,7 @@ impl NodeType {
             filled_nodes,
         )
     }
+
     /// 创建节点
     pub fn create(
         &self,
@@ -248,6 +252,7 @@ impl NodeType {
             Mark::set_from(marks),
         )
     }
+
     fn compute_attrs(
         &self,
         attrs: Option<&HashMap<String, Value>>,
@@ -257,7 +262,6 @@ impl NodeType {
             None => compute_attrs(&self.attrs, Some(&self.default_attrs)),
         }
     }
-    // 其他方法...
 }
 
 /// 定义节点类型的约束规范

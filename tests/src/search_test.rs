@@ -6,12 +6,13 @@ use std::sync::Arc;
 use std::time::Instant;
 use im::HashMap;
 use rayon::prelude::*;
+use std::sync::Mutex;
+use std::collections::HashMap as StdHashMap;
 
 pub type NodePredicate = Box<dyn Fn(&Node) -> bool + Send + Sync>;
 
 /// 生成测试数据
 pub fn generate_test_data(size: usize) -> NodeEnum {
-    // 创建根节点
     let root_id = "root".to_string();
     let mut root_attrs = im::HashMap::new();
     root_attrs.insert("depth".to_string(), serde_json::json!(0));
@@ -23,60 +24,77 @@ pub fn generate_test_data(size: usize) -> NodeEnum {
         vec![],
     );
 
-    // 递归生成子节点
-    fn generate_children(
-        parent_id: &str,
-        depth: usize,
-        remaining: &mut usize,
-    ) -> Vec<NodeEnum> {
-        if *remaining == 0 {
-            return vec![];
+    // 计算每个线程需要处理的节点数量
+    let num_threads = rayon::current_num_threads();
+    let chunk_size = (size - 1) / num_threads + 1;
+    
+    // 使用线程安全的数据结构来收集结果
+    let nodes = Arc::new(Mutex::new(Vec::with_capacity(size - 1)));
+    let node_count = Arc::new(Mutex::new(1)); // 已生成节点数（含根节点）
+    let branch = 10; // 每个节点最多多少个子节点
+
+    // 并行生成节点
+    (0..num_threads).into_par_iter().for_each(|thread_id| {
+        let mut local_queue = Vec::new();
+        let start_id = format!("{}_{}", root_id, thread_id);
+        local_queue.push((start_id.clone(), 1));
+
+        while let Some((parent_id, depth)) = local_queue.pop() {
+            let mut current_count = *node_count.lock().unwrap();
+            if current_count >= size {
+                break;
+            }
+
+            for i in 0..branch {
+                current_count = *node_count.lock().unwrap();
+                if current_count >= size {
+                    break;
+                }
+
+                let node_type = match (i + thread_id) % 5 {
+                    0 => "document",
+                    1 => "heading",
+                    2 => "paragraph",
+                    3 => "list",
+                    _ => "text",
+                };
+
+                let mut attrs = im::HashMap::new();
+                attrs.insert("index".to_string(), serde_json::json!(i));
+                attrs.insert("depth".to_string(), serde_json::json!(depth));
+                let node_id = format!("{}_{}", parent_id, i);
+                let node = Node::new(
+                    &node_id,
+                    node_type.to_string(),
+                    Attrs::from(attrs),
+                    vec![],
+                    vec![],
+                );
+
+                nodes.lock().unwrap().push((node_id.clone(), depth, node));
+                local_queue.push((node_id, depth + 1));
+                *node_count.lock().unwrap() += 1;
+            }
         }
+    });
 
-        let mut children = Vec::new();
-        let child_count = (*remaining).min(10); // 每个父节点最多10个子节点
-        *remaining -= child_count;
+    // 构建树结构
+    let nodes = Arc::try_unwrap(nodes).unwrap().into_inner().unwrap();
+    let mut node_map: StdHashMap<String, Vec<NodeEnum>> = StdHashMap::new();
+    let mut root_children = Vec::new();
 
-        for i in 0..child_count {
-            let node_type = match i % 5 {
-                0 => "document",
-                1 => "heading",
-                2 => "paragraph",
-                3 => "list",
-                _ => "text",
-            };
-
-            let mut attrs = im::HashMap::new();
-            attrs.insert("index".to_string(), serde_json::json!(i));
-            attrs.insert("depth".to_string(), serde_json::json!(depth));
-
-            let node_id = format!("{}_{}", parent_id, i);
-            let node = Node::new(
-                &node_id,
-                node_type.to_string(),
-                Attrs::from(attrs),
-                vec![],
-                vec![],
-            );
-
-            // 递归生成子节点的子节点
-            let mut child_remaining = (*remaining).min(100); // 限制每层最多100个节点
-            let grandchildren =
-                generate_children(&node_id, depth + 1, &mut child_remaining);
-            *remaining -= child_remaining;
-
-            children.push(NodeEnum(node, grandchildren));
+    for (node_id, depth, node) in nodes.into_iter().rev() {
+        let children = node_map.remove(&node_id).unwrap_or_default();
+        let node_enum = NodeEnum(node, children);
+        if depth == 1 {
+            root_children.push(node_enum);
+        } else {
+            let parent_id = node_id.rsplit_once('_').map(|(parent, _)| parent.to_string()).unwrap_or_default();
+            node_map.entry(parent_id).or_default().push(node_enum);
         }
-
-        children
     }
 
-    // 生成整个树结构
-    let mut remaining = size - 1; // 减去根节点
-    let children = generate_children(&root_id, 1, &mut remaining);
-
-    // 返回根节点及其子节点
-    NodeEnum(root_node, children)
+    NodeEnum(root_node, root_children)
 }
 
 #[test]
@@ -85,7 +103,7 @@ fn test_query_engine_performance() {
 
     // 创建节点池
     let node_pool = NodePool::from(test_data);
-    println!("创建节点池");
+    println!("创建节点池，节点数量: {}", node_pool.size());
 
     // 测试1: 按类型查询
     let config = moduforge_model::node_pool::QueryCacheConfig {
