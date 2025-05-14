@@ -27,4 +27,6 @@ tracing-appender = { workspace = true }
 time = { workspace = true }
 anyhow = { workspace = true }
 
+rayon = { workspace = true }
+lru = { workspace = true }
 

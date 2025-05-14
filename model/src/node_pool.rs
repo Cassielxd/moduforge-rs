@@ -1,9 +1,14 @@
 use crate::tree::Tree;
 
 use super::{error::PoolError, node::Node, types::NodeId};
-use im::HashMap;
+use im::HashMap as ImHashMap;
 use serde::{Deserialize, Serialize};
-use std::{ops::Deref, sync::Arc};
+use std::{ops::{Deref}, sync::Arc};
+use rayon::prelude::*;
+use std::marker::Sync;
+use std::collections::{HashMap, HashSet};
+use lru::LruCache;
+use std::num::NonZeroUsize;
 
 /// 线程安全的节点池封装
 ///
@@ -13,6 +18,8 @@ pub struct NodePool {
     // 使用 Arc 包裹内部结构，实现快速克隆
     inner: Arc<Tree>,
 }
+
+
 impl Deref for NodePool {
     type Target = Tree;
 
@@ -49,8 +56,8 @@ impl NodePool {
         nodes: Vec<Node>,
         root_id: NodeId,
     ) -> Self {
-        let mut nodes_ref = HashMap::new();
-        let mut parent_map_ref = HashMap::new();
+        let mut nodes_ref = ImHashMap::new();
+        let mut parent_map_ref = ImHashMap::new();
         for node in nodes.into_iter() {
             for child_id in &node.content {
                 parent_map_ref.insert(child_id.clone(), node.id.clone());
@@ -433,4 +440,417 @@ impl NodePool {
         }
         None
     }
+
+    /// 并行查询节点
+    /// 
+    /// # 参数
+    /// 
+    /// * `predicate` - 查询条件函数
+    /// 
+    /// # 返回值
+    /// 
+    /// 返回所有满足条件的节点
+    pub fn parallel_query<P>(&self, predicate: P) -> Vec<&Arc<Node>>
+    where
+        P: Fn(&Node) -> bool + Send + Sync,
+    {
+        self.inner
+            .nodes
+            .values()
+            .par_bridge()
+            .filter(|node| predicate(node))
+            .collect()
+    }
+
+    /// 并行批量查询节点
+    /// 
+    /// # 参数
+    /// 
+    /// * `batch_size` - 批处理大小
+    /// * `predicate` - 查询条件函数
+    /// 
+    /// # 返回值
+    /// 
+    /// 返回所有满足条件的节点
+    pub fn parallel_batch_query<'a, P>(&'a self, batch_size: usize, predicate: P) -> Vec<&'a Arc<Node>>
+    where
+        P: Fn(&[&'a Arc<Node>]) -> Vec<&'a Arc<Node>> + Send + Sync,
+    {
+        let nodes: Vec<_> = self.inner.nodes.values().collect();
+        nodes
+            .par_chunks(batch_size)
+            .flat_map(|chunk| predicate(chunk))
+            .collect()
+    }
+
+    /// 并行查询并转换结果
+    /// 
+    /// # 参数
+    /// 
+    /// * `predicate` - 查询条件函数
+    /// * `transform` - 结果转换函数
+    /// 
+    /// # 返回值
+    /// 
+    /// 返回转换后的结果列表
+    pub fn parallel_query_map<'a, P, T, F>(&'a self, predicate: P, transform: F) -> Vec<T>
+    where
+        P: Fn(&Node) -> bool + Send + Sync,
+        F: Fn(&'a Arc<Node>) -> T + Send + Sync,
+        T: Send,
+    {
+        self.inner
+            .nodes
+            .values()
+            .par_bridge()
+            .filter(|node| predicate(node))
+            .map(transform)
+            .collect()
+    }
+
+    /// 并行查询并聚合结果
+    /// 
+    /// # 参数
+    /// 
+    /// * `predicate` - 查询条件函数
+    /// * `init` - 初始值
+    /// * `fold` - 聚合函数
+    /// 
+    /// # 返回值
+    /// 
+    /// 返回聚合后的结果
+    pub fn parallel_query_reduce<P, T, F>(&self, predicate: P, init: T, fold: F) -> T
+    where
+        P: Fn(&Node) -> bool + Send + Sync,
+        F: Fn(T, &Arc<Node>) -> T + Send + Sync,
+        T: Send + Sync + Clone,
+    {
+        self.inner
+            .nodes
+            .values()
+            .par_bridge()
+            .filter(|node| predicate(node))
+            .fold(|| init.clone(), |acc, node| fold(acc, node))
+            .reduce(|| init.clone(), |a, b| fold(a, &Arc::new(Node::new("", "".to_string(), Default::default(), vec![], vec![]))))
+    }
 }
+
+/// 查询条件构建器
+pub struct QueryEngine<'a> {
+    pool: &'a NodePool,
+    conditions: Vec<Box<dyn Fn(&Node) -> bool + Send + Sync + 'a>>,
+}
+
+impl<'a> QueryEngine<'a> {
+    /// 创建新的查询引擎实例
+    pub fn new(pool: &'a NodePool) -> Self {
+        Self {
+            pool,
+            conditions: Vec::new(),
+        }
+    }
+
+    /// 按节点类型查询
+    pub fn by_type(mut self, node_type: &'a str) -> Self {
+        let node_type = node_type.to_string();
+        self.conditions.push(Box::new(move |node| node.r#type == node_type));
+        self
+    }
+
+    /// 按属性值查询
+    pub fn by_attr(mut self, key: &'a str, value: &'a serde_json::Value) -> Self {
+        let key = key.to_string();
+        let value = value.clone();
+        self.conditions.push(Box::new(move |node| {
+            node.attrs.get(&key).map_or(false, |v| v == &value)
+        }));
+        self
+    }
+
+    /// 按标记查询
+    pub fn by_mark(mut self, mark_type: &'a str) -> Self {
+        let mark_type = mark_type.to_string();
+        self.conditions.push(Box::new(move |node| {
+            node.marks.iter().any(|mark| mark.r#type == mark_type)
+        }));
+        self
+    }
+
+    /// 按子节点数量查询
+    pub fn by_child_count(mut self, count: usize) -> Self {
+        self.conditions.push(Box::new(move |node| node.content.len() == count));
+        self
+    }
+
+    /// 按深度查询
+    pub fn by_depth(mut self, depth: usize) -> Self {
+        let pool = self.pool.clone();
+        self.conditions.push(Box::new(move |node| {
+            pool.get_node_depth(&node.id).map_or(false, |d| d == depth)
+        }));
+        self
+    }
+
+    /// 按祖先节点类型查询
+    pub fn by_ancestor_type(mut self, ancestor_type: &'a str) -> Self {
+        let pool = self.pool.clone();
+        let ancestor_type = ancestor_type.to_string();
+        self.conditions.push(Box::new(move |node| {
+            pool.ancestors(&node.id)
+                .iter()
+                .any(|ancestor| ancestor.r#type == ancestor_type)
+        }));
+        self
+    }
+
+    /// 按后代节点类型查询
+    pub fn by_descendant_type(mut self, descendant_type: &'a str) -> Self {
+        let pool = self.pool.clone();
+        let descendant_type = descendant_type.to_string();
+        self.conditions.push(Box::new(move |node| {
+            pool.descendants(&node.id)
+                .iter()
+                .any(|descendant| descendant.r#type == descendant_type)
+        }));
+        self
+    }
+
+    /// 执行查询并返回所有匹配的节点
+    pub fn find_all(&self) -> Vec<&Arc<Node>> {
+        self.pool
+            .inner
+            .nodes
+            .values()
+            .filter(|node| self.conditions.iter().all(|condition| condition(node)))
+            .collect()
+    }
+
+    /// 执行查询并返回第一个匹配的节点
+    pub fn find_first(&self) -> Option<&Arc<Node>> {
+        self.pool
+            .inner
+            .nodes
+            .values()
+            .find(|node| self.conditions.iter().all(|condition| condition(node)))
+    }
+
+    /// 执行查询并返回匹配的节点数量
+    pub fn count(&self) -> usize {
+        self.pool
+            .inner
+            .nodes
+            .values()
+            .filter(|node| self.conditions.iter().all(|condition| condition(node)))
+            .count()
+    }
+
+    /// 并行执行查询并返回所有匹配的节点
+    pub fn parallel_find_all(&self) -> Vec<&Arc<Node>> {
+        let conditions: &Vec<Box<dyn Fn(&Node) -> bool + Send + Sync + 'a>> = &self.conditions;
+        self.pool.parallel_query(move |node| {
+            conditions.iter().all(|condition| condition(node))
+        })
+    }
+
+    /// 并行执行查询并返回第一个匹配的节点
+    pub fn parallel_find_first(&self) -> Option<&Arc<Node>> {
+        let conditions = &self.conditions;
+        self.pool
+            .inner
+            .nodes
+            .values()
+            .par_bridge()
+            .find_any(move |node| conditions.iter().all(|condition| condition(node)))
+    }
+
+    /// 并行执行查询并返回匹配的节点数量
+    pub fn parallel_count(&self) -> usize {
+        let conditions = &self.conditions;
+        self.pool
+            .inner
+            .nodes
+            .values()
+            .par_bridge()
+            .filter(move |node| conditions.iter().all(|condition| condition(node)))
+            .count()
+    }
+}
+
+impl NodePool {
+    /// 创建查询引擎实例
+    pub fn query(&self) -> QueryEngine {
+        QueryEngine::new(self)
+    }
+}
+
+/// 查询缓存配置
+#[derive(Clone, Debug)]
+pub struct QueryCacheConfig {
+    /// 缓存大小
+    pub capacity: usize,
+    /// 是否启用缓存
+    pub enabled: bool,
+}
+
+impl Default for QueryCacheConfig {
+    fn default() -> Self {
+        Self {
+            capacity: 1000,
+            enabled: true,
+        }
+    }
+}
+
+/// 优化的查询引擎
+pub struct OptimizedQueryEngine<'a> {
+    pool: &'a NodePool,
+    cache: Option<LruCache<String, Vec<&'a Arc<Node>>>>,
+    type_index: HashMap<String, Vec<&'a Arc<Node>>>,
+    depth_index: HashMap<usize, Vec<&'a Arc<Node>>>,
+    mark_index: HashMap<String, Vec<&'a Arc<Node>>>,
+}
+
+impl<'a> OptimizedQueryEngine<'a> {
+    /// 创建新的优化查询引擎
+    pub fn new(pool: &'a NodePool, config: QueryCacheConfig) -> Self {
+        let mut engine = Self {
+            pool,
+            cache: if config.enabled {
+                Some(LruCache::new(NonZeroUsize::new(config.capacity).unwrap()))
+            } else {
+                None
+            },
+            type_index: HashMap::new(),
+            depth_index: HashMap::new(),
+            mark_index: HashMap::new(),
+        };
+        
+        // 构建索引
+        engine.build_indices();
+        engine
+    }
+
+    /// 构建索引
+    fn build_indices(&mut self) {
+        for node in self.pool.inner.nodes.values() {
+            // 类型索引
+            self.type_index
+                .entry(node.r#type.clone())
+                .or_default()
+                .push(node);
+
+            // 深度索引
+            if let Some(depth) = self.pool.get_node_depth(&node.id) {
+                self.depth_index
+                    .entry(depth)
+                    .or_default()
+                    .push(node);
+            }
+
+            // 标记索引
+            for mark in node.marks.iter() {
+                self.mark_index
+                    .entry(mark.r#type.clone())
+                    .or_default()
+                    .push(node);
+            }
+        }
+    }
+
+    /// 按类型查询（使用索引）
+    pub fn by_type(&self, node_type: &str) -> Vec<&Arc<Node>> {
+        self.type_index
+            .get(node_type)
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    /// 按深度查询（使用索引）
+    pub fn by_depth(&self, depth: usize) -> Vec<&Arc<Node>> {
+        self.depth_index
+            .get(&depth)
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    /// 按标记查询（使用索引）
+    pub fn by_mark(&self, mark_type: &str) -> Vec<&Arc<Node>> {
+        self.mark_index
+            .get(mark_type)
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    /// 组合查询（使用索引和缓存）
+    pub fn query(&mut self, conditions: Vec<Box<dyn Fn(&Node) -> bool + Send + Sync + 'a>>) -> Vec<&'a Arc<Node>> {
+        // 生成缓存键
+        let cache_key = format!("query_{}", conditions.len());
+        
+        // 检查缓存
+        if let Some(cache) = &self.cache {
+            if let Some(cached) = cache.peek(&cache_key) {
+                return cached.clone();
+            }
+        }
+
+        // 使用索引优化查询
+        let mut candidates: Option<Vec<&'a Arc<Node>>> = None;
+
+        // 根据条件类型选择最优的索引
+        for condition in &conditions {
+            if let Some(indexed) = self.get_indexed_nodes(condition) {
+                candidates = match candidates {
+                    None => Some(indexed),
+                    Some(existing) => Some(self.intersect_nodes(&existing, &indexed)),
+                };
+            }
+        }
+
+        let result = match candidates {
+            Some(nodes) => {
+                // 使用索引过滤后的候选节点
+                nodes.par_iter()
+                    .filter(|node| conditions.iter().all(|condition| condition(node)))
+                    .cloned()
+                    .collect()
+            }
+            None => {
+                // 回退到全量查询
+                self.pool.parallel_query(|node| {
+                    conditions.iter().all(|condition| condition(node))
+                })
+            }
+        };
+
+        // 更新缓存
+        if let Some(cache) = &mut self.cache {
+            cache.put(cache_key, result.clone());
+        }
+
+        result
+    }
+
+    /// 从索引中获取节点
+    fn get_indexed_nodes(&self, condition: &Box<dyn Fn(&Node) -> bool + Send + Sync + 'a>) -> Option<Vec<&'a Arc<Node>>> {
+        // 这里需要根据具体的条件类型来选择合适的索引
+        // 示例实现，实际使用时需要根据具体条件类型来优化
+        None
+    }
+
+    /// 计算两个节点集合的交集
+    fn intersect_nodes(&self, nodes1: &[&'a Arc<Node>], nodes2: &[&'a Arc<Node>]) -> Vec<&'a Arc<Node>> {
+        let set1: HashSet<_> = nodes1.iter().map(|n| n.id.as_str()).collect();
+        nodes2.iter()
+            .filter(|node| set1.contains(node.id.as_str()))
+            .cloned()
+            .collect()
+    }
+}
+
+impl NodePool {
+    /// 创建优化查询引擎
+    pub fn optimized_query(&self, config: QueryCacheConfig) -> OptimizedQueryEngine {
+        OptimizedQueryEngine::new(self, config)
+    }
+}
+
