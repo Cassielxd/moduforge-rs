@@ -9,6 +9,15 @@ use super::types::NodeId;
 use serde_json::Value;
 use std::collections::HashMap;
 
+pub struct NodeEnum(pub Node, pub Vec<NodeEnum>);
+
+impl NodeEnum {
+    pub fn into_parts(self) -> (Node, Vec<NodeEnum>) {
+        match self {
+            NodeEnum(node, children) => (node, children),
+        }
+    }
+}
 /// 用于描述节点类型的行为规则和属性约束，通过[Schema](super::schema::Schema)进行统一管理
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct NodeType {
@@ -174,7 +183,7 @@ impl NodeType {
         content: Vec<Node>,
         marks: Option<Vec<Mark>>,
         schema: &Schema,
-    ) -> Vec<Node> {
+    ) -> NodeEnum {
         let id: String = id.unwrap_or_else(IdGenerator::get_id);
         let attrs = self.compute_attrs(attrs);
 
@@ -192,30 +201,30 @@ impl NodeType {
                         {
                             content_ids.push(node.id.clone());
                             // 递归创建节点及其子节点
-                            let mut child_nodes = node_type.create_and_fill(
+                            let child_nodes = node_type.create_and_fill(
                                 Some(node.id.clone()),
                                 None,
                                 vec![],
                                 None,
                                 schema,
                             );
-                            filled_nodes.append(&mut child_nodes);
+                            filled_nodes.push(child_nodes);
                         }
                     }
                 }
             }
         }
 
-        let mut nodes = vec![Node::new(
-            &id,
-            self.name.clone(),
-            attrs,
-            content_ids,
-            Mark::set_from(marks),
-        )];
-        nodes.append(&mut filled_nodes);
-
-        nodes
+        NodeEnum(
+            Node::new(
+                &id,
+                self.name.clone(),
+                attrs,
+                content_ids,
+                Mark::set_from(marks),
+            ),
+            filled_nodes,
+        )
     }
     /// 创建节点
     pub fn create(

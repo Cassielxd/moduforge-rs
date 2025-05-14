@@ -28,6 +28,6 @@ pub mod content_test;
 pub mod ext;
 pub mod middleware;
 pub mod plugins;
+pub mod search_test;
 pub mod snapshot_test;
 pub mod zip_test;
-pub mod search_test;

@@ -30,3 +30,9 @@ anyhow = { workspace = true }
 rayon = { workspace = true }
 lru = { workspace = true }
 
+crossbeam = { workspace = true }
+parking_lot ={ workspace = true }
+
+dashmap = { workspace = true }
+once_cell = "1.19"
+

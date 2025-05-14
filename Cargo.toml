@@ -50,4 +50,6 @@ futures="0.3"
 
 rayon = "1.8"
 lru = "0.14.0"
+parking_lot = "0.12"
+
 

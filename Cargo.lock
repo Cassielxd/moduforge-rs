@@ -560,8 +560,12 @@ version = "0.3.6"
 dependencies = [
  "anyhow",
  "async-trait",
+ "crossbeam",
+ "dashmap",
  "im",
  "lru",
+ "once_cell",
+ "parking_lot",
  "rayon",
  "serde",
  "serde_json",

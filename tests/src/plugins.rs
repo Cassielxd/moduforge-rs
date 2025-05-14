@@ -8,20 +8,12 @@ use moduforge_state::{
     transaction::Transaction,
 };
 use moduforge_macros::{impl_plugin, impl_state_field};
-use crate::ext::MyGlobalTest;
 async fn p1_append(
-    trs: &[Transaction],
+    _trs: &[Transaction],
     _: &State,
-    new_state: &State,
+    _new_state: &State,
 ) -> Option<Transaction> {
-    let resource_manager = new_state.resource_manager();
-    resource_manager.get::<MyGlobalTest>().print();
-    let mut tr: Transaction = trs.last().unwrap().clone();
-    let parent_id = tr.doc().root_id.to_string();
-    let node =
-        tr.schema.nodes.get("DW").unwrap().create(None, None, vec![], None);
-
-    Some(tr)
+    None
 }
 
 // P1Plugin 是一个插件，用于在调度前后打印消息。用于案例测试

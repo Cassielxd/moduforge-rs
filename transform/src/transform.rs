@@ -71,6 +71,6 @@ impl Transform {
         step: Arc<dyn Step>,
     ) {
         self.steps.push_back(step);
-        self.doc = Arc::new(NodePool::new(Arc::new(self.draft.clone())));
+        self.doc = NodePool::new(Arc::new(self.draft.clone()));
     }
 }

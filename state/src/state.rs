@@ -92,7 +92,7 @@ impl State {
                         None,
                         &config.schema,
                     );
-                NodePool::from(nodes, id).into()
+                NodePool::from(nodes)
             },
         };
 
