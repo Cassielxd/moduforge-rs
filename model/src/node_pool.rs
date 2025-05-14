@@ -847,7 +847,6 @@ impl OptimizedQueryEngine {
         
         // 预分配容量
         let node_count = self.pool.size();
-        println!("总节点数: {}", node_count);
         
         // 使用 Arc 包装索引，避免克隆开销
         let type_index = Arc::new(Mutex::new(HashMap::with_capacity(node_count / 5)));
@@ -855,12 +854,9 @@ impl OptimizedQueryEngine {
         let mark_index = Arc::new(Mutex::new(HashMap::with_capacity(node_count / 10)));
 
         let init_time = start.elapsed();
-        println!("初始化时间: {:?}", init_time);
 
         // 优化分片策略：使用更细粒度的分片
-        let num_cores = rayon::current_num_threads();
         let optimal_shard_size = 1000; // 固定较小的分片大小
-        println!("CPU核心数: {}, 分片大小: {}", num_cores, optimal_shard_size);
 
         // 重新组织数据为更小的分片
         let mut all_nodes: Vec<_> = self.pool.inner.nodes.iter()
@@ -872,14 +868,10 @@ impl OptimizedQueryEngine {
         
         // 创建更小的分片
         let shards: Vec<_> = all_nodes.chunks(optimal_shard_size).collect();
-        println!("优化后的分片数量: {}", shards.len());
 
-        let shard_time = start.elapsed() - init_time;
-        println!("分片准备时间: {:?}", shard_time);
 
         // 使用分片级别的并行处理
         shards.into_par_iter().for_each(|shard| {
-            let shard_start = Instant::now();
             
             // 为每个线程创建本地索引，使用预分配的容量
             let mut local_type_index = HashMap::with_capacity(shard.len() / 5);
@@ -909,10 +901,7 @@ impl OptimizedQueryEngine {
                 }
             }
 
-            let collect_time = collect_start.elapsed();
-            println!("分片收集时间: {:?}, 节点数: {}", collect_time, shard.len());
 
-            let index_start = Instant::now();
             
             // 批量更新本地索引，使用预分配的容量
             for (type_name, node) in type_nodes {
@@ -936,10 +925,7 @@ impl OptimizedQueryEngine {
                     .push(node);
             }
 
-            let index_time = index_start.elapsed();
-            println!("分片索引时间: {:?}", index_time);
 
-            let merge_start = Instant::now();
             
             // 批量更新全局索引，使用更细粒度的锁
             {
@@ -970,24 +956,14 @@ impl OptimizedQueryEngine {
                 }
             }
 
-            let merge_time = merge_start.elapsed();
-            println!("分片合并时间: {:?}", merge_time);
-            println!("分片总时间: {:?}", shard_start.elapsed());
         });
 
-        let parallel_time = start.elapsed() - shard_time;
-        println!("并行处理时间: {:?}", parallel_time);
 
-        let final_start = Instant::now();
-        
         // 将并行构建的索引转移到结构体中
         self.type_index = Arc::try_unwrap(type_index).unwrap().into_inner().unwrap();
         self.depth_index = Arc::try_unwrap(depth_index).unwrap().into_inner().unwrap();
         self.mark_index = Arc::try_unwrap(mark_index).unwrap().into_inner().unwrap();
 
-        let final_time = final_start.elapsed();
-        println!("最终合并时间: {:?}", final_time);
-        println!("总耗时: {:?}", start.elapsed());
     }
 
     /// 按类型查询（使用索引）
