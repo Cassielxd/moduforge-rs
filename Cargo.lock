@@ -603,6 +603,7 @@ name = "moduforge-test"
 version = "0.3.6"
 dependencies = [
  "async-trait",
+ "crossbeam",
  "im",
  "moduforge-core",
  "moduforge-macros",

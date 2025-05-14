@@ -3,8 +3,8 @@ use crate::{node_type::NodeEnum, tree::Tree};
 use super::{error::PoolError, node::Node, types::NodeId};
 use serde::{Deserialize, Serialize};
 use std::{
-    ops::{Deref},
-    sync::Arc,
+    ops::Deref,
+    sync::Arc, time::Instant,
 };
 use rayon::prelude::*;
 use std::marker::Sync;
@@ -45,15 +45,7 @@ impl NodePool {
         let id = POOL_ID_COUNTER.fetch_add(1, Ordering::SeqCst);
         let pool = Self { inner, key: format!("pool_{}", id) };
         let pool: Arc<NodePool> = Arc::new(pool);
-        let pool_clone = pool.clone();
-        tokio::task::spawn(async move {
-            let config = QueryCacheConfig::default();
-            let engine = OptimizedQueryEngine::new(&pool_clone, config);
-            ENGINE_CACHE
-                .lock()
-                .unwrap()
-                .put(pool_clone.key.clone(), engine.clone());
-        });
+        
         pool
     }
 
@@ -64,7 +56,7 @@ impl NodePool {
 
     /// 获取节点池中节点总数
     pub fn size(&self) -> usize {
-        self.inner.nodes.len()
+        self.inner.nodes.iter().map(|i|i.values().len()).sum()
     }
     pub fn get_inner(&self) -> &Arc<Tree> {
         &self.inner
@@ -809,9 +801,6 @@ impl Default for QueryCacheConfig {
     }
 }
 
-/// 全局缓存，用于存储 OptimizedQueryEngine 实例
-static ENGINE_CACHE: Lazy<Mutex<LruCache<String, OptimizedQueryEngine>>> =
-    Lazy::new(|| Mutex::new(LruCache::new(NonZeroUsize::new(10).unwrap())));
 
 /// 优化的查询引擎
 pub struct OptimizedQueryEngine {
@@ -838,8 +827,10 @@ impl OptimizedQueryEngine {
             depth_index: HashMap::new(),
             mark_index: HashMap::new(),
         };
-
+        let start = Instant::now();
         engine.build_indices();
+        let duration = start.elapsed();
+        println!("索引构建完成，耗时: {:?}", duration);
         engine
     }
 
@@ -849,52 +840,108 @@ impl OptimizedQueryEngine {
         use std::collections::HashMap;
         use std::sync::Mutex;
         use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+        use std::time::Instant;
 
+        let start = Instant::now();
+        
         // 预分配容量
-        let node_count = self.pool.inner.nodes.len();
-        let type_index = Mutex::new(HashMap::with_capacity(node_count / 5));
-        let depth_index = Mutex::new(HashMap::with_capacity(10));
-        let mark_index = Mutex::new(HashMap::with_capacity(node_count / 10));
+        let node_count = self.pool.size();
+        println!("总节点数: {}", node_count);
+        
+        // 使用 Arc 包装索引，避免克隆开销
+        let type_index = Arc::new(Mutex::new(HashMap::with_capacity(node_count / 5)));
+        let depth_index = Arc::new(Mutex::new(HashMap::with_capacity(10)));
+        let mark_index = Arc::new(Mutex::new(HashMap::with_capacity(node_count / 10)));
 
-        // 使用原子计数器跟踪进度
-        let processed = AtomicUsize::new(0);
+        let init_time = start.elapsed();
+        println!("初始化时间: {:?}", init_time);
 
-        // 获取分片的引用并转换为可并行迭代的形式
-        let shards: Vec<_> = self.pool.inner.nodes.iter().collect();
+        // 优化分片策略：使用更细粒度的分片
+        let num_cores = rayon::current_num_threads();
+        let optimal_shard_size = 1000; // 固定较小的分片大小
+        println!("CPU核心数: {}, 分片大小: {}", num_cores, optimal_shard_size);
+
+        // 重新组织数据为更小的分片
+        let mut all_nodes: Vec<_> = self.pool.inner.nodes.iter()
+            .flat_map(|shard| shard.values().cloned())
+            .collect();
+        
+        // 按ID排序以确保确定性
+        all_nodes.sort_by(|a, b| a.id.cmp(&b.id));
+        
+        // 创建更小的分片
+        let shards: Vec<_> = all_nodes.chunks(optimal_shard_size).collect();
+        println!("优化后的分片数量: {}", shards.len());
+
+        let shard_time = start.elapsed() - init_time;
+        println!("分片准备时间: {:?}", shard_time);
 
         // 使用分片级别的并行处理
         shards.into_par_iter().for_each(|shard| {
+            let shard_start = Instant::now();
+            
             // 为每个线程创建本地索引，使用预分配的容量
             let mut local_type_index = HashMap::with_capacity(shard.len() / 5);
             let mut local_depth_index = HashMap::with_capacity(5);
             let mut local_mark_index = HashMap::with_capacity(shard.len() / 10);
 
-            // 处理当前分片的所有节点
-            for node in shard.values() {
-                // 类型索引 - 使用 entry API 避免重复查找
-                local_type_index
-                    .entry(node.r#type.clone())
-                    .or_insert_with(|| Vec::with_capacity(shard.len() / 5))
-                    .push(Arc::clone(node));
+            // 预分配向量容量，避免动态扩容
+            let mut type_nodes = Vec::with_capacity(shard.len());
+            let mut depth_nodes = Vec::with_capacity(shard.len());
+            let mut mark_nodes = Vec::with_capacity(shard.len() * 2);
 
-                // 深度索引 - 使用 entry API
+            let collect_start = Instant::now();
+            
+            // 批量收集节点信息，使用引用避免克隆
+            for node in shard {
+                // 收集类型信息
+                type_nodes.push((node.r#type.clone(), Arc::clone(node)));
+
+                // 收集深度信息
                 if let Some(depth) = self.pool.get_node_depth(&node.id) {
-                    local_depth_index
-                        .entry(depth)
-                        .or_insert_with(|| Vec::with_capacity(shard.len() / 10))
-                        .push(Arc::clone(node));
+                    depth_nodes.push((depth, Arc::clone(node)));
                 }
 
-                // 标记索引 - 使用 entry API
-                for mark in node.marks.iter() {
-                    local_mark_index
-                        .entry(mark.r#type.clone())
-                        .or_insert_with(|| Vec::with_capacity(shard.len() / 10))
-                        .push(Arc::clone(node));
+                // 收集标记信息
+                for mark in &node.marks {
+                    mark_nodes.push((mark.r#type.clone(), Arc::clone(node)));
                 }
             }
 
-            // 批量更新全局索引 - 使用单个锁减少锁竞争
+            let collect_time = collect_start.elapsed();
+            println!("分片收集时间: {:?}, 节点数: {}", collect_time, shard.len());
+
+            let index_start = Instant::now();
+            
+            // 批量更新本地索引，使用预分配的容量
+            for (type_name, node) in type_nodes {
+                local_type_index
+                    .entry(type_name)
+                    .or_insert_with(|| Vec::with_capacity(shard.len() / 5))
+                    .push(node);
+            }
+
+            for (depth, node) in depth_nodes {
+                local_depth_index
+                    .entry(depth)
+                    .or_insert_with(|| Vec::with_capacity(shard.len() / 10))
+                    .push(node);
+            }
+
+            for (mark_type, node) in mark_nodes {
+                local_mark_index
+                    .entry(mark_type)
+                    .or_insert_with(|| Vec::with_capacity(shard.len() / 10))
+                    .push(node);
+            }
+
+            let index_time = index_start.elapsed();
+            println!("分片索引时间: {:?}", index_time);
+
+            let merge_start = Instant::now();
+            
+            // 批量更新全局索引，使用更细粒度的锁
             {
                 let mut type_idx = type_index.lock().unwrap();
                 for (k, v) in local_type_index {
@@ -923,14 +970,24 @@ impl OptimizedQueryEngine {
                 }
             }
 
-            // 更新进度
-            processed.fetch_add(shard.len(), Ordering::Relaxed);
+            let merge_time = merge_start.elapsed();
+            println!("分片合并时间: {:?}", merge_time);
+            println!("分片总时间: {:?}", shard_start.elapsed());
         });
 
+        let parallel_time = start.elapsed() - shard_time;
+        println!("并行处理时间: {:?}", parallel_time);
+
+        let final_start = Instant::now();
+        
         // 将并行构建的索引转移到结构体中
-        self.type_index = type_index.into_inner().unwrap();
-        self.depth_index = depth_index.into_inner().unwrap();
-        self.mark_index = mark_index.into_inner().unwrap();
+        self.type_index = Arc::try_unwrap(type_index).unwrap().into_inner().unwrap();
+        self.depth_index = Arc::try_unwrap(depth_index).unwrap().into_inner().unwrap();
+        self.mark_index = Arc::try_unwrap(mark_index).unwrap().into_inner().unwrap();
+
+        let final_time = final_start.elapsed();
+        println!("最终合并时间: {:?}", final_time);
+        println!("总耗时: {:?}", start.elapsed());
     }
 
     /// 按类型查询（使用索引）
@@ -1067,14 +1124,7 @@ impl NodePool {
         &self,
         config: QueryCacheConfig,
     ) -> OptimizedQueryEngine {
-        let cache_key = format!("engine_{}", self.inner.nodes.len());
-
-        if let Some(cached) = ENGINE_CACHE.lock().unwrap().get(&cache_key) {
-            return cached.clone();
-        }
-
         let engine = OptimizedQueryEngine::new(self, config);
-        ENGINE_CACHE.lock().unwrap().put(cache_key, engine.clone());
         engine
     }
 }
