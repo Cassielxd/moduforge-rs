@@ -17,14 +17,10 @@ async fn p1_append(
     let resource_manager = new_state.resource_manager();
     resource_manager.get::<MyGlobalTest>().print();
     let mut tr: Transaction = trs.last().unwrap().clone();
-    let parent_id = tr.doc().inner.root_id.to_string();
-    let node = tr.schema.nodes.get("DW").unwrap().create(
-        None,
-        None,
-        vec![],
-        None,
-    );
-    
+    let parent_id = tr.doc().root_id.to_string();
+    let node =
+        tr.schema.nodes.get("DW").unwrap().create(None, None, vec![], None);
+
     Some(tr)
 }
 
@@ -62,7 +58,7 @@ async fn p2_append(
     debug!("P2Plugin开始节点个数：{}", tr.doc.size());
     if size < 10 {
         tr.add_node(
-            tr.doc().inner.root_id.to_string(),
+            tr.doc().root_id.to_string(),
             vec![tr.schema.nodes.get("DW").unwrap().create(
                 None,
                 None,

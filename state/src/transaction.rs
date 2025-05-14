@@ -159,8 +159,4 @@ impl Transaction {
         let key_str = key.into();
         self.meta.get(&key_str)?.downcast_ref::<Arc<T>>()
     }
-    
-
 }
-
-

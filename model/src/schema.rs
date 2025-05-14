@@ -229,7 +229,7 @@ pub fn compute_attrs(
             },
         };
 
-        built[&name]=given;
+        built[&name] = given;
     }
 
     built

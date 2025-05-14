@@ -11,7 +11,10 @@ pub struct Attrs {
 }
 
 impl Serialize for Attrs {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<S>(
+        &self,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -38,14 +41,20 @@ impl Default for Attrs {
 impl Index<&str> for Attrs {
     type Output = Value;
 
-    fn index(&self, key: &str) -> &Self::Output {
+    fn index(
+        &self,
+        key: &str,
+    ) -> &Self::Output {
         self.get_safe(key).expect("Key not found")
     }
 }
 
 // 实现 IndexMut trait 用于修改值
 impl IndexMut<&str> for Attrs {
-    fn index_mut(&mut self, key: &str) -> &mut Self::Output {
+    fn index_mut(
+        &mut self,
+        key: &str,
+    ) -> &mut Self::Output {
         if !self.attrs.contains_key(key) {
             self.attrs.insert(key.to_string(), Value::Null);
         }
@@ -73,7 +82,10 @@ impl Attrs {
         }
         Attrs { attrs }
     }
-    pub fn get_safe(&self, key: &str) -> Option<&Value> {
+    pub fn get_safe(
+        &self,
+        key: &str,
+    ) -> Option<&Value> {
         self.attrs.get(key)
     }
 }
@@ -100,13 +112,19 @@ pub struct FilteredAttrs<'a> {
 }
 
 impl<'a> FilteredAttrs<'a> {
-    pub fn new(attrs: &'a Attrs, filter_key: &'a str) -> Self {
+    pub fn new(
+        attrs: &'a Attrs,
+        filter_key: &'a str,
+    ) -> Self {
         Self { attrs, filter_key }
     }
 }
 
 impl<'a> Serialize for FilteredAttrs<'a> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<S>(
+        &self,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
@@ -134,7 +152,7 @@ mod tests {
         let mut map = HashMap::new();
         map.insert("key1".to_string(), json!("value1"));
         map.insert("key2".to_string(), json!(42));
-        
+
         let attrs = Attrs::from(map.clone());
         assert_eq!(attrs.attrs, map);
     }
@@ -163,8 +181,11 @@ mod tests {
         attrs["string"] = json!("test");
         attrs["number"] = json!(42);
         attrs["boolean"] = json!(true);
-        
-        assert_eq!(attrs.get_value::<String>("string"), Some("test".to_string()));
+
+        assert_eq!(
+            attrs.get_value::<String>("string"),
+            Some("test".to_string())
+        );
         assert_eq!(attrs.get_value::<i32>("number"), Some(42));
         assert_eq!(attrs.get_value::<bool>("boolean"), Some(true));
         assert_eq!(attrs.get_value::<String>("nonexistent"), None);
@@ -174,13 +195,13 @@ mod tests {
     fn test_update() {
         let mut attrs = Attrs::default();
         attrs["key1"] = json!("value1");
-        
+
         let mut new_values = HashMap::new();
         new_values.insert("key2".to_string(), json!("value2"));
         new_values.insert("key1".to_string(), json!("updated_value"));
-        
+
         let updated = attrs.update(new_values);
-        
+
         assert_eq!(updated["key1"], json!("updated_value"));
         assert_eq!(updated["key2"], json!("value2"));
     }
@@ -189,10 +210,10 @@ mod tests {
     fn test_deref() {
         let mut attrs = Attrs::default();
         attrs["key1"] = json!("value1");
-        
+
         // Test Deref
         assert_eq!(attrs.get("key1"), Some(&json!("value1")));
-        
+
         // Test DerefMut
         attrs.insert("key2".to_string(), json!("value2"));
         assert_eq!(attrs["key2"], json!("value2"));
@@ -209,9 +230,8 @@ mod tests {
     fn test_get_safe() {
         let mut attrs = Attrs::default();
         attrs["key1"] = json!("value1");
-        
+
         assert_eq!(attrs.get_safe("key1"), Some(&json!("value1")));
         assert_eq!(attrs.get_safe("nonexistent"), None);
     }
 }
-

@@ -1,9 +1,15 @@
-use std::{ ops::Index, sync::Arc};
+use std::{ops::Index, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{error::PoolError, mark::Mark, node::Node, ops::{AttrsRef, MarkRef, NodeRef}, types::NodeId};
+use crate::{
+    error::PoolError,
+    mark::Mark,
+    node::Node,
+    ops::{AttrsRef, MarkRef, NodeRef},
+    types::NodeId,
+};
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Tree {
@@ -14,24 +20,35 @@ pub struct Tree {
 impl Index<&NodeId> for Tree {
     type Output = Arc<Node>;
 
-    fn index(&self, index: &NodeId) -> &Self::Output {
+    fn index(
+        &self,
+        index: &NodeId,
+    ) -> &Self::Output {
         self.nodes.get(index).unwrap()
     }
 }
 
 impl Tree {
     // 获取节点的引用
-    pub fn node(&mut self, key: &str) -> NodeRef<'_> {
+    pub fn node(
+        &mut self,
+        key: &str,
+    ) -> NodeRef<'_> {
         NodeRef::new(self, key.to_string())
     }
-    pub fn mark(&mut self, key: &str) -> MarkRef<'_> {
+    pub fn mark(
+        &mut self,
+        key: &str,
+    ) -> MarkRef<'_> {
         MarkRef::new(self, key.to_string())
     }
-    pub fn attrs(&mut self, key: &str) -> AttrsRef<'_> {
+    pub fn attrs(
+        &mut self,
+        key: &str,
+    ) -> AttrsRef<'_> {
         AttrsRef::new(self, key.to_string())
     }
-    
-    
+
     pub fn get_node(
         &self,
         id: &NodeId,
@@ -55,7 +72,8 @@ impl Tree {
         &self,
         parent_id: &NodeId,
     ) -> Option<im::Vector<&Arc<Node>>> {
-        self.children(parent_id).map(|ids| ids.iter().filter_map(|id| self.get_node(id)).collect())
+        self.children(parent_id)
+            .map(|ids| ids.iter().filter_map(|id| self.get_node(id)).collect())
     }
     pub fn children_count(
         &self,
@@ -63,14 +81,15 @@ impl Tree {
     ) -> usize {
         self.get_node(parent_id).map(|n| n.content.len()).unwrap_or(0)
     }
-    
-
 
     pub fn new(root: Node) -> Self {
-        Self { root_id: root.id.clone(), nodes: im::HashMap::from(vec![(root.id.clone(), Arc::new(root))]), parent_map: im::HashMap::new() }
+        Self {
+            root_id: root.id.clone(),
+            nodes: im::HashMap::from(vec![(root.id.clone(), Arc::new(root))]),
+            parent_map: im::HashMap::new(),
+        }
     }
 
-    
     pub fn update_attr(
         &mut self,
         id: &NodeId,
@@ -100,7 +119,7 @@ impl Tree {
         node.marks =
             node.marks.iter().filter(|&m| !m.eq(&mark)).cloned().collect();
         self.nodes.insert(id.clone(), Arc::new(node));
-     
+
         Ok(())
     }
 
@@ -114,10 +133,10 @@ impl Tree {
             .ok_or(PoolError::NodeNotFound(id.clone()))?
             .as_ref()
             .clone();
-        
+
         node.marks.extend(marks.clone());
         self.nodes.insert(id.clone(), Arc::new(node));
-      
+
         Ok(())
     }
     pub fn add_node(
@@ -229,15 +248,13 @@ impl Tree {
             new_target_parent.content.push_back(node_id.clone());
         }
 
-        self
-            .nodes
+        self.nodes
             .insert(source_parent_id.clone(), Arc::new(new_source_parent));
-        self
-            .nodes
+        self.nodes
             .insert(target_parent_id.clone(), Arc::new(new_target_parent));
         // 更新父子关系映射
         self.parent_map.insert(node_id.clone(), target_parent_id.clone());
-        
+
         Ok(())
     }
 
@@ -288,7 +305,7 @@ impl Tree {
         for node_id in nodes {
             self.remove_subtree(&node_id, &mut remove_nodes)?;
         }
-        
+
         Ok(())
     }
 
@@ -328,8 +345,10 @@ impl Tree {
 impl Index<&str> for Tree {
     type Output = Arc<Node>;
 
-    fn index(&self, index: &str) -> &Self::Output {
+    fn index(
+        &self,
+        index: &str,
+    ) -> &Self::Output {
         self.nodes.get(index).expect("Node not found")
     }
 }
-

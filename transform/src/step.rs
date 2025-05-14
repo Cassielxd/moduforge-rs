@@ -17,13 +17,11 @@ pub trait Step: Send + Sync + Debug {
 
 #[derive(Debug, Clone)]
 pub struct StepResult {
-    pub failed: Option<String>
+    pub failed: Option<String>,
 }
 
 impl StepResult {
-    pub fn ok(
-      
-    ) -> Self { 
+    pub fn ok() -> Self {
         StepResult { failed: None }
     }
 
@@ -31,4 +29,3 @@ impl StepResult {
         StepResult { failed: Some(message) }
     }
 }
-

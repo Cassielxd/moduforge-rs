@@ -7,7 +7,6 @@ use moduforge_test::{
     middleware::{Middleware1, Middleware2},
 };
 
-
 fn main() {
     init_logging("debug", None).unwrap();
     let options = EditorOptionsBuilder::new()

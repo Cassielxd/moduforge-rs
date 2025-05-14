@@ -2,8 +2,6 @@ use std::{fmt, sync::Arc};
 
 use moduforge_model::{node_pool::NodePool, schema::Schema, tree::Tree};
 
-
-
 use super::step::{Step, StepResult};
 
 // 定义 TransformError 结构体
@@ -38,20 +36,23 @@ pub struct Transform {
     pub schema: Arc<Schema>,
 }
 impl Transform {
-    pub fn new (doc:Arc<NodePool>,schema: Arc<Schema>)->Transform{
+    pub fn new(
+        doc: Arc<NodePool>,
+        schema: Arc<Schema>,
+    ) -> Transform {
         Transform {
-            doc:doc.clone(),
-            draft: doc.inner.as_ref().clone(),
+            doc: doc.clone(),
+            draft: doc.get_inner().as_ref().clone(),
             steps: im::Vector::new(),
             schema,
         }
-
     }
     pub fn step(
         &mut self,
         step: Arc<dyn Step>,
     ) -> Result<(), TransformError> {
-        let result: StepResult = step.apply(&mut self.draft, self.schema.clone())?;
+        let result: StepResult =
+            step.apply(&mut self.draft, self.schema.clone())?;
         match result.failed {
             Some(message) => Err(TransformError::new(message)),
             None => {
@@ -70,6 +71,6 @@ impl Transform {
         step: Arc<dyn Step>,
     ) {
         self.steps.push_back(step);
-        self.doc = Arc::new(NodePool{ inner: Arc::new(self.draft.clone()) });
+        self.doc = Arc::new(NodePool::new(Arc::new(self.draft.clone())));
     }
 }

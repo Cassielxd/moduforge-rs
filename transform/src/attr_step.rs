@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-
 use super::{
     step::{Step, StepResult},
     transform::TransformError,
@@ -32,14 +31,13 @@ impl Step for AttrStep {
         schema: Arc<Schema>,
     ) -> Result<StepResult, TransformError> {
         let _ = schema;
-       let result = dart.attrs(&self.id)+self.values.clone();
-       match result {
-        Ok(_) => Ok(StepResult::ok()),
-        Err(e) => Ok(StepResult::fail(e.to_string())),
-       }
+        let result = dart.attrs(&self.id) + self.values.clone();
+        match result {
+            Ok(_) => Ok(StepResult::ok()),
+            Err(e) => Ok(StepResult::fail(e.to_string())),
+        }
     }
     fn serialize(&self) -> Option<Vec<u8>> {
         serde_json::to_vec(self).ok()
     }
-    
 }

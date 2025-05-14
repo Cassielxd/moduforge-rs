@@ -1,16 +1,19 @@
 use crate::tree::Tree;
 
-pub mod sub;
 pub mod add;
+pub mod sub;
 
 // 用于处理节点赋值的包装器
 pub struct NodeRef<'a> {
     tree: &'a mut Tree,
-    key: String,    
+    key: String,
 }
 
 impl<'a> NodeRef<'a> {
-    pub fn new(tree: &'a mut Tree, key: String) -> Self {
+    pub fn new(
+        tree: &'a mut Tree,
+        key: String,
+    ) -> Self {
         Self { tree, key }
     }
 }
@@ -36,7 +39,10 @@ pub struct MarkRef<'a> {
 }
 
 impl<'a> MarkRef<'a> {
-    pub fn new(tree: &'a mut Tree, key: String) -> Self {
+    pub fn new(
+        tree: &'a mut Tree,
+        key: String,
+    ) -> Self {
         Self { tree, key }
     }
 }
@@ -55,14 +61,16 @@ impl<'a> std::ops::DerefMut for MarkRef<'a> {
     }
 }
 
-
 pub struct AttrsRef<'a> {
     tree: &'a mut Tree,
     key: String,
 }
 
 impl<'a> AttrsRef<'a> {
-    pub fn new(tree: &'a mut Tree, key: String) -> Self {
+    pub fn new(
+        tree: &'a mut Tree,
+        key: String,
+    ) -> Self {
         Self { tree, key }
     }
 }

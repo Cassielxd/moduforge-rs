@@ -24,7 +24,7 @@ impl Command for MyCommand {
     ) -> Result<(), TransformError> {
         //  数据库的查询
         tr.add_node(
-            tr.doc().inner.root_id.to_string(),
+            tr.doc().root_id.to_string(),
             vec![tr.schema.nodes.get("DW").unwrap().create(
                 None,
                 None,
@@ -41,7 +41,7 @@ impl_command!(
     MyCommand1,
     async |tr: &mut Transaction| -> Result<(), TransformError> {
         tr.add_node(
-            tr.doc().inner.root_id.to_string(),
+            tr.doc().root_id.to_string(),
             vec![tr.schema.nodes.get("DW").unwrap().create(
                 None,
                 None,

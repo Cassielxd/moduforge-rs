@@ -5,14 +5,13 @@ use im::HashMap;
 use serde::{Deserialize, Serialize};
 use std::{ops::Deref, sync::Arc};
 
-
 /// 线程安全的节点池封装
 ///
 /// 使用 [`Arc`] 实现快速克隆，内部使用不可变数据结构保证线程安全
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct NodePool {
     // 使用 Arc 包裹内部结构，实现快速克隆
-    pub inner: Arc<Tree>,
+    inner: Arc<Tree>,
 }
 impl Deref for NodePool {
     type Target = Tree;
@@ -25,9 +24,15 @@ unsafe impl Send for NodePool {}
 unsafe impl Sync for NodePool {}
 
 impl NodePool {
+    pub fn new(inner: Arc<Tree>) -> Self {
+        Self { inner }
+    }
     /// 获取节点池中节点总数
     pub fn size(&self) -> usize {
         self.inner.nodes.len()
+    }
+    pub fn get_inner(&self) -> &Arc<Tree> {
+        &self.inner
     }
 
     /// 从节点列表构建节点池
@@ -114,7 +119,19 @@ impl NodePool {
             }
         }
     }
-
+    pub fn for_each<F>(
+        &self,
+        id: &NodeId,
+        f: F,
+    ) where
+        F: Fn(&Node),
+    {
+        if let Some(children) = self.children(id) {
+            for child_id in children {
+                f(self.get_node(child_id).unwrap());
+            }
+        }
+    }
     /// 获取父节点ID
     pub fn parent_id(
         &self,
@@ -233,6 +250,21 @@ impl NodePool {
 
         path
     }
+    /// 获取从根节点到目标节点的完整路径
+    pub fn resolve(
+        &self,
+        node_id: &NodeId,
+    ) -> Vec<&Arc<Node>> {
+        let mut result = Vec::new();
+        let mut current_id = node_id;
+        while let Some(parent_id) = self.parent_id(current_id) {
+            result.push(self.get_node(current_id).unwrap());
+            current_id = parent_id;
+        }
+        result.push(self.get_node(node_id).unwrap());
+        result.reverse();
+        result
+    }
 
     /// 检查节点是否为叶子节点
     ///
@@ -254,29 +286,58 @@ impl NodePool {
         }
     }
 
-    /// 获取节点的同级节点（具有相同父节点的节点）
-    ///
-    /// # 参数
-    ///
-    /// * `node_id` - 目标节点ID
-    ///
-    /// # 返回值
-    ///
-    /// 返回同级节点的ID列表
-    pub fn get_siblings(
+    /// 获取左边的所有节点 根据下标
+    pub fn get_left_siblings(
         &self,
         node_id: &NodeId,
     ) -> Vec<NodeId> {
         if let Some(parent_id) = self.parent_id(node_id) {
-            if let Some(children) = self.children(parent_id) {
-                return children
-                    .iter()
-                    .filter(|&id| id != node_id)
-                    .cloned()
-                    .collect();
+            if let Some(siblings) = self.children(parent_id) {
+                let index =
+                    siblings.iter().position(|id| id == node_id).unwrap();
+                return siblings.iter().take(index).cloned().collect();
             }
         }
         Vec::new()
+    }
+    /// 获取右边边的所有节点 根据下标
+    pub fn get_right_siblings(
+        &self,
+        node_id: &NodeId,
+    ) -> Vec<NodeId> {
+        if let Some(parent_id) = self.parent_id(node_id) {
+            if let Some(siblings) = self.children(parent_id) {
+                let index =
+                    siblings.iter().position(|id| id == node_id).unwrap();
+                return siblings.iter().skip(index + 1).cloned().collect();
+            }
+        }
+        Vec::new()
+    }
+    /// 获取左边的所有节点
+    pub fn get_left_nodes(
+        &self,
+        node_id: &NodeId,
+    ) -> Vec<&Arc<Node>> {
+        let siblings = self.get_left_siblings(node_id);
+        let mut result = Vec::new();
+        for sibling_id in siblings {
+            result.push(self.get_node(&sibling_id).unwrap());
+        }
+        result
+    }
+
+    /// 获取右边的所有节点
+    pub fn get_right_nodes(
+        &self,
+        node_id: &NodeId,
+    ) -> Vec<&Arc<Node>> {
+        let siblings = self.get_right_siblings(node_id);
+        let mut result = Vec::new();
+        for sibling_id in siblings {
+            result.push(self.get_node(&sibling_id).unwrap());
+        }
+        result
     }
 
     /// 获取节点的所有兄弟节点（包括自身）
