@@ -30,13 +30,7 @@ pub struct NodePool {
     key: String,
 }
 
-impl Deref for NodePool {
-    type Target = Tree;
 
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
 unsafe impl Send for NodePool {}
 unsafe impl Sync for NodePool {}
 
@@ -58,6 +52,15 @@ impl NodePool {
     pub fn size(&self) -> usize {
         self.inner.nodes.iter().map(|i|i.values().len()).sum()
     }
+    
+    pub fn root(&self) -> Arc<Node> {
+        self.inner[&self.inner.root_id].clone()
+    }
+
+    pub fn root_id(&self) -> &NodeId {
+        &self.inner.root_id
+    }
+
     pub fn get_inner(&self) -> &Arc<Tree> {
         &self.inner
     }

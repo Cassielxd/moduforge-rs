@@ -50,7 +50,7 @@ async fn p2_append(
     debug!("P2Plugin开始节点个数：{}", tr.doc.size());
     if size < 10 {
         tr.add_node(
-            tr.doc().root_id.to_string(),
+            tr.doc().root_id().to_string(),
             vec![tr.schema.nodes.get("DW").unwrap().create(
                 None,
                 None,
