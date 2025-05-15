@@ -2,10 +2,7 @@ use crate::{node_type::NodeEnum, tree::Tree};
 
 use super::{error::PoolError, node::Node, types::NodeId};
 use serde::{Deserialize, Serialize};
-use std::{
-    ops::Deref,
-    sync::Arc, time::Instant,
-};
+use std::{ops::Deref, sync::Arc, time::Instant};
 use rayon::prelude::*;
 use std::marker::Sync;
 use std::collections::{HashMap, HashSet};
@@ -30,7 +27,6 @@ pub struct NodePool {
     key: String,
 }
 
-
 unsafe impl Send for NodePool {}
 unsafe impl Sync for NodePool {}
 
@@ -39,7 +35,7 @@ impl NodePool {
         let id = POOL_ID_COUNTER.fetch_add(1, Ordering::SeqCst);
         let pool = Self { inner, key: format!("pool_{}", id) };
         let pool: Arc<NodePool> = Arc::new(pool);
-        
+
         pool
     }
 
@@ -50,9 +46,9 @@ impl NodePool {
 
     /// 获取节点池中节点总数
     pub fn size(&self) -> usize {
-        self.inner.nodes.iter().map(|i|i.values().len()).sum()
+        self.inner.nodes.iter().map(|i| i.values().len()).sum()
     }
-    
+
     pub fn root(&self) -> Arc<Node> {
         self.inner[&self.inner.root_id].clone()
     }
@@ -480,13 +476,14 @@ impl NodePool {
     {
         // 将分片转换为 Vec 以支持并行处理
         let shards: Vec<_> = self.inner.nodes.iter().collect();
-        
+
         // 对每个分片进行并行处理
         shards
             .into_par_iter()
             .flat_map(|shard| {
                 // 在每个分片内部进行顺序处理
-                shard.values()
+                shard
+                    .values()
                     .filter(|node| predicate(node))
                     .cloned()
                     .collect::<Vec<_>>()
@@ -514,14 +511,14 @@ impl NodePool {
     {
         // 将分片转换为 Vec 以支持并行处理
         let shards: Vec<_> = self.inner.nodes.iter().collect();
-        
+
         // 对每个分片进行并行处理
         shards
             .into_par_iter()
             .flat_map(|shard| {
                 // 将分片中的节点收集到 Vec 中
                 let nodes: Vec<_> = shard.values().cloned().collect();
-                
+
                 // 按批次处理节点
                 nodes
                     .chunks(batch_size)
@@ -553,13 +550,14 @@ impl NodePool {
     {
         // 将分片转换为 Vec 以支持并行处理
         let shards: Vec<_> = self.inner.nodes.iter().collect();
-        
+
         // 对每个分片进行并行处理
         shards
             .into_par_iter()
             .flat_map(|shard| {
                 // 在每个分片内部进行顺序处理
-                shard.values()
+                shard
+                    .values()
                     .filter(|node| predicate(node))
                     .map(|node| transform(node))
                     .collect::<Vec<T>>()
@@ -596,16 +594,17 @@ impl NodePool {
             vec![],
             vec![],
         ));
-        
+
         // 将分片转换为 Vec 以支持并行处理
         let shards: Vec<_> = self.inner.nodes.iter().collect();
-        
+
         // 对每个分片进行并行处理
         shards
             .into_par_iter()
             .map(|shard| {
                 // 在每个分片内部进行顺序处理
-                shard.values()
+                shard
+                    .values()
                     .filter(|node| predicate(node))
                     .fold(init.clone(), |acc, node| fold(acc, node))
             })
@@ -804,7 +803,6 @@ impl Default for QueryCacheConfig {
     }
 }
 
-
 /// 优化的查询引擎
 pub struct OptimizedQueryEngine {
     pool: Arc<NodePool>,
@@ -847,14 +845,16 @@ impl OptimizedQueryEngine {
         use std::time::Instant;
 
         let start = Instant::now();
-        
+
         // 预分配容量
         let node_count = self.pool.size();
-        
+
         // 使用 Arc 包装索引，避免克隆开销
-        let type_index = Arc::new(Mutex::new(HashMap::with_capacity(node_count / 5)));
+        let type_index =
+            Arc::new(Mutex::new(HashMap::with_capacity(node_count / 5)));
         let depth_index = Arc::new(Mutex::new(HashMap::with_capacity(10)));
-        let mark_index = Arc::new(Mutex::new(HashMap::with_capacity(node_count / 10)));
+        let mark_index =
+            Arc::new(Mutex::new(HashMap::with_capacity(node_count / 10)));
 
         let init_time = start.elapsed();
 
@@ -862,20 +862,22 @@ impl OptimizedQueryEngine {
         let optimal_shard_size = 1000; // 固定较小的分片大小
 
         // 重新组织数据为更小的分片
-        let mut all_nodes: Vec<_> = self.pool.inner.nodes.iter()
+        let mut all_nodes: Vec<_> = self
+            .pool
+            .inner
+            .nodes
+            .iter()
             .flat_map(|shard| shard.values().cloned())
             .collect();
-        
+
         // 按ID排序以确保确定性
         all_nodes.sort_by(|a, b| a.id.cmp(&b.id));
-        
+
         // 创建更小的分片
         let shards: Vec<_> = all_nodes.chunks(optimal_shard_size).collect();
 
-
         // 使用分片级别的并行处理
         shards.into_par_iter().for_each(|shard| {
-            
             // 为每个线程创建本地索引，使用预分配的容量
             let mut local_type_index = HashMap::with_capacity(shard.len() / 5);
             let mut local_depth_index = HashMap::with_capacity(5);
@@ -887,7 +889,7 @@ impl OptimizedQueryEngine {
             let mut mark_nodes = Vec::with_capacity(shard.len() * 2);
 
             let collect_start = Instant::now();
-            
+
             // 批量收集节点信息，使用引用避免克隆
             for node in shard {
                 // 收集类型信息
@@ -904,8 +906,6 @@ impl OptimizedQueryEngine {
                 }
             }
 
-
-            
             // 批量更新本地索引，使用预分配的容量
             for (type_name, node) in type_nodes {
                 local_type_index
@@ -928,8 +928,6 @@ impl OptimizedQueryEngine {
                     .push(node);
             }
 
-
-            
             // 批量更新全局索引，使用更细粒度的锁
             {
                 let mut type_idx = type_index.lock().unwrap();
@@ -958,15 +956,15 @@ impl OptimizedQueryEngine {
                         .extend(v);
                 }
             }
-
         });
 
-
         // 将并行构建的索引转移到结构体中
-        self.type_index = Arc::try_unwrap(type_index).unwrap().into_inner().unwrap();
-        self.depth_index = Arc::try_unwrap(depth_index).unwrap().into_inner().unwrap();
-        self.mark_index = Arc::try_unwrap(mark_index).unwrap().into_inner().unwrap();
-
+        self.type_index =
+            Arc::try_unwrap(type_index).unwrap().into_inner().unwrap();
+        self.depth_index =
+            Arc::try_unwrap(depth_index).unwrap().into_inner().unwrap();
+        self.mark_index =
+            Arc::try_unwrap(mark_index).unwrap().into_inner().unwrap();
     }
 
     /// 按类型查询（使用索引）

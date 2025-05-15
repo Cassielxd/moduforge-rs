@@ -30,22 +30,23 @@ pub fn generate_test_data(size: usize) -> NodeEnum {
     // 使用原子计数器
     let node_count = AtomicUsize::new(1);
     let branch = 10;
-    
+
     // 预分配节点存储
     let mut nodes = Vec::with_capacity(size);
     nodes.push((root_id.clone(), 0, root_node.clone()));
-    
+
     // 使用无锁队列存储待处理的节点
     let queue = Arc::new(SegQueue::new());
     queue.push((root_id, 0));
-    
+
     // 使用线程本地存储来减少锁竞争
-    let thread_local_nodes: Arc<Mutex<Vec<(String, usize, Node)>>> = Arc::new(Mutex::new(Vec::with_capacity(size)));
-    
+    let thread_local_nodes: Arc<Mutex<Vec<(String, usize, Node)>>> =
+        Arc::new(Mutex::new(Vec::with_capacity(size)));
+
     // 使用默认的全局线程池
     while node_count.load(Ordering::Relaxed) < size {
         let mut batch = Vec::with_capacity(branch * 2);
-        
+
         // 批量获取待处理的节点
         while let Some((parent_id, depth)) = queue.pop() {
             batch.push((parent_id, depth));
@@ -53,22 +54,22 @@ pub fn generate_test_data(size: usize) -> NodeEnum {
                 break;
             }
         }
-        
+
         if batch.is_empty() {
             break;
         }
-        
+
         // 并行处理批次
         batch.par_iter().for_each(|(parent_id, depth)| {
             let mut local_nodes = Vec::with_capacity(branch);
             let mut children_ids = Vector::new();
-            
+
             for i in 0..branch {
                 let current_count = node_count.load(Ordering::Relaxed);
                 if current_count >= size {
                     break;
                 }
-                
+
                 let node_type = match i % 5 {
                     0 => "document",
                     1 => "heading",
@@ -76,12 +77,15 @@ pub fn generate_test_data(size: usize) -> NodeEnum {
                     3 => "list",
                     _ => "text",
                 };
-                
+
                 let mut attrs = im::HashMap::new();
                 attrs.insert("index".to_string(), serde_json::json!(i));
                 attrs.insert("depth".to_string(), serde_json::json!(depth + 1));
-                attrs.insert("parent_id".to_string(), serde_json::json!(parent_id.clone()));
-                
+                attrs.insert(
+                    "parent_id".to_string(),
+                    serde_json::json!(parent_id.clone()),
+                );
+
                 let node_id = format!("{}_{}", parent_id, i);
                 let node = Node::new(
                     &node_id,
@@ -90,19 +94,19 @@ pub fn generate_test_data(size: usize) -> NodeEnum {
                     vec![parent_id.clone()],
                     vec![],
                 );
-                
+
                 children_ids.push_back(node_id.clone());
                 local_nodes.push((node_id.clone(), depth + 1, node));
-                
+
                 // 使用原子操作增加计数
                 node_count.fetch_add(1, Ordering::Relaxed);
             }
-            
+
             // 批量添加本地节点
             if !local_nodes.is_empty() {
                 let mut thread_nodes = thread_local_nodes.lock().unwrap();
                 thread_nodes.extend(local_nodes.clone());
-                
+
                 // 将新节点添加到队列
                 for (node_id, depth, _) in local_nodes {
                     queue.push((node_id, depth));
@@ -110,42 +114,45 @@ pub fn generate_test_data(size: usize) -> NodeEnum {
             }
         });
     }
-    
+
     // 收集所有节点
     let mut all_nodes = thread_local_nodes.lock().unwrap().clone();
     all_nodes.extend(nodes);
-    
+
     // 按深度排序
     all_nodes.par_sort_by_key(|(_, depth, _)| *depth);
-    
+
     // 构建树结构
     let mut node_map: StdHashMap<String, Vec<NodeEnum>> = StdHashMap::new();
     let mut root_children = Vec::new();
-    
+
     // 从叶子节点开始构建树
     for (node_id, depth, node) in all_nodes.into_iter().rev() {
         if depth == 0 {
             continue; // 跳过根节点
         }
-        
+
         let children = node_map.remove(&node_id).unwrap_or_default();
         let node_enum = NodeEnum(node.clone(), children);
-        
+
         if depth == 1 {
             root_children.push(node_enum);
         } else {
-            let parent_id = node.attrs.get("parent_id")
+            let parent_id = node
+                .attrs
+                .get("parent_id")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string())
                 .unwrap_or_default();
             node_map.entry(parent_id).or_default().push(node_enum);
         }
     }
-    
+
     // 更新根节点
     let mut root_node = root_node;
-    root_node.content = Vector::from_iter(root_children.iter().map(|child| child.0.id.clone()));
-    
+    root_node.content =
+        Vector::from_iter(root_children.iter().map(|child| child.0.id.clone()));
+
     NodeEnum(root_node, root_children)
 }
 
@@ -304,3 +311,19 @@ fn test_query_engine_performance() {
     assert!(!parallel_results.is_empty(), "应该找到并行查询的节点");
 }
 
+#[test]
+fn test_query_engine() {
+    let test_data = generate_test_data(100_0000);
+    // 创建节点池
+    let node_pool = NodePool::from(test_data);
+    println!("创建节点池，节点数量: {}", node_pool.size());
+    let start = Instant::now();
+    let engine = node_pool.query();
+    let results = engine.by_type("document").parallel_find_all();
+    let duration = start.elapsed();
+    println!(
+        "按类型查询 (document): 找到 {} 个节点，用时 {:?}",
+        results.len(),
+        duration
+    );
+}
