@@ -48,19 +48,7 @@ async fn p2_append(
     let mut tr = trs.last().unwrap().clone();
     let size = tr.doc.size();
     debug!("P2Plugin开始节点个数：{}", tr.doc.size());
-    if size < 10 {
-        tr.add_node(
-            tr.doc().root_id().to_string(),
-            vec![tr.schema.nodes.get("DW").unwrap().create(
-                None,
-                None,
-                vec![],
-                None,
-            )],
-        );
-        debug!("P2Plugin节点个数：{}", tr.doc.size());
-        return Some(tr);
-    }
+
     None
 }
 

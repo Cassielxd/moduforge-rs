@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use moduforge_model::node_type::NodeEnum;
 use moduforge_state::transaction::{Command, Transaction};
 use moduforge_transform::{node_step::AddNodeStep, transform::TransformError};
 use moduforge_macros::impl_command;
@@ -23,8 +24,9 @@ impl Command for MyCommand {
         tr: &mut Transaction,
     ) -> Result<(), TransformError> {
         //  数据库的查询
-        tr.add_node(
-            tr.doc().root_id().to_string(),
+        let root = tr.doc().root();
+        let node: NodeEnum = NodeEnum::from(
+            root.as_ref().clone(),
             vec![tr.schema.nodes.get("DW").unwrap().create(
                 None,
                 None,
@@ -32,7 +34,7 @@ impl Command for MyCommand {
                 None,
             )],
         );
-
+        tr.add_node(node);
         Ok(())
     }
 }
@@ -40,8 +42,9 @@ impl Command for MyCommand {
 impl_command!(
     MyCommand1,
     async |tr: &mut Transaction| -> Result<(), TransformError> {
-        tr.add_node(
-            tr.doc().root_id().to_string(),
+        let root = tr.doc().root();
+        let node: NodeEnum = NodeEnum::from(
+            root.as_ref().clone(),
             vec![tr.schema.nodes.get("DW").unwrap().create(
                 None,
                 None,
@@ -49,6 +52,7 @@ impl_command!(
                 None,
             )],
         );
+        tr.add_node(node);
         Ok(())
     },
     "MyCommand1"
