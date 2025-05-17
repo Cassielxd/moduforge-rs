@@ -2,15 +2,14 @@ use crate::{node_type::NodeEnum, tree::Tree};
 
 use super::{error::PoolError, node::Node, types::NodeId};
 use serde::{Deserialize, Serialize};
-use std::{ops::Deref, sync::Arc, time::Instant};
+use std::time::Instant;
+use std::{sync::Arc};
 use rayon::prelude::*;
 use std::marker::Sync;
 use std::collections::{HashMap, HashSet};
 use lru::LruCache;
 use std::num::NonZeroUsize;
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use once_cell::sync::Lazy;
 
 // 用于生成唯一ID的计数器
 static POOL_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
@@ -89,6 +88,12 @@ impl NodePool {
         id: &NodeId,
     ) -> Option<Arc<Node>> {
         self.inner.get_node(id)
+    }
+    pub fn get_parent_node(
+        &self,
+        id: &NodeId,
+    ) -> Option<Arc<Node>> {
+        self.inner.get_parent_node(id)
     }
 
     /// 检查节点是否存在

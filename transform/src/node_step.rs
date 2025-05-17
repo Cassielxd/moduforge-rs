@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use moduforge_model::{node::Node, node_type::NodeEnum, schema::Schema, tree::Tree, types::NodeId};
+use moduforge_model::{
+    node::Node, node_type::NodeEnum, schema::Schema, tree::Tree, types::NodeId,
+};
 
 use super::{
     step::{Step, StepResult},
@@ -13,9 +15,7 @@ pub struct AddNodeStep {
     nodes: NodeEnum,
 }
 impl AddNodeStep {
-    pub fn new(
-        nodes: NodeEnum,
-    ) -> Self {
+    pub fn new(nodes: NodeEnum) -> Self {
         AddNodeStep { nodes }
     }
 }

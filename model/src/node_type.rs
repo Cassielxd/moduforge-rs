@@ -1,3 +1,5 @@
+use crate::node;
+
 use super::attrs::Attrs;
 use super::content::ContentMatch;
 use super::id_generator::IdGenerator;
@@ -10,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
-#[derive(Clone,Debug,Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NodeEnum(pub Node, pub Vec<NodeEnum>);
 
 impl NodeEnum {
@@ -18,6 +20,15 @@ impl NodeEnum {
         match self {
             NodeEnum(node, children) => (node, children),
         }
+    }
+    pub fn from(
+        node: Node,
+        childs: Vec<Node>,
+    ) -> Self {
+        NodeEnum(
+            node,
+            childs.into_iter().map(|n| NodeEnum(n, vec![])).collect(),
+        )
     }
 }
 /// 用于描述节点类型的行为规则和属性约束，通过[Schema](super::schema::Schema)进行统一管理
