@@ -6,10 +6,11 @@ use super::mark_type::MarkType;
 use super::node::Node;
 use super::schema::{compute_attrs, Attribute, AttributeSpec, Schema};
 use super::types::NodeId;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
-#[derive(Clone)]
+#[derive(Clone,Debug,Serialize, Deserialize)]
 pub struct NodeEnum(pub Node, pub Vec<NodeEnum>);
 
 impl NodeEnum {

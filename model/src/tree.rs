@@ -148,6 +148,35 @@ impl Tree {
         Ok(())
     }
 
+    pub fn add(
+        &mut self,
+        nodes: NodeEnum
+    ) -> Result<(), PoolError> {
+        let (node, children) = nodes.into_parts();
+        let node_id = node.id.clone();
+        
+        // Check if parent exists
+        let parent_shard_index = self.get_shard_index(&node_id);
+        let _ = self.nodes[parent_shard_index]
+            .get(&node_id)
+            .ok_or(PoolError::ParentNotFound(node_id.clone()))?;
+        
+        let mut node_queue = Vec::new();
+        node_queue.push((children, node_id.clone()));
+        while let Some((current_children, parent_id)) = node_queue.pop() {
+            for child in current_children {
+                let (child_node, grand_children) = child.into_parts();
+                let current_node_id = child_node.id.clone();
+                let shard_index = self.get_shard_index(&current_node_id);
+                self.nodes[shard_index] = self.nodes[shard_index]
+                    .update(current_node_id.clone(), Arc::new(child_node));
+                self.parent_map.insert(current_node_id.clone(), parent_id.clone());
+                node_queue.push((grand_children, current_node_id.clone()));
+            }
+        }
+        Ok(())
+    }
+    
     pub fn add_node(
         &mut self,
         parent_id: &NodeId,

@@ -64,5 +64,5 @@ async fn p2_append(
     None
 }
 
-/// P2Plugin 是一个插件，用于在调度前后打印消息。用于案例测试
+// P2Plugin 是一个插件，用于在调度前后打印消息。用于案例测试
 impl_plugin!(P2Plugin, p2_append);

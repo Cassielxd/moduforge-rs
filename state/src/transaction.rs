@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use moduforge_model::mark::Mark;
+use moduforge_model::node_type::NodeEnum;
 use moduforge_model::types::NodeId;
 use serde_json::Value;
 
@@ -96,10 +97,9 @@ impl Transaction {
     /// node: 要添加的节点
     pub fn add_node(
         &mut self,
-        parent_id: String,
-        nodes: Vec<Node>,
+        nodes: NodeEnum,
     ) {
-        let _ = self.step(Arc::new(AddNodeStep::new(parent_id, nodes)));
+        let _ = self.step(Arc::new(AddNodeStep::new(nodes)));
     }
     /// 删除节点
     /// id: 节点ID

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use moduforge_model::{node::Node, schema::Schema, tree::Tree, types::NodeId};
+use moduforge_model::{node::Node, node_type::NodeEnum, schema::Schema, tree::Tree, types::NodeId};
 
 use super::{
     step::{Step, StepResult},
@@ -10,15 +10,13 @@ use serde::{Deserialize, Serialize};
 /// 添加节点的步骤
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AddNodeStep {
-    parent_id: NodeId,
-    nodes: Vec<Node>,
+    nodes: NodeEnum,
 }
 impl AddNodeStep {
     pub fn new(
-        parent_id: NodeId,
-        nodes: Vec<Node>,
+        nodes: NodeEnum,
     ) -> Self {
-        AddNodeStep { parent_id, nodes }
+        AddNodeStep { nodes }
     }
 }
 impl Step for AddNodeStep {
@@ -31,7 +29,7 @@ impl Step for AddNodeStep {
         schema: Arc<Schema>,
     ) -> Result<StepResult, TransformError> {
         let _ = schema;
-        let _ = dart.node(&self.parent_id) + self.nodes.clone();
+        let _ = dart.add(self.nodes.clone());
         Ok(StepResult::ok())
     }
     fn serialize(&self) -> Option<Vec<u8>> {
