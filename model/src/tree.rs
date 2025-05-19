@@ -149,13 +149,13 @@ impl Tree {
     }
 
     /// 向树中添加新的节点及其子节点
-    /// 
+    ///
     /// # 参数
     /// * `nodes` - 要添加的节点枚举，包含节点本身及其子节点
-    /// 
+    ///
     /// # 返回值
     /// * `Result<(), PoolError>` - 如果添加成功返回 Ok(()), 否则返回错误
-    /// 
+    ///
     /// # 错误
     /// * `PoolError::ParentNotFound` - 如果父节点不存在
     pub fn add(
@@ -171,15 +171,16 @@ impl Tree {
         let _ = self.nodes[parent_shard_index]
             .get(&node_id)
             .ok_or(PoolError::ParentNotFound(node_id.clone()))?;
-        
+
         // 收集所有子节点的ID并添加到当前节点的content中
-        let zenliang:Vector<String> = children.iter().map(|n|n.0.id.clone()).collect();
+        let zenliang: Vector<String> =
+            children.iter().map(|n| n.0.id.clone()).collect();
         node.content.extend(zenliang);
 
         // 更新当前节点
         let shard_index = self.get_shard_index(&node_id);
-        self.nodes[shard_index] = self.nodes[shard_index]
-            .update(node_id.clone(), Arc::new(node));
+        self.nodes[shard_index] =
+            self.nodes[shard_index].update(node_id.clone(), Arc::new(node));
 
         // 使用队列进行广度优先遍历，处理所有子节点
         let mut node_queue = Vec::new();
@@ -189,20 +190,21 @@ impl Tree {
                 // 处理每个子节点
                 let (mut child_node, grand_children) = child.into_parts();
                 let current_node_id = child_node.id.clone();
-                
+
                 // 收集孙节点的ID并添加到子节点的content中
-                let zenliang:Vector<String> = grand_children.iter().map(|n|n.0.id.clone()).collect();
+                let zenliang: Vector<String> =
+                    grand_children.iter().map(|n| n.0.id.clone()).collect();
                 child_node.content.extend(zenliang);
-                
+
                 // 更新子节点
                 let shard_index = self.get_shard_index(&current_node_id);
                 self.nodes[shard_index] = self.nodes[shard_index]
                     .update(current_node_id.clone(), Arc::new(child_node));
-                
+
                 // 更新父子关系映射
                 self.parent_map
                     .insert(current_node_id.clone(), parent_id.clone());
-                
+
                 // 将孙节点加入队列，以便后续处理
                 node_queue.push((grand_children, current_node_id.clone()));
             }

@@ -45,7 +45,7 @@ async fn p2_append(
     _: &State,
     _: &State,
 ) -> Option<Transaction> {
-    let mut tr = trs.last().unwrap().clone();
+    let tr = trs.last().unwrap().clone();
     let size = tr.doc.size();
     debug!("P2Plugin开始节点个数：{}", tr.doc.size());
 

@@ -5,16 +5,20 @@ use moduforge_state::StateConfig;
 use crate::types::Content;
 
 /// 创建文档
-pub async fn create_doc(content: &Content, config: &mut StateConfig){
+pub async fn create_doc(
+    content: &Content,
+    config: &mut StateConfig,
+) {
     match content {
-        Content::NodePool(node_pool) =>{
-            config.doc =  Some(Arc::new(node_pool.clone()));
+        Content::NodePool(node_pool) => {
+            config.doc = Some(Arc::new(node_pool.clone()));
         },
         Content::None => {
             config.doc = None;
         },
         Content::NodePoolFn(node_pool_fn_trait) => {
-            config.doc = Some(Arc::new(node_pool_fn_trait.create(&config).await));
+            config.doc =
+                Some(Arc::new(node_pool_fn_trait.create(&config).await));
         },
     };
     if let Some(doc) = &config.doc {

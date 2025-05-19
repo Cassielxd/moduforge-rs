@@ -126,11 +126,11 @@ impl ContentMatch {
 
             // 然后尝试按顺序匹配每个边
             for edge in &match_.next {
-                /* 
+                /*
                 !edge.node_type.has_required_attrs()
                     && !seen.contains(&edge.next)
                  */
-                if !seen.contains(&edge.next){
+                if !seen.contains(&edge.next) {
                     seen.push(edge.next.clone());
                     types.push(edge.node_type.clone());
                     if let Some(found) =

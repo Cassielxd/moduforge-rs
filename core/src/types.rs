@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 use async_trait::async_trait;
-use moduforge_state::{State, StateConfig};
+use moduforge_state::StateConfig;
 
 use crate::{
     event::EventHandler,
@@ -9,10 +9,7 @@ use crate::{
     middleware::{Middleware, MiddlewareStack},
     node::Node,
 };
-use moduforge_model::{
-    node_pool::NodePool,
-    schema::{AttributeSpec, Schema},
-};
+use moduforge_model::{node_pool::NodePool, schema::AttributeSpec};
 
 #[async_trait]
 pub trait NodePoolFnTrait: Send + Sync + std::fmt::Debug {

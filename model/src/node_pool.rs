@@ -845,7 +845,7 @@ impl OptimizedQueryEngine {
         use rayon::prelude::*;
         use std::collections::HashMap;
         use std::sync::Mutex;
-        use std::sync::atomic::{AtomicUsize, Ordering};
+
         use std::sync::Arc;
         use std::time::Instant;
 

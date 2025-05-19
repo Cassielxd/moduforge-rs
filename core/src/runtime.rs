@@ -6,7 +6,7 @@ use crate::{
     extension_manager::ExtensionManager,
     helpers::create_doc,
     history_manager::HistoryManager,
-    types::{Content, EditorOptions},
+    types::EditorOptions,
 };
 
 use moduforge_model::{node_pool::NodePool, schema::Schema};
@@ -36,7 +36,7 @@ impl Editor {
         let extension_manager =
             ExtensionManager::new(&options.get_extensions());
         debug!("已初始化扩展管理器");
-        
+
         let event_bus = EventBus::new();
         debug!("已创建文档和事件总线");
         let op_state = GlobalResourceManager::new();
@@ -46,7 +46,7 @@ impl Editor {
 
         let mut config = StateConfig {
             schema: Some(extension_manager.get_schema()),
-            doc:None,
+            doc: None,
             stored_marks: None,
             plugins: Some(extension_manager.get_plugins().clone()),
             resource_manager: Some(Arc::new(op_state)),

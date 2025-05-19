@@ -203,7 +203,7 @@ impl NodeType {
         // 首先创建需要填充的内容
         let mut filled_nodes = Vec::new();
         let mut content_ids = Vec::new();
-     
+
         if let Some(content_match) = &self.content_match {
             if let Some(matched) =
                 content_match.match_fragment(&content, schema)
