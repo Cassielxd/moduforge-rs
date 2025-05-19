@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use moduforge_model::{
-    node_type::NodeSpec,
-    schema::{Schema, SchemaSpec},
+    content::ContentMatch, node_type::NodeSpec, schema::{Schema, SchemaSpec}
 };
 #[allow(dead_code)]
 pub fn create_test_schema() -> Schema {
@@ -21,7 +20,7 @@ pub fn create_test_schema() -> Schema {
     nodes.insert(
         "DW".to_string(),
         NodeSpec {
-            content: Some("djgc+".to_string()),
+            content: Some("djgc*".to_string()),
             marks: None,
             group: None,
             desc: Some("单项工程".to_string()),
@@ -85,4 +84,24 @@ pub fn create_test_schema() -> Schema {
         top_node: Some("doc".to_string()),
     };
     Schema::compile(instance_spec).unwrap()
+}
+
+#[test]
+fn test_content_match() {
+    let schema = create_test_schema();
+    
+    // Test DW+ content match
+    let content_match = ContentMatch::parse("DW+".to_string(), &schema.nodes);
+    println!("Content match for DW+: {}", content_match);
+    assert!(!content_match.valid_end);
+    
+    // Test DW djgc+ content match
+    let content_match = ContentMatch::parse("DW djgc+".to_string(), &schema.nodes);
+    println!("Content match for DW djgc+: {}", content_match);
+    assert!(content_match.valid_end);
+    
+    // Test DW djgc djgc content match
+    let content_match = ContentMatch::parse("DW djgc djgc".to_string(), &schema.nodes);
+    println!("Content match for DW djgc djgc: {}", content_match);
+    assert!(content_match.valid_end);
 }
