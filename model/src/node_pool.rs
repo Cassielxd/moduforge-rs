@@ -614,7 +614,7 @@ impl NodePool {
                     .fold(init.clone(), |acc, node| fold(acc, node))
             })
             // 合并所有分片的结果
-            .reduce(|| init.clone(), |a, b| fold(a, &dummy_node))
+            .reduce(|| init.clone(), |a, _b| fold(a, &dummy_node))
     }
 
     // Add helper method to get all nodes
@@ -847,10 +847,6 @@ impl OptimizedQueryEngine {
         use std::sync::Mutex;
 
         use std::sync::Arc;
-        use std::time::Instant;
-
-        let start = Instant::now();
-
         // 预分配容量
         let node_count = self.pool.size();
 
@@ -861,7 +857,6 @@ impl OptimizedQueryEngine {
         let mark_index =
             Arc::new(Mutex::new(HashMap::with_capacity(node_count / 10)));
 
-        let init_time = start.elapsed();
 
         // 优化分片策略：使用更细粒度的分片
         let optimal_shard_size = 1000; // 固定较小的分片大小
@@ -893,7 +888,6 @@ impl OptimizedQueryEngine {
             let mut depth_nodes = Vec::with_capacity(shard.len());
             let mut mark_nodes = Vec::with_capacity(shard.len() * 2);
 
-            let collect_start = Instant::now();
 
             // 批量收集节点信息，使用引用避免克隆
             for node in shard {
