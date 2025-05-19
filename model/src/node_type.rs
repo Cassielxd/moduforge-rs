@@ -205,13 +205,10 @@ impl NodeType {
         let mut content_ids = Vec::new();
      
         if let Some(content_match) = &self.content_match {
-            println!("content_match1");
             if let Some(matched) =
                 content_match.match_fragment(&content, schema)
             {
-                println!("content_match2");
                 if let Some(filled) = matched.fill(&content, true, schema) {
-                    println!("content_match3");
                     // 对每个填充的节点，递归创建其子节点
                     for node in filled {
                         if let Some(node_type) = schema.nodes.get(&node.r#type)

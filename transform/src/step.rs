@@ -1,11 +1,11 @@
-use std::sync::Arc;
+use std::{any::Any, sync::Arc};
 
 use moduforge_model::{schema::Schema, tree::Tree};
 use std::fmt::Debug;
 
 use super::transform::TransformError;
 
-pub trait Step: Send + Sync + Debug {
+pub trait Step: Any + Send + Sync + Debug + 'static {
     fn name(&self) -> String;
     fn apply(
         &self,
@@ -13,6 +13,11 @@ pub trait Step: Send + Sync + Debug {
         schema: Arc<Schema>,
     ) -> Result<StepResult, TransformError>;
     fn serialize(&self) -> Option<Vec<u8>>;
+}
+impl dyn Step {
+    pub fn downcast_ref<E: Step>(&self) -> Option<&E> {
+        <dyn Any>::downcast_ref::<E>(self)
+    }
 }
 
 #[derive(Debug, Clone)]
