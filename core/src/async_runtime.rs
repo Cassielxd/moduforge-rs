@@ -150,7 +150,7 @@ impl AsyncEditor {
     ) -> EditorResult<()> {
         let start_time = std::time::Instant::now();
         let mut current_transaction = transaction;
-
+        let old_id = self.get_state().version;
         // 前置中间件处理
         let middleware_start = std::time::Instant::now();
         self.run_before_middleware(&mut current_transaction).await?;
@@ -211,7 +211,11 @@ impl AsyncEditor {
 
             let event_start = std::time::Instant::now();
             self.base
-                .emit_event(Event::TrApply(Arc::new(transactions), state))
+                .emit_event(Event::TrApply(
+                    old_id,
+                    Arc::new(transactions),
+                    state,
+                ))
                 .await?;
             self.log_performance("事件广播", event_start.elapsed());
         }

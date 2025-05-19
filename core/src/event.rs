@@ -11,9 +11,9 @@ use crate::error::{EditorResult, error_utils};
 #[derive(Clone)]
 pub enum Event {
     Create(Arc<State>),
-    TrApply(Arc<Vec<Transaction>>, Arc<State>), // 事务应用后 + 是否成功
-    Destroy,                                    // 销毁事件
-    Stop,                                       // 停止后需要重启
+    TrApply(u64, Arc<Vec<Transaction>>, Arc<State>), // 事务应用后 + 是否成功
+    Destroy,                                         // 销毁事件
+    Stop,                                            // 停止后需要重启
 }
 /// 事件总线
 #[derive(Clone)]

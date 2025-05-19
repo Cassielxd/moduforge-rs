@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use crate::{
-    error::{EditorResult, error_utils},
+    error::{error_utils, EditorResult},
     event::{Event, EventBus},
     extension_manager::ExtensionManager,
     helpers::create_doc,
     history_manager::HistoryManager,
-    types::EditorOptions,
+    types::{Content, EditorOptions},
 };
 
 use moduforge_model::{node_pool::NodePool, schema::Schema};
@@ -36,26 +36,25 @@ impl Editor {
         let extension_manager =
             ExtensionManager::new(&options.get_extensions());
         debug!("已初始化扩展管理器");
-        let doc = create_doc::create_doc(
-            &extension_manager.get_schema(),
-            &options.get_content(),
-        )
-        .await;
+        let doc = create_doc::create_doc(&options.get_content()).await;
         let event_bus = EventBus::new();
         debug!("已创建文档和事件总线");
         let op_state = GlobalResourceManager::new();
         for op_fn in extension_manager.get_op_fns() {
             op_fn(&op_state)?;
         }
-        let state: State = State::create(StateConfig {
+
+        let mut config = StateConfig {
             schema: Some(extension_manager.get_schema()),
             doc,
             stored_marks: None,
             plugins: Some(extension_manager.get_plugins().clone()),
             resource_manager: Some(Arc::new(op_state)),
-        })
-        .await
-        .map_err(|e| {
+        };
+        if let Content::NodePoolFn(fun) = &options.get_content() {
+            config.doc = Some(Arc::new(fun.create(&config).await));
+        }
+        let state: State = State::create(config).await.map_err(|e| {
             error!("创建状态失败: {}", e);
             error_utils::state_error(format!("Failed to create state: {}", e))
         })?;
@@ -200,6 +199,7 @@ impl Editor {
         &mut self,
         transaction: Transaction,
     ) -> EditorResult<()> {
+        let old_id = self.get_state().version;
         // 保存当前事务的副本，用于中间件处理
         let mut current_transaction = transaction;
         self.run_before_middleware(&mut current_transaction).await?;
@@ -229,8 +229,12 @@ impl Editor {
         // 如果有新的状态，更新编辑器状态并记录到历史记录
         if let Some(state) = state_update {
             self.update_state(state.clone()).await?;
-            self.emit_event(Event::TrApply(Arc::new(transactions), state))
-                .await?;
+            self.emit_event(Event::TrApply(
+                old_id,
+                Arc::new(transactions),
+                state,
+            ))
+            .await?;
         }
 
         Ok(())
