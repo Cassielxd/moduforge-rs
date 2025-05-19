@@ -45,7 +45,7 @@ impl State {
     /// - 返回完整的编辑器状态实例
     pub async fn create(state_config: StateConfig) -> StateResult<State> {
         tracing::info!("正在创建新的state");
-        let schema = match &state_config.schema {
+        let schema: Arc<Schema> = match &state_config.schema {
             Some(schema) => schema.clone(),
             None => state_config.schema.clone().ok_or_else(|| {
                 StateError::SchemaError("Schema is required".to_string())

@@ -114,7 +114,7 @@ impl ContentMatch {
             // 首先检查是否可以匹配当前片段
             if let Some(finished) = match_.match_fragment(after, schema) {
                 if finished.valid_end || !to_end {
-                    let mut nodes = vec![];
+                    let mut nodes: Vec<Node> = vec![];
                     for tp in types.iter() {
                         // 创建一个节点，但不递归创建子节点
                         let node = tp.create(None, None, vec![], None);
@@ -126,9 +126,11 @@ impl ContentMatch {
 
             // 然后尝试按顺序匹配每个边
             for edge in &match_.next {
-                if !edge.node_type.has_required_attrs()
+                /* 
+                !edge.node_type.has_required_attrs()
                     && !seen.contains(&edge.next)
-                {
+                 */
+                if !seen.contains(&edge.next){
                     seen.push(edge.next.clone());
                     types.push(edge.node_type.clone());
                     if let Some(found) =
