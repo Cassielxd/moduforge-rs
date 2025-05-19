@@ -36,7 +36,7 @@ impl Editor {
         let extension_manager =
             ExtensionManager::new(&options.get_extensions());
         debug!("已初始化扩展管理器");
-        let doc = create_doc::create_doc(&options.get_content()).await;
+        
         let event_bus = EventBus::new();
         debug!("已创建文档和事件总线");
         let op_state = GlobalResourceManager::new();
@@ -46,14 +46,12 @@ impl Editor {
 
         let mut config = StateConfig {
             schema: Some(extension_manager.get_schema()),
-            doc,
+            doc:None,
             stored_marks: None,
             plugins: Some(extension_manager.get_plugins().clone()),
             resource_manager: Some(Arc::new(op_state)),
         };
-        if let Content::NodePoolFn(fun) = &options.get_content() {
-            config.doc = Some(Arc::new(fun.create(&config).await));
-        }
+        create_doc::create_doc(&options.get_content(), &mut config).await;
         let state: State = State::create(config).await.map_err(|e| {
             error!("创建状态失败: {}", e);
             error_utils::state_error(format!("Failed to create state: {}", e))
