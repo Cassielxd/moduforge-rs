@@ -1,17 +1,15 @@
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use crate::attrs::Attrs;
 
 use super::mark::Mark;
-use super::schema::{Attribute, AttributeSpec, Schema, compute_attrs};
+use super::schema::{Attribute, AttributeSpec, compute_attrs};
 #[derive(Clone, PartialEq, Debug, Eq)]
 pub struct MarkType {
     pub name: String,
     pub rank: usize,
-    pub schema: Option<Arc<Schema>>,
     pub spec: MarkSpec,
     pub attrs: HashMap<String, Attribute>,
     pub excluded: Option<Vec<MarkType>>,
@@ -26,7 +24,7 @@ impl MarkType {
         for (rank, (name, spec)) in marks.into_iter().enumerate() {
             result.insert(
                 name.clone(),
-                MarkType::new(name.clone(), rank, None, spec.clone()),
+                MarkType::new(name.clone(), rank, spec.clone()),
             );
         }
 
@@ -36,7 +34,6 @@ impl MarkType {
     fn new(
         name: String,
         rank: usize,
-        schema: Option<Arc<Schema>>,
         spec: MarkSpec,
     ) -> Self {
         let attrs = spec.attrs.as_ref().map_or_else(HashMap::new, |attrs| {
@@ -48,7 +45,7 @@ impl MarkType {
                 .collect()
         });
 
-        MarkType { name, rank, schema, spec, attrs, excluded: None }
+        MarkType { name, rank, spec, attrs, excluded: None }
     }
 
     pub fn create(
