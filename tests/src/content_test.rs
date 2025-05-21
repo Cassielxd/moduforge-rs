@@ -12,7 +12,7 @@ mod test {
     pub fn create_test_schema() -> Schema {
         let mut nodes = HashMap::new();
         nodes.insert(
-            "doc".to_string(),
+            "gcxm".to_string(),
             NodeSpec {
                 content: Some("DW+".to_string()),
                 marks: None,
@@ -86,7 +86,7 @@ mod test {
         let instance_spec = SchemaSpec {
             nodes,
             marks: HashMap::new(),
-            top_node: Some("doc".to_string()),
+            top_node: Some("gcxm".to_string()),
         };
         Schema::compile(instance_spec).unwrap()
     }
