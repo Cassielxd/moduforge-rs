@@ -5,8 +5,9 @@ mod test {
     use moduforge_model::{
         content::ContentMatch,
         node_type::NodeSpec,
-        schema::{Schema, SchemaSpec},
+        schema::{AttributeSpec, Schema, SchemaSpec},
     };
+    use serde_json::Value;
     #[allow(dead_code)]
     pub fn create_test_schema() -> Schema {
         let mut nodes = HashMap::new();
@@ -28,7 +29,7 @@ mod test {
                 marks: None,
                 group: None,
                 desc: Some("单项工程".to_string()),
-                attrs: None,
+                attrs: Some(HashMap::from([("name".to_string(), AttributeSpec{ default: None })])),
             },
         );
         nodes.insert(
@@ -92,11 +93,22 @@ mod test {
 
     #[test]
     fn test_content_match() {
-        let schema = create_test_schema();
+        let schema: Schema = create_test_schema();
         // Test DW djgc djgc content match
         let content_match =
             ContentMatch::parse("doc".to_string(), &schema.nodes);
         println!("Content match for DW djgc djgc: {}", content_match);
         dbg!(content_match);
+    }
+
+    #[test]
+    fn test_content_fill() {
+        let schema: Schema = create_test_schema();
+        let dw = schema.nodes.get("DW").unwrap();
+        let mut attrs = HashMap::new();
+        attrs.insert("name".to_string(), Value::String("test".to_string()));
+        let dw_node =dw.create(None, Some(&attrs), vec![], None);
+        let node = schema.top_node_type.clone().unwrap().create_and_fill(None, None, vec![dw_node], None, &schema);
+        dbg!(node);
     }
 }

@@ -205,18 +205,31 @@ impl NodeType {
         let mut content_ids = Vec::new();
 
         if let Some(content_match) = &self.content_match {
-            if let Some(matched) =
-                content_match.match_fragment(&content, schema)
-            {
-                if let Some(filled) = matched.fill(&content, true, schema) {
-                    // 对每个填充的节点，递归创建其子节点
-                    for node in filled {
-                        if let Some(node_type) = schema.nodes.get(&node.r#type)
-                        {
+            if let Some(matched) = content_match.match_fragment(&content, schema) {
+                if let Some(needed_types) = matched.fill(&content, true, schema) {
+                    // 对每个需要的类型，尝试复用content中的节点或创建新节点
+                    for node_type in needed_types {
+                        // 在content中查找同类型的节点
+                        let existing_node = content.iter().find(|n| n.r#type == node_type.name);
+                        
+                        if let Some(node) = existing_node {
+                            // 复用现有节点
                             content_ids.push(node.id.clone());
-                            // 递归创建节点及其子节点
+                            // 递归创建节点及其子节点，保留原始节点的内容
                             let child_nodes = node_type.create_and_fill(
                                 Some(node.id.clone()),
+                                Some(&node.attrs.attrs.clone().into_iter().map(|(k, v)| (k.clone(), v.clone())).collect()), // 使用节点的原始属性
+                                vec![], // 子节点内容会在递归时处理
+                                Some(node.marks.clone().into_iter().map(|m| m.clone()).collect()),
+                                schema,
+                            );
+                            filled_nodes.push(child_nodes);
+                        } else {
+                            // 创建新节点
+                            let new_id = IdGenerator::get_id();
+                            content_ids.push(new_id.clone());
+                            let child_nodes = node_type.create_and_fill(
+                                Some(new_id),
                                 None,
                                 vec![],
                                 None,
