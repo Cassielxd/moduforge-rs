@@ -414,6 +414,7 @@ pub struct StateSerialize {
 /// - doc: 初始文档内容
 /// - stored_marks: 存储的标记
 /// - plugins: 插件列表
+#[derive(Debug)]
 pub struct StateConfig {
     pub schema: Option<Arc<Schema>>,
     pub doc: Option<Arc<NodePool>>,
