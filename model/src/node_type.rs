@@ -248,7 +248,7 @@ impl NodeType {
                 self.name.clone(),
                 attrs,
                 content_ids,
-                Mark::set_from(marks),
+                self.compute_marks(marks),
             ),
             filled_nodes,
         )
@@ -268,13 +268,33 @@ impl NodeType {
                 IdGenerator::get_instance().lock().unwrap();
             id_generator.get_next_id()
         });
+
         Node::new(
             &id,
             self.name.clone(),
             self.compute_attrs(attrs),
             content,
-            Mark::set_from(marks),
+            self.compute_marks(marks),
         )
+    }
+
+    fn compute_marks(
+        &self,
+        marks: Option<Vec<Mark>>,
+    ) -> Vec<Mark> {
+        match (&self.mark_set, marks) {
+            (Some(def), Some(marks)) => {
+                def.iter()
+                    .filter_map(|mark_type| {
+                        marks.iter()
+                            .find(|m| m.r#type == mark_type.name)
+                            .map(|m| m.clone())
+                    })
+                    .collect()
+            },
+            (None, Some(marks))=> marks,
+            _=> vec![]
+            }
     }
 
     fn compute_attrs(
