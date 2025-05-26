@@ -20,6 +20,7 @@ moduforge-model = {version = "0.3.7", path = "../model"}
 moduforge-state = {version = "0.3.7", path = "../state"}
 moduforge-transform = {version = "0.3.7", path = "../transform"}
 moduforge-core = {version = "0.3.7", path = "../core"}
-moduforge-macros = {version = "0.3.7", path = "../macros"}
+moduforge-macros = {version = "0.3.7", path = "../macros/macro"}
+moduforge-macros-derive = {version = "0.3.7", path = "../macros/derive"}
 rayon = { workspace = true }
 crossbeam = { workspace = true }

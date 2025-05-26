@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
+use moduforge_macros_derive::PluginState;
 use moduforge_state::{
     debug,
     plugin::{PluginState, PluginTrait, StateField},
@@ -19,26 +20,32 @@ async fn p1_append(
 // P1Plugin 是一个插件，用于在调度前后打印消息。用于案例测试
 impl_plugin!(P1Plugin, p1_append);
 
+#[derive(Debug,PluginState)]
+pub struct P1State1 {
+    pub map: HashMap<String, String>,
+}
+
 async fn p1_init(
     _config: &StateConfig,
     _instance: Option<&State>,
-) -> PluginState {
+) -> Arc<dyn PluginState> {
     let map: HashMap<String, String> =
         HashMap::from([("k".to_string(), "v".to_string())]);
-    Arc::new(map)
+    Arc::new(P1State1 { map })
 }
 
 async fn p1_apply(
     tr: &Transaction,
-    value: PluginState,
+    value: Arc<dyn PluginState>,
     _old_state: &State,
     _new_state: &State,
-) -> PluginState {
+) -> Arc<dyn PluginState> {
+    let p1_state = value.downcast_arc::<P1State1>().unwrap();
     debug!("P1Plugin apply{}", tr.steps.len());
     value
 }
 
-impl_state_field!(P1State, p1_init, p1_apply);
+impl_state_field!(P1StateField, p1_init, p1_apply);
 
 async fn p2_append(
     trs: &[Transaction],

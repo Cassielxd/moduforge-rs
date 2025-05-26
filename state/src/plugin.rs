@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use std::any::{Any, TypeId};
 use std::sync::Arc;
 
 use super::state::{State, StateConfig};
@@ -37,20 +38,20 @@ pub trait StateField: Send + Sync + Debug {
         &self,
         config: &StateConfig,
         instance: Option<&State>,
-    ) -> PluginState;
+    ) -> Arc<dyn PluginState>;
     /// 应用状态变更
     /// 根据事务内容更新插件状态
     async fn apply(
         &self,
         tr: &Transaction,
-        value: PluginState,
+        value: Arc<dyn PluginState>,
         old_state: &State,
         new_state: &State,
-    ) -> PluginState;
+    ) -> Arc<dyn PluginState>;
     /// 序列化插件状态
     fn serialize(
         &self,
-        _value: PluginState,
+        _value: Arc<dyn PluginState>,
     ) -> Option<Vec<u8>> {
         None
     }
@@ -58,7 +59,7 @@ pub trait StateField: Send + Sync + Debug {
     fn deserialize(
         &self,
         _value: &Vec<u8>,
-    ) -> Option<PluginState> {
+    ) -> Option<Arc<dyn PluginState>> {
         None
     }
 }
@@ -66,7 +67,7 @@ pub trait StateField: Send + Sync + Debug {
 /// 定义插件的配置和行为
 #[derive(Clone, Debug)]
 pub struct PluginSpec {
-    pub state: Option<Arc<dyn StateField>>,
+    pub state_field: Option<Arc<dyn StateField>>,
     pub key: PluginKey,
     pub tr: Option<Arc<dyn PluginTrait>>,
     pub priority: i32,
@@ -125,7 +126,7 @@ impl Plugin {
     pub fn get_state(
         &self,
         state: &State,
-    ) -> Option<PluginState> {
+    ) -> Option<Arc<dyn PluginState>> {
         state.get_field(&self.key)
     }
     /// 应用事务过滤逻辑
@@ -150,10 +151,34 @@ impl Plugin {
 
 /// 插件状态类型
 /// 使用 Arc 包装的任意类型作为插件状态
-pub type PluginState = Arc<dyn std::any::Any + Send + Sync>;
+//pub type PluginState = Arc<dyn std::any::Any + Send + Sync>;
 
 use std::fmt::Debug;
 
 /// 插件键类型
 /// 使用两个字符串组成的元组作为插件的唯一标识
 pub type PluginKey = (String, String);
+
+pub trait PluginState: Any + Debug + Send + Sync + 'static {
+}
+
+impl dyn PluginState {
+    #[inline(always)]
+    fn is<T: PluginState>(&self) -> bool {
+        self.type_id() == TypeId::of::<T>()
+    }
+
+    #[inline(always)]
+    #[allow(clippy::needless_lifetimes)]
+    pub fn downcast_arc<'a, T: PluginState>(
+        self: &'a Arc<Self>
+    ) -> Option<&'a Arc<T>> {
+        if self.is::<T>() {
+            let ptr = self as *const Arc<_> as *const Arc<T>;
+            #[allow(clippy::undocumented_unsafe_blocks)]
+            Some(unsafe { &*ptr })
+        } else {
+            None
+        }
+    }
+}

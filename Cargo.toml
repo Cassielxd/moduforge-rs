@@ -5,7 +5,7 @@ members = [
    "transform",
    "state",
    "core",
-   "macros",
+   "macros/*",
    "tests"
    ]
 exclude = [

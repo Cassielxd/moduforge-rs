@@ -71,19 +71,27 @@ macro_rules! impl_state_field {
                 &self,
                 config: &StateConfig,
                 instance: Option<&State>,
-            ) -> PluginState {
+            ) -> Arc<dyn PluginState> {
                 $init_fn(config, instance).await
             }
 
             async fn apply(
                 &self,
                 tr: &Transaction,
-                value: PluginState,
+                value: Arc<dyn PluginState>,
                 old_state: &State,
                 new_state: &State,
-            ) -> PluginState {
+            ) -> Arc<dyn PluginState> {
                 $apply_fn(tr, value, old_state, new_state).await
             }
         }
     };
 }
+
+#[macro_export]
+macro_rules! derive_plugin_state {
+    ($name:ident) => {
+        impl PluginState for $name {}
+    };
+}
+

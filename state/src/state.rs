@@ -33,7 +33,7 @@ pub fn get_state_version() -> u64 {
 #[derive(Clone, Debug)]
 pub struct State {
     pub config: Arc<Configuration>,
-    pub fields_instances: ImHashMap<String, PluginState>,
+    pub fields_instances: ImHashMap<String, Arc<dyn PluginState>>,
     pub node_pool: Arc<NodePool>,
     pub version: u64,
 }
@@ -60,7 +60,7 @@ impl State {
         let mut instance = State::new(Arc::new(config));
         let mut field_values = Vec::new();
         for plugin in &instance.config.plugins {
-            if let Some(field) = &plugin.spec.state {
+            if let Some(field) = &plugin.spec.state_field {
                 tracing::debug!("正在初始化插件状态: {}", plugin.key);
                 let value = field.init(&state_config, Some(&instance)).await;
                 field_values.push((plugin.key.clone(), value));
@@ -250,7 +250,7 @@ impl State {
         let sorted_plugins = self.sorted_plugins();
 
         for plugin in sorted_plugins.iter() {
-            if let Some(field) = &plugin.spec.state {
+            if let Some(field) = &plugin.spec.state_field {
                 if let Some(old_plugin_state) = self.get_field(&plugin.key) {
                     let value = field
                         .apply(tr, old_plugin_state, self, &new_instance)
@@ -281,7 +281,7 @@ impl State {
         let mut instance = State::new(Arc::new(config));
         let mut field_values = Vec::new();
         for plugin in &instance.config.plugins {
-            if let Some(field) = &plugin.spec.state {
+            if let Some(field) = &plugin.spec.state_field {
                 let key = plugin.key.clone();
                 tracing::debug!("正在重新配置插件: {}", key);
                 let value = if self.has_field(&key) {
@@ -306,23 +306,23 @@ impl State {
     pub fn get_field(
         &self,
         name: &str,
-    ) -> Option<PluginState> {
+    ) -> Option<Arc<dyn PluginState>> {
         self.fields_instances.get(name).cloned()
     }
-    pub fn get<T: Send + Sync + 'static>(
+    pub fn get<T: PluginState>(
         &self,
         name: &str,
     ) -> Option<Arc<T>> {
         self.fields_instances
             .get(name)
             .cloned()
-            .and_then(|state| state.downcast::<T>().ok())
+            .and_then(|state| state.downcast_arc::<T>().cloned())
     }
 
     fn set_field(
         &mut self,
         name: &str,
-        value: PluginState,
+        value: Arc<dyn PluginState>,
     ) -> StateResult<()> {
         self.fields_instances.insert(name.to_owned(), value);
         Ok(())
@@ -338,7 +338,7 @@ impl State {
     pub fn serialize(&self) -> StateResult<StateSerialize> {
         let mut state_fields: HashMap<String, Vec<u8>> = HashMap::new();
         for plugin in self.plugins() {
-            if let Some(state_field) = &plugin.spec.state {
+            if let Some(state_field) = &plugin.spec.state_field {
                 if let Some(value) = self.get_field(&plugin.key) {
                     if let Some(json) = state_field.serialize(value) {
                         state_fields.insert(plugin.key.clone(), json);
@@ -390,7 +390,7 @@ impl State {
 
         let mut map_instances = ImHashMap::new();
         for plugin in &configuration.plugins {
-            if let Some(state_field) = &plugin.spec.state {
+            if let Some(state_field) = &plugin.spec.state_field {
                 if let Some(value) = state_fields.get(&plugin.key) {
                     if let Some(p_state) = state_field.deserialize(value) {
                         let key = plugin.key.clone();
