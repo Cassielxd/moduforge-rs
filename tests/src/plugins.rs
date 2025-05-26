@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
-use moduforge_macros_derive::PluginState;
+use moduforge_macros_derive::PState;
 use moduforge_state::{
     debug,
     plugin::{PluginState, PluginTrait, StateField},
@@ -20,7 +20,7 @@ async fn p1_append(
 // P1Plugin 是一个插件，用于在调度前后打印消息。用于案例测试
 impl_plugin!(P1Plugin, p1_append);
 
-#[derive(Debug,PluginState)]
+#[derive(Debug,PState)]
 pub struct P1State1 {
     pub map: HashMap<String, String>,
 }
