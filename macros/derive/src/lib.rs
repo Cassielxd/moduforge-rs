@@ -8,7 +8,7 @@ pub fn derive_plugin_state(input: TokenStream) -> TokenStream {
     let name = input.ident;
 
     let expanded = quote! {
-        impl PluginState for #name {}
+        impl Resource for #name {}
     };
 
     TokenStream::from(expanded)

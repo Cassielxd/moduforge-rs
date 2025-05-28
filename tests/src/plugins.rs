@@ -4,7 +4,8 @@ use async_trait::async_trait;
 use moduforge_macros_derive::PState;
 use moduforge_state::{
     debug,
-    plugin::{PluginState, PluginTrait, StateField},
+    plugin::{PluginTrait, StateField},
+    resource::Resource,
     state::{State, StateConfig},
     transaction::Transaction,
 };
@@ -28,7 +29,7 @@ pub struct P1State1 {
 async fn p1_init(
     _config: &StateConfig,
     _instance: Option<&State>,
-) -> Arc<dyn PluginState> {
+) -> Arc<dyn Resource> {
     let map: HashMap<String, String> =
         HashMap::from([("k".to_string(), "v".to_string())]);
     Arc::new(P1State1 { map })
@@ -36,10 +37,10 @@ async fn p1_init(
 
 async fn p1_apply(
     tr: &Transaction,
-    value: Arc<dyn PluginState>,
+    value: Arc<dyn Resource>,
     _old_state: &State,
     _new_state: &State,
-) -> Arc<dyn PluginState> {
+) -> Arc<dyn Resource> {
     let p1_state = value.downcast_arc::<P1State1>().unwrap();
     debug!("P1Plugin apply{}", tr.steps.len());
     value

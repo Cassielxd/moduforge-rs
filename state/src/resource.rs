@@ -5,10 +5,6 @@ use std::borrow::Cow;
 use std::sync::Arc;
 use std::fmt::Debug;
 pub trait Resource: Any + Debug + Send + Sync + 'static {
-    fn name(&self) -> Cow<str> {
-        type_name::<Self>().into()
-    }
-    fn close(self: Arc<Self>) {}
 }
 
 impl dyn Resource {

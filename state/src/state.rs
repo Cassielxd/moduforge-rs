@@ -12,11 +12,11 @@ use std::{
     time::Instant,
 };
 
-use crate::ops::GlobalResourceManager;
+use crate::{ops::GlobalResourceManager, resource::Resource};
 
 use super::{
     error::{StateError, StateResult},
-    plugin::{Plugin, PluginState},
+    plugin::{Plugin},
     transaction::Transaction,
 };
 
@@ -33,7 +33,7 @@ pub fn get_state_version() -> u64 {
 #[derive(Clone, Debug)]
 pub struct State {
     pub config: Arc<Configuration>,
-    pub fields_instances: ImHashMap<String, Arc<dyn PluginState>>,
+    pub fields_instances: ImHashMap<String, Arc<dyn Resource>>,
     pub node_pool: Arc<NodePool>,
     pub version: u64,
 }
@@ -306,10 +306,10 @@ impl State {
     pub fn get_field(
         &self,
         name: &str,
-    ) -> Option<Arc<dyn PluginState>> {
+    ) -> Option<Arc<dyn Resource>> {
         self.fields_instances.get(name).cloned()
     }
-    pub fn get<T: PluginState>(
+    pub fn get<T: Resource>(
         &self,
         name: &str,
     ) -> Option<Arc<T>> {
@@ -322,7 +322,7 @@ impl State {
     fn set_field(
         &mut self,
         name: &str,
-        value: Arc<dyn PluginState>,
+        value: Arc<dyn Resource>,
     ) -> StateResult<()> {
         self.fields_instances.insert(name.to_owned(), value);
         Ok(())
