@@ -34,7 +34,7 @@ impl<T: Send + 'static> Default for EventBus<T> {
 
 impl<T: Send + 'static> EventBus<T> {
     pub fn add_event_handler(
-        &mut self,
+        &self,
         event_handler: Arc<dyn EventHandler<T>>,
     ) -> EditorResult<()> {
         let mut write = self.event_handlers.write().unwrap();
@@ -42,7 +42,7 @@ impl<T: Send + 'static> EventBus<T> {
         Ok(())
     }
     pub fn add_event_handlers(
-        &mut self,
+        &self,
         event_handlers: Vec<Arc<dyn EventHandler<T>>>,
     ) -> EditorResult<()> {
         let mut write = self.event_handlers.write().unwrap();
