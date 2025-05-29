@@ -18,7 +18,7 @@ pub async fn create_doc(
         },
         Content::NodePoolFn(node_pool_fn_trait) => {
             config.doc =
-                Some(Arc::new(node_pool_fn_trait.create(&config).await));
+                Some(Arc::new(node_pool_fn_trait.create(&config).await?));
         },
     };
     if let Some(doc) = &config.doc {

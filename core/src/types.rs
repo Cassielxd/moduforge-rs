@@ -7,7 +7,7 @@ use crate::{
     extension::Extension,
     mark::Mark,
     middleware::{Middleware, MiddlewareStack},
-    node::Node,
+    node::Node, EditorResult,
 };
 use moduforge_model::{node_pool::NodePool, schema::AttributeSpec};
 
@@ -16,7 +16,7 @@ pub trait NodePoolFnTrait: Send + Sync + std::fmt::Debug {
     async fn create(
         &self,
         config: &StateConfig,
-    ) -> NodePool;
+    ) -> EditorResult<NodePool>;
 }
 
 pub type GlobalAttributes = Vec<GlobalAttributeItem>;
