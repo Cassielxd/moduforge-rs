@@ -114,9 +114,7 @@ impl AsyncEditor {
 
         // 创建事务并应用命令
         let mut tr = self.get_tr();
-        command.execute(&mut tr).await.map_err(|e| {
-            error_utils::state_error(format!("命令执行失败: {}", e))
-        })?;
+        command.execute(&mut tr).await?;
 
         // 使用高性能处理引擎处理事务
         match self.dispatch_flow(tr).await {

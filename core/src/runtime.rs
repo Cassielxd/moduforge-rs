@@ -51,11 +51,8 @@ impl Editor {
             plugins: Some(extension_manager.get_plugins().clone()),
             resource_manager: Some(Arc::new(op_state)),
         };
-        create_doc::create_doc(&options.get_content(), &mut config).await;
-        let state: State = State::create(config).await.map_err(|e| {
-            error!("创建状态失败: {}", e);
-            error_utils::state_error(format!("Failed to create state: {}", e))
-        })?;
+        create_doc::create_doc(&options.get_content(), &mut config).await?;
+        let state: State = State::create(config).await?;
 
         let state: Arc<State> = Arc::new(state);
         debug!("已创建编辑器状态");
@@ -178,9 +175,7 @@ impl Editor {
     ) -> EditorResult<()> {
         debug!("正在执行命令: {}", command.name());
         let mut tr = self.get_tr();
-        command.execute(&mut tr).await.map_err(|e| {
-            error_utils::state_error(format!("命令执行失败: {}", e))
-        })?;
+        command.execute(&mut tr).await?;
         self.dispatch(tr).await
     }
 
@@ -202,12 +197,7 @@ impl Editor {
 
         // 应用事务到编辑器状态，获取新的状态和产生的事务列表
         let TransactionResult { state, mut transactions } =
-            self.state.apply(current_transaction).await.map_err(|e| {
-                error_utils::state_error(format!(
-                    "Failed to apply transaction: {}",
-                    e
-                ))
-            })?;
+            self.state.apply(current_transaction).await?;
 
         // 使用 Option 来避免不必要的克隆
         let mut state_update = None;
@@ -257,14 +247,7 @@ impl Editor {
                     self.get_state().resource_manager().clone(),
                 ),
             })
-            .await
-            .map_err(|e| {
-                error!("重新配置状态失败: {}", e);
-                error_utils::state_error(format!(
-                    "Failed to reconfigure state: {}",
-                    e
-                ))
-            })?;
+            .await?;
         self.update_state(Arc::new(state)).await?;
         info!("插件注册成功");
         Ok(())
@@ -293,14 +276,7 @@ impl Editor {
                     self.get_state().resource_manager().clone(),
                 ),
             })
-            .await
-            .map_err(|e| {
-                error!("重新配置状态失败: {}", e);
-                error_utils::state_error(format!(
-                    "Failed to reconfigure state: {}",
-                    e
-                ))
-            })?;
+            .await?;
         self.update_state(Arc::new(state)).await?;
         info!("插件注销成功");
         Ok(())
