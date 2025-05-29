@@ -1,4 +1,4 @@
-use std::{fmt, sync::Arc};
+use std::{sync::Arc};
 
 use moduforge_model::{node_pool::NodePool, schema::Schema, tree::Tree};
 

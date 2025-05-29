@@ -1,4 +1,4 @@
-use std::{f32::consts::E, sync::Arc};
+use std::{sync::Arc};
 
 use moduforge_model::{mark::Mark, schema::Schema, tree::Tree, types::NodeId};
 

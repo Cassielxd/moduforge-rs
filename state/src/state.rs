@@ -1,7 +1,6 @@
 use moduforge_model::{
     id_generator::IdGenerator, mark::Mark, node_pool::NodePool, schema::Schema,
 };
-
 use im::HashMap as ImHashMap;
 use std::fmt::{self, Debug};
 use std::{
@@ -65,8 +64,8 @@ impl State {
             state_config.plugins.clone(),
             state_config.doc.clone(),
             state_config.resource_manager.clone(),
-        );
-        let mut instance = State::new(Arc::new(config));
+        )?;
+        let mut instance = State::new(Arc::new(config))?;
         let mut field_values = Vec::new();
         for plugin in &instance.config.plugins {
             if let Some(field) = &plugin.spec.state_field {
@@ -84,7 +83,7 @@ impl State {
     /// 根据配置创建新的状态实例
     /// - 如果没有提供文档，则创建一个空的顶层节点
     /// - 初始化基本状态信息
-    pub fn new(config: Arc<Configuration>) -> Self {
+    pub fn new(config: Arc<Configuration>) ->StateResult<Self>  {
         let doc: Arc<NodePool> = match &config.doc {
             Some(doc) => doc.clone(),
             None => {
@@ -93,7 +92,7 @@ impl State {
                     .schema
                     .top_node_type
                     .clone()
-                    .unwrap()
+                    .ok_or_else(|| error::schema_error("顶级节点不存在".to_string()))?
                     .create_and_fill(
                         Some(id.clone()),
                         None,
@@ -105,12 +104,12 @@ impl State {
             },
         };
 
-        State {
-            fields_instances: ImHashMap::new(),
-            config,
-            node_pool: doc,
-            version: get_state_version(),
-        }
+       Ok(State {
+        fields_instances: ImHashMap::new(),
+        config,
+        node_pool: doc,
+        version: get_state_version(),
+    }) 
     }
     pub fn doc(&self) -> Arc<NodePool> {
         Arc::clone(&self.node_pool)
@@ -253,7 +252,7 @@ impl State {
     ) -> StateResult<State> {
         let mut config = self.config.as_ref().clone();
         config.doc = Some(tr.doc.clone());
-        let mut new_instance = State::new(Arc::new(config));
+        let mut new_instance = State::new(Arc::new(config))?;
 
         // 获取已排序的插件列表
         let sorted_plugins = self.sorted_plugins();
@@ -286,8 +285,8 @@ impl State {
             state_config.plugins.clone(),
             state_config.doc.clone(),
             state_config.resource_manager.clone(),
-        );
-        let mut instance = State::new(Arc::new(config));
+        )?;
+        let mut instance = State::new(Arc::new(config))?;
         let mut field_values = Vec::new();
         for plugin in &instance.config.plugins {
             if let Some(field) = &plugin.spec.state_field {
@@ -358,14 +357,14 @@ impl State {
         let node_pool_str =
             serde_json::to_string(&self.doc()).map_err(|e| {
                 error::serialize_error(format!(
-                    "Failed to serialize node pool: {}",
+                    "node pool 序列化失败: {}",
                     e
                 ))
             })?;
         let state_fields_str =
             serde_json::to_string(&state_fields).map_err(|e| {
                 error::serialize_error(format!(
-                    "Failed to serialize state fields: {}",
+                    "fields 序列化失败: {}",
                     e
                 ))
             })?;
@@ -382,20 +381,20 @@ impl State {
         let state_fields: HashMap<String, Vec<u8>> =
             serde_json::from_slice(&s.state_fields).map_err(|e| {
                 error::deserialize_error(format!(
-                    "Failed to deserialize state fields: {}",
+                    "state fields 反序列化失败{}",
                     e
                 ))
             })?;
         let node_pool: Arc<NodePool> = serde_json::from_slice(&s.node_pool)
             .map_err(|e| {
                 error::deserialize_error(format!(
-                    "Failed to deserialize node pool: {}",
+                    "node pool 反序列化失败: {}",
                     e
                 ))
             })?;
         let mut config = configuration.clone();
         config.doc = Some(node_pool);
-        let mut state = State::new(Arc::new(config));
+        let mut state = State::new(Arc::new(config))?;
 
         let mut map_instances = ImHashMap::new();
         for plugin in &configuration.plugins {
@@ -461,7 +460,7 @@ impl Configuration {
         plugins: Option<Vec<Arc<Plugin>>>,
         doc: Option<Arc<NodePool>>,
         resource_manager: Option<Arc<GlobalResourceManager>>,
-    ) -> Self {
+    ) -> StateResult<Self>{
         let mut config = Configuration {
             doc,
             plugins: Vec::new(),
@@ -480,12 +479,12 @@ impl Configuration {
             for plugin in sorted_plugins {
                 let key = plugin.key.clone();
                 if config.plugins_by_key.contains_key(&key) {
-                    panic!("插件请不要重复添加 ({})", key);
+                  return Err(anyhow::anyhow!(format!("插件请不要重复添加{:?}",key)));
                 }
                 config.plugins.push(plugin.clone());
                 config.plugins_by_key.insert(key, plugin);
             }
         }
-        config
+       Ok(config) 
     }
 }
