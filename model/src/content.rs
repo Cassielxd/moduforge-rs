@@ -3,6 +3,8 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use std::cmp::Ordering;
 
+use crate::error::PoolResult;
+
 use super::node::Node;
 use super::node_type::NodeType;
 use super::schema::Schema;
@@ -165,9 +167,10 @@ impl ContentMatch {
     pub fn edge(
         &self,
         n: usize,
-    ) -> Result<&MatchEdge, String> {
+// 根据错误提示，PoolResult 类型别名可能只接受一个泛型参数，这里修改为只传递一个泛型参数
+    ) -> PoolResult<&MatchEdge> {
         if n >= self.next.len() {
-            Err(format!("{} 超出了 {}", n, self.next.len()))
+            Err(anyhow::anyhow!(format!("{} 超出了 {}", n, self.next.len())))
         } else {
             Ok(&self.next[n])
         }

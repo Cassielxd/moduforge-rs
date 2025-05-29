@@ -34,7 +34,7 @@ impl Editor {
     pub async fn create(options: EditorOptions) -> EditorResult<Self> {
         info!("正在创建新的编辑器实例");
         let extension_manager =
-            ExtensionManager::new(&options.get_extensions());
+            ExtensionManager::new(&options.get_extensions())?;
         debug!("已初始化扩展管理器");
 
         let event_bus = EventBus::new();

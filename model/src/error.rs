@@ -1,5 +1,5 @@
 use crate::types::NodeId;
-use anyhow::{bail, Context, Result};
+use anyhow::{Result};
 
 /// Error messages for node pool operations
 pub mod error_messages {
@@ -21,10 +21,12 @@ pub mod error_messages {
 /// Helper functions for creating node pool errors
 pub mod error_helpers {
     use super::*;
-    use anyhow::bail;
 
     pub fn duplicate_node(id: NodeId) -> anyhow::Error {
         anyhow::anyhow!("{}: {}", error_messages::DUPLICATE_NODE, id)
+    }
+    pub fn schema_error(msg: &str) -> anyhow::Error {
+        anyhow::anyhow!("schema 错误：{}", msg)
     }
 
     pub fn parent_not_found(id: NodeId) -> anyhow::Error {

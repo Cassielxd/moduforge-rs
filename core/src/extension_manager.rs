@@ -16,12 +16,8 @@ pub struct ExtensionManager {
     >,
 }
 impl ExtensionManager {
-    pub fn new(extensions: &Vec<Extensions>) -> Self {
-        let schema = Arc::new(
-            get_schema_by_resolved_extensions(extensions).unwrap_or_else(|e| {
-                panic!("schema 构建失败: {}", e);
-            }),
-        );
+    pub fn new(extensions: &Vec<Extensions>) -> EditorResult<Self> {
+        let schema = Arc::new(get_schema_by_resolved_extensions(extensions)?);
         let mut plugins = vec![];
         let mut op_fns = vec![];
         for extension in extensions {
@@ -35,7 +31,7 @@ impl ExtensionManager {
             }
         }
 
-        ExtensionManager { schema, plugins, op_fns }
+        Ok(ExtensionManager { schema, plugins, op_fns })
     }
     pub fn get_op_fns(
         &self

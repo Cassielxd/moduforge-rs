@@ -2,11 +2,14 @@ use std::collections::HashMap;
 
 use moduforge_model::schema::{AttributeSpec, Schema, SchemaSpec};
 
-use crate::types::{Extensions, GlobalAttributeItem};
+use crate::{
+    types::{Extensions, GlobalAttributeItem},
+    EditorResult,
+};
 
 pub fn get_schema_by_resolved_extensions(
     extensions: &Vec<Extensions>
-) -> Result<Schema, Box<dyn std::error::Error>> {
+) -> EditorResult<Schema> {
     let mut extension_attributes = vec![];
     for extension in extensions {
         if let Extensions::E(extension) = extension {

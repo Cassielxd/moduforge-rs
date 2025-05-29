@@ -1,53 +1,6 @@
-use std::io;
 use anyhow::{Result};
-use crate::flow::FlowError;
-
-/// 编辑器核心错误类型
-#[derive(Debug, thiserror::Error)]
-pub enum EditorError {
-    /// 状态相关错误
-    #[error("State error: {0}")]
-    StateError(String),
-    /// 存储相关错误
-    #[error("Storage error: {0}")]
-    StorageError(String),
-    /// 事件处理错误
-    #[error("Event error: {0}")]
-    EventError(String),
-    /// 插件相关错误
-    #[error("Plugin error: {0}")]
-    PluginError(String),
-    /// IO操作错误
-    #[error("IO error: {0}")]
-    IoError(#[from] io::Error),
-    /// 配置错误
-    #[error("Config error: {0}")]
-    ConfigError(String),
-    /// 事务处理错误
-    #[error("Transaction error: {0}")]
-    TransactionError(String),
-    /// 历史记录错误
-    #[error("History error: {0}")]
-    HistoryError(String),
-    /// 引擎错误
-    #[error("Engine error: {0}")]
-    EngineError(String),
-    /// 缓存错误
-    #[error("Cache error: {0}")]
-    CacheError(String),
-    /// 未知错误
-    #[error("Unknown error: {0}")]
-    Unknown(String),
-    /// 其他错误
-    #[error("Other error: {0}")]
-    Other(String),
-    /// 流程错误
-    #[error("Flow error: {0}")]
-    Flow(#[from] FlowError),
-}
-
 /// 错误结果类型别名
-pub type EditorResult<T> = Result<T, EditorError>;
+pub type EditorResult<T> = Result<T>;
 
 /// 错误处理工具函数
 pub mod error_utils {
@@ -58,56 +11,58 @@ pub mod error_utils {
         result: Result<T, E>,
         context: &str,
     ) -> EditorResult<T> {
-        result.map_err(|e| EditorError::Unknown(format!("{}: {}", context, e)))
+        result.map_err(|e| {
+            anyhow::anyhow!(format!("未知的错误 {}: {}", context, e))
+        })
     }
 
     /// 创建状态错误
-    pub fn state_error(msg: impl Into<String>) -> EditorError {
-        EditorError::StateError(msg.into())
+    pub fn state_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow::anyhow!(format!("状态错误 {:?}", msg.into()))
     }
 
     /// 创建存储错误
-    pub fn storage_error(msg: impl Into<String>) -> EditorError {
-        EditorError::StorageError(msg.into())
+    pub fn storage_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow::anyhow!(format!("存储相关错误 {:?}", msg.into()))
     }
 
     /// 创建事件错误
-    pub fn event_error(msg: impl Into<String>) -> EditorError {
-        EditorError::EventError(msg.into())
+    pub fn event_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow::anyhow!(format!("事件处理错误 {:?}", msg.into()))
     }
 
     /// 创建插件错误
-    pub fn plugin_error(msg: impl Into<String>) -> EditorError {
-        EditorError::PluginError(msg.into())
+    pub fn plugin_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow::anyhow!(format!("插件相关错误 {:?}", msg.into()))
     }
 
     /// 创建配置错误
-    pub fn config_error(msg: impl Into<String>) -> EditorError {
-        EditorError::ConfigError(msg.into())
+    pub fn config_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow::anyhow!(format!("配置错误 {:?}", msg.into()))
     }
 
     /// 创建事务错误
-    pub fn transaction_error(msg: impl Into<String>) -> EditorError {
-        EditorError::TransactionError(msg.into())
+    pub fn transaction_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow::anyhow!(format!(" 事务处理错误 {:?}", msg.into()))
     }
 
     /// 创建历史记录错误
-    pub fn history_error(msg: impl Into<String>) -> EditorError {
-        EditorError::HistoryError(msg.into())
+    pub fn history_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow::anyhow!(format!(" 历史记录错误 {:?}", msg.into()))
     }
 
     /// 创建引擎错误
-    pub fn engine_error(msg: impl Into<String>) -> EditorError {
-        EditorError::EngineError(msg.into())
+    pub fn engine_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow::anyhow!(format!(" 引擎错误 {:?}", msg.into()))
     }
 
     /// 创建缓存错误
-    pub fn cache_error(msg: impl Into<String>) -> EditorError {
-        EditorError::CacheError(msg.into())
+    pub fn cache_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow::anyhow!(format!("  缓存错误 {:?}", msg.into()))
     }
 
     /// 创建中间件错误
-    pub fn middleware_error(msg: impl Into<String>) -> EditorError {
-        EditorError::PluginError(msg.into())
+    pub fn middleware_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow::anyhow!(format!("  插件相关错误 {:?}", msg.into()))
     }
 }

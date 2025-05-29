@@ -40,4 +40,4 @@ pub mod middleware;
 pub mod node;
 pub mod runtime;
 pub mod types;
-pub use error::{EditorError, EditorResult, error_utils};
+pub use error::{EditorResult, error_utils};

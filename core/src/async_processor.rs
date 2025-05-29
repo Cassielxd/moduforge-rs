@@ -3,10 +3,13 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
+use anyhow::anyhow;
 use moduforge_state::debug;
 use tokio::sync::{mpsc, oneshot};
 use async_trait::async_trait;
 use tokio::select;
+
+use crate::EditorResult;
 
 /// 任务处理的结果状态
 /// - Pending: 任务等待处理
@@ -188,7 +191,7 @@ impl<T: Clone + Send + Sync + 'static, O: Clone + Send + Sync + 'static>
         &self,
         task: T,
         priority: u32,
-    ) -> Result<(u64, mpsc::Receiver<TaskResult<T, O>>), ProcessorError> {
+    ) -> EditorResult<(u64, mpsc::Receiver<TaskResult<T, O>>)> {
         let mut task_id = self.next_task_id.lock().await;
         *task_id += 1;
         let current_id = *task_id;
@@ -205,7 +208,7 @@ impl<T: Clone + Send + Sync + 'static, O: Clone + Send + Sync + 'static>
         self.queue
             .send(queued_task)
             .await
-            .map_err(|_| ProcessorError::QueueFull)?;
+            .map_err(|_| anyhow!("队列已经满了"))?;
 
         let mut stats = self.stats.lock().await;
         stats.total_tasks += 1;
@@ -321,7 +324,7 @@ where
         &self,
         task: T,
         priority: u32,
-    ) -> Result<(u64, mpsc::Receiver<TaskResult<T, O>>), ProcessorError> {
+    ) -> EditorResult<(u64, mpsc::Receiver<TaskResult<T, O>>)> {
         self.task_queue.enqueue_task(task, priority).await
     }
 

@@ -1,3 +1,6 @@
+use crate::error::error_helpers::schema_error;
+use crate::error::PoolResult;
+
 use super::attrs::Attrs;
 use super::content::ContentMatch;
 use super::mark_type::{MarkSpec, MarkType};
@@ -6,7 +9,6 @@ use serde::Serialize;
 use serde_json::Value;
 use std::any::Any;
 use std::collections::HashMap;
-use std::error::Error;
 use std::sync::{Arc, Mutex};
 /// 属性定义结构体
 /// 用于定义节点或标记的属性特征
@@ -82,9 +84,7 @@ impl Schema {
     }
     /// 编译 Schema 定义
     /// 处理节点和标记的定义，建立它们之间的关系
-    pub fn compile(
-        instance_spec: SchemaSpec
-    ) -> Result<Schema, Box<dyn Error>> {
+    pub fn compile(instance_spec: SchemaSpec) -> PoolResult<Schema> {
         let mut schema: Schema = Schema::new(instance_spec);
         let nodes: HashMap<String, NodeType> =
             NodeType::compile(schema.spec.nodes.clone());
@@ -93,7 +93,10 @@ impl Schema {
         let mut updated_nodes = HashMap::new();
         for (prop, type_) in &nodes {
             if marks.contains_key(prop) {
-                return Err(format!("{} 不能既是节点又是标记", prop).into());
+                return Err(schema_error(&format!(
+                    "{} 不能既是节点又是标记",
+                    prop
+                )));
             }
 
             let content_expr = type_.spec.content.as_deref().unwrap_or("");
@@ -115,7 +118,7 @@ impl Schema {
                     );
                     match marks_result {
                         Ok(marks) => Some(marks.into_iter().cloned().collect()), // Convert Vec<&MarkType> to Vec<MarkType>
-                        Err(e) => return Err(e.into()),
+                        Err(e) => return Err(schema_error(&e)),
                     }
                 },
                 None => None,
@@ -133,7 +136,7 @@ impl Schema {
         ) {
             Some(node) => Some(node.clone()),
             None => {
-                return Err("未找到顶级节点类型定义".to_string().into());
+                return Err(schema_error("未找到顶级节点类型定义"));
             },
         };
 
