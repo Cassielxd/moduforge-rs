@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use std::any::{Any, TypeId};
 use std::sync::Arc;
 
 use crate::resource::Resource;
@@ -154,11 +153,8 @@ impl Plugin {
 /// 插件状态类型
 /// 使用 Arc 包装的任意类型作为插件状态
 //pub type PluginState = Arc<dyn std::any::Any + Send + Sync>;
-
 use std::fmt::Debug;
 
 /// 插件键类型
 /// 使用两个字符串组成的元组作为插件的唯一标识
 pub type PluginKey = (String, String);
-
-

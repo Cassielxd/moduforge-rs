@@ -12,4 +12,4 @@ pub fn derive_plugin_state(input: TokenStream) -> TokenStream {
     };
 
     TokenStream::from(expanded)
-} 
+}

@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use moduforge_state::StateConfig;
 
 use crate::{
-    event::EventHandler,
+    event::{Event, EventHandler},
     extension::Extension,
     mark::Mark,
     middleware::{Middleware, MiddlewareStack},
@@ -49,7 +49,7 @@ pub struct EditorOptions {
     content: Content,
     extensions: Vec<Extensions>,
     history_limit: Option<usize>,
-    event_handlers: Vec<Arc<dyn EventHandler>>,
+    event_handlers: Vec<Arc<dyn EventHandler<Event>>>,
     middleware_stack: MiddlewareStack,
 }
 impl EditorOptions {
@@ -101,12 +101,12 @@ impl EditorOptions {
         self
     }
 
-    pub fn get_event_handlers(&self) -> Vec<Arc<dyn EventHandler>> {
+    pub fn get_event_handlers(&self) -> Vec<Arc<dyn EventHandler<Event>>> {
         self.event_handlers.clone()
     }
     pub fn set_event_handlers(
         mut self,
-        event_handlers: Vec<Arc<dyn EventHandler>>,
+        event_handlers: Vec<Arc<dyn EventHandler<Event>>>,
     ) -> Self {
         self.event_handlers = event_handlers;
         self
@@ -118,7 +118,7 @@ pub struct EditorOptionsBuilder {
     content: Content,
     extensions: Vec<Extensions>,
     history_limit: Option<usize>,
-    event_handlers: Vec<Arc<dyn EventHandler>>,
+    event_handlers: Vec<Arc<dyn EventHandler<Event>>>,
     middleware_stack: MiddlewareStack,
 }
 
@@ -159,7 +159,7 @@ impl EditorOptionsBuilder {
 
     pub fn event_handlers(
         mut self,
-        handlers: Vec<Arc<dyn EventHandler>>,
+        handlers: Vec<Arc<dyn EventHandler<Event>>>,
     ) -> Self {
         self.event_handlers = handlers;
         self
@@ -167,7 +167,7 @@ impl EditorOptionsBuilder {
 
     pub fn add_event_handler(
         mut self,
-        handler: Arc<dyn EventHandler>,
+        handler: Arc<dyn EventHandler<Event>>,
     ) -> Self {
         self.event_handlers.push(handler);
         self

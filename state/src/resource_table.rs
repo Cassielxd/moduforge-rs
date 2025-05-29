@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::fmt::{self, Debug};
 
 use dashmap::DashMap;
 
@@ -8,12 +9,19 @@ use crate::resource::Resource;
 pub type ResourceId = String;
 
 // 资源表结构体，用于管理所有资源
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct ResourceTable {
     // 使用BTreeMap存储资源ID到资源的映射
     index: DashMap<ResourceId, Arc<dyn Resource>>,
 }
-
+impl Debug for ResourceTable {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        write!(f, "ResourceTable {{ len: {} }}", self.index.len())
+    }
+}
 impl ResourceTable {
     // 获取资源表中资源的数量
     pub fn len(&self) -> usize {

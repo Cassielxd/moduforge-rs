@@ -20,7 +20,7 @@ use moduforge_state::{
 /// Editor 结构体代表编辑器的核心功能实现
 /// 负责管理文档状态、事件处理、插件系统和存储等核心功能
 pub struct Editor {
-    event_bus: EventBus,
+    event_bus: EventBus<Event>,
     state: Arc<State>,
     extension_manager: ExtensionManager,
     history_manager: HistoryManager<Arc<State>>,
@@ -78,9 +78,7 @@ impl Editor {
     /// 初始化编辑器，设置事件处理器并启动事件循环
     async fn init(&mut self) -> EditorResult<()> {
         debug!("正在初始化编辑器");
-        self.event_bus
-            .add_event_handlers(self.options.get_event_handlers())
-            .await?;
+        self.event_bus.add_event_handlers(self.options.get_event_handlers())?;
         self.event_bus.start_event_loop();
         debug!("事件总线已启动");
 
@@ -325,7 +323,7 @@ impl Editor {
         self.extension_manager.get_schema()
     }
 
-    pub fn get_event_bus(&self) -> &EventBus {
+    pub fn get_event_bus(&self) -> &EventBus<Event> {
         &self.event_bus
     }
 
@@ -350,5 +348,10 @@ impl Editor {
     ) {
         self.history_manager.jump(n);
         self.state = self.history_manager.get_present();
+    }
+}
+impl Drop for Editor {
+    fn drop(&mut self) {
+        self.event_bus.destroy();
     }
 }

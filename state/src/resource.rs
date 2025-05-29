@@ -1,11 +1,8 @@
 use std::any::Any;
 use std::any::TypeId;
-use std::any::type_name;
-use std::borrow::Cow;
 use std::sync::Arc;
-use std::fmt::Debug;
-pub trait Resource: Any + Debug + Send + Sync + 'static {
-}
+
+pub trait Resource: Any + Send + Sync + 'static {}
 
 impl dyn Resource {
     #[inline(always)]
@@ -20,6 +17,20 @@ impl dyn Resource {
     ) -> Option<&'a Arc<T>> {
         if self.is::<T>() {
             let ptr = self as *const Arc<_> as *const Arc<T>;
+            // TODO(piscisaureus): safety comment
+            #[allow(clippy::undocumented_unsafe_blocks)]
+            Some(unsafe { &*ptr })
+        } else {
+            None
+        }
+    }
+    #[inline(always)]
+    #[allow(clippy::needless_lifetimes)]
+    pub fn downcast<'a, T: Resource>(
+        self: &'a Box<Self>
+    ) -> Option<&'a Box<T>> {
+        if self.is::<T>() {
+            let ptr = self as *const Box<_> as *const Box<T>;
             // TODO(piscisaureus): safety comment
             #[allow(clippy::undocumented_unsafe_blocks)]
             Some(unsafe { &*ptr })

@@ -29,7 +29,7 @@ impl Step for AddNodeStep {
         schema: Arc<Schema>,
     ) -> Result<StepResult, TransformError> {
         let _ = schema;
-        let _ = dart.add(self.nodes.clone());
+        let _ = dart.node("key")+self.nodes.clone();
         Ok(StepResult::ok())
     }
     fn serialize(&self) -> Option<Vec<u8>> {

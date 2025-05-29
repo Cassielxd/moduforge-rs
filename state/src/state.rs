@@ -3,6 +3,7 @@ use moduforge_model::{
 };
 
 use im::HashMap as ImHashMap;
+use std::fmt::{self, Debug};
 use std::{
     collections::HashMap,
     sync::{
@@ -30,12 +31,20 @@ pub fn get_state_version() -> u64 {
 /// - fields_instances: 存储插件的状态数据
 /// - node_pool: 文档的节点池
 /// - version: 状态版本号，用于追踪变更
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct State {
     pub config: Arc<Configuration>,
     pub fields_instances: ImHashMap<String, Arc<dyn Resource>>,
     pub node_pool: Arc<NodePool>,
     pub version: u64,
+}
+impl Debug for State {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        write!(f, "State {{ len: {} }}", self.fields_instances.len())
+    }
 }
 
 impl State {

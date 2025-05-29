@@ -857,7 +857,6 @@ impl OptimizedQueryEngine {
         let mark_index =
             Arc::new(Mutex::new(HashMap::with_capacity(node_count / 10)));
 
-
         // 优化分片策略：使用更细粒度的分片
         let optimal_shard_size = 1000; // 固定较小的分片大小
 
@@ -887,7 +886,6 @@ impl OptimizedQueryEngine {
             let mut type_nodes = Vec::with_capacity(shard.len());
             let mut depth_nodes = Vec::with_capacity(shard.len());
             let mut mark_nodes = Vec::with_capacity(shard.len() * 2);
-
 
             // 批量收集节点信息，使用引用避免克隆
             for node in shard {

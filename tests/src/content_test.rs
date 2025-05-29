@@ -29,7 +29,10 @@ mod test {
                 marks: None,
                 group: None,
                 desc: Some("单项工程".to_string()),
-                attrs: Some(HashMap::from([("name".to_string(), AttributeSpec{ default: None })])),
+                attrs: Some(HashMap::from([(
+                    "name".to_string(),
+                    AttributeSpec { default: None },
+                )])),
             },
         );
         nodes.insert(
@@ -107,8 +110,14 @@ mod test {
         let dw = schema.nodes.get("DW").unwrap();
         let mut attrs = HashMap::new();
         attrs.insert("name".to_string(), Value::String("test".to_string()));
-        let dw_node =dw.create(None, Some(&attrs), vec![], None);
-        let node = schema.top_node_type.clone().unwrap().create_and_fill(None, None, vec![dw_node], None, &schema);
+        let dw_node = dw.create(None, Some(&attrs), vec![], None);
+        let node = schema.top_node_type.clone().unwrap().create_and_fill(
+            None,
+            None,
+            vec![dw_node],
+            None,
+            &schema,
+        );
         dbg!(node);
     }
 }

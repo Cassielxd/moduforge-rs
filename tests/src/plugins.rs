@@ -21,7 +21,7 @@ async fn p1_append(
 // P1Plugin 是一个插件，用于在调度前后打印消息。用于案例测试
 impl_plugin!(P1Plugin, p1_append);
 
-#[derive(Debug,PState)]
+#[derive(Debug, PState)]
 pub struct P1State1 {
     pub map: HashMap<String, String>,
 }

@@ -2,7 +2,7 @@ use std::ops::Add;
 
 use serde_json::Value;
 
-use crate::{attrs::Attrs, error::PoolError, mark::Mark, node::Node};
+use crate::{attrs::Attrs, error::PoolError, mark::Mark, node::Node, node_type::NodeEnum};
 
 use super::{AttrsRef, MarkRef, NodeRef};
 
@@ -31,6 +31,18 @@ impl<'a> Add<Vec<Node>> for NodeRef<'a> {
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
 }
+impl<'a> Add<NodeEnum> for NodeRef<'a> {
+    type Output = Result<NodeRef<'a>, PoolError>;
+    fn add(
+        self,
+        nodes: NodeEnum,
+    ) -> Self::Output {
+        let _ = self.tree.add(nodes);
+        Ok(NodeRef::new(self.tree, self.key.clone()))
+    }
+}
+
+
 
 /// 为 MarkRef 实现自定义的 + 运算符，用于添加单个标记
 /// 当使用 + 运算符时，会将新标记添加到当前标记的列表中

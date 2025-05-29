@@ -94,4 +94,3 @@ macro_rules! derive_plugin_state {
         impl Resource for $name {}
     };
 }
-
