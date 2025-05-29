@@ -16,7 +16,6 @@ pub mod error_utils {
         })
     }
 
-    
     /// 创建状态错误
     pub fn state_error(msg: impl Into<String>) -> anyhow::Error {
         anyhow::anyhow!(format!("状态错误 {:?}", msg.into()))

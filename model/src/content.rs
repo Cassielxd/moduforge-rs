@@ -167,7 +167,7 @@ impl ContentMatch {
     pub fn edge(
         &self,
         n: usize,
-// 根据错误提示，PoolResult 类型别名可能只接受一个泛型参数，这里修改为只传递一个泛型参数
+        // 根据错误提示，PoolResult 类型别名可能只接受一个泛型参数，这里修改为只传递一个泛型参数
     ) -> PoolResult<&MatchEdge> {
         if n >= self.next.len() {
             Err(anyhow::anyhow!(format!("{} 超出了 {}", n, self.next.len())))

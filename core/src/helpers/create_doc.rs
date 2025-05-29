@@ -8,7 +8,7 @@ use crate::{types::Content, EditorResult};
 pub async fn create_doc(
     content: &Content,
     config: &mut StateConfig,
-) ->EditorResult<()>{
+) -> EditorResult<()> {
     match content {
         Content::NodePool(node_pool) => {
             config.doc = Some(Arc::new(node_pool.clone()));

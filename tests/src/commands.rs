@@ -36,7 +36,7 @@ impl Command for MyCommand {
                 None,
             )],
         );
-        let _ =tr.add_node(node);
+        let _ = tr.add_node(node);
         Ok(())
     }
 }
@@ -54,7 +54,7 @@ impl_command!(
                 None,
             )],
         );
-        let _= tr.add_node(node);
+        let _ = tr.add_node(node);
         Ok(())
     },
     "MyCommand1"

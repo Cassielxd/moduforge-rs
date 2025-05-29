@@ -63,9 +63,7 @@ impl DerefMut for AsyncEditor {
 impl AsyncEditor {
     /// 创建新的编辑器实例
     /// options: 编辑器配置选项
-    pub async fn create(
-        options: EditorOptions
-    ) -> EditorResult<Self> {
+    pub async fn create(options: EditorOptions) -> EditorResult<Self> {
         let base = Editor::create(options).await?;
         Ok(AsyncEditor {
             base,

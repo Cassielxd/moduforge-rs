@@ -83,7 +83,7 @@ impl State {
     /// 根据配置创建新的状态实例
     /// - 如果没有提供文档，则创建一个空的顶层节点
     /// - 初始化基本状态信息
-    pub fn new(config: Arc<Configuration>) ->StateResult<Self>  {
+    pub fn new(config: Arc<Configuration>) -> StateResult<Self> {
         let doc: Arc<NodePool> = match &config.doc {
             Some(doc) => doc.clone(),
             None => {
@@ -92,7 +92,9 @@ impl State {
                     .schema
                     .top_node_type
                     .clone()
-                    .ok_or_else(|| error::schema_error("顶级节点不存在".to_string()))?
+                    .ok_or_else(|| {
+                        error::schema_error("顶级节点不存在".to_string())
+                    })?
                     .create_and_fill(
                         Some(id.clone()),
                         None,
@@ -104,12 +106,12 @@ impl State {
             },
         };
 
-       Ok(State {
-        fields_instances: ImHashMap::new(),
-        config,
-        node_pool: doc,
-        version: get_state_version(),
-    }) 
+        Ok(State {
+            fields_instances: ImHashMap::new(),
+            config,
+            node_pool: doc,
+            version: get_state_version(),
+        })
     }
     pub fn doc(&self) -> Arc<NodePool> {
         Arc::clone(&self.node_pool)
@@ -356,17 +358,11 @@ impl State {
         }
         let node_pool_str =
             serde_json::to_string(&self.doc()).map_err(|e| {
-                error::serialize_error(format!(
-                    "node pool 序列化失败: {}",
-                    e
-                ))
+                error::serialize_error(format!("node pool 序列化失败: {}", e))
             })?;
         let state_fields_str =
             serde_json::to_string(&state_fields).map_err(|e| {
-                error::serialize_error(format!(
-                    "fields 序列化失败: {}",
-                    e
-                ))
+                error::serialize_error(format!("fields 序列化失败: {}", e))
             })?;
         Ok(StateSerialize {
             state_fields: state_fields_str.as_bytes().to_vec(),
@@ -460,7 +456,7 @@ impl Configuration {
         plugins: Option<Vec<Arc<Plugin>>>,
         doc: Option<Arc<NodePool>>,
         resource_manager: Option<Arc<GlobalResourceManager>>,
-    ) -> StateResult<Self>{
+    ) -> StateResult<Self> {
         let mut config = Configuration {
             doc,
             plugins: Vec::new(),
@@ -479,12 +475,15 @@ impl Configuration {
             for plugin in sorted_plugins {
                 let key = plugin.key.clone();
                 if config.plugins_by_key.contains_key(&key) {
-                  return Err(anyhow::anyhow!(format!("插件请不要重复添加{:?}",key)));
+                    return Err(anyhow::anyhow!(format!(
+                        "插件请不要重复添加{:?}",
+                        key
+                    )));
                 }
                 config.plugins.push(plugin.clone());
                 config.plugins_by_key.insert(key, plugin);
             }
         }
-       Ok(config) 
+        Ok(config)
     }
 }

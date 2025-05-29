@@ -1,6 +1,4 @@
-use std::{
-    sync::Arc,
-};
+use std::{sync::Arc};
 
 use moduforge_state::{
     state::{State, TransactionResult},
