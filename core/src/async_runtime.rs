@@ -65,7 +65,7 @@ impl AsyncEditor {
     /// options: 编辑器配置选项
     pub async fn create(
         options: EditorOptions
-    ) -> Result<Self, Box<dyn std::error::Error>> {
+    ) -> EditorResult<Self> {
         let base = Editor::create(options).await?;
         Ok(AsyncEditor {
             base,
