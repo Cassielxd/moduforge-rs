@@ -14,7 +14,7 @@ macro_rules! impl_plugin {
                 trs: &[Transaction],
                 old_state: &State,
                 new_state: &State,
-            ) -> Option<Transaction> {
+            ) -> StateResult<Option<Transaction>> {
                 $append_fn(trs, old_state, new_state).await
             }
 
@@ -41,7 +41,7 @@ macro_rules! impl_plugin {
                 tr: &Transaction,
                 old_state: &State,
                 new_state: &State,
-            ) -> Option<Transaction> {
+            ) -> StateResult<Option<Transaction>> {
                 $append_fn(tr, old_state, new_state).await
             }
 

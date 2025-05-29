@@ -3,19 +3,15 @@ use std::{collections::HashMap, sync::Arc};
 use async_trait::async_trait;
 use moduforge_macros_derive::PState;
 use moduforge_state::{
-    debug,
-    plugin::{PluginTrait, StateField},
-    resource::Resource,
-    state::{State, StateConfig},
-    transaction::Transaction,
+    debug, error::StateResult, plugin::{PluginTrait, StateField}, resource::Resource, state::{State, StateConfig}, transaction::Transaction
 };
 use moduforge_macros::{impl_plugin, impl_state_field};
 async fn p1_append(
     _trs: &[Transaction],
     _: &State,
     _new_state: &State,
-) -> Option<Transaction> {
-    None
+) ->StateResult< Option<Transaction>> {
+    Ok(None)
 }
 
 // P1Plugin 是一个插件，用于在调度前后打印消息。用于案例测试
@@ -52,12 +48,12 @@ async fn p2_append(
     trs: &[Transaction],
     _: &State,
     _: &State,
-) -> Option<Transaction> {
+) -> StateResult<Option<Transaction>> {
     let tr = trs.last().unwrap().clone();
     let size = tr.doc.size();
     debug!("P2Plugin开始节点个数：{}", size);
 
-    None
+     Ok(None)
 }
 
 // P2Plugin 是一个插件，用于在调度前后打印消息。用于案例测试

@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use std::sync::Arc;
 
+use crate::error::StateResult;
 use crate::resource::Resource;
 
 use super::state::{State, StateConfig};
@@ -17,8 +18,8 @@ pub trait PluginTrait: Send + Sync + Debug {
         _: &[Transaction],
         _: &State,
         _: &State,
-    ) -> Option<Transaction> {
-        None
+    ) -> StateResult<Option<Transaction>> {
+        Ok(None)
     }
     /// 事务过滤
     /// 决定是否允许事务执行
@@ -95,12 +96,12 @@ impl PluginSpec {
         trs: &'a [Transaction],
         old_state: &State,
         new_state: &State,
-    ) -> Option<Transaction> {
+    ) -> StateResult<Option<Transaction>> {
         match &self.tr {
             Some(transaction) => {
                 transaction.append_transaction(trs, old_state, new_state).await
             },
-            None => None,
+            None => Ok(None),
         }
     }
 }
@@ -145,7 +146,7 @@ impl Plugin {
         trs: &[Transaction],
         old_state: &State,
         new_state: &State,
-    ) -> Option<Transaction> {
+    ) -> StateResult<Option<Transaction>> {
         self.spec.append_transaction(trs, old_state, new_state).await
     }
 }
