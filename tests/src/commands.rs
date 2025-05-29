@@ -3,7 +3,6 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use moduforge_model::node_type::NodeEnum;
 use moduforge_state::{
-    state::TransactionResult,
     transaction::{Command, Transaction},
 };
 use moduforge_macros::impl_command;
@@ -37,7 +36,7 @@ impl Command for MyCommand {
                 None,
             )],
         );
-        tr.add_node(node);
+        let _ =tr.add_node(node);
         Ok(())
     }
 }
@@ -55,7 +54,7 @@ impl_command!(
                 None,
             )],
         );
-        tr.add_node(node);
+        let _= tr.add_node(node);
         Ok(())
     },
     "MyCommand1"

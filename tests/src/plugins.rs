@@ -41,7 +41,7 @@ async fn p1_apply(
     _old_state: &State,
     _new_state: &State,
 ) -> Arc<dyn Resource> {
-    let p1_state = value.downcast_arc::<P1State1>().unwrap();
+    let _ = value.downcast_arc::<P1State1>().unwrap();
     debug!("P1Plugin apply{}", tr.steps.len());
     value
 }
