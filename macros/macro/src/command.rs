@@ -27,7 +27,7 @@ macro_rules! impl_command {
             async fn execute(
                 &self,
                 tr: &mut Transaction,
-            ) -> Result<(), TransformError> {
+            ) -> TransformResult<()> {
                 $execute_fn(tr).await
             }
 

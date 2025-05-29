@@ -1,46 +1,59 @@
-/// A type alias for Result that uses StateError as the error type.
-pub type StateResult<T> = Result<T, StateError>;
+use anyhow::Result;
 
-/// Represents all possible errors that can occur in state management operations.
-#[derive(Debug, thiserror::Error)]
-pub enum StateError {
-    /// Error occurs when plugin state initialization fails
-    #[error("插件状态初始化失败: {0}")]
-    PluginInitError(String),
+/// A type alias for Result that uses anyhow::Error as the error type.
+pub type StateResult<T> = Result<T>;
 
-    /// Error occurs when applying plugin state fails
-    #[error("插件状态应用失败: {0}")]
-    PluginApplyError(String),
+/// Helper functions for creating common error types
+pub mod error {
+    use anyhow::anyhow;
 
-    /// Error occurs when transaction application fails
-    #[error("事务应用失败: {0}")]
-    TransactionError(String),
+    /// Creates a plugin initialization error
+    pub fn plugin_init_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow!("插件状态初始化失败: {}", msg.into())
+    }
 
-    /// Error occurs when configuration is invalid
-    #[error("配置错误: {0}")]
-    ConfigurationError(String),
+    /// Creates a plugin apply error
+    pub fn plugin_apply_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow!("插件状态应用失败: {}", msg.into())
+    }
 
-    /// Error occurs when field operations fail
-    #[error("字段操作失败: {0}")]
-    FieldError(String),
+    /// Creates a transaction error
+    pub fn transaction_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow!("事务应用失败: {}", msg.into())
+    }
 
-    /// Error occurs when schema is missing or invalid
-    #[error("Schema错误: {0}")]
-    SchemaError(String),
+    /// Creates a configuration error
+    pub fn configuration_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow!("配置错误: {}", msg.into())
+    }
 
-    /// Error occurs when plugin is not found
-    #[error("插件未找到: {0}")]
-    PluginNotFound(String),
+    /// Creates a field operation error
+    pub fn field_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow!("字段操作失败: {}", msg.into())
+    }
 
-    /// Error occurs when plugin state is invalid
-    #[error("插件状态无效: {0}")]
-    InvalidPluginState(String),
+    /// Creates a schema error
+    pub fn schema_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow!("Schema错误: {}", msg.into())
+    }
 
-    /// Error occurs when serialization fails
-    #[error("序列化失败: {0}")]
-    SerializeError(String),
+    /// Creates a plugin not found error
+    pub fn plugin_not_found(msg: impl Into<String>) -> anyhow::Error {
+        anyhow!("插件未找到: {}", msg.into())
+    }
 
-    /// Error occurs when deserialization fails
-    #[error("反序列化失败: {0}")]
-    DeserializeError(String),
+    /// Creates an invalid plugin state error
+    pub fn invalid_plugin_state(msg: impl Into<String>) -> anyhow::Error {
+        anyhow!("插件状态无效: {}", msg.into())
+    }
+
+    /// Creates a serialization error
+    pub fn serialize_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow!("序列化失败: {}", msg.into())
+    }
+
+    /// Creates a deserialization error
+    pub fn deserialize_error(msg: impl Into<String>) -> anyhow::Error {
+        anyhow!("反序列化失败: {}", msg.into())
+    }
 }

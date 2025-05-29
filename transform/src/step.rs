@@ -3,7 +3,7 @@ use std::{any::Any, sync::Arc};
 use moduforge_model::{schema::Schema, tree::Tree};
 use std::fmt::Debug;
 
-use super::transform::TransformError;
+use crate::TransformResult;
 
 pub trait Step: Any + Send + Sync + Debug + 'static {
     fn name(&self) -> String;
@@ -11,7 +11,7 @@ pub trait Step: Any + Send + Sync + Debug + 'static {
         &self,
         dart: &mut Tree,
         schema: Arc<Schema>,
-    ) -> Result<StepResult, TransformError>;
+    ) -> TransformResult<StepResult>;
     fn serialize(&self) -> Option<Vec<u8>>;
 }
 impl dyn Step {

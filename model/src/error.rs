@@ -1,85 +1,104 @@
 use crate::types::NodeId;
+use anyhow::{bail, Context, Result};
 
-/// Represents all possible errors that can occur in the node pool operations.
-#[derive(Debug, thiserror::Error)]
-pub enum PoolError {
-    /// Error occurs when attempting to add a node with an ID that already exists in the pool.
-    #[error("重复的节点 ID: {0}")]
-    DuplicateNodeId(NodeId),
-
-    /// Error occurs when trying to access a parent node that doesn't exist in the pool.
-    #[error("父节点不存在: {0}")]
-    ParentNotFound(NodeId),
-
-    /// Error occurs when trying to access a child node that doesn't exist in the pool.
-    #[error("子节点不存在: {0}")]
-    ChildNotFound(NodeId),
-
-    /// Error occurs when trying to access a node that doesn't exist in the pool.
-    #[error("节点不存在: {0}")]
-    NodeNotFound(NodeId),
-
-    /// Error occurs when a node exists in the pool but has no parent.
-    #[error("检测到孤立节点: {0}")]
-    OrphanNode(NodeId),
-
-    /// Error occurs when attempting to establish an invalid parent-child relationship.
-    #[error(
-        "无效的父子关系: 子节点 {child} 不是父节点 {alleged_parent} 的子节点"
-    )]
-    InvalidParenting { child: NodeId, alleged_parent: NodeId },
-
-    /// Error occurs when attempting to replace a node with a different ID.
-    #[error(
-        "节点ID不匹配: 新节点ID({nodeid})与要替换的节点ID({new_node_id})不一致"
-    )]
-    InvalidNodeId { nodeid: NodeId, new_node_id: NodeId },
-
-    /// Error occurs when attempting to perform operations on an empty pool.
-    #[error("节点池为空")]
-    EmptyPool,
-
-    /// Error occurs when attempting to create a cycle in the node hierarchy.
-    #[error("检测到循环引用: 节点 {0} 不能成为自己的祖先")]
-    CyclicReference(NodeId),
-
-    /// Error occurs when attempting to move a node to an invalid position.
-    #[error("无效的节点移动: 无法将节点 {0} 移动到目标位置")]
-    InvalidNodeMove(NodeId),
-
-    /// Error occurs when attempting to perform operations on a locked node.
-    #[error("节点 {0} 已被锁定，无法执行操作")]
-    NodeLocked(NodeId),
-
-    /// Error occurs when attempting to perform operations on a deleted node.
-    #[error("节点 {0} 已被删除")]
-    NodeDeleted(NodeId),
-
-    /// Error occurs when attempting to remove the root node.
-    #[error("无法删除根节点")]
-    CannotRemoveRoot,
+/// Error messages for node pool operations
+pub mod error_messages {
+    pub const DUPLICATE_NODE: &str = "重复的节点 ID";
+    pub const PARENT_NOT_FOUND: &str = "父节点不存在";
+    pub const CHILD_NOT_FOUND: &str = "子节点不存在";
+    pub const NODE_NOT_FOUND: &str = "节点不存在";
+    pub const ORPHAN_NODE: &str = "检测到孤立节点";
+    pub const INVALID_PARENTING: &str = "无效的父子关系";
+    pub const INVALID_NODE_ID: &str = "节点ID不匹配";
+    pub const EMPTY_POOL: &str = "节点池为空";
+    pub const CYCLIC_REFERENCE: &str = "检测到循环引用";
+    pub const INVALID_NODE_MOVE: &str = "无效的节点移动";
+    pub const NODE_LOCKED: &str = "节点已被锁定，无法执行操作";
+    pub const NODE_DELETED: &str = "节点已被删除";
+    pub const CANNOT_REMOVE_ROOT: &str = "无法删除根节点";
 }
 
-impl PoolError {
-    /// Returns the node ID associated with this error, if any.
-    pub fn node_id(&self) -> Option<&NodeId> {
-        match self {
-            PoolError::DuplicateNodeId(id) => Some(id),
-            PoolError::ParentNotFound(id) => Some(id),
-            PoolError::ChildNotFound(id) => Some(id),
-            PoolError::NodeNotFound(id) => Some(id),
-            PoolError::OrphanNode(id) => Some(id),
-            PoolError::InvalidParenting { child, .. } => Some(child),
-            PoolError::InvalidNodeId { nodeid, .. } => Some(nodeid),
-            PoolError::CyclicReference(id) => Some(id),
-            PoolError::InvalidNodeMove(id) => Some(id),
-            PoolError::NodeLocked(id) => Some(id),
-            PoolError::NodeDeleted(id) => Some(id),
-            PoolError::EmptyPool => None,
-            PoolError::CannotRemoveRoot => None,
-        }
+/// Helper functions for creating node pool errors
+pub mod error_helpers {
+    use super::*;
+    use anyhow::bail;
+
+    pub fn duplicate_node(id: NodeId) -> anyhow::Error {
+        anyhow::anyhow!("{}: {}", error_messages::DUPLICATE_NODE, id)
+    }
+
+    pub fn parent_not_found(id: NodeId) -> anyhow::Error {
+        anyhow::anyhow!("{}: {}", error_messages::PARENT_NOT_FOUND, id)
+    }
+
+    pub fn child_not_found(id: NodeId) -> anyhow::Error {
+        anyhow::anyhow!("{}: {}", error_messages::CHILD_NOT_FOUND, id)
+    }
+
+    pub fn node_not_found(id: NodeId) -> anyhow::Error {
+        anyhow::anyhow!("{}: {}", error_messages::NODE_NOT_FOUND, id)
+    }
+
+    pub fn orphan_node(id: NodeId) -> anyhow::Error {
+        anyhow::anyhow!("{}: {}", error_messages::ORPHAN_NODE, id)
+    }
+
+    pub fn invalid_parenting(
+        child: NodeId,
+        alleged_parent: NodeId,
+    ) -> anyhow::Error {
+        anyhow::anyhow!(
+            "{}: 子节点 {} 不是父节点 {} 的子节点",
+            error_messages::INVALID_PARENTING,
+            child,
+            alleged_parent
+        )
+    }
+
+    pub fn invalid_node_id(
+        nodeid: NodeId,
+        new_node_id: NodeId,
+    ) -> anyhow::Error {
+        anyhow::anyhow!(
+            "{}: 新节点ID({})与要替换的节点ID({})不一致",
+            error_messages::INVALID_NODE_ID,
+            nodeid,
+            new_node_id
+        )
+    }
+
+    pub fn empty_pool() -> anyhow::Error {
+        anyhow::anyhow!(error_messages::EMPTY_POOL)
+    }
+
+    pub fn cyclic_reference(id: NodeId) -> anyhow::Error {
+        anyhow::anyhow!(
+            "{}: 节点 {} 不能成为自己的祖先",
+            error_messages::CYCLIC_REFERENCE,
+            id
+        )
+    }
+
+    pub fn invalid_node_move(id: NodeId) -> anyhow::Error {
+        anyhow::anyhow!(
+            "{}: 无法将节点 {} 移动到目标位置",
+            error_messages::INVALID_NODE_MOVE,
+            id
+        )
+    }
+
+    pub fn node_locked(id: NodeId) -> anyhow::Error {
+        anyhow::anyhow!("{}: {}", error_messages::NODE_LOCKED, id)
+    }
+
+    pub fn node_deleted(id: NodeId) -> anyhow::Error {
+        anyhow::anyhow!("{}: {}", error_messages::NODE_DELETED, id)
+    }
+
+    pub fn cannot_remove_root() -> anyhow::Error {
+        anyhow::anyhow!(error_messages::CANNOT_REMOVE_ROOT)
     }
 }
 
-/// A type alias for Result that uses PoolError as the error type.
-pub type PoolResult<T> = Result<T, PoolError>;
+/// A type alias for Result that uses anyhow::Error as the error type.
+pub type PoolResult<T> = Result<T>;

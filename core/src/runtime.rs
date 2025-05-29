@@ -96,7 +96,7 @@ impl Editor {
     }
 
     /// 销毁编辑器实例
-    pub async fn destroy(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn destroy(&mut self) -> EditorResult<()> {
         debug!("正在销毁编辑器实例");
         // 广播销毁事件
         self.event_bus.broadcast(Event::Destroy).await?;

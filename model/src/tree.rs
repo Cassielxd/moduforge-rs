@@ -5,9 +5,10 @@ use im::Vector;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::error::PoolResult;
 use crate::node_type::NodeEnum;
 use crate::{
-    error::PoolError,
+    error::error_helpers,
     mark::Mark,
     node::Node,
     ops::{AttrsRef, MarkRef, NodeRef},
@@ -134,11 +135,11 @@ impl Tree {
         &mut self,
         id: &NodeId,
         new_values: im::HashMap<String, Value>,
-    ) -> Result<(), PoolError> {
+    ) -> PoolResult<()> {
         let shard_index = self.get_shard_index(id);
         let node = self.nodes[shard_index]
             .get(id)
-            .ok_or(PoolError::NodeNotFound(id.clone()))?;
+            .ok_or(error_helpers::node_not_found(id.clone()))?;
         let old_values = node.attrs.clone();
         let mut new_node = node.as_ref().clone();
         let new_attrs = old_values.update(new_values);
@@ -161,7 +162,7 @@ impl Tree {
     pub fn add(
         &mut self,
         nodes: NodeEnum,
-    ) -> Result<(), PoolError> {
+    ) -> PoolResult<()> {
         // 将节点枚举分解为当前节点和子节点
         let (mut node, children) = nodes.into_parts();
         let node_id = node.id.clone();
@@ -170,7 +171,7 @@ impl Tree {
         let parent_shard_index = self.get_shard_index(&node_id);
         let _ = self.nodes[parent_shard_index]
             .get(&node_id)
-            .ok_or(PoolError::ParentNotFound(node_id.clone()))?;
+            .ok_or(error_helpers::parent_not_found(node_id.clone()))?;
 
         // 收集所有子节点的ID并添加到当前节点的content中
         let zenliang: Vector<String> =
@@ -216,11 +217,11 @@ impl Tree {
         &mut self,
         parent_id: &NodeId,
         nodes: &Vec<Node>,
-    ) -> Result<(), PoolError> {
+    ) -> PoolResult<()> {
         let parent_shard_index = self.get_shard_index(parent_id);
         let parent = self.nodes[parent_shard_index]
             .get(parent_id)
-            .ok_or(PoolError::ParentNotFound(parent_id.clone()))?;
+            .ok_or(error_helpers::parent_not_found(parent_id.clone()))?;
         let mut new_parent = parent.as_ref().clone();
         new_parent.content.push_back(nodes[0].id.clone());
         self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
@@ -282,11 +283,11 @@ impl Tree {
         &mut self,
         id: &NodeId,
         mark: Mark,
-    ) -> Result<(), PoolError> {
+    ) -> PoolResult<()> {
         let shard_index = self.get_shard_index(id);
         let node = self.nodes[shard_index]
             .get(id)
-            .ok_or(PoolError::NodeNotFound(id.clone()))?;
+            .ok_or(error_helpers::node_not_found(id.clone()))?;
         let mut new_node = node.as_ref().clone();
         new_node.marks =
             new_node.marks.iter().filter(|&m| !m.eq(&mark)).cloned().collect();
@@ -299,11 +300,11 @@ impl Tree {
         &mut self,
         id: &NodeId,
         marks: &Vec<Mark>,
-    ) -> Result<(), PoolError> {
+    ) -> PoolResult<()> {
         let shard_index = self.get_shard_index(id);
         let node = self.nodes[shard_index]
             .get(id)
-            .ok_or(PoolError::NodeNotFound(id.clone()))?;
+            .ok_or(error_helpers::node_not_found(id.clone()))?;
         let mut new_node = node.as_ref().clone();
         new_node.marks.extend(marks.clone());
         self.nodes[shard_index] =
@@ -314,16 +315,16 @@ impl Tree {
         &mut self,
         node_id: NodeId,
         nodes: &Vec<Node>,
-    ) -> Result<(), PoolError> {
+    ) -> PoolResult<()> {
         let shard_index = self.get_shard_index(&node_id);
         let _ = self.nodes[shard_index]
             .get(&node_id)
-            .ok_or(PoolError::NodeNotFound(node_id.clone()))?;
+            .ok_or(error_helpers::node_not_found(node_id.clone()))?;
         if nodes[0].id != node_id {
-            return Err(PoolError::InvalidNodeId {
-                nodeid: node_id,
-                new_node_id: nodes[0].id.clone(),
-            });
+            return Err(error_helpers::invalid_node_id(
+                node_id,
+                nodes[0].id.clone(),
+            ));
         }
         let _ = self.add_node(&node_id, nodes)?;
         Ok(())
@@ -335,24 +336,24 @@ impl Tree {
         target_parent_id: &NodeId,
         node_id: &NodeId,
         position: Option<usize>,
-    ) -> Result<(), PoolError> {
+    ) -> PoolResult<()> {
         let source_shard_index = self.get_shard_index(source_parent_id);
         let target_shard_index = self.get_shard_index(target_parent_id);
         let node_shard_index = self.get_shard_index(node_id);
         let source_parent = self.nodes[source_shard_index]
             .get(source_parent_id)
-            .ok_or(PoolError::ParentNotFound(source_parent_id.clone()))?;
+            .ok_or(error_helpers::parent_not_found(source_parent_id.clone()))?;
         let target_parent = self.nodes[target_shard_index]
             .get(target_parent_id)
-            .ok_or(PoolError::ParentNotFound(target_parent_id.clone()))?;
+            .ok_or(error_helpers::parent_not_found(target_parent_id.clone()))?;
         let _node = self.nodes[node_shard_index]
             .get(node_id)
-            .ok_or(PoolError::NodeNotFound(node_id.clone()))?;
+            .ok_or(error_helpers::node_not_found(node_id.clone()))?;
         if !source_parent.content.contains(node_id) {
-            return Err(PoolError::InvalidParenting {
-                child: node_id.clone(),
-                alleged_parent: source_parent_id.clone(),
-            });
+            return Err(error_helpers::invalid_parenting(
+                node_id.clone(),
+                source_parent_id.clone(),
+            ));
         }
         let mut new_source_parent = source_parent.as_ref().clone();
         new_source_parent.content = new_source_parent
@@ -395,20 +396,20 @@ impl Tree {
         &mut self,
         parent_id: &NodeId,
         nodes: Vec<NodeId>,
-    ) -> Result<(), PoolError> {
+    ) -> PoolResult<()> {
         let parent_shard_index = self.get_shard_index(parent_id);
         let parent = self.nodes[parent_shard_index]
             .get(parent_id)
-            .ok_or(PoolError::ParentNotFound(parent_id.clone()))?;
+            .ok_or(error_helpers::parent_not_found(parent_id.clone()))?;
         if nodes.contains(&self.root_id) {
-            return Err(PoolError::CannotRemoveRoot);
+            return Err(error_helpers::cannot_remove_root());
         }
         for node_id in &nodes {
             if !parent.content.contains(node_id) {
-                return Err(PoolError::InvalidParenting {
-                    child: node_id.clone(),
-                    alleged_parent: parent_id.clone(),
-                });
+                return Err(error_helpers::invalid_parenting(
+                    node_id.clone(),
+                    parent_id.clone(),
+                ));
             }
         }
         let nodes_to_remove: std::collections::HashSet<_> =
@@ -435,14 +436,14 @@ impl Tree {
         &mut self,
         node_id: &NodeId,
         remove_nodes: &mut Vec<Node>,
-    ) -> Result<(), PoolError> {
+    ) -> PoolResult<()> {
         if node_id == &self.root_id {
-            return Err(PoolError::CannotRemoveRoot);
+            return Err(error_helpers::cannot_remove_root());
         }
         let shard_index = self.get_shard_index(node_id);
         let _ = self.nodes[shard_index]
             .get(node_id)
-            .ok_or(PoolError::NodeNotFound(node_id.clone()))?;
+            .ok_or(error_helpers::node_not_found(node_id.clone()))?;
         if let Some(children) = self.children(node_id) {
             for child_id in children {
                 self.remove_subtree(&child_id, remove_nodes)?;

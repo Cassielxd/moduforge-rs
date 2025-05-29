@@ -2,28 +2,10 @@ use std::{fmt, sync::Arc};
 
 use moduforge_model::{node_pool::NodePool, schema::Schema, tree::Tree};
 
+use crate::TransformResult;
+
 use super::step::{Step, StepResult};
 
-// 定义 TransformError 结构体
-#[derive(Debug)]
-pub struct TransformError {
-    message: String,
-}
-impl fmt::Display for TransformError {
-    fn fmt(
-        &self,
-        f: &mut fmt::Formatter,
-    ) -> fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
-impl std::error::Error for TransformError {}
-
-impl TransformError {
-    pub fn new(message: String) -> Self {
-        TransformError { message }
-    }
-}
 #[derive(Debug, Clone)]
 pub struct Transform {
     /// 当前文档状态
@@ -50,11 +32,11 @@ impl Transform {
     pub fn step(
         &mut self,
         step: Arc<dyn Step>,
-    ) -> Result<(), TransformError> {
+    ) -> TransformResult<()> {
         let result: StepResult =
             step.apply(&mut self.draft, self.schema.clone())?;
         match result.failed {
-            Some(message) => Err(TransformError::new(message)),
+            Some(message) => Err(anyhow::anyhow!(message)),
             None => {
                 self.add_step(step);
                 Ok(())

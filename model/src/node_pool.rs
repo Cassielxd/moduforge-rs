@@ -1,6 +1,7 @@
+use crate::error::PoolResult;
 use crate::{node_type::NodeEnum, tree::Tree};
 
-use super::{error::PoolError, node::Node, types::NodeId};
+use super::{error::error_helpers, node::Node, types::NodeId};
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
 use std::{sync::Arc};
@@ -180,20 +181,20 @@ impl NodePool {
     }
 
     /// 验证父子关系一致性
-    pub fn validate_hierarchy(&self) -> Result<(), PoolError> {
+    pub fn validate_hierarchy(&self) -> PoolResult<()> {
         for (child_id, parent_id) in &self.inner.parent_map {
             // 验证父节点存在
             if !self.contains_node(parent_id) {
-                return Err(PoolError::OrphanNode(child_id.clone()));
+                return Err(error_helpers::orphan_node(child_id.clone()));
             }
 
             // 验证父节点确实包含该子节点
             if let Some(children) = self.children(parent_id) {
                 if !children.contains(child_id) {
-                    return Err(PoolError::InvalidParenting {
-                        child: child_id.clone(),
-                        alleged_parent: parent_id.clone(),
-                    });
+                    return Err(error_helpers::invalid_parenting(
+                        child_id.clone(),
+                        parent_id.clone(),
+                    ));
                 }
             }
         }

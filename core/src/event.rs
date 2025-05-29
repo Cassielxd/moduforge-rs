@@ -49,7 +49,7 @@ impl<T: Send + 'static> EventBus<T> {
         write.extend(event_handlers);
         Ok(())
     }
-    pub  fn destroy(&self) {
+    pub fn destroy(&self) {
         let _ = self.shutdown.0.send_blocking(());
     }
     /// 启动事件循环
@@ -104,7 +104,12 @@ impl<T: Send + 'static> EventBus<T> {
     pub fn new() -> Self {
         let (tx, rt) = async_channel::bounded(100);
         let (shutdown_tx, shutdown_rt) = async_channel::bounded(1);
-        Self { tx, rt, event_handlers: Arc::new(RwLock::new(vec![])), shutdown: (shutdown_tx, shutdown_rt) }
+        Self {
+            tx,
+            rt,
+            event_handlers: Arc::new(RwLock::new(vec![])),
+            shutdown: (shutdown_tx, shutdown_rt),
+        }
     }
 
     pub fn subscribe(&self) -> Receiver<T> {
@@ -116,10 +121,7 @@ impl<T: Send + 'static> EventBus<T> {
         event: T,
     ) -> EditorResult<()> {
         self.tx.send(event).await.map_err(|e| {
-            error_utils::event_error(format!(
-                "广播事件失败: {}",
-                e
-            ))
+            error_utils::event_error(format!("广播事件失败: {}", e))
         })
     }
     pub fn broadcast_blocking(
@@ -127,10 +129,7 @@ impl<T: Send + 'static> EventBus<T> {
         event: T,
     ) -> EditorResult<()> {
         self.tx.send_blocking(event).map_err(|e| {
-            error_utils::event_error(format!(
-                "广播事件失败: {}",
-                e
-            ))
+            error_utils::event_error(format!("广播事件失败: {}", e))
         })
     }
 }

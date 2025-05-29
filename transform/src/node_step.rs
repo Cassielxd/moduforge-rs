@@ -4,9 +4,11 @@ use moduforge_model::{
     node::Node, node_type::NodeEnum, schema::Schema, tree::Tree, types::NodeId,
 };
 
+use crate::transform_error;
+
 use super::{
     step::{Step, StepResult},
-    transform::TransformError,
+    TransformResult,
 };
 use serde::{Deserialize, Serialize};
 /// 添加节点的步骤
@@ -27,9 +29,9 @@ impl Step for AddNodeStep {
         &self,
         dart: &mut Tree,
         schema: Arc<Schema>,
-    ) -> Result<StepResult, TransformError> {
+    ) -> TransformResult<StepResult> {
         let _ = schema;
-        let _ = dart.node("key")+self.nodes.clone();
+        let _ = dart.node("key") + self.nodes.clone();
         Ok(StepResult::ok())
     }
     fn serialize(&self) -> Option<Vec<u8>> {
@@ -58,7 +60,7 @@ impl Step for RemoveNodeStep {
         &self,
         dart: &mut Tree,
         schema: Arc<Schema>,
-    ) -> Result<StepResult, TransformError> {
+    ) -> TransformResult<StepResult> {
         let _ = schema;
         let result = dart.node(&self.parent_id) - self.node_ids.clone();
         match result {
@@ -98,7 +100,7 @@ impl Step for MoveNodeStep {
         &self,
         dart: &mut Tree,
         schema: Arc<Schema>,
-    ) -> Result<StepResult, TransformError> {
+    ) -> TransformResult<StepResult> {
         let _ = schema;
 
         match dart.move_node(
@@ -108,7 +110,7 @@ impl Step for MoveNodeStep {
             self.position,
         ) {
             Ok(()) => Ok(StepResult::ok()),
-            Err(err) => Err(TransformError::new(err.to_string())),
+            Err(err) => Err(transform_error(err.to_string())),
         }
     }
     fn serialize(&self) -> Option<Vec<u8>> {
@@ -138,12 +140,12 @@ impl Step for ReplaceNodeStep {
         &self,
         dart: &mut Tree,
         schema: Arc<Schema>,
-    ) -> Result<StepResult, TransformError> {
+    ) -> TransformResult<StepResult> {
         let _ = schema;
 
         match dart.replace_node(self.node_id.clone(), &self.nodes) {
             Ok(()) => Ok(StepResult::ok()),
-            Err(err) => Err(TransformError::new(err.to_string())),
+            Err(err) => Err(transform_error(err.to_string())),
         }
     }
     fn serialize(&self) -> Option<Vec<u8>> {

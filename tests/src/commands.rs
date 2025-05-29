@@ -2,9 +2,12 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use moduforge_model::node_type::NodeEnum;
-use moduforge_state::transaction::{Command, Transaction};
-use moduforge_transform::transform::TransformError;
+use moduforge_state::{
+    state::TransactionResult,
+    transaction::{Command, Transaction},
+};
 use moduforge_macros::impl_command;
+use moduforge_transform::TransformResult;
 
 #[derive(Clone, Default, Debug)]
 pub struct MyCommand;
@@ -22,7 +25,7 @@ impl Command for MyCommand {
     async fn execute(
         &self,
         tr: &mut Transaction,
-    ) -> Result<(), TransformError> {
+    ) -> TransformResult<()> {
         //  数据库的查询
         let root = tr.doc().root();
         let node: NodeEnum = NodeEnum::from(
@@ -41,7 +44,7 @@ impl Command for MyCommand {
 
 impl_command!(
     MyCommand1,
-    async |tr: &mut Transaction| -> Result<(), TransformError> {
+    async |tr: &mut Transaction| -> TransformResult<()> {
         let root = tr.doc().root();
         let node: NodeEnum = NodeEnum::from(
             root.as_ref().clone(),

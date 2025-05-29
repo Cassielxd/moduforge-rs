@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
+use crate::{transform_error, TransformResult};
+
 use super::{
     step::{Step, StepResult},
-    transform::TransformError,
 };
 use im::HashMap;
 use moduforge_model::{schema::Schema, tree::Tree, types::NodeId};
@@ -29,7 +30,7 @@ impl Step for AttrStep {
         &self,
         dart: &mut Tree,
         schema: Arc<Schema>,
-    ) -> Result<StepResult, TransformError> {
+    ) -> TransformResult<StepResult> {
         let _ = schema;
         match dart.get_node(&self.id) {
             Some(node) => {
@@ -44,11 +45,11 @@ impl Step for AttrStep {
                 let result = dart.attrs(&self.id) + new_values;
                 match result {
                     Ok(_) => Ok(StepResult::ok()),
-                    Err(e) => Ok(StepResult::fail(e.to_string())),
+                    Err(e) => Err(transform_error(e.to_string())),
                 }
             },
             None => {
-                return Ok(StepResult::fail("节点不存在".to_string()));
+                return Err(transform_error("节点不存在".to_string()));
             },
         }
     }

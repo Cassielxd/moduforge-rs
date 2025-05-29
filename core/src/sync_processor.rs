@@ -21,10 +21,17 @@ pub enum ProcessorError {
 }
 
 impl Display for ProcessorError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
         match self {
-            ProcessorError::TaskFailed(msg) => write!(f, "任务执行失败: {}", msg),
-            ProcessorError::InternalError(msg) => write!(f, "内部错误: {}", msg),
+            ProcessorError::TaskFailed(msg) => {
+                write!(f, "任务执行失败: {}", msg)
+            },
+            ProcessorError::InternalError(msg) => {
+                write!(f, "内部错误: {}", msg)
+            },
         }
     }
 }
@@ -51,7 +58,10 @@ where
     T: Clone + Send + Sync + 'static,
     O: Clone + Send + Sync + 'static,
 {
-    fn process(&self, task: T) -> Result<O, ProcessorError>;
+    fn process(
+        &self,
+        task: T,
+    ) -> Result<O, ProcessorError>;
 }
 
 /// 同步任务处理器
@@ -73,7 +83,11 @@ where
     O: Clone + Send + Sync + 'static,
     P: TaskProcessor<T, O>,
 {
-    pub fn new(processor: P, max_retries: u32, retry_delay: Duration) -> Self {
+    pub fn new(
+        processor: P,
+        max_retries: u32,
+        retry_delay: Duration,
+    ) -> Self {
         Self {
             processor: Arc::new(processor),
             max_retries,
@@ -82,7 +96,10 @@ where
         }
     }
 
-    pub fn process_task(&self, task: T) -> TaskResult<T, O> {
+    pub fn process_task(
+        &self,
+        task: T,
+    ) -> TaskResult<T, O> {
         let start_time = Instant::now();
         let mut current_retry = 0;
 
@@ -96,7 +113,7 @@ where
                         error: None,
                         processing_time: start_time.elapsed(),
                     };
-                }
+                },
                 Err(e) => {
                     if current_retry < self.max_retries {
                         current_retry += 1;
@@ -110,12 +127,17 @@ where
                         error: Some(e.to_string()),
                         processing_time: start_time.elapsed(),
                     };
-                }
+                },
             }
         }
     }
 
-    pub fn process_task_with_retry(&self, task: T, max_retries: u32, retry_delay: Duration) -> TaskResult<T, O> {
+    pub fn process_task_with_retry(
+        &self,
+        task: T,
+        max_retries: u32,
+        retry_delay: Duration,
+    ) -> TaskResult<T, O> {
         let start_time = Instant::now();
         let mut current_retry = 0;
 
@@ -129,7 +151,7 @@ where
                         error: None,
                         processing_time: start_time.elapsed(),
                     };
-                }
+                },
                 Err(e) => {
                     if current_retry < max_retries {
                         current_retry += 1;
@@ -143,7 +165,7 @@ where
                         error: Some(e.to_string()),
                         processing_time: start_time.elapsed(),
                     };
-                }
+                },
             }
         }
     }
@@ -156,7 +178,10 @@ mod tests {
     struct TestProcessor;
 
     impl TaskProcessor<i32, String> for TestProcessor {
-        fn process(&self, task: i32) -> Result<String, ProcessorError> {
+        fn process(
+            &self,
+            task: i32,
+        ) -> Result<String, ProcessorError> {
             if task < 0 {
                 return Err(ProcessorError::TaskFailed("负数任务".to_string()));
             }
@@ -167,11 +192,8 @@ mod tests {
 
     #[test]
     fn test_sync_processor() {
-        let processor = SyncProcessor::new(
-            TestProcessor,
-            3,
-            Duration::from_millis(100),
-        );
+        let processor =
+            SyncProcessor::new(TestProcessor, 3, Duration::from_millis(100));
 
         // 测试成功的情况
         let result = processor.process_task(42);
@@ -181,27 +203,24 @@ mod tests {
 
         // 测试失败的情况
         let result = processor.process_task(-1);
-        assert_eq!(result.status, TaskStatus::Failed("任务执行失败: 负数任务".to_string()));
+        assert_eq!(
+            result.status,
+            TaskStatus::Failed("任务执行失败: 负数任务".to_string())
+        );
         assert!(result.output.is_none());
         assert!(result.error.is_some());
     }
 
     #[test]
     fn test_processor_with_retry() {
-        let processor = SyncProcessor::new(
-            TestProcessor,
-            3,
-            Duration::from_millis(100),
-        );
+        let processor =
+            SyncProcessor::new(TestProcessor, 3, Duration::from_millis(100));
 
         // 测试自定义重试参数
-        let result = processor.process_task_with_retry(
-            42,
-            2,
-            Duration::from_millis(50),
-        );
+        let result =
+            processor.process_task_with_retry(42, 2, Duration::from_millis(50));
         assert_eq!(result.status, TaskStatus::Completed);
         assert!(result.error.is_none());
         assert_eq!(result.output, Some("Processed: 42".to_string()));
     }
-} 
+}

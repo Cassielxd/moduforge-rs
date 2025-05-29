@@ -27,3 +27,10 @@ pub mod node_step;
 pub mod patch;
 pub mod step;
 pub mod transform;
+use anyhow::Result;
+
+pub type TransformResult<T> = Result<T>;
+
+pub fn transform_error(msg: impl Into<String>) -> anyhow::Error {
+    anyhow::anyhow!("事务应用失败: {}", msg.into())
+}

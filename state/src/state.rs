@@ -16,7 +16,7 @@ use std::{
 use crate::{ops::GlobalResourceManager, resource::Resource};
 
 use super::{
-    error::{StateError, StateResult},
+    error::{error, StateResult},
     plugin::{Plugin},
     transaction::Transaction,
 };
@@ -57,7 +57,7 @@ impl State {
         let schema: Arc<Schema> = match &state_config.schema {
             Some(schema) => schema.clone(),
             None => state_config.schema.clone().ok_or_else(|| {
-                StateError::SchemaError("Schema is required".to_string())
+                error::schema_error("Schema is required".to_string())
             })?,
         };
         let config = Configuration::new(
@@ -357,14 +357,14 @@ impl State {
         }
         let node_pool_str =
             serde_json::to_string(&self.doc()).map_err(|e| {
-                StateError::SerializeError(format!(
+                error::serialize_error(format!(
                     "Failed to serialize node pool: {}",
                     e
                 ))
             })?;
         let state_fields_str =
             serde_json::to_string(&state_fields).map_err(|e| {
-                StateError::SerializeError(format!(
+                error::serialize_error(format!(
                     "Failed to serialize state fields: {}",
                     e
                 ))
@@ -381,14 +381,14 @@ impl State {
     ) -> StateResult<State> {
         let state_fields: HashMap<String, Vec<u8>> =
             serde_json::from_slice(&s.state_fields).map_err(|e| {
-                StateError::DeserializeError(format!(
+                error::deserialize_error(format!(
                     "Failed to deserialize state fields: {}",
                     e
                 ))
             })?;
         let node_pool: Arc<NodePool> = serde_json::from_slice(&s.node_pool)
             .map_err(|e| {
-                StateError::DeserializeError(format!(
+                error::deserialize_error(format!(
                     "Failed to deserialize node pool: {}",
                     e
                 ))

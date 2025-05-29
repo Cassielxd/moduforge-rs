@@ -24,7 +24,6 @@
 //! - `types`: 核心类型定义
 
 pub mod async_processor;
-pub mod sync_processor;
 pub mod async_runtime;
 pub mod error;
 pub mod event;
@@ -33,6 +32,7 @@ pub mod extension_manager;
 pub mod flow;
 pub mod helpers;
 pub mod history_manager;
+pub mod sync_processor;
 
 pub mod mark;
 pub mod metrics;

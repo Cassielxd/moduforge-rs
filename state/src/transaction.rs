@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use moduforge_model::mark::Mark;
 use moduforge_model::node_type::NodeEnum;
 use moduforge_model::types::NodeId;
+use moduforge_transform::TransformResult;
 use serde_json::Value;
 
 use super::state::State;
@@ -13,7 +14,7 @@ use moduforge_model::node_pool::NodePool;
 use moduforge_transform::attr_step::AttrStep;
 use moduforge_transform::node_step::{AddNodeStep, RemoveNodeStep};
 use moduforge_transform::mark_step::{AddMarkStep, RemoveMarkStep};
-use moduforge_transform::transform::{Transform, TransformError};
+use moduforge_transform::transform::{Transform};
 use std::fmt::Debug;
 
 static IDS: AtomicU64 = AtomicU64::new(1);
@@ -29,7 +30,7 @@ pub trait Command: Send + Sync + Debug {
     async fn execute(
         &self,
         tr: &mut Transaction,
-    ) -> Result<(), TransformError>;
+    ) -> TransformResult<()>;
     fn name(&self) -> String;
 }
 /// 事务结构体，用于管理文档的修改操作
@@ -88,8 +89,9 @@ impl Transaction {
         &mut self,
         id: String,
         values: im::HashMap<String, Value>,
-    ) {
-        let _ = self.step(Arc::new(AttrStep::new(id, values)));
+    ) -> TransformResult<()> {
+        self.step(Arc::new(AttrStep::new(id, values)))?;
+        Ok(())
     }
     /// 添加新节点
     /// parent_id: 父节点ID
@@ -97,8 +99,9 @@ impl Transaction {
     pub fn add_node(
         &mut self,
         nodes: NodeEnum,
-    ) {
-        let _ = self.step(Arc::new(AddNodeStep::new(nodes)));
+    ) -> TransformResult<()> {
+        self.step(Arc::new(AddNodeStep::new(nodes)))?;
+        Ok(())
     }
     /// 删除节点
     /// id: 节点ID
@@ -107,8 +110,9 @@ impl Transaction {
         &mut self,
         parent_id: NodeId,
         node_ids: Vec<NodeId>,
-    ) {
-        let _ = self.step(Arc::new(RemoveNodeStep::new(parent_id, node_ids)));
+    ) -> TransformResult<()> {
+        self.step(Arc::new(RemoveNodeStep::new(parent_id, node_ids)))?;
+        Ok(())
     }
     /// 添加标记
     /// id: 节点ID
@@ -117,8 +121,9 @@ impl Transaction {
         &mut self,
         id: NodeId,
         marks: Vec<Mark>,
-    ) {
-        let _ = self.step(Arc::new(AddMarkStep::new(id, marks)));
+    ) -> TransformResult<()> {
+        self.step(Arc::new(AddMarkStep::new(id, marks)))?;
+        Ok(())
     }
     /// 删除标记
     /// id: 节点ID
@@ -127,8 +132,9 @@ impl Transaction {
         &mut self,
         id: NodeId,
         marks: Vec<Mark>,
-    ) {
-        let _ = self.step(Arc::new(RemoveMarkStep::new(id, marks)));
+    ) -> TransformResult<()> {
+        self.step(Arc::new(RemoveMarkStep::new(id, marks)))?;
+        Ok(())
     }
     /// 设置元数据
     /// key: 键

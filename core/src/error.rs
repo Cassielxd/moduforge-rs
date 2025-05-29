@@ -1,91 +1,49 @@
-use std::fmt;
 use std::io;
+use anyhow::{Result};
 use crate::flow::FlowError;
 
 /// 编辑器核心错误类型
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum EditorError {
     /// 状态相关错误
+    #[error("State error: {0}")]
     StateError(String),
     /// 存储相关错误
+    #[error("Storage error: {0}")]
     StorageError(String),
     /// 事件处理错误
+    #[error("Event error: {0}")]
     EventError(String),
     /// 插件相关错误
+    #[error("Plugin error: {0}")]
     PluginError(String),
     /// IO操作错误
-    IoError(io::Error),
+    #[error("IO error: {0}")]
+    IoError(#[from] io::Error),
     /// 配置错误
+    #[error("Config error: {0}")]
     ConfigError(String),
     /// 事务处理错误
+    #[error("Transaction error: {0}")]
     TransactionError(String),
     /// 历史记录错误
+    #[error("History error: {0}")]
     HistoryError(String),
     /// 引擎错误
+    #[error("Engine error: {0}")]
     EngineError(String),
     /// 缓存错误
+    #[error("Cache error: {0}")]
     CacheError(String),
     /// 未知错误
+    #[error("Unknown error: {0}")]
     Unknown(String),
     /// 其他错误
+    #[error("Other error: {0}")]
     Other(String),
     /// 流程错误
-    Flow(FlowError),
-}
-
-impl fmt::Display for EditorError {
-    fn fmt(
-        &self,
-        f: &mut fmt::Formatter<'_>,
-    ) -> fmt::Result {
-        match self {
-            EditorError::StateError(msg) => write!(f, "State error: {}", msg),
-            EditorError::StorageError(msg) => {
-                write!(f, "Storage error: {}", msg)
-            },
-            EditorError::EventError(msg) => write!(f, "Event error: {}", msg),
-            EditorError::PluginError(msg) => write!(f, "Plugin error: {}", msg),
-            EditorError::IoError(err) => write!(f, "IO error: {}", err),
-            EditorError::ConfigError(msg) => write!(f, "Config error: {}", msg),
-            EditorError::TransactionError(msg) => {
-                write!(f, "Transaction error: {}", msg)
-            },
-            EditorError::HistoryError(msg) => {
-                write!(f, "History error: {}", msg)
-            },
-            EditorError::EngineError(msg) => write!(f, "Engine error: {}", msg),
-            EditorError::CacheError(msg) => write!(f, "Cache error: {}", msg),
-            EditorError::Unknown(msg) => write!(f, "Unknown error: {}", msg),
-            EditorError::Other(msg) => write!(f, "Other error: {}", msg),
-            EditorError::Flow(err) => write!(f, "Flow error: {}", err),
-        }
-    }
-}
-
-impl std::error::Error for EditorError {}
-
-impl From<io::Error> for EditorError {
-    fn from(err: io::Error) -> Self {
-        EditorError::IoError(err)
-    }
-}
-
-impl From<String> for EditorError {
-    fn from(err: String) -> Self {
-        EditorError::Unknown(err)
-    }
-}
-
-impl From<&str> for EditorError {
-    fn from(err: &str) -> Self {
-        EditorError::Unknown(err.to_string())
-    }
-}
-
-impl From<FlowError> for EditorError {
-    fn from(err: FlowError) -> Self {
-        EditorError::Flow(err)
-    }
+    #[error("Flow error: {0}")]
+    Flow(#[from] FlowError),
 }
 
 /// 错误结果类型别名

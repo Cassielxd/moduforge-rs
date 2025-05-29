@@ -1,10 +1,11 @@
-use std::sync::Arc;
+use std::{f32::consts::E, sync::Arc};
 
 use moduforge_model::{mark::Mark, schema::Schema, tree::Tree, types::NodeId};
 
+use crate::{transform_error, TransformResult};
+
 use super::{
     step::{Step, StepResult},
-    transform::TransformError,
 };
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -28,7 +29,7 @@ impl Step for AddMarkStep {
         &self,
         dart: &mut Tree,
         schema: Arc<Schema>,
-    ) -> Result<StepResult, TransformError> {
+    ) -> TransformResult<StepResult> {
         let _ = schema;
         let result = dart.mark(&self.id) + self.marks.clone();
         match result {
@@ -62,12 +63,12 @@ impl Step for RemoveMarkStep {
         &self,
         dart: &mut Tree,
         schema: Arc<Schema>,
-    ) -> Result<StepResult, TransformError> {
+    ) -> TransformResult<StepResult> {
         let _ = schema;
         let result = dart.mark(&self.id) - self.marks.clone();
         match result {
             Ok(_) => Ok(StepResult::ok()),
-            Err(e) => Ok(StepResult::fail(e.to_string())),
+            Err(e) => Err(transform_error(e.to_string())),
         }
     }
     fn serialize(&self) -> Option<Vec<u8>> {
