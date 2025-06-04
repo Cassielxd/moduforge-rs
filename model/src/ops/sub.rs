@@ -58,6 +58,17 @@ impl<'a> Sub<Mark> for MarkRef<'a> {
     }
 }
 
+impl<'a> Sub<String> for MarkRef<'a> {
+    type Output = PoolResult<MarkRef<'a>>;
+    fn sub(
+        self,
+        mark_name: String,
+    ) -> Self::Output {
+        self.tree.remove_mark_by_name(&self.key.clone().into(), &mark_name)?;
+        Ok(MarkRef::new(self.tree, self.key.clone()))
+    }
+}
+
 /// 为 MarkRef 实现自定义的 - 运算符，用于删除多个标记
 /// 当使用 - 运算符时，会从当前标记列表中移除指定的多个标记
 /// 注意：这里使用循环逐个删除标记，而不是一次性删除所有标记

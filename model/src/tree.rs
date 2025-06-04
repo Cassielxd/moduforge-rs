@@ -325,7 +325,23 @@ impl Tree {
     ) -> usize {
         self.get_node(parent_id).map(|n| n.content.len()).unwrap_or(0)
     }
-
+    pub fn remove_mark_by_name(
+        &mut self,
+        id: &NodeId,
+        mark_name: &str,
+    ) -> PoolResult<()> {
+        let shard_index = self.get_shard_index(id);
+        let node = self.nodes[shard_index]
+            .get(id)
+            .ok_or(error_helpers::node_not_found(id.clone()))?;
+        let mut new_node = node.as_ref().clone();
+        new_node.marks =
+            new_node.marks.iter().filter(|&m| m.r#type != mark_name).cloned().collect();
+        self.nodes[shard_index] =
+            self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
+        Ok(())
+    }
+    
     pub fn remove_mark(
         &mut self,
         id: &NodeId,
