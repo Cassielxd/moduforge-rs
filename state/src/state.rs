@@ -116,13 +116,15 @@ impl State {
     pub fn doc(&self) -> Arc<NodePool> {
         Arc::clone(&self.node_pool)
     }
+    /// 获取资源管理器
     pub fn resource_manager(&self) -> Arc<GlobalResourceManager> {
         Arc::clone(&self.config.resource_manager)
     }
+    /// 获取结构定义
     pub fn schema(&self) -> Arc<Schema> {
         Arc::clone(&self.config.schema)
     }
-
+    /// 获取插件列表
     pub fn plugins(&self) -> &Vec<Arc<Plugin>> {
         &self.config.plugins
     }
