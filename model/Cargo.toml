@@ -19,6 +19,7 @@ serde_json = {workspace=true}
 thiserror= {workspace=true}
 async-trait= {workspace=true}
 tokio= {workspace=true}
+nanoid = "0.4.0"
 
 # 日志系统
 tracing = { workspace = true }

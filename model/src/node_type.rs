@@ -281,11 +281,7 @@ impl NodeType {
         marks: Option<Vec<Mark>>,
     ) -> Node {
         // 实现...
-        let id: String = id.unwrap_or_else(|| {
-            let mut id_generator: std::sync::MutexGuard<'_, IdGenerator> =
-                IdGenerator::get_instance().lock().unwrap();
-            id_generator.get_next_id()
-        });
+        let id: String = id.unwrap_or_else(IdGenerator::get_id);
 
         Node::new(
             &id,

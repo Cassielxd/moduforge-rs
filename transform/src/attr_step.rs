@@ -8,7 +8,7 @@ use super::{
 use im::HashMap as ImHashMap;
 use moduforge_model::{schema::Schema, tree::Tree, types::NodeId};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{Value};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AttrStep {
