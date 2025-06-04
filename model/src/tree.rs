@@ -1,4 +1,3 @@
-use std::ops::Add;
 use std::{ops::Index, sync::Arc, num::NonZeroUsize};
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
@@ -7,15 +6,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::error::PoolResult;
-use crate::node;
 use crate::node_type::NodeEnum;
 use crate::{
     error::error_helpers,
     mark::Mark,
     node::Node,
     ops::{AttrsRef, MarkRef, NodeRef},
-    types::NodeId,
-    attrs::Attrs,
+    types::NodeId
 };
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -571,5 +568,209 @@ impl Index<&str> for Tree {
         let node_id = NodeId::from(index);
         let shard_index = self.get_shard_index(&node_id);
         self.nodes[shard_index].get(&node_id).expect("Node not found")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::node::Node;
+    use crate::node_type::NodeEnum;
+    use crate::types::NodeId;
+    use crate::attrs::Attrs;
+    use crate::mark::Mark;
+    use im::HashMap;
+    use serde_json::json;
+
+    fn create_test_node(id: &str) -> Node {
+        Node::new(
+            id,
+            "test".to_string(),
+            Attrs::default(),
+            vec![],
+            vec![],
+        )
+    }
+
+    #[test]
+    fn test_tree_creation() {
+        let root = create_test_node("root");
+        let tree = Tree::new(root.clone());
+        assert_eq!(tree.root_id, root.id);
+        assert!(tree.contains_node(&root.id));
+    }
+
+    #[test]
+    fn test_add_node() {
+        let root = create_test_node("root");
+        let mut tree = Tree::new(root.clone());
+        
+        let child = create_test_node("child");
+        let nodes = vec![child.clone()];
+        
+        tree.add_node(&root.id, &nodes).unwrap();
+        dbg!(&tree);
+        assert!(tree.contains_node(&child.id));
+        assert_eq!(tree.children(&root.id).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_remove_node() {
+        let root = create_test_node("root");
+        let mut tree = Tree::new(root.clone());
+       
+        let child = create_test_node("child");
+        let nodes = vec![child.clone()];
+        
+        tree.add_node(&root.id, &nodes).unwrap();
+        dbg!(&tree);
+        tree.remove_node(&root.id, vec![child.id.clone()]).unwrap();
+        dbg!(&tree);
+        assert!(!tree.contains_node(&child.id));
+        assert_eq!(tree.children(&root.id).unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_move_node() {
+        // 创建两个父节点
+        let parent1 = create_test_node("parent1");
+        let parent2 = create_test_node("parent2");
+        let mut tree = Tree::new(parent1.clone());
+        
+        // 将 parent2 添加为 parent1 的子节点
+        tree.add_node(&parent1.id, &vec![parent2.clone()]).unwrap();
+        
+        // 创建三个子节点
+        let child1 = create_test_node("child1");
+        let child2 = create_test_node("child2");
+        let child3 = create_test_node("child3");
+        
+        // 将所有子节点添加到 parent1 下
+        tree.add_node(&parent1.id, &vec![child1.clone()]).unwrap();
+        tree.add_node(&parent1.id, &vec![child2.clone()]).unwrap();
+        tree.add_node(&parent1.id, &vec![child3.clone()]).unwrap();
+        
+        // 验证初始状态
+        let parent1_children = tree.children(&parent1.id).unwrap();
+        assert_eq!(parent1_children.len(), 4); // parent2 + 3 children
+        assert_eq!(parent1_children[0], parent2.id);
+        assert_eq!(parent1_children[1], child1.id);
+        assert_eq!(parent1_children[2], child2.id);
+        assert_eq!(parent1_children[3], child3.id);
+        
+        // 将 child1 移动到 parent2 下
+        tree.move_node(&parent1.id, &parent2.id, &child1.id, None).unwrap();
+        
+        // 验证移动后的状态
+        let parent1_children = tree.children(&parent1.id).unwrap();
+        let parent2_children = tree.children(&parent2.id).unwrap();
+        assert_eq!(parent1_children.len(), 3); // parent2 + 2 children
+        assert_eq!(parent2_children.len(), 1); // child1
+        assert_eq!(parent2_children[0], child1.id);
+        
+        // 将 child2 移动到 parent2 下，放在 child1 后面
+        tree.move_node(&parent1.id, &parent2.id, &child2.id, Some(1)).unwrap();
+        
+        // 验证最终状态
+        let parent1_children = tree.children(&parent1.id).unwrap();
+        let parent2_children = tree.children(&parent2.id).unwrap();
+        assert_eq!(parent1_children.len(), 2); // parent2 + 1 child
+        assert_eq!(parent2_children.len(), 2); // child1 + child2
+        assert_eq!(parent2_children[0], child1.id);
+        assert_eq!(parent2_children[1], child2.id);
+        
+        // 验证父节点关系
+        let child1_parent = tree.get_parent_node(&child1.id).unwrap();
+        let child2_parent = tree.get_parent_node(&child2.id).unwrap();
+        assert_eq!(child1_parent.id, parent2.id);
+        assert_eq!(child2_parent.id, parent2.id);
+    }
+
+    #[test]
+    fn test_update_attr() {
+        let root = create_test_node("root");
+        let mut tree = Tree::new(root.clone());
+        
+        let mut attrs = HashMap::new();
+        attrs.insert("key".to_string(), json!("value"));
+        
+        tree.update_attr(&root.id, attrs).unwrap();
+        
+        let node = tree.get_node(&root.id).unwrap();
+        dbg!(&node);
+        assert_eq!(node.attrs.get("key").unwrap(), &json!("value"));
+    }
+
+    #[test]
+    fn test_add_mark() {
+        let root = create_test_node("root");
+        let mut tree = Tree::new(root.clone());
+        
+        let mark = Mark {
+            r#type: "test".to_string(),
+            attrs: Attrs::default(),
+        };
+        tree.add_mark(&root.id, &vec![mark.clone()]).unwrap();
+        dbg!(&tree);
+        let node = tree.get_node(&root.id).unwrap();
+        assert!(node.marks.contains(&mark));
+    }
+
+    #[test]
+    fn test_remove_mark() {
+        let root = create_test_node("root");
+        let mut tree = Tree::new(root.clone());
+        
+        let mark = Mark {
+            r#type: "test".to_string(),
+            attrs: Attrs::default(),
+        };
+        tree.add_mark(&root.id, &vec![mark.clone()]).unwrap();
+        dbg!(&tree);
+        tree.remove_mark(&root.id, mark.clone()).unwrap();
+        dbg!(&tree);
+        let node = tree.get_node(&root.id).unwrap();
+        assert!(!node.marks.contains(&mark));
+    }
+
+    #[test]
+    fn test_all_children() {
+        let root = create_test_node("root");
+        let mut tree = Tree::new(root.clone());
+        
+        let child1 = create_test_node("child1");
+        let child2 = create_test_node("child2");
+        
+        tree.add_node(&root.id, &vec![child1.clone()]).unwrap();
+        tree.add_node(&root.id, &vec![child2.clone()]).unwrap();
+        dbg!(&tree);
+        let all_children = tree.all_children(&root.id, None).unwrap();
+        assert_eq!(all_children.1.len(), 2);
+    }
+
+    #[test]
+    fn test_children_count() {
+        let root = create_test_node("root");
+        let mut tree = Tree::new(root.clone());
+        
+        let child1 = create_test_node("child1");
+        let child2 = create_test_node("child2");
+        
+        tree.add_node(&root.id, &vec![child1.clone()]).unwrap();
+        tree.add_node(&root.id, &vec![child2.clone()]).unwrap();
+        
+        assert_eq!(tree.children_count(&root.id), 2);
+    }
+
+    #[test]
+    fn test_get_parent_node() {
+        let root = create_test_node("root");
+        let mut tree = Tree::new(root.clone());
+        
+        let child = create_test_node("child");
+        tree.add_node(&root.id, &vec![child.clone()]).unwrap();
+        
+        let parent = tree.get_parent_node(&child.id).unwrap();
+        assert_eq!(parent.id, root.id);
     }
 }
