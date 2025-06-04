@@ -374,24 +374,6 @@ impl Tree {
             self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
         Ok(())
     }
-    pub fn replace_node(
-        &mut self,
-        node_id: NodeId,
-        nodes: &Vec<Node>,
-    ) -> PoolResult<()> {
-        let shard_index = self.get_shard_index(&node_id);
-        let _ = self.nodes[shard_index]
-            .get(&node_id)
-            .ok_or(error_helpers::node_not_found(node_id.clone()))?;
-        if nodes[0].id != node_id {
-            return Err(error_helpers::invalid_node_id(
-                node_id,
-                nodes[0].id.clone(),
-            ));
-        }
-        let _ = self.add_node(&node_id, nodes)?;
-        Ok(())
-    }
 
     pub fn move_node(
         &mut self,

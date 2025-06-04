@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use moduforge_model::{
     node::Node, node_type::NodeEnum, schema::Schema, tree::Tree, types::NodeId,
+    attrs::Attrs,
+    mark::Mark,
 };
 
 use crate::transform_error;
@@ -31,8 +33,11 @@ impl Step for AddNodeStep {
         schema: Arc<Schema>,
     ) -> TransformResult<StepResult> {
         let _ = schema;
-        let _ = dart.node("key") + self.nodes.clone();
-        Ok(StepResult::ok())
+        let result = dart.add(self.nodes.clone());
+        match result {
+            Ok(_) => Ok(StepResult::ok()),
+            Err(e) => Err(transform_error(e.to_string())),
+        }
     }
     fn serialize(&self) -> Option<Vec<u8>> {
         serde_json::to_vec(self).ok()
@@ -171,55 +176,135 @@ impl Step for MoveNodeStep {
     }
 }
 
-/// 替换节点
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ReplaceNodeStep {
-    node_id: NodeId,
-    nodes: Vec<Node>,
-}
-impl ReplaceNodeStep {
-    pub fn new(
-        node_id: NodeId,
-        nodes: Vec<Node>,
-    ) -> Self {
-        ReplaceNodeStep { node_id, nodes }
-    }
-}
-impl Step for ReplaceNodeStep {
-    fn name(&self) -> String {
-        "replace_node_step".to_string()
-    }
-    fn apply(
-        &self,
-        dart: &mut Tree,
-        schema: Arc<Schema>,
-    ) -> TransformResult<StepResult> {
-        let _ = schema;
 
-        match dart.replace_node(self.node_id.clone(), &self.nodes) {
-            Ok(()) => Ok(StepResult::ok()),
-            Err(err) => Err(transform_error(err.to_string())),
-        }
-    }
-    fn serialize(&self) -> Option<Vec<u8>> {
-        serde_json::to_vec(self).ok()
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use moduforge_model::{
+        node::Node,
+        node_type::{NodeEnum, NodeType, NodeSpec},
+        schema::{Schema, SchemaSpec, AttributeSpec},
+        tree::Tree,
+        attrs::Attrs,
+        mark::Mark,
+    };
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    fn create_test_node(id: &str) -> Node {
+        Node::new(
+            id,
+            "test".to_string(),
+            Attrs::default(),
+            vec![],
+            vec![],
+        )
     }
 
-    fn invert(
-        &self,
-        dart: &Arc<Tree>,
-    ) -> Option<Arc<dyn Step>> {
-        match dart.get_node(&self.node_id) {
-            Some(node) => {
-                //拿到所有替换之前的节点
-                let mut new_nodes = Vec::new();
-                for node_id in node.content.iter() {
-                    let node = dart.get_node(node_id).unwrap();
-                    new_nodes.push(node.as_ref().clone());
-                }
-                Some(Arc::new(ReplaceNodeStep::new(node.id.clone(), new_nodes)))
-            },
-            None => None,
+    fn create_test_schema() -> Arc<Schema> {
+        let mut nodes = HashMap::new();
+        nodes.insert("test".to_string(), NodeSpec {
+            content: None,
+            marks: None,
+            group: None,
+            desc: Some("Test node".to_string()),
+            attrs: None,
+        });
+
+        let spec = SchemaSpec {
+            nodes,
+            marks: HashMap::new(),
+            top_node: Some("test".to_string()),
+        };
+
+        Arc::new(Schema::compile(spec).unwrap())
+    }
+
+    fn create_test_tree() -> Tree {
+        let root = create_test_node("root");
+        Tree::new(root)
+    }
+
+    #[test]
+    fn test_add_node_step() {
+        let mut tree = create_test_tree();
+        let schema = create_test_schema();
+        
+        // Create a test node to add
+        let node = create_test_node("root");
+        let test = create_test_node("test");
+        let node_enum = NodeEnum(node, vec![NodeEnum(test, vec![])]);
+        let step = AddNodeStep::new(node_enum.clone());
+        let result = step.apply(&mut tree, schema.clone());
+        assert!(result.is_ok());
+        
+        // Verify node was added
+        assert!(tree.get_node(&"test".to_string()).is_some());
+        
+        // Test invert
+        let inverted = step.invert(&Arc::new(tree.clone()));
+        assert!(inverted.is_some());
+        
+        // Apply inverted step
+        if let Some(inverted_step) = inverted {
+            let result = inverted_step.apply(&mut tree, schema);
+            assert!(result.is_ok());
+            // Verify node was removed
+            assert!(tree.get_node(&"test".to_string()).is_none());
         }
+    }
+
+    #[test]
+    fn test_remove_node_step() {
+        let mut tree = create_test_tree();
+        let schema = create_test_schema();
+        
+        // Add a node first
+        let node = create_test_node("test");
+        tree.add_node(&"root".to_string(), &vec![node]).unwrap();
+        
+        let step = RemoveNodeStep::new("root".to_string(), vec!["test".to_string()]);
+        let result = step.apply(&mut tree, schema.clone());
+        assert!(result.is_ok());
+        
+        // Verify node was removed
+        assert!(tree.get_node(&"test".to_string()).is_none());
+        
+        // Test invert
+        let inverted = step.invert(&Arc::new(tree.clone()));
+        assert!(inverted.is_some());
+    }
+
+    #[test]
+    fn test_move_node_step() {
+        let mut tree = create_test_tree();
+        let schema = create_test_schema();
+        
+        // Add source and target nodes
+        let source = create_test_node("source");
+        let target = create_test_node("target");
+        let node = create_test_node("node");
+        
+        tree.add_node(&"root".to_string(), &vec![source]).unwrap();
+        tree.add_node(&"root".to_string(), &vec![target]).unwrap();
+        tree.add_node(&"source".to_string(), &vec![node]).unwrap();
+        
+        let step = MoveNodeStep::new(
+            "source".to_string(),
+            "target".to_string(),
+            "node".to_string(),
+            None,
+        );
+        
+        let result = step.apply(&mut tree, schema.clone());
+        assert!(result.is_ok());
+        
+        // Verify node was moved
+        let target_node = tree.get_node(&"target".to_string()).unwrap();
+        assert!(target_node.content.contains(&"node".to_string()));
+        
+        // Test invert
+        let inverted = step.invert(&Arc::new(tree.clone()));
+        assert!(inverted.is_some());
     }
 }

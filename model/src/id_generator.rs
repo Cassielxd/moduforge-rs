@@ -1,4 +1,5 @@
 use nanoid::nanoid;
+use std::collections::HashSet;
 
 pub struct IdGenerator;
 
@@ -35,5 +36,24 @@ mod tests {
         
         println!("生成 {} 个新ID耗时: {:?}", ITERATIONS, new_duration);
         println!("平均每个ID生成时间: {:?}", new_duration / ITERATIONS as u32);
+    }
+
+    #[test]
+    fn test_id_uniqueness() {
+        const ITERATIONS: usize = 1_000_000;
+        let mut ids = HashSet::with_capacity(ITERATIONS);
+        
+        // 生成大量ID并检查唯一性
+        for _ in 0..ITERATIONS {
+            let id = IdGenerator::get_id();
+            assert!(ids.insert(id), "发现重复ID！");
+        }
+        
+        println!("成功生成 {} 个唯一ID", ITERATIONS);
+        
+        // 计算碰撞概率
+        let total_possible = 32u64.pow(12);
+        let collision_probability = 1.0 - (1.0 - 1.0/(total_possible as f64)).powi(ITERATIONS as i32);
+        println!("理论碰撞概率: {:.10}%", collision_probability * 100.0);
     }
 }
