@@ -7,7 +7,8 @@ use crate::{
     extension::Extension,
     mark::Mark,
     middleware::{Middleware, MiddlewareStack},
-    node::Node, EditorResult,
+    node::Node,
+    EditorResult,
 };
 use moduforge_model::{node_pool::NodePool, schema::AttributeSpec};
 

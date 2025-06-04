@@ -14,6 +14,8 @@ pub struct Transform {
     pub draft: Tree,
     /// 存储所有操作步骤
     pub steps: im::Vector<Arc<dyn Step>>,
+    /// 存储所有反向操作步骤
+    pub invert_steps: im::Vector<Arc<dyn Step>>,
     /// 文档的模式定义
     pub schema: Arc<Schema>,
 }
@@ -26,6 +28,7 @@ impl Transform {
             doc: doc.clone(),
             draft: doc.get_inner().as_ref().clone(),
             steps: im::Vector::new(),
+            invert_steps: im::Vector::new(),
             schema,
         }
     }
@@ -52,6 +55,9 @@ impl Transform {
         &mut self,
         step: Arc<dyn Step>,
     ) {
+        if let Some(invert_step) = step.invert(&self.doc.get_inner()) {
+            self.invert_steps.push_back(invert_step);
+        }
         self.steps.push_back(step);
         self.doc = NodePool::new(Arc::new(self.draft.clone()));
     }

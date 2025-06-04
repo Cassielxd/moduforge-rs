@@ -37,6 +37,31 @@ impl Step for AddNodeStep {
     fn serialize(&self) -> Option<Vec<u8>> {
         serde_json::to_vec(self).ok()
     }
+
+    fn invert(
+        &self,
+        _: &Arc<Tree>,
+    ) -> Option<Arc<dyn Step>> {
+        // 递归收集所有子节点的 id
+        fn collect_node_ids(node_enum: &NodeEnum) -> Vec<NodeId> {
+            let mut ids: Vec<String> = vec![node_enum.0.id.clone()];
+            for child in &node_enum.1 {
+                ids.extend(collect_node_ids(child));
+            }
+            ids
+        }
+        // 收集所有节点的 id
+        let mut node_ids = collect_node_ids(&self.nodes);
+        if node_ids.len() > 0 {
+            // 排除node_ids 第一个 id
+            node_ids.remove(0);
+            return Some(Arc::new(RemoveNodeStep::new(
+                self.nodes.0.id.clone(),
+                node_ids,
+            )));
+        }
+        None
+    }
 }
 /// 删除节点的步骤
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -70,6 +95,19 @@ impl Step for RemoveNodeStep {
     }
     fn serialize(&self) -> Option<Vec<u8>> {
         serde_json::to_vec(self).ok()
+    }
+
+    fn invert(
+        &self,
+        dart: &Arc<Tree>,
+    ) -> Option<Arc<dyn Step>> {
+        match dart.all_children(
+            &self.parent_id,
+            Some(&|node| !self.node_ids.contains(&node.id)),
+        ) {
+            Some(node_enum) => Some(Arc::new(AddNodeStep::new(node_enum))),
+            None => None,
+        }
     }
 }
 
@@ -116,6 +154,21 @@ impl Step for MoveNodeStep {
     fn serialize(&self) -> Option<Vec<u8>> {
         serde_json::to_vec(self).ok()
     }
+
+    fn invert(
+        &self,
+        dart: &Arc<Tree>,
+    ) -> Option<Arc<dyn Step>> {
+        match dart.get_node(&self.node_id) {
+            Some(_) => Some(Arc::new(MoveNodeStep::new(
+                self.target_parent_id.clone(),
+                self.source_parent_id.clone(),
+                self.node_id.clone(),
+                self.position,
+            ))),
+            None => None,
+        }
+    }
 }
 
 /// 替换节点
@@ -150,5 +203,23 @@ impl Step for ReplaceNodeStep {
     }
     fn serialize(&self) -> Option<Vec<u8>> {
         serde_json::to_vec(self).ok()
+    }
+
+    fn invert(
+        &self,
+        dart: &Arc<Tree>,
+    ) -> Option<Arc<dyn Step>> {
+        match dart.get_node(&self.node_id) {
+            Some(node) => {
+                //拿到所有替换之前的节点
+                let mut new_nodes = Vec::new();
+                for node_id in node.content.iter() {
+                    let node = dart.get_node(node_id).unwrap();
+                    new_nodes.push(node.as_ref().clone());
+                }
+                Some(Arc::new(ReplaceNodeStep::new(node.id.clone(), new_nodes)))
+            },
+            None => None,
+        }
     }
 }

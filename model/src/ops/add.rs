@@ -24,6 +24,18 @@ impl<'a> Add<Node> for NodeRef<'a> {
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
 }
+/// 为 NodeRef 实现自定义的 + 运算符，用于在指定位置添加单个节点
+/// 当使用 + 运算符时，会将新节点添加到当前节点的子节点列表中的指定位置
+impl<'a> Add<(usize, Node)> for NodeRef<'a> {
+    type Output = PoolResult<NodeRef<'a>>;
+    fn add(
+        self,
+        (index, node): (usize, Node),
+    ) -> Self::Output {
+        self.tree.add_at_index(&self.key.clone().into(), index, &node)?;
+        Ok(NodeRef::new(self.tree, self.key.clone()))
+    }
+}
 
 /// 为 NodeRef 实现自定义的 + 运算符，用于添加多个节点
 /// 当使用 + 运算符时，会将多个新节点添加到当前节点的子节点列表中
@@ -83,6 +95,17 @@ impl<'a> Add<Attrs> for AttrsRef<'a> {
         attrs: Attrs,
     ) -> Self::Output {
         self.tree.update_attr(&self.key.clone().into(), attrs.attrs)?;
+        Ok(AttrsRef::new(self.tree, self.key.clone()))
+    }
+}
+impl<'a> Add<(String, Value)> for AttrsRef<'a> {
+    type Output = PoolResult<AttrsRef<'a>>;
+    fn add(
+        self,
+        (key, value): (String, Value),
+    ) -> Self::Output {
+        self.tree
+            .update_attr(&self.key.clone().into(), im::hashmap! {key=>value})?;
         Ok(AttrsRef::new(self.tree, self.key.clone()))
     }
 }

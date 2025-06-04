@@ -40,6 +40,19 @@ impl Step for AddMarkStep {
     fn serialize(&self) -> Option<Vec<u8>> {
         serde_json::to_vec(self).ok()
     }
+
+    fn invert(
+        &self,
+        dart: &Arc<Tree>,
+    ) -> Option<Arc<dyn Step>> {
+        match dart.get_node(&self.id) {
+            Some(_) => Some(Arc::new(RemoveMarkStep::new(
+                self.id.clone(),
+                self.marks.clone(),
+            ))),
+            None => None,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -73,5 +86,18 @@ impl Step for RemoveMarkStep {
     }
     fn serialize(&self) -> Option<Vec<u8>> {
         serde_json::to_vec(self).ok()
+    }
+
+    fn invert(
+        &self,
+        dart: &Arc<Tree>,
+    ) -> Option<Arc<dyn Step>> {
+        match dart.get_node(&self.id) {
+            Some(_) => Some(Arc::new(AddMarkStep::new(
+                self.id.clone(),
+                self.marks.clone(),
+            ))),
+            None => None,
+        }
     }
 }

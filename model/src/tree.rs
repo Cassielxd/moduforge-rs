@@ -1,3 +1,4 @@
+use std::ops::Add;
 use std::{ops::Index, sync::Arc, num::NonZeroUsize};
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
@@ -6,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::error::PoolResult;
+use crate::node;
 use crate::node_type::NodeEnum;
 use crate::{
     error::error_helpers,
@@ -13,6 +15,7 @@ use crate::{
     node::Node,
     ops::{AttrsRef, MarkRef, NodeRef},
     types::NodeId,
+    attrs::Attrs,
 };
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -212,7 +215,25 @@ impl Tree {
         }
         Ok(())
     }
-
+    // 添加到下标
+    pub fn add_at_index(
+        &mut self,
+        parent_id: &NodeId,
+        index: usize,
+        node: &Node,
+    ) -> PoolResult<()> {
+        //添加到节点到 parent_id 的 content 中
+        let parent_shard_index = self.get_shard_index(parent_id);
+        let parent = self.nodes[parent_shard_index]
+            .get(parent_id)
+            .ok_or(error_helpers::parent_not_found(parent_id.clone()))?;
+        let mut new_parent = parent.as_ref().clone();
+        new_parent.content.insert(index, node.id.clone());
+        self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
+            .update(parent_id.clone(), Arc::new(new_parent));
+        self.parent_map.insert(node.id.clone(), parent_id.clone());
+        Ok(())
+    }
     pub fn add_node(
         &mut self,
         parent_id: &NodeId,
@@ -270,6 +291,35 @@ impl Tree {
     ) -> Option<im::Vector<Arc<Node>>> {
         self.children(parent_id)
             .map(|ids| ids.iter().filter_map(|id| self.get_node(id)).collect())
+    }
+    //递归获取所有子节点 封装成 NodeEnum 返回
+    pub fn all_children(
+        &self,
+        parent_id: &NodeId,
+        filter: Option<&dyn Fn(&Node) -> bool>,
+    ) -> Option<NodeEnum> {
+        if let Some(node) = self.get_node(parent_id) {
+            let mut child_enums = Vec::new();
+            for child_id in &node.content {
+                if let Some(child_node) = self.get_node(child_id) {
+                    // 检查子节点是否满足过滤条件
+                    if let Some(filter_fn) = filter {
+                        if !filter_fn(child_node.as_ref()) {
+                            continue; // 跳过不满足条件的子节点
+                        }
+                    }
+                    // 递归处理满足条件的子节点
+                    if let Some(child_enum) =
+                        self.all_children(child_id, filter)
+                    {
+                        child_enums.push(child_enum);
+                    }
+                }
+            }
+            Some(NodeEnum(node.as_ref().clone(), child_enums))
+        } else {
+            None
+        }
     }
 
     pub fn children_count(
@@ -431,7 +481,51 @@ impl Tree {
         }
         Ok(())
     }
+    //=删除节点
+    pub fn remove_node_by_id(
+        &mut self,
+        node_id: &NodeId,
+    ) -> PoolResult<()> {
+        let shard_index = self.get_shard_index(node_id);
+        let _ = self.nodes[shard_index]
+            .get(node_id)
+            .ok_or(error_helpers::node_not_found(node_id.clone()))?;
+        let mut remove_nodes = Vec::new();
+        self.remove_subtree(node_id, &mut remove_nodes)?;
+        for node in remove_nodes {
+            let shard_index = self.get_shard_index(&node.id);
+            self.nodes[shard_index].remove(&node.id);
+            self.parent_map.remove(&node.id);
+        }
+        self.nodes[shard_index].remove(node_id);
+        Ok(())
+    }
 
+    ///根据下标删除
+    pub fn remove_node_by_index(
+        &mut self,
+        parent_id: &NodeId,
+        index: usize,
+    ) -> PoolResult<()> {
+        let shard_index = self.get_shard_index(parent_id);
+        let parent = self.nodes[shard_index]
+            .get(parent_id)
+            .ok_or(error_helpers::parent_not_found(parent_id.clone()))?;
+        let mut new_parent = parent.as_ref().clone();
+        let remove_node_id = new_parent.content.remove(index);
+        self.nodes[shard_index] = self.nodes[shard_index]
+            .update(parent_id.clone(), Arc::new(new_parent));
+        let mut remove_nodes = Vec::new();
+        self.remove_subtree(&remove_node_id, &mut remove_nodes)?;
+        for node in remove_nodes {
+            let shard_index = self.get_shard_index(&node.id);
+            self.nodes[shard_index].remove(&node.id);
+            self.parent_map.remove(&node.id);
+        }
+        Ok(())
+    }
+
+    //删除子树
     fn remove_subtree(
         &mut self,
         node_id: &NodeId,

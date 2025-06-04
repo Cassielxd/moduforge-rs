@@ -13,6 +13,10 @@ pub trait Step: Any + Send + Sync + Debug + 'static {
         schema: Arc<Schema>,
     ) -> TransformResult<StepResult>;
     fn serialize(&self) -> Option<Vec<u8>>;
+    fn invert(
+        &self,
+        dart: &Arc<Tree>,
+    ) -> Option<Arc<dyn Step>>;
 }
 impl dyn Step {
     pub fn downcast_ref<E: Step>(&self) -> Option<&E> {

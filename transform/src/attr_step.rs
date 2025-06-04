@@ -56,4 +56,22 @@ impl Step for AttrStep {
     fn serialize(&self) -> Option<Vec<u8>> {
         serde_json::to_vec(self).ok()
     }
+
+    fn invert(
+        &self,
+        dart: &Arc<Tree>,
+    ) -> Option<Arc<dyn Step>> {
+        match dart.get_node(&self.id) {
+            Some(node) => {
+                let mut new_values = im::hashmap!();
+                for (key, value) in node.attrs.attrs.iter() {
+                    new_values.insert(key.clone(), value.clone());
+                }
+                Some(Arc::new(AttrStep::new(self.id.clone(), new_values)))
+            },
+            None => {
+                return None;
+            },
+        }
+    }
 }
