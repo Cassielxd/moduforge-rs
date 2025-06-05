@@ -144,6 +144,7 @@ impl Editor {
                 },
             }
         }
+        transaction.commit();
         Ok(())
     }
     pub async fn run_after_middleware(
@@ -175,8 +176,9 @@ impl Editor {
                 },
             };
 
-            if let Some(transaction) = middleware_result.additional_transaction
+            if let Some(mut transaction) = middleware_result.additional_transaction
             {
+                transaction.commit();
                 let TransactionResult { state: new_state, transactions: trs } =
                     self.state.apply(transaction).await.map_err(|e| {
                         error_utils::state_error(format!(
@@ -197,6 +199,7 @@ impl Editor {
         debug!("正在执行命令: {}", command.name());
         let mut tr = self.get_tr();
         command.execute(&mut tr).await?;
+        tr.commit();
         self.dispatch(tr).await
     }
 

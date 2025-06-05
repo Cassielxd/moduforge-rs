@@ -161,7 +161,7 @@ impl AsyncEditor {
         // 创建事务并应用命令
         let mut tr = self.get_tr();
         command.execute(&mut tr).await?;
-
+        tr.commit();
         // 使用高性能处理引擎处理事务
         match self.dispatch_flow(tr).await {
             Ok(_) => {
@@ -304,6 +304,7 @@ impl AsyncEditor {
                 },
             }
         }
+        transaction.commit();
         Ok(())
     }
     pub async fn run_after_middleware(
@@ -356,8 +357,9 @@ impl AsyncEditor {
                 debug!("中间件执行时间较长: {}ms", elapsed.as_millis());
             }
 
-            if let Some(transaction) = middleware_result.additional_transaction
+            if let Some(mut transaction) = middleware_result.additional_transaction
             {
+                transaction.commit();
                 // 记录额外事务处理开始时间
                 let tx_start_time = std::time::Instant::now();
 
