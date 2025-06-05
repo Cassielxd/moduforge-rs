@@ -60,7 +60,7 @@ impl<'a> Shl<usize> for NodeRef<'a> {
                     let mut content = node.content.clone();
                     content.swap(current_index, new_index);
                     node.content = content;
-                    self.tree.update_node(node);
+                    self.tree.update_node(node)?;
                 }
             }
         }

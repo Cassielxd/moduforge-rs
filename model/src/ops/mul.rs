@@ -1,7 +1,7 @@
 use std::ops::Mul;
 
 use crate::{
-    error::PoolResult, id_generator::IdGenerator, node::Node, types::NodeId
+    error::PoolResult, id_generator::IdGenerator, types::NodeId
 };
 
 use super::NodeRef;

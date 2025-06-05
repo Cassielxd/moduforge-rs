@@ -1,9 +1,7 @@
 use std::ops::BitAnd;
 
 use crate::{
-    error::{error_helpers, PoolResult},
-    mark::Mark,
-    types::NodeId,
+    error::{error_helpers, PoolResult}
 };
 
 use super::{MarkRef, NodeRef};
