@@ -1,6 +1,6 @@
 use nanoid::nanoid;
-use std::collections::HashSet;
 
+use std::collections::HashSet;
 pub struct IdGenerator;
 
 impl IdGenerator {
@@ -9,9 +9,9 @@ impl IdGenerator {
         // 使用自定义字符集：数字(0-9)和大写字母(A-Z)，去掉容易混淆的字符
         const ALPHABET: [char; 32] = [
             '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-            'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K',
-            'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
-            'W', 'X'
+            'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'j', 'k',
+            'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v',
+            'w', 'x'
         ];
         
         nanoid!(12, &ALPHABET)
