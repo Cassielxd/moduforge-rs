@@ -279,15 +279,22 @@ impl NodePool {
     ) -> Vec<Arc<Node>> {
         let mut result = Vec::new();
         let mut current_id = node_id;
-        while let Some(parent_id) = self.parent_id(current_id) {
+        
+        // 收集从当前节点到根节点的路径
+        loop {
             if let Some(node) = self.get_node(current_id) {
                 result.push(node);
             }
-            current_id = parent_id;
+            
+            if let Some(parent_id) = self.parent_id(current_id) {
+                current_id = parent_id;
+            } else {
+                // 已到达根节点
+                break;
+            }
         }
-        if let Some(node) = self.get_node(node_id) {
-            result.push(node);
-        }
+        
+        // 反转以获得从根到目标的路径
         result.reverse();
         result
     }
@@ -319,9 +326,12 @@ impl NodePool {
     ) -> Vec<NodeId> {
         if let Some(parent_id) = self.parent_id(node_id) {
             if let Some(siblings) = self.children(parent_id) {
-                let index =
-                    siblings.iter().position(|id| id == node_id).unwrap();
-                return siblings.iter().take(index).cloned().collect();
+                if let Some(index) = siblings.iter().position(|id| id == node_id) {
+                    return siblings.iter().take(index).cloned().collect();
+                } else {
+                    // 节点不在父节点的children列表中，可能是数据不一致
+                    eprintln!("Warning: Node {:?} not found in parent's children list", node_id);
+                }
             }
         }
         Vec::new()
@@ -333,9 +343,12 @@ impl NodePool {
     ) -> Vec<NodeId> {
         if let Some(parent_id) = self.parent_id(node_id) {
             if let Some(siblings) = self.children(parent_id) {
-                let index =
-                    siblings.iter().position(|id| id == node_id).unwrap();
-                return siblings.iter().skip(index + 1).cloned().collect();
+                if let Some(index) = siblings.iter().position(|id| id == node_id) {
+                    return siblings.iter().skip(index + 1).cloned().collect();
+                } else {
+                    // 节点不在父节点的children列表中，可能是数据不一致
+                    eprintln!("Warning: Node {:?} not found in parent's children list", node_id);
+                }
             }
         }
         Vec::new()
@@ -994,8 +1007,8 @@ impl OptimizedQueryEngine {
         &mut self,
         conditions: Vec<Box<dyn Fn(&Node) -> bool + Send + Sync>>,
     ) -> Vec<Arc<Node>> {
-        // 生成缓存键
-        let cache_key = format!("query_{}", conditions.len());
+        // 生成更安全的缓存键
+        let cache_key = self.generate_query_cache_key(&conditions);
 
         // 检查缓存
         if let Some(cache) = &self.cache {
@@ -1047,6 +1060,27 @@ impl OptimizedQueryEngine {
         }
 
         result
+    }
+
+    /// 生成查询缓存键
+    fn generate_query_cache_key(&self, conditions: &[Box<dyn Fn(&Node) -> bool + Send + Sync>]) -> String {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        
+        let mut hasher = DefaultHasher::new();
+        
+        // 使用条件数量、池ID和时间戳生成唯一键
+        conditions.len().hash(&mut hasher);
+        self.pool.key().hash(&mut hasher);
+        
+        // 添加条件的内存地址作为唯一标识符
+        for (i, _condition) in conditions.iter().enumerate() {
+            // 使用索引和一个随机值来区分不同的条件
+            i.hash(&mut hasher);
+            std::ptr::addr_of!(_condition).hash(&mut hasher);
+        }
+        
+        format!("query_{:x}", hasher.finish())
     }
 
     /// 从索引中获取节点
@@ -1116,3 +1150,488 @@ impl Clone for OptimizedQueryEngine {
         }
     }
 }
+
+/// 懒加载查询引擎配置
+#[derive(Clone, Debug)]
+pub struct LazyQueryConfig {
+    /// 缓存大小
+    pub cache_capacity: usize,
+    /// 索引缓存大小
+    pub index_cache_capacity: usize,
+    /// 是否启用缓存
+    pub cache_enabled: bool,
+    /// 索引构建阈值（当查询频率超过此值时才构建索引）
+    pub index_build_threshold: usize,
+}
+
+impl Default for LazyQueryConfig {
+    fn default() -> Self {
+        Self {
+            cache_capacity: 1000,
+            index_cache_capacity: 100,
+            cache_enabled: true,
+            index_build_threshold: 5,
+        }
+    }
+}
+
+/// 查询统计信息
+#[derive(Debug, Clone)]
+struct QueryStats {
+    /// 查询次数
+    count: usize,
+    /// 最后查询时间
+    last_query: Instant,
+}
+
+/// 实时构建的懒加载查询引擎
+pub struct LazyQueryEngine {
+    pool: Arc<NodePool>,
+    
+    // 缓存系统
+    query_cache: Option<LruCache<String, Vec<Arc<Node>>>>,
+    
+    // 懒加载索引系统
+    type_index_cache: LruCache<String, Vec<Arc<Node>>>,
+    depth_index_cache: LruCache<usize, Vec<Arc<Node>>>,
+    mark_index_cache: LruCache<String, Vec<Arc<Node>>>,
+    
+    // 查询统计
+    type_query_stats: HashMap<String, QueryStats>,
+    depth_query_stats: HashMap<usize, QueryStats>,
+    mark_query_stats: HashMap<String, QueryStats>,
+    
+    // 配置
+    config: LazyQueryConfig,
+}
+
+// 为 LazyQueryEngine 实现线程安全
+unsafe impl Send for LazyQueryEngine {}
+unsafe impl Sync for LazyQueryEngine {}
+
+impl LazyQueryEngine {
+    pub fn new(pool: &NodePool, config: LazyQueryConfig) -> Self {
+        Self {
+            pool: Arc::new(pool.clone()),
+            query_cache: if config.cache_enabled {
+                Some(LruCache::new(NonZeroUsize::new(config.cache_capacity).unwrap()))
+            } else {
+                None
+            },
+            type_index_cache: LruCache::new(
+                NonZeroUsize::new(config.index_cache_capacity).unwrap()
+            ),
+            depth_index_cache: LruCache::new(
+                NonZeroUsize::new(config.index_cache_capacity).unwrap()
+            ),
+            mark_index_cache: LruCache::new(
+                NonZeroUsize::new(config.index_cache_capacity).unwrap()
+            ),
+            type_query_stats: HashMap::new(),
+            depth_query_stats: HashMap::new(),
+            mark_query_stats: HashMap::new(),
+            config,
+        }
+    }
+
+    /// 懒加载类型索引
+    pub fn by_type_lazy(&mut self, node_type: &str) -> Vec<Arc<Node>> {
+        // 更新查询统计
+        self.update_type_stats(node_type);
+        
+        // 检查索引缓存
+        if let Some(cached) = self.type_index_cache.get(node_type) {
+            return cached.clone();
+        }
+        
+        // 实时构建索引
+        let start = Instant::now();
+        let nodes = self.build_type_index(node_type);
+        let duration = start.elapsed();
+        
+        println!("实时构建类型索引 '{}', 耗时: {:?}, 节点数: {}", 
+                node_type, duration, nodes.len());
+        
+        // 缓存索引
+        self.type_index_cache.put(node_type.to_string(), nodes.clone());
+        
+        nodes
+    }
+
+    /// 懒加载深度索引
+    pub fn by_depth_lazy(&mut self, depth: usize) -> Vec<Arc<Node>> {
+        self.update_depth_stats(depth);
+        
+        if let Some(cached) = self.depth_index_cache.get(&depth) {
+            return cached.clone();
+        }
+        
+        let start = Instant::now();
+        let nodes = self.build_depth_index(depth);
+        let duration = start.elapsed();
+        
+        println!("实时构建深度索引 {}, 耗时: {:?}, 节点数: {}", 
+                depth, duration, nodes.len());
+        
+        self.depth_index_cache.put(depth, nodes.clone());
+        nodes
+    }
+
+    /// 懒加载标记索引
+    pub fn by_mark_lazy(&mut self, mark_type: &str) -> Vec<Arc<Node>> {
+        self.update_mark_stats(mark_type);
+        
+        if let Some(cached) = self.mark_index_cache.get(mark_type) {
+            return cached.clone();
+        }
+        
+        let start = Instant::now();
+        let nodes = self.build_mark_index(mark_type);
+        let duration = start.elapsed();
+        
+        println!("实时构建标记索引 '{}', 耗时: {:?}, 节点数: {}", 
+                mark_type, duration, nodes.len());
+        
+        self.mark_index_cache.put(mark_type.to_string(), nodes.clone());
+        nodes
+    }
+
+    /// 智能查询（根据查询频率决定是否使用索引）
+    pub fn smart_query<F>(&mut self, query_name: &str, query_fn: F) -> Vec<Arc<Node>>
+    where
+        F: Fn() -> Vec<Arc<Node>>,
+    {
+        // 生成更好的缓存键
+        let cache_key = self.generate_cache_key(query_name);
+        
+        // 检查查询缓存
+        if let Some(cache) = &self.query_cache {
+            if let Some(cached) = cache.peek(&cache_key) {
+                return cached.clone();
+            }
+        }
+        
+        // 执行查询
+        let start = Instant::now();
+        let result = query_fn();
+        let duration = start.elapsed();
+        
+        println!("执行查询 '{}', 耗时: {:?}, 结果数: {}", 
+                query_name, duration, result.len());
+        
+        // 更新缓存
+        if let Some(cache) = &mut self.query_cache {
+            cache.put(cache_key, result.clone());
+        }
+        
+        result
+    }
+
+    /// 组合查询（支持索引优化）
+    pub fn combined_query(&mut self, conditions: &[QueryCondition]) -> Vec<Arc<Node>> {
+        let cache_key = self.generate_combined_cache_key(conditions);
+        
+        // 检查缓存
+        if let Some(cache) = &self.query_cache {
+            if let Some(cached) = cache.peek(&cache_key) {
+                return cached.clone();
+            }
+        }
+        
+        let mut candidates: Option<Vec<Arc<Node>>> = None;
+        
+        // 根据条件选择最优索引
+        for condition in conditions {
+            let indexed_nodes = match condition {
+                QueryCondition::ByType(type_name) => {
+                    if self.should_use_type_index(type_name) {
+                        Some(self.by_type_lazy(type_name))
+                    } else {
+                        None
+                    }
+                },
+                QueryCondition::ByDepth(depth) => {
+                    if self.should_use_depth_index(*depth) {
+                        Some(self.by_depth_lazy(*depth))
+                    } else {
+                        None
+                    }
+                },
+                QueryCondition::ByMark(mark_type) => {
+                    if self.should_use_mark_index(mark_type) {
+                        Some(self.by_mark_lazy(mark_type))
+                    } else {
+                        None
+                    }
+                },
+                                 QueryCondition::ByAttr { .. } | 
+                 QueryCondition::IsLeaf | 
+                 QueryCondition::HasChildren => None,
+            };
+            
+            if let Some(indexed) = indexed_nodes {
+                candidates = match candidates {
+                    None => Some(indexed),
+                    Some(existing) => Some(self.intersect_nodes(&existing, &indexed)),
+                };
+            }
+        }
+        
+        // 执行最终过滤
+        let result = match candidates {
+            Some(nodes) => {
+                nodes.into_par_iter()
+                    .filter(|node| conditions.iter().all(|cond| cond.matches(node)))
+                    .collect()
+            },
+            None => {
+                // 回退到全量查询
+                self.pool.parallel_query(|node| {
+                    conditions.iter().all(|cond| cond.matches(node))
+                })
+            }
+        };
+        
+        // 更新缓存
+        if let Some(cache) = &mut self.query_cache {
+            cache.put(cache_key, result.clone());
+        }
+        
+        result
+    }
+
+    // 私有辅助方法
+    
+    fn update_type_stats(&mut self, type_name: &str) {
+        let stats = self.type_query_stats.entry(type_name.to_string())
+            .or_insert(QueryStats { count: 0, last_query: Instant::now() });
+        stats.count += 1;
+        stats.last_query = Instant::now();
+    }
+    
+    fn update_depth_stats(&mut self, depth: usize) {
+        let stats = self.depth_query_stats.entry(depth)
+            .or_insert(QueryStats { count: 0, last_query: Instant::now() });
+        stats.count += 1;
+        stats.last_query = Instant::now();
+    }
+    
+    fn update_mark_stats(&mut self, mark_type: &str) {
+        let stats = self.mark_query_stats.entry(mark_type.to_string())
+            .or_insert(QueryStats { count: 0, last_query: Instant::now() });
+        stats.count += 1;
+        stats.last_query = Instant::now();
+    }
+    
+    fn should_use_type_index(&self, type_name: &str) -> bool {
+        self.type_query_stats.get(type_name)
+            .map(|stats| stats.count >= self.config.index_build_threshold)
+            .unwrap_or(false)
+    }
+    
+    fn should_use_depth_index(&self, depth: usize) -> bool {
+        self.depth_query_stats.get(&depth)
+            .map(|stats| stats.count >= self.config.index_build_threshold)
+            .unwrap_or(false)
+    }
+    
+    fn should_use_mark_index(&self, mark_type: &str) -> bool {
+        self.mark_query_stats.get(mark_type)
+            .map(|stats| stats.count >= self.config.index_build_threshold)
+            .unwrap_or(false)
+    }
+    
+    fn build_type_index(&self, node_type: &str) -> Vec<Arc<Node>> {
+        self.pool.parallel_query(|node| node.r#type == node_type)
+    }
+    
+    fn build_depth_index(&self, target_depth: usize) -> Vec<Arc<Node>> {
+        self.pool.parallel_query(|node| {
+            self.pool.get_node_depth(&node.id)
+                .map(|depth| depth == target_depth)
+                .unwrap_or(false)
+        })
+    }
+    
+    fn build_mark_index(&self, mark_type: &str) -> Vec<Arc<Node>> {
+        self.pool.parallel_query(|node| {
+            node.marks.iter().any(|mark| mark.r#type == mark_type)
+        })
+    }
+    
+    fn generate_cache_key(&self, query_name: &str) -> String {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        
+        let mut hasher = DefaultHasher::new();
+        query_name.hash(&mut hasher);
+        self.pool.key().hash(&mut hasher);
+        format!("query_{:x}", hasher.finish())
+    }
+    
+    fn generate_combined_cache_key(&self, conditions: &[QueryCondition]) -> String {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        
+        let mut hasher = DefaultHasher::new();
+        for condition in conditions {
+            condition.cache_key().hash(&mut hasher);
+        }
+        self.pool.key().hash(&mut hasher);
+        format!("combined_{:x}", hasher.finish())
+    }
+    
+    fn intersect_nodes(&self, nodes1: &[Arc<Node>], nodes2: &[Arc<Node>]) -> Vec<Arc<Node>> {
+        let set1: HashSet<_> = nodes1.iter().map(|n| n.id.as_str()).collect();
+        nodes2
+            .iter()
+            .filter(|node| set1.contains(node.id.as_str()))
+            .cloned()
+            .collect()
+    }
+    
+    /// 获取查询统计信息
+    pub fn get_query_stats(&self) -> QueryStatsSummary {
+        QueryStatsSummary {
+            type_queries: self.type_query_stats.clone(),
+            depth_queries: self.depth_query_stats.clone(),
+            mark_queries: self.mark_query_stats.clone(),
+            cache_hit_rates: self.calculate_cache_hit_rates(),
+        }
+    }
+    
+    fn calculate_cache_hit_rates(&self) -> CacheHitRates {
+        CacheHitRates {
+            query_cache_size: self.query_cache.as_ref()
+                .map(|c| c.len()).unwrap_or(0),
+            type_index_cache_size: self.type_index_cache.len(),
+            depth_index_cache_size: self.depth_index_cache.len(),
+            mark_index_cache_size: self.mark_index_cache.len(),
+        }
+    }
+}
+
+/// 查询条件枚举
+#[derive(Debug, Clone)]
+pub enum QueryCondition {
+    ByType(String),
+    ByDepth(usize),
+    ByMark(String),
+    ByAttr { key: String, value: serde_json::Value },
+    IsLeaf,
+    HasChildren,
+}
+
+impl QueryCondition {
+    pub fn matches(&self, node: &Node) -> bool {
+        match self {
+            QueryCondition::ByType(type_name) => node.r#type == *type_name,
+            QueryCondition::ByDepth(_) => true, // 深度检查在索引中完成
+            QueryCondition::ByMark(mark_type) => {
+                node.marks.iter().any(|mark| mark.r#type == *mark_type)
+            },
+            QueryCondition::ByAttr { key, value } => {
+                node.attrs.get(key).map_or(false, |v| v == value)
+            },
+            QueryCondition::IsLeaf => node.content.is_empty(),
+            QueryCondition::HasChildren => !node.content.is_empty(),
+        }
+    }
+    
+    pub fn cache_key(&self) -> String {
+        match self {
+            QueryCondition::ByType(t) => format!("type_{}", t),
+            QueryCondition::ByDepth(d) => format!("depth_{}", d),
+            QueryCondition::ByMark(m) => format!("mark_{}", m),
+            QueryCondition::ByAttr { key, value } => {
+                format!("attr_{}_{}", key, serde_json::to_string(value).unwrap_or_default())
+            },
+            QueryCondition::IsLeaf => "is_leaf".to_string(),
+            QueryCondition::HasChildren => "has_children".to_string(),
+        }
+    }
+}
+
+/// 查询统计摘要
+#[derive(Debug)]
+pub struct QueryStatsSummary {
+    pub type_queries: HashMap<String, QueryStats>,
+    pub depth_queries: HashMap<usize, QueryStats>,
+    pub mark_queries: HashMap<String, QueryStats>,
+    pub cache_hit_rates: CacheHitRates,
+}
+
+/// 缓存命中率统计
+#[derive(Debug)]
+pub struct CacheHitRates {
+    pub query_cache_size: usize,
+    pub type_index_cache_size: usize,
+    pub depth_index_cache_size: usize,
+    pub mark_index_cache_size: usize,
+}
+
+impl NodePool {
+    /// 创建懒加载查询引擎
+    pub fn lazy_query(&self, config: LazyQueryConfig) -> LazyQueryEngine {
+        LazyQueryEngine::new(self, config)
+    }
+}
+
+/*
+使用示例：
+
+```rust
+use crate::node_pool::{LazyQueryConfig, QueryCondition};
+
+// 1. 创建懒加载查询引擎
+let config = LazyQueryConfig {
+    cache_capacity: 2000,
+    index_cache_capacity: 200,
+    cache_enabled: true,
+    index_build_threshold: 3, // 查询3次后才构建索引
+};
+
+let mut lazy_engine = pool.lazy_query(config);
+
+// 2. 使用懒加载索引查询
+// 第一次查询 "document" 类型会触发实时索引构建
+let docs = lazy_engine.by_type_lazy("document");
+println!("文档节点数: {}", docs.len());
+
+// 第二次查询会直接使用缓存的索引
+let docs_again = lazy_engine.by_type_lazy("document");
+
+// 3. 使用智能查询
+let complex_result = lazy_engine.smart_query("find_complex_nodes", || {
+    pool.parallel_query(|node| {
+        node.r#type == "paragraph" && !node.attrs.is_empty()
+    })
+});
+
+// 4. 使用组合查询
+let conditions = vec![
+    QueryCondition::ByType("text".to_string()),
+    QueryCondition::ByDepth(2),
+    QueryCondition::IsLeaf,
+];
+
+let filtered_nodes = lazy_engine.combined_query(&conditions);
+
+// 5. 查看统计信息
+let stats = lazy_engine.get_query_stats();
+println!("查询统计: {:#?}", stats);
+```
+
+优势：
+1. **按需构建**: 只在实际需要时构建索引，避免预构建的开销
+2. **智能缓存**: 根据查询频率智能决定是否使用索引
+3. **实时反馈**: 每次索引构建都会输出耗时和结果数量
+4. **统计监控**: 提供详细的查询统计信息
+5. **内存高效**: LRU缓存自动淘汰不常用的索引
+
+适用场景：
+- 大型节点池，但只查询部分类型的节点
+- 查询模式不确定的应用
+- 需要快速启动的应用（不用等待索引预构建）
+- 内存受限的环境
+*/

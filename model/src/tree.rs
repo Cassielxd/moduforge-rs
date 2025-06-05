@@ -222,6 +222,14 @@ impl Tree {
             self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
         Ok(())
     }
+    pub fn update_node(
+        &mut self,
+        node: Node,
+    ) -> PoolResult<()> {
+        let shard_index = self.get_shard_index(&node.id);
+        self.nodes[shard_index] = self.nodes[shard_index].update(node.id.clone(), Arc::new(node));
+        Ok(())
+    }
 
     /// 向树中添加新的节点及其子节点
     ///
@@ -413,6 +421,12 @@ impl Tree {
         self.nodes[shard_index] =
             self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
         Ok(())
+    }
+    pub fn get_marks(
+        &self,
+        id: &NodeId,
+    ) -> Option<im::Vector<Mark>> {
+        self.get_node(id).map(|n| n.marks.clone())
     }
     
     pub fn remove_mark(
