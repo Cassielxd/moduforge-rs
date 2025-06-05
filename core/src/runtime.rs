@@ -17,6 +17,9 @@ use moduforge_state::{
     transaction::{Command, Transaction},
 };
 
+/// 默认中间件超时时间（毫秒）
+const DEFAULT_MIDDLEWARE_TIMEOUT_MS: u64 = 500;
+
 /// Editor 结构体代表编辑器的核心功能实现
 /// 负责管理文档状态、事件处理、插件系统和存储等核心功能
 pub struct Editor {
@@ -116,17 +119,29 @@ impl Editor {
     ) -> EditorResult<()> {
         debug!("执行前置中间件链");
         for middleware in &self.options.get_middleware_stack().middlewares {
-            let timeout = std::time::Duration::from_millis(500);
-            if let Err(e) = tokio::time::timeout(
+            let timeout = std::time::Duration::from_millis(DEFAULT_MIDDLEWARE_TIMEOUT_MS);
+            match tokio::time::timeout(
                 timeout,
                 middleware.before_dispatch(transaction),
             )
             .await
             {
-                return Err(error_utils::middleware_error(format!(
-                    "中间件执行超时: {}",
-                    e
-                )));
+                Ok(Ok(())) => {
+                    // 中间件执行成功
+                    continue;
+                },
+                Ok(Err(e)) => {
+                    return Err(error_utils::middleware_error(format!(
+                        "前置中间件执行失败: {}",
+                        e
+                    )));
+                },
+                Err(_) => {
+                    return Err(error_utils::middleware_error(format!(
+                        "前置中间件执行超时（{}ms）",
+                        DEFAULT_MIDDLEWARE_TIMEOUT_MS
+                    )));
+                },
             }
         }
         Ok(())
@@ -138,18 +153,24 @@ impl Editor {
     ) -> EditorResult<()> {
         debug!("执行后置中间件链");
         for middleware in &self.options.get_middleware_stack().middlewares {
-            let timeout = std::time::Duration::from_millis(500);
+            let timeout = std::time::Duration::from_millis(DEFAULT_MIDDLEWARE_TIMEOUT_MS);
             let middleware_result = match tokio::time::timeout(
                 timeout,
                 middleware.after_dispatch(state.clone(), transactions),
             )
             .await
             {
-                Ok(result) => result?,
-                Err(e) => {
+                Ok(Ok(result)) => result,
+                Ok(Err(e)) => {
                     return Err(error_utils::middleware_error(format!(
-                        "中间件执行超时: {}",
+                        "后置中间件执行失败: {}",
                         e
+                    )));
+                },
+                Err(_) => {
+                    return Err(error_utils::middleware_error(format!(
+                        "后置中间件执行超时（{}ms）",
+                        DEFAULT_MIDDLEWARE_TIMEOUT_MS
                     )));
                 },
             };

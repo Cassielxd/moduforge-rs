@@ -63,6 +63,6 @@ pub mod error_utils {
 
     /// 创建中间件错误
     pub fn middleware_error(msg: impl Into<String>) -> anyhow::Error {
-        anyhow::anyhow!(format!("  插件相关错误 {:?}", msg.into()))
+        anyhow::anyhow!(format!("  中间件错误 {:?}", msg.into()))
     }
 }

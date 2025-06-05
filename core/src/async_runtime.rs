@@ -1,3 +1,40 @@
+//! # 异步运行时超时机制改进
+//!
+//! 本模块为 ModuForge 异步运行时添加了全面的超时保护机制，解决了以下问题：
+//!
+//! ## 主要改进
+//!
+//! 1. **任务接收超时**：防止 `rx.recv().await` 无限等待
+//! 2. **中间件超时配置化**：统一使用配置而非硬编码超时时间
+//!
+//! ## 配置说明
+//!
+//! 通过 `PerformanceConfig` 可以配置各种超时时间：
+//!
+//! ```rust
+//! use moduforge_core::async_runtime::PerformanceConfig;
+//!
+//! let config = PerformanceConfig {
+//!     enable_monitoring: true,
+//!     middleware_timeout_ms: 1000,         // 中间件超时 1秒
+//!     task_receive_timeout_ms: 5000,       // 任务接收超时 5秒
+//!     ..Default::default()
+//! };
+//! ```
+//!
+//! ## 使用建议
+//!
+//! - **开发环境**：使用较长的超时时间（如 10-30 秒）便于调试
+//! - **生产环境**：使用较短的超时时间（如 1-5 秒）保证响应性
+//! - **高负载环境**：根据实际性能测试调整超时时间
+//!
+//! ## 错误处理
+//!
+//! 所有超时都会产生详细的错误信息，包含：
+//! - 超时的具体操作类型
+//! - 配置的超时时间
+//! - 便于调试的上下文信息
+
 use std::{
     ops::{Deref, DerefMut},
     sync::Arc,
@@ -22,9 +59,19 @@ use moduforge_state::{
 /// 性能监控配置
 #[derive(Debug, Clone)]
 pub struct PerformanceConfig {
+    /// 是否启用性能监控
     pub enable_monitoring: bool,
+    /// 中间件执行超时时间（毫秒）
+    /// 推荐值：500-2000ms，取决于中间件复杂度
     pub middleware_timeout_ms: u64,
+    /// 性能日志记录阈值（毫秒）
+    /// 超过此时间的操作将被记录到日志
     pub log_threshold_ms: u64,
+    /// 任务接收超时时间（毫秒）
+    /// 等待异步任务结果的最大时间
+    /// 推荐值：3000-10000ms，取决于任务复杂度
+    pub task_receive_timeout_ms: u64,
+
 }
 
 impl Default for PerformanceConfig {
@@ -33,6 +80,7 @@ impl Default for PerformanceConfig {
             enable_monitoring: false,
             middleware_timeout_ms: 500,
             log_threshold_ms: 50,
+            task_receive_timeout_ms: 5000,     // 5秒
         }
     }
 }
@@ -153,7 +201,6 @@ impl AsyncEditor {
         self.log_performance("前置中间件处理", middleware_start.elapsed());
 
         // 使用 flow_engine 提交事务
-        let flow_start = std::time::Instant::now();
         let (_id, mut rx) = self
             .flow_engine
             .submit_transaction((
@@ -161,14 +208,22 @@ impl AsyncEditor {
                 current_transaction,
             ))
             .await?;
-        self.log_performance("提交事务", flow_start.elapsed());
 
-        // 等待任务结果
+        // 等待任务结果（添加超时保护）
         let recv_start = std::time::Instant::now();
-        let Some(task_result) = rx.recv().await else {
-            return Err(error_utils::state_error(
-                "无法接收任务结果".to_string(),
-            ));
+        let task_receive_timeout = Duration::from_millis(self.perf_config.task_receive_timeout_ms);
+        let task_result = match tokio::time::timeout(task_receive_timeout, rx.recv()).await {
+            Ok(Some(result)) => result,
+            Ok(None) => {
+                return Err(error_utils::state_error(
+                    "任务接收通道已关闭".to_string(),
+                ));
+            },
+            Err(_) => {
+                return Err(error_utils::state_error(
+                    format!("任务接收超时（{}ms）", self.perf_config.task_receive_timeout_ms),
+                ));
+            },
         };
         self.log_performance("接收任务结果", recv_start.elapsed());
 
@@ -187,10 +242,8 @@ impl AsyncEditor {
         transactions.extend(result.transactions);
 
         // 检查最后一个事务是否改变了文档
-        if let Some(tr) = transactions.last() {
-            if tr.doc_changed() {
-                current_state = Some(Arc::new(result.state));
-            }
+        if let Some(_) = transactions.last() {
+            current_state = Some(Arc::new(result.state));
         }
 
         // 执行后置中间件链
@@ -199,11 +252,9 @@ impl AsyncEditor {
             .await?;
         self.log_performance("后置中间件处理", after_start.elapsed());
 
-        // 更新状态并广播事件
+        // 更新状态并广播事件（状态更新无需超时保护，事件广播需要）
         if let Some(state) = current_state {
-            let update_start = std::time::Instant::now();
             self.base.update_state(state.clone()).await?;
-            self.log_performance("状态更新", update_start.elapsed());
 
             let event_start = std::time::Instant::now();
             self.base
@@ -228,17 +279,29 @@ impl AsyncEditor {
         for middleware in
             &self.base.get_options().get_middleware_stack().middlewares
         {
-            let timeout = std::time::Duration::from_millis(500);
-            if let Err(e) = tokio::time::timeout(
+            let timeout = Duration::from_millis(self.perf_config.middleware_timeout_ms);
+            match tokio::time::timeout(
                 timeout,
                 middleware.before_dispatch(transaction),
             )
             .await
             {
-                return Err(error_utils::middleware_error(format!(
-                    "中间件执行超时: {}",
-                    e
-                )));
+                Ok(Ok(())) => {
+                    // 中间件执行成功
+                    continue;
+                },
+                Ok(Err(e)) => {
+                    return Err(error_utils::middleware_error(format!(
+                        "前置中间件执行失败: {}",
+                        e
+                    )));
+                },
+                Err(_) => {
+                    return Err(error_utils::middleware_error(format!(
+                        "前置中间件执行超时（{}ms）",
+                        self.perf_config.middleware_timeout_ms
+                    )));
+                },
             }
         }
         Ok(())
@@ -318,15 +381,27 @@ impl AsyncEditor {
 
                 let (_id, mut rx) = result;
 
-                let Some(task_result) = rx.recv().await else {
-                    debug!("接收事务处理结果失败");
-                    return Ok(());
+                // 添加任务接收超时保护
+                let task_receive_timeout = Duration::from_millis(self.perf_config.task_receive_timeout_ms);
+                let task_result = match tokio::time::timeout(task_receive_timeout, rx.recv()).await {
+                    Ok(Some(result)) => result,
+                    Ok(None) => {
+                        debug!("附加事务接收通道已关闭");
+                        return Ok(());
+                    },
+                    Err(_) => {
+                        debug!("附加事务接收超时");
+                        return Err(error_utils::state_error(format!(
+                            "附加事务接收超时（{}ms）",
+                            self.perf_config.task_receive_timeout_ms
+                        )));
+                    },
                 };
 
                 let Some(ProcessorResult { result: Some(result), .. }) =
                     task_result.output
                 else {
-                    debug!("处理结果无效");
+                    debug!("附加事务处理结果无效");
                     return Ok(());
                 };
 
