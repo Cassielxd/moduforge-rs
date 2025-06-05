@@ -55,7 +55,7 @@ impl<'a> Add<NodeEnum> for NodeRef<'a> {
         self,
         nodes: NodeEnum,
     ) -> Self::Output {
-        self.tree.add(nodes)?;
+        self.tree.add(&self.key.clone().into(), vec![nodes])?;
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
 }

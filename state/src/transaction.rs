@@ -101,9 +101,10 @@ impl Transaction {
     /// node: 要添加的节点
     pub fn add_node(
         &mut self,
-        nodes: NodeEnum,
+        parent_id: NodeId,
+        nodes: Vec<NodeEnum>,
     ) -> TransformResult<()> {
-        self.step(Arc::new(AddNodeStep::new(nodes)))?;
+        self.step(Arc::new(AddNodeStep::new(parent_id, nodes)))?;
         Ok(())
     }
     /// 删除节点

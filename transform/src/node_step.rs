@@ -14,11 +14,12 @@ use serde::{Deserialize, Serialize};
 /// 添加节点的步骤
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AddNodeStep {
-    nodes: NodeEnum,
+    parent_id: NodeId,
+    nodes: Vec<NodeEnum>,
 }
 impl AddNodeStep {
-    pub fn new(nodes: NodeEnum) -> Self {
-        AddNodeStep { nodes }
+    pub fn new(parent_id: NodeId, nodes: Vec<NodeEnum>) -> Self {
+        AddNodeStep { parent_id, nodes }
     }
 }
 impl Step for AddNodeStep {
@@ -31,7 +32,7 @@ impl Step for AddNodeStep {
         schema: Arc<Schema>,
     ) -> TransformResult<StepResult> {
         let _ = schema;
-        let result = dart.add(self.nodes.clone());
+        let result = dart.add(&self.parent_id, self.nodes.clone());
         match result {
             Ok(_) => Ok(StepResult::ok()),
             Err(e) => Err(transform_error(e.to_string())),
@@ -45,7 +46,7 @@ impl Step for AddNodeStep {
         &self,
         _: &Arc<Tree>,
     ) -> Option<Arc<dyn Step>> {
-        // 递归收集所有子节点的 id
+        // 递归收集单个节点枚举的所有子节点 id
         fn collect_node_ids(node_enum: &NodeEnum) -> Vec<NodeId> {
             let mut ids: Vec<String> = vec![node_enum.0.id.clone()];
             for child in &node_enum.1 {
@@ -53,14 +54,17 @@ impl Step for AddNodeStep {
             }
             ids
         }
-        // 收集所有节点的 id
-        let mut node_ids = collect_node_ids(&self.nodes);
-        if node_ids.len() > 0 {
-            // 排除node_ids 第一个 id
-            node_ids.remove(0);
+        
+        // 收集所有节点的 id（包括顶级节点和所有子节点）
+        let mut all_node_ids = Vec::new();
+        for node_enum in &self.nodes {
+            all_node_ids.extend(collect_node_ids(node_enum));
+        }
+        
+        if !all_node_ids.is_empty() {
             return Some(Arc::new(RemoveNodeStep::new(
-                self.nodes.0.id.clone(),
-                node_ids,
+                self.parent_id.clone(),
+                all_node_ids,
             )));
         }
         None
@@ -90,10 +94,10 @@ impl Step for RemoveNodeStep {
         schema: Arc<Schema>,
     ) -> TransformResult<StepResult> {
         let _ = schema;
-        let result = dart.node(&self.parent_id) - self.node_ids.clone();
+        let result = dart.remove_node(&self.parent_id, self.node_ids.clone());
         match result {
             Ok(_) => Ok(StepResult::ok()),
-            Err(e) => Ok(StepResult::fail(e.to_string())),
+            Err(e) => Err(transform_error(e.to_string())), // 修复：失败时返回Err保持一致性
         }
     }
     fn serialize(&self) -> Option<Vec<u8>> {
@@ -104,12 +108,22 @@ impl Step for RemoveNodeStep {
         &self,
         dart: &Arc<Tree>,
     ) -> Option<Arc<dyn Step>> {
-        match dart.all_children(
-            &self.parent_id,
-            Some(&|node| !self.node_ids.contains(&node.id)),
-        ) {
-            Some(node_enum) => Some(Arc::new(AddNodeStep::new(node_enum))),
-            None => None,
+        // 收集所有要删除的节点及其子树
+        let mut nodes_to_restore = Vec::new();
+        
+        for node_id in &self.node_ids {
+            if let Some(node_enum) = dart.all_children(node_id, None) {
+                nodes_to_restore.push(node_enum);
+            }
+        }
+        
+        if !nodes_to_restore.is_empty() {
+            Some(Arc::new(AddNodeStep::new(
+                self.parent_id.clone(),
+                nodes_to_restore
+            )))
+        } else {
+            None
         }
     }
 }
@@ -232,7 +246,7 @@ mod tests {
         let node = create_test_node("root");
         let test = create_test_node("test");
         let node_enum = NodeEnum(node, vec![NodeEnum(test, vec![])]);
-        let step = AddNodeStep::new(node_enum.clone());
+        let step = AddNodeStep::new("root".to_string(), vec![node_enum.clone()]);
         let result = step.apply(&mut tree, schema.clone());
         assert!(result.is_ok());
         

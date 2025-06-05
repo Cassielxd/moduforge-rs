@@ -235,50 +235,49 @@ impl Tree {
     /// * `PoolError::ParentNotFound` - 如果父节点不存在
     pub fn add(
         &mut self,
-        nodes: NodeEnum,
+        parent_id: &NodeId,
+        nodes: Vec<NodeEnum>,
     ) -> PoolResult<()> {
-        // 将节点枚举分解为当前节点和子节点
-        let (mut node, children) = nodes.into_parts();
-        let node_id = node.id.clone();
+  
 
         // 检查父节点是否存在
-        let parent_shard_index = self.get_shard_index(&node_id);
-        let _ = self.nodes[parent_shard_index]
-            .get(&node_id)
-            .ok_or(error_helpers::parent_not_found(node_id.clone()))?;
+        let parent_shard_index = self.get_shard_index(&parent_id);
+        let parent_node = self.nodes[parent_shard_index]
+            .get(parent_id)
+            .ok_or(error_helpers::parent_not_found(parent_id.clone()))?;
+        let mut new_parent = parent_node.as_ref().clone();
 
         // 收集所有子节点的ID并添加到当前节点的content中
         let zenliang: Vector<String> =
-            children.iter().map(|n| n.0.id.clone()).collect();
-        node.content.extend(zenliang);
+            nodes.iter().map(|n| n.0.id.clone()).collect();
+        new_parent.content.extend(zenliang);
 
         // 更新当前节点
-        let shard_index = self.get_shard_index(&node_id);
-        self.nodes[shard_index] =
-            self.nodes[shard_index].update(node_id.clone(), Arc::new(node));
+        self.nodes[parent_shard_index] =
+            self.nodes[parent_shard_index].update(parent_id.clone(), Arc::new(new_parent));
 
         // 使用队列进行广度优先遍历，处理所有子节点
         let mut node_queue = Vec::new();
-        node_queue.push((children, node_id.clone()));
-        while let Some((current_children, parent_id)) = node_queue.pop() {
+        node_queue.push((nodes, parent_id.clone()));
+        while let Some((current_children, current_parent_id)) = node_queue.pop() {
             for child in current_children {
                 // 处理每个子节点
                 let (mut child_node, grand_children) = child.into_parts();
                 let current_node_id = child_node.id.clone();
 
                 // 收集孙节点的ID并添加到子节点的content中
-                let zenliang: Vector<String> =
+                let grand_children_ids: Vector<String> =
                     grand_children.iter().map(|n| n.0.id.clone()).collect();
-                child_node.content.extend(zenliang);
+                child_node.content.extend(grand_children_ids);
 
-                // 更新子节点
+                // 将当前节点存储到对应的分片中
                 let shard_index = self.get_shard_index(&current_node_id);
                 self.nodes[shard_index] = self.nodes[shard_index]
                     .update(current_node_id.clone(), Arc::new(child_node));
 
                 // 更新父子关系映射
                 self.parent_map
-                    .insert(current_node_id.clone(), parent_id.clone());
+                    .insert(current_node_id.clone(), current_parent_id.clone());
 
                 // 将孙节点加入队列，以便后续处理
                 node_queue.push((grand_children, current_node_id.clone()));
@@ -483,24 +482,29 @@ impl Tree {
             .collect();
         let mut new_target_parent = target_parent.as_ref().clone();
         if let Some(pos) = position {
-            if pos <= new_target_parent.content.len() {
+            // 确保position不超过当前content的长度
+            let insert_pos = pos.min(new_target_parent.content.len());
+            
+            if insert_pos == new_target_parent.content.len() {
+                // 在末尾插入
+                new_target_parent.content.push_back(node_id.clone());
+            } else {
+                // 在指定位置插入
                 let mut new_content = im::Vector::new();
-                for (i, child_id) in
-                    new_target_parent.content.iter().enumerate()
-                {
-                    if i == pos {
+                
+                // 添加position之前的所有元素
+                for (i, child_id) in new_target_parent.content.iter().enumerate() {
+                    if i == insert_pos {
+                        // 在这个位置插入新节点
                         new_content.push_back(node_id.clone());
                     }
                     new_content.push_back(child_id.clone());
                 }
-                if pos == new_target_parent.content.len() {
-                    new_content.push_back(node_id.clone());
-                }
+                
                 new_target_parent.content = new_content;
-            } else {
-                new_target_parent.content.push_back(node_id.clone());
             }
         } else {
+            // 没有指定位置，添加到末尾
             new_target_parent.content.push_back(node_id.clone());
         }
         self.nodes[source_shard_index] = self.nodes[source_shard_index]
@@ -555,18 +559,36 @@ impl Tree {
         &mut self,
         node_id: &NodeId,
     ) -> PoolResult<()> {
+        // 检查是否试图删除根节点
+        if node_id == &self.root_id {
+            return Err(error_helpers::cannot_remove_root());
+        }
+
         let shard_index = self.get_shard_index(node_id);
         let _ = self.nodes[shard_index]
             .get(node_id)
             .ok_or(error_helpers::node_not_found(node_id.clone()))?;
+
+        // 从父节点的content中移除该节点
+        if let Some(parent_id) = self.parent_map.get(node_id).cloned() {
+            let parent_shard_index = self.get_shard_index(&parent_id);
+            if let Some(parent_node) = self.nodes[parent_shard_index].get(&parent_id) {
+                let mut new_parent = parent_node.as_ref().clone();
+                new_parent.content = new_parent.content
+                    .iter()
+                    .filter(|&id| id != node_id)
+                    .cloned()
+                    .collect();
+                self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
+                    .update(parent_id.clone(), Arc::new(new_parent));
+            }
+        }
+
+        // 删除子树（remove_subtree内部已经处理了节点的删除和parent_map的清理）
         let mut remove_nodes = Vec::new();
         self.remove_subtree(node_id, &mut remove_nodes)?;
-        for node in remove_nodes {
-            let shard_index = self.get_shard_index(&node.id);
-            self.nodes[shard_index].remove(&node.id);
-            self.parent_map.remove(&node.id);
-        }
-        self.nodes[shard_index].remove(node_id);
+        
+        // remove_subtree已经删除了所有节点，包括node_id本身，所以这里不需要再次删除
         Ok(())
     }
 
@@ -832,6 +854,68 @@ mod tests {
         tree.add_node(&root.id, &vec![child2.clone()]).unwrap();
         
         assert_eq!(tree.children_count(&root.id), 2);
+    }
+
+    #[test]
+    fn test_remove_node_by_id_updates_parent() {
+        let root = create_test_node("root");
+        let mut tree = Tree::new(root.clone());
+        
+        let child = create_test_node("child");
+        tree.add_node(&root.id, &vec![child.clone()]).unwrap();
+        
+        // 验证子节点被添加
+        assert_eq!(tree.children_count(&root.id), 1);
+        assert!(tree.contains_node(&child.id));
+        
+        // 删除子节点
+        tree.remove_node_by_id(&child.id).unwrap();
+        
+        // 验证子节点被删除且父节点的content被更新
+        assert_eq!(tree.children_count(&root.id), 0);
+        assert!(!tree.contains_node(&child.id));
+    }
+
+    #[test]
+    fn test_move_node_position_edge_cases() {
+        let root = create_test_node("root");
+        let mut tree = Tree::new(root.clone());
+        
+        let container = create_test_node("container");
+        tree.add_node(&root.id, &vec![container.clone()]).unwrap();
+        
+        let child1 = create_test_node("child1");
+        let child2 = create_test_node("child2");
+        let child3 = create_test_node("child3");
+        
+        tree.add_node(&root.id, &vec![child1.clone()]).unwrap();
+        tree.add_node(&root.id, &vec![child2.clone()]).unwrap();
+        tree.add_node(&root.id, &vec![child3.clone()]).unwrap();
+        
+        // 测试移动到超出范围的位置（应该插入到末尾）
+        tree.move_node(&root.id, &container.id, &child1.id, Some(100)).unwrap();
+        
+        let container_children = tree.children(&container.id).unwrap();
+        assert_eq!(container_children.len(), 1);
+        assert_eq!(container_children[0], child1.id);
+        
+        // 测试移动到位置0
+        tree.move_node(&root.id, &container.id, &child2.id, Some(0)).unwrap();
+        
+        let container_children = tree.children(&container.id).unwrap();
+        assert_eq!(container_children.len(), 2);
+        assert_eq!(container_children[0], child2.id);
+        assert_eq!(container_children[1], child1.id);
+    }
+
+    #[test]
+    fn test_cannot_remove_root_node() {
+        let root = create_test_node("root");
+        let mut tree = Tree::new(root.clone());
+        
+        // 尝试删除根节点应该失败
+        let result = tree.remove_node_by_id(&root.id);
+        assert!(result.is_err());
     }
 
     #[test]

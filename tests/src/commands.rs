@@ -27,16 +27,13 @@ impl Command for MyCommand {
     ) -> TransformResult<()> {
         //  数据库的查询
         let root = tr.doc().root();
-        let node: NodeEnum = NodeEnum::from(
-            root.as_ref().clone(),
-            vec![tr.schema.nodes.get("DW").unwrap().create(
-                None,
-                None,
-                vec![],
-                None,
-            )],
+        let node = tr.schema.nodes.get("DW").unwrap().create(
+            None,
+            None,
+            vec![],
+            None,
         );
-        let _ = tr.add_node(node);
+        let _ = tr.add_node(root.id.clone(), vec![NodeEnum(node, vec![])]);
         Ok(())
     }
 }
@@ -45,16 +42,13 @@ impl_command!(
     MyCommand1,
     async |tr: &mut Transaction| -> TransformResult<()> {
         let root = tr.doc().root();
-        let node: NodeEnum = NodeEnum::from(
-            root.as_ref().clone(),
-            vec![tr.schema.nodes.get("DW").unwrap().create(
-                None,
-                None,
-                vec![],
-                None,
-            )],
+        let node = tr.schema.nodes.get("DW").unwrap().create(
+            None,
+            None,
+            vec![],
+            None,
         );
-        let _ = tr.add_node(node);
+        let _ = tr.add_node(root.id.clone(), vec![NodeEnum(node, vec![])]);
         Ok(())
     },
     "MyCommand1"
