@@ -1,6 +1,6 @@
 use nanoid::nanoid;
 
-use std::collections::HashSet;
+
 pub struct IdGenerator;
 
 impl IdGenerator {
@@ -41,7 +41,7 @@ mod tests {
     #[test]
     fn test_id_uniqueness() {
         const ITERATIONS: usize = 1_000_000;
-        let mut ids = HashSet::with_capacity(ITERATIONS);
+        let mut ids = std::collections::HashSet::with_capacity(ITERATIONS);
         
         // 生成大量ID并检查唯一性
         for _ in 0..ITERATIONS {

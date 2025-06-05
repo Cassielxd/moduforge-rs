@@ -1177,7 +1177,7 @@ impl Default for LazyQueryConfig {
 
 /// 查询统计信息
 #[derive(Debug, Clone)]
-struct QueryStats {
+pub struct QueryStats {
     /// 查询次数
     count: usize,
     /// 最后查询时间
