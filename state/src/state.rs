@@ -26,10 +26,10 @@ pub fn get_state_version() -> u64 {
     VERSION.fetch_add(1, Ordering::SeqCst)
 }
 /// State 结构体代表编辑器的整体状态
-/// - config: 存储编辑器的配置信息
-/// - fields_instances: 存储插件的状态数据
-/// - node_pool: 文档的节点池
-/// - version: 状态版本号，用于追踪变更
+/// - 配置信息: 存储编辑器的配置信息
+/// - 字段实例: 存储插件的状态数据
+/// - 节点池: 文档的节点池
+/// - 版本号: 状态版本号，用于追踪变更
 #[derive(Clone)]
 pub struct State {
     pub config: Arc<Configuration>,
@@ -42,7 +42,7 @@ impl Debug for State {
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        write!(f, "State {{ len: {} }}", self.fields_instances.len())
+        write!(f, "State {{ 字段数量: {} }}", self.fields_instances.len())
     }
 }
 
@@ -56,7 +56,7 @@ impl State {
         let schema: Arc<Schema> = match &state_config.schema {
             Some(schema) => schema.clone(),
             None => state_config.schema.clone().ok_or_else(|| {
-                error::schema_error("Schema is required".to_string())
+                error::schema_error("必须提供结构定义".to_string())
             })?,
         };
         let config = Configuration::new(
@@ -416,10 +416,10 @@ pub struct StateSerialize {
 }
 
 /// 状态配置结构体，用于初始化编辑器状态
-/// - schema: 文档结构定义
-/// - doc: 初始文档内容
-/// - stored_marks: 存储的标记
-/// - plugins: 插件列表
+/// - 结构定义: 文档结构定义
+/// - 文档内容: 初始文档内容
+/// - 存储标记: 存储的标记
+/// - 插件列表: 插件列表
 #[derive(Debug)]
 pub struct StateConfig {
     pub schema: Option<Arc<Schema>>,
@@ -439,10 +439,10 @@ pub struct TransactionResult {
     pub transactions: Vec<Transaction>,
 }
 /// 配置结构体，存储编辑器的核心配置信息
-/// - plugins: 已加载的插件列表
-/// /// - plugins_by_key: 插件索引，用于快速查找
-/// - doc: 文档实例
-/// - schema: 文档结构定义
+/// - 插件列表: 已加载的插件列表
+/// - 插件索引: 插件索引，用于快速查找
+/// - 文档实例: 文档实例
+/// - 结构定义: 文档结构定义
 #[derive(Clone, Debug)]
 pub struct Configuration {
     plugins: Vec<Arc<Plugin>>,
