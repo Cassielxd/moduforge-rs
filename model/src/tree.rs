@@ -4,6 +4,9 @@ use std::collections::hash_map::DefaultHasher;
 use im::Vector;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use once_cell::sync::Lazy;
+use parking_lot::RwLock;
+use lru::LruCache;
 
 use crate::error::PoolResult;
 use crate::node_type::NodeEnum;
@@ -15,21 +18,92 @@ use crate::{
     types::NodeId
 };
 
+// 全局LRU缓存用于存储NodeId到分片索引的映射
+static SHARD_INDEX_CACHE: Lazy<RwLock<LruCache<String, usize>>> = 
+    Lazy::new(|| RwLock::new(LruCache::new(NonZeroUsize::new(10000).unwrap())));
+
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Tree {
     pub root_id: NodeId,
     pub nodes: Vector<im::HashMap<NodeId, Arc<Node>>>, // 分片存储节点数据
     pub parent_map: im::HashMap<NodeId, NodeId>,
+    #[serde(skip)]
+    num_shards: usize, // 缓存分片数量，避免重复计算
 }
 
 impl Tree {
+    #[inline]
     pub fn get_shard_index(
         &self,
         id: &NodeId,
     ) -> usize {
+        // 先检查缓存
+        {
+            let cache = SHARD_INDEX_CACHE.read();
+            if let Some(&index) = cache.peek(id) {
+                return index;
+            }
+        }
+        
+        // 缓存未命中，计算哈希值
         let mut hasher = DefaultHasher::new();
         id.hash(&mut hasher);
-        (hasher.finish() as usize) % self.nodes.len()
+        let index = (hasher.finish() as usize) % self.num_shards;
+        
+        // 更新缓存
+        {
+            let mut cache = SHARD_INDEX_CACHE.write();
+            cache.put(id.clone(), index);
+        }
+        
+        index
+    }
+
+    #[inline]
+    pub fn get_shard_indices(&self, ids: &[&NodeId]) -> Vec<usize> {
+        ids.iter().map(|id| self.get_shard_index(id)).collect()
+    }
+
+    // 为批量操作提供优化的哈希计算
+    #[inline]
+    pub fn get_shard_index_batch<'a>(
+        &self,
+        ids: &'a [&'a NodeId],
+    ) -> Vec<(usize, &'a NodeId)> {
+        let mut results = Vec::with_capacity(ids.len());
+        let mut cache_misses = Vec::new();
+        
+        // 批量检查缓存
+        {
+            let cache = SHARD_INDEX_CACHE.read();
+            for &id in ids {
+                if let Some(&index) = cache.peek(id) {
+                    results.push((index, id));
+                } else {
+                    cache_misses.push(id);
+                }
+            }
+        }
+        
+        // 批量计算缓存未命中的项
+        if !cache_misses.is_empty() {
+            let mut cache = SHARD_INDEX_CACHE.write();
+            for &id in &cache_misses {
+                let mut hasher = DefaultHasher::new();
+                id.hash(&mut hasher);
+                let index = (hasher.finish() as usize) % self.num_shards;
+                cache.put(id.clone(), index);
+                results.push((index, id));
+            }
+        }
+        
+        results
+    }
+
+    // 清理缓存的方法，用于内存管理
+    pub fn clear_shard_cache() {
+        let mut cache = SHARD_INDEX_CACHE.write();
+        cache.clear();
     }
 
     pub fn contains_node(
@@ -111,7 +185,7 @@ impl Tree {
             num_shards,
         );
 
-        Self { root_id, nodes: shards, parent_map }
+        Self { root_id, nodes: shards, parent_map, num_shards }
     }
 
     pub fn new(root: Node) -> Self {
@@ -128,7 +202,7 @@ impl Tree {
         let shard_index = (hasher.finish() as usize) % num_shards;
         nodes[shard_index] =
             nodes[shard_index].update(root_id.clone(), Arc::new(root));
-        Self { root_id, nodes, parent_map: im::HashMap::new() }
+        Self { root_id, nodes, parent_map: im::HashMap::new(), num_shards }
     }
 
     pub fn update_attr(

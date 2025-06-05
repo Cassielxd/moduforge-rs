@@ -255,7 +255,7 @@ impl State {
         tr: &Transaction,
     ) -> StateResult<State> {
         let mut config = self.config.as_ref().clone();
-        config.doc = Some(tr.doc.clone());
+        config.doc = Some(tr.doc());
         let mut new_instance = State::new(Arc::new(config))?;
 
         // 获取已排序的插件列表

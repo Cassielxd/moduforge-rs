@@ -6,6 +6,7 @@
 //! - 属性更新
 //! - 批量操作
 //! - 补丁应用
+//! - 增量更新和内存优化
 //!
 //! 主要组件：
 //! - `attr_step`: 属性步骤，处理属性更新操作
@@ -15,11 +16,14 @@
 //! - `patch`: 补丁系统，用于增量更新
 //! - `step`: 步骤定义，定义转换操作的基本接口
 //! - `transform`: 转换系统，协调各种转换操作
+//! - `incremental_pool`: 增量更新的节点池，提供内存优化
 //!
 //! 核心类型：
 //! - `ConcreteStep`: 具体步骤枚举，表示所有可能的转换操作
 //! - `PatchStep`: 补丁步骤，用于应用补丁
 //! - `BatchStep`: 批量步骤，用于执行多个转换操作
+//! - `IncrementalNodePool`: 增量更新的节点池
+//! - `IncrementalPoolManager`: 节点池版本管理器
 
 pub mod attr_step;
 pub mod mark_step;

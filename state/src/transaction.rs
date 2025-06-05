@@ -75,12 +75,15 @@ impl Transaction {
         &mut self,
         other: &mut Self,
     ) {
-        self.steps.extend(other.steps.iter().cloned());
-        self.doc = other.doc.clone();
+        // 使用批量应用来优化性能
+        let steps_to_apply: Vec<_> = other.steps.iter().cloned().collect();
+        if let Err(e) = self.apply_steps_batch(steps_to_apply) {
+            eprintln!("批量应用步骤失败: {}", e);
+        }
     }
     /// 获取当前文档状态
     pub fn doc(&self) -> Arc<NodePool> {
-        self.doc.clone()
+        self.transform.doc()
     }
     /// 设置节点属性
     /// id: 节点ID
