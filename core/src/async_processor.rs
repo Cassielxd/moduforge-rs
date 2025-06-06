@@ -432,22 +432,13 @@ where
 
     /// 优雅地关闭处理器
     /// 等待所有正在处理的任务完成后再关闭
-    pub async fn shutdown(&mut self) -> Result<(), ProcessorError> {
+    pub  fn shutdown(&mut self) -> Result<(), ProcessorError> {
         if let Some(shutdown_tx) = self.shutdown_tx.take() {
             shutdown_tx.send(()).map_err(|_| {
                 ProcessorError::InternalError(
                     "Failed to send shutdown signal".to_string(),
                 )
             })?;
-
-            if let Some(handle) = self.handle.take() {
-                handle.await.map_err(|e| {
-                    ProcessorError::InternalError(format!(
-                        "Failed to join processor task: {}",
-                        e
-                    ))
-                })?;
-            }
         }
         Ok(())
     }
@@ -467,8 +458,7 @@ where
     fn drop(&mut self) {
         if self.shutdown_tx.is_some() {
             // 创建一个新的运行时来处理异步关闭
-            let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(self.shutdown()).unwrap();
+           let _ = self.shutdown();
         }
     }
 }
@@ -536,7 +526,7 @@ mod tests {
         }
 
         // Initiate shutdown
-        processor.shutdown().await.unwrap();
+        processor.shutdown().unwrap();
 
         // Verify all tasks completed
         for mut rx in receivers {

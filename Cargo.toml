@@ -6,10 +6,10 @@ members = [
    "state",
    "core",
    "macros/*",
-   "tests"
+   "demo"
    ]
 exclude = [
-   "tests"
+   "demo"
 ]
 [workspace.package]
 name = "moduforge"

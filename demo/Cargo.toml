@@ -1,8 +1,8 @@
 [package]
-name = "moduforge-test"
+name = "moduforge-demo"
 version = {workspace=true}
 edition = {workspace=true}
-description = "用于测试"
+description = "用于演示"
 authors = {workspace=true}
 license = {workspace=true}
 documentation = {workspace=true}
@@ -16,6 +16,11 @@ thiserror= {workspace=true}
 async-trait= {workspace=true}
 tokio= {workspace=true}
 im = {workspace=true}
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+chrono = "0.4"
+rand = "0.8"
 moduforge-model = {version = "0.3.8", path = "../model"}
 moduforge-state = {version = "0.3.8", path = "../state"}
 moduforge-transform = {version = "0.3.8", path = "../transform"}

@@ -158,14 +158,11 @@ impl Transaction {
     /// 获取元数据
     /// key: 键
     /// 返回: Option<&T>，如果存在且类型匹配则返回Some，否则返回None
-    pub fn get_meta<T: 'static, K>(
+    pub fn get_meta<T: 'static>(
         &self,
-        key: K,
+        key: &str,
     ) -> Option<&Arc<T>>
-    where
-        K: Into<String>,
     {
-        let key_str = key.into();
-        self.meta.get(&key_str)?.downcast_ref::<Arc<T>>()
+        self.meta.get(key)?.downcast_ref::<Arc<T>>()
     }
 }
