@@ -1,0 +1,182 @@
+# ModuForge-RS Cursor Rules
+# Rust-based state management and transformation framework
+
+## Project Overview
+This is ModuForge-RS, a Rust-based framework for state management and data transformation using immutable data structures and event-driven architecture.
+
+## Core Technologies
+- **Language**: Rust (Edition 2024)
+- **Immutable Data**: im-rs crate for persistent data structures
+- **Rules Engine**: zen crate for rule processing
+- **Async Runtime**: tokio for asynchronous operations
+- **Serialization**: serde for data serialization/deserialization
+- **Error Handling**: thiserror and anyhow for error management
+
+## Code Style Guidelines
+
+### Rust Conventions
+- Follow standard Rust naming conventions (snake_case for variables/functions, PascalCase for types)
+- Use `clippy` warnings and suggestions
+- Prefer explicit error handling over panics
+- Use `Result<T, E>` for fallible operations
+- Implement `Debug`, `Clone`, `PartialEq` derives where appropriate
+- Use `#[derive(Debug)]` for all custom types unless there's a specific reason not to
+
+### Project-Specific Patterns
+- Use `im::HashMap` and `im::Vector` for immutable collections
+- Event-driven architecture: all state changes should emit events
+- Transaction-based operations: group related changes into transactions
+- Plugin architecture: implement extensible plugin system
+- Middleware pattern: use middleware for cross-cutting concerns
+
+### Error Handling
+- Use `thiserror` for custom error types
+- Use `anyhow` for application-level error handling
+- Prefer `Result` over `Option` when an error cause is known
+- Always provide meaningful error messages
+- Use `?` operator for error propagation
+
+### Memory Management
+- Prefer borrowing over cloning when possible
+- Use `Arc<T>` for shared ownership in async contexts
+- Use `Rc<T>` for shared ownership in single-threaded contexts
+- Be explicit about lifetimes when necessary
+
+## Architecture Patterns
+
+### State Management
+- Immutable state using im-rs collections
+- State transitions through events
+- Snapshot-based state persistence
+- Time-travel debugging capabilities
+
+### Event System
+- Event-driven architecture
+- Type-safe event dispatching
+- Event sourcing for state reconstruction
+- Event replay capabilities
+
+### Plugin System
+- Dynamic plugin loading
+- Plugin lifecycle management
+- Plugin dependency resolution
+- Plugin isolation and sandboxing
+
+### Transaction Model
+- ACID-compliant transactions
+- Rollback capabilities
+- Transaction logging
+- Concurrent transaction handling
+
+## Code Organization
+
+### Module Structure
+```
+src/
+├── core/           # Core framework components
+├── events/         # Event system implementation
+├── plugins/        # Plugin system
+├── middleware/     # Middleware components
+├── state/          # State management
+├── transactions/   # Transaction handling
+├── rules/          # Rules engine integration
+└── utils/          # Utility functions
+```
+
+### File Naming
+- Use descriptive names that reflect the module's purpose
+- Group related functionality in modules
+- Use `mod.rs` for module declarations
+- Keep file sizes manageable (under 500 lines when possible)
+
+## Testing Guidelines
+- Write unit tests for all public APIs
+- Use property-based testing with quickcheck when appropriate
+- Integration tests for end-to-end workflows
+- Mock external dependencies
+- Test error conditions and edge cases
+- Use `#[cfg(test)]` for test-only code
+
+## Performance Considerations
+- Minimize allocations in hot paths
+- Use zero-copy operations when possible
+- Profile before optimizing
+- Consider using `smallvec` for small collections
+- Use `Box<str>` instead of `String` for immutable strings
+- Lazy evaluation for expensive computations
+
+## Documentation
+- Use `///` for public API documentation
+- Include examples in documentation
+- Document error conditions
+- Explain complex algorithms
+- Keep README.md updated with current features
+
+## Dependencies Management
+- Minimize external dependencies
+- Pin dependency versions in Cargo.lock
+- Regularly audit dependencies for security
+- Prefer maintained crates with good documentation
+- Consider internal alternatives for simple functionality
+
+## Async Programming
+- Use `async/await` for I/O operations
+- Prefer `tokio::spawn` for CPU-bound tasks
+- Use `Arc<Mutex<T>>` or `Arc<RwLock<T>>` for shared mutable state
+- Avoid blocking operations in async contexts
+- Use channels for inter-task communication
+
+## Security Considerations
+- Validate all external inputs
+- Use type-safe APIs to prevent common mistakes
+- Implement proper authentication and authorization
+- Log security-relevant events
+- Use secure random number generation
+- Avoid storing sensitive data in logs
+
+## Common Anti-patterns to Avoid
+- Using `unwrap()` or `expect()` in production code without justification
+- Ignoring compiler warnings
+- Large functions (prefer breaking into smaller functions)
+- Deep nesting (use early returns and guard clauses)
+- Mutable global state
+- Blocking operations in async code
+
+## Specific Framework Features
+
+### Node System
+- Hierarchical node structure
+- Attribute-based node properties
+- Mark-based node tagging
+- Node validation and type checking
+
+### Rules Engine Integration
+- YAML-based rule configuration
+- Dynamic rule evaluation
+- Rule composition and chaining
+- Custom rule validators
+
+### Middleware Chain
+- Request/response processing pipeline
+- Configurable middleware ordering
+- Error handling and recovery
+- Performance monitoring
+
+### Plugin Architecture
+- Plugin discovery and loading
+- Plugin configuration management
+- Plugin lifecycle hooks
+- Plugin communication protocols
+
+## AI Assistant Guidelines
+When helping with this codebase:
+1. Always consider the immutable data structure paradigm
+2. Suggest event-driven solutions for state changes
+3. Recommend appropriate error handling patterns
+4. Consider performance implications of suggestions
+5. Maintain consistency with existing architectural patterns
+6. Suggest tests for new functionality
+7. Consider backwards compatibility
+8. Follow Rust best practices and idioms
+9. Prioritize type safety and memory safety
+10. Consider the plugin and middleware architectures when suggesting changes 

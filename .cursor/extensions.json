@@ -1,0 +1,40 @@
+{
+  "recommendations": [
+    // Rust development
+    "rust-lang.rust-analyzer",
+    "vadimcn.vscode-lldb",
+    "serayuzgur.crates",
+    "tamasfe.even-better-toml",
+    
+    // Code quality and formatting
+    "esbenp.prettier-vscode",
+    "editorconfig.editorconfig",
+    "streetsidesoftware.code-spell-checker",
+    
+    // Git and version control
+    "eamodio.gitlens",
+    "mhutchie.git-graph",
+    "github.vscode-pull-request-github",
+    
+    // YAML and JSON
+    "redhat.vscode-yaml",
+    "ms-vscode.vscode-json",
+    
+    // Documentation
+    "yzhang.markdown-all-in-one",
+    "davidanson.vscode-markdownlint",
+    
+    // Testing
+    "hbenl.vscode-test-explorer",
+    "swellaby.vscode-rust-test-adapter",
+    
+    // Utilities
+    "ms-vscode.hexdump",
+    "tyriar.sort-lines",
+    "aaron-bond.better-comments",
+    "oderwat.indent-rainbow"
+  ],
+  "unwantedRecommendations": [
+    "ms-vscode.vscode-typescript-next"
+  ]
+} 
