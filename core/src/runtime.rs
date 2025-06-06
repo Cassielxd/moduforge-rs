@@ -229,7 +229,7 @@ impl Editor {
     ) -> EditorResult<()> {
         self.dispatch_with_meta(transaction, "".to_string(), serde_json::Value::Null).await
     }
-
+    /// 更新编辑器状态并记录到历史记录 包含描述和元信息
     pub async fn dispatch_with_meta(
         &mut self,
         transaction: Transaction,
@@ -271,14 +271,14 @@ impl Editor {
         }
         Ok(())
     }
-
+    /// 更新编辑器状态并记录到历史记录 不包含描述和元信息
     pub async fn update_state(
         &mut self,
         state: Arc<State>,
     ) -> EditorResult<()> {
         self.update_state_with_meta(state, "".to_string(), serde_json::Value::Null).await
     }
-
+    /// 更新编辑器状态并记录到历史记录 包含描述和元信息
     pub async fn update_state_with_meta(
         &mut self,
         state: Arc<State>,

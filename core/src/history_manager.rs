@@ -35,11 +35,18 @@ impl<T: Clone> HistoryManager<T> {
             history: History::new(Vec::new(), initial_state, Vec::new()),
         }
     }
-
+    /// 获取当前状态
     pub fn get_present(&self) -> T {
         self.history.present.clone()
     }
-
+    /// 获取历史记录
+    pub fn get_history(&self) -> &History<T> {
+        &self.history
+    }
+    /// 获取历史记录长度
+    pub fn get_history_length(&self) -> usize {
+        self.history.past.len() + self.history.future.len() + 1
+    }
     /// 插入新状态
     pub fn insert(
         &mut self,
