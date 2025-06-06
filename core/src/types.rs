@@ -1,6 +1,6 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc, time::SystemTime};
 use async_trait::async_trait;
-use moduforge_state::StateConfig;
+use moduforge_state::{State, StateConfig};
 
 use crate::{
     event::{Event, EventHandler},
@@ -196,6 +196,38 @@ impl EditorOptionsBuilder {
             history_limit: self.history_limit,
             event_handlers: self.event_handlers,
             middleware_stack: self.middleware_stack,
+        }
+    }
+}
+
+
+/// 带元信息的历史记录项
+#[derive(Debug, Clone)]
+pub struct HistoryEntryWithMeta {
+    /// 状态快照
+    pub state: Arc<State>,
+    
+    /// 操作描述
+    pub description: String,
+    
+    /// 时间戳
+    pub timestamp: SystemTime,
+    
+    pub meta: serde_json::Value,
+}
+
+
+impl HistoryEntryWithMeta {
+    pub fn new(
+        state: Arc<State>,
+        description: String,
+        meta: serde_json::Value,
+    ) -> Self {
+        Self {
+            state,
+            description,
+            timestamp: SystemTime::now(),
+            meta,
         }
     }
 }

@@ -6,7 +6,7 @@ use crate::{
     extension_manager::ExtensionManager,
     helpers::create_doc,
     history_manager::HistoryManager,
-    types::EditorOptions,
+    types::{EditorOptions, HistoryEntryWithMeta},
 };
 
 use moduforge_model::{node_pool::NodePool, schema::Schema};
@@ -26,7 +26,7 @@ pub struct Editor {
     event_bus: EventBus<Event>,
     state: Arc<State>,
     extension_manager: ExtensionManager,
-    history_manager: HistoryManager<Arc<State>>,
+    history_manager: HistoryManager<HistoryEntryWithMeta>,
     options: EditorOptions,
 }
 unsafe impl Send for Editor {}
@@ -65,7 +65,7 @@ impl Editor {
             state: state.clone(),
             extension_manager,
             history_manager: HistoryManager::new(
-                state,
+                HistoryEntryWithMeta::new(state.clone(), "init".to_string(), serde_json::Value::Null),
                 options.get_history_limit(),
             ),
             options,
@@ -203,6 +203,19 @@ impl Editor {
         self.dispatch(tr).await
     }
 
+    pub async fn command_with_meta(
+        &mut self,
+        command: Arc<dyn Command>,
+        description: String,
+        meta: serde_json::Value,
+    ) -> EditorResult<()> {
+        debug!("正在执行命令: {}", command.name());
+        let mut tr = self.get_tr();
+        command.execute(&mut tr).await?;
+        tr.commit();
+        self.dispatch_with_meta(tr, description, meta).await
+    }
+
     /// 处理编辑器事务的核心方法
     ///
     /// # 参数
@@ -214,6 +227,16 @@ impl Editor {
         &mut self,
         transaction: Transaction,
     ) -> EditorResult<()> {
+        self.dispatch_with_meta(transaction, "".to_string(), serde_json::Value::Null).await
+    }
+
+    pub async fn dispatch_with_meta(
+        &mut self,
+        transaction: Transaction,
+        description: String,
+        meta: serde_json::Value,
+    ) -> EditorResult<()> {
+        
         let old_id = self.get_state().version;
         // 保存当前事务的副本，用于中间件处理
         let mut current_transaction = transaction;
@@ -238,7 +261,7 @@ impl Editor {
 
         // 如果有新的状态，更新编辑器状态并记录到历史记录
         if let Some(state) = state_update {
-            self.update_state(state.clone()).await?;
+            self.update_state_with_meta(state.clone(), description, meta).await?;
             self.emit_event(Event::TrApply(
                 old_id,
                 Arc::new(transactions),
@@ -246,15 +269,24 @@ impl Editor {
             ))
             .await?;
         }
-
         Ok(())
     }
+
     pub async fn update_state(
         &mut self,
         state: Arc<State>,
     ) -> EditorResult<()> {
-        self.state = state;
-        self.history_manager.insert(self.state.clone());
+        self.update_state_with_meta(state, "".to_string(), serde_json::Value::Null).await
+    }
+
+    pub async fn update_state_with_meta(
+        &mut self,
+        state: Arc<State>,
+        description: String,
+        meta: serde_json::Value,
+    ) -> EditorResult<()> {
+        self.state = state.clone();
+        self.history_manager.insert(HistoryEntryWithMeta::new(state, description, meta));
         Ok(())
     }
 
@@ -334,12 +366,12 @@ impl Editor {
 
     pub fn undo(&mut self) {
         self.history_manager.jump(-1);
-        self.state = self.history_manager.get_present();
+        self.state = self.history_manager.get_present().state;
     }
 
     pub fn redo(&mut self) {
         self.history_manager.jump(1);
-        self.state = self.history_manager.get_present();
+        self.state = self.history_manager.get_present().state;
     }
 
     pub fn jump(
@@ -347,7 +379,7 @@ impl Editor {
         n: isize,
     ) {
         self.history_manager.jump(n);
-        self.state = self.history_manager.get_present();
+        self.state = self.history_manager.get_present().state;
     }
 }
 impl Drop for Editor {

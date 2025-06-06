@@ -140,6 +140,12 @@ impl AsyncEditor {
             debug!("{} 耗时: {}ms", operation, duration.as_millis());
         }
     }
+    pub async fn command(
+        &mut self,
+        command: Arc<dyn Command>,
+    ) -> EditorResult<()> {
+        self.command_with_meta(command, "".to_string(), serde_json::Value::Null).await
+    }
 
     /// 执行命令并生成相应的事务
     ///
@@ -151,9 +157,11 @@ impl AsyncEditor {
     ///
     /// # 返回值
     /// * `EditorResult<()>` - 命令执行结果
-    pub async fn command(
+    pub async fn command_with_meta(
         &mut self,
         command: Arc<dyn Command>,
+        description: String,
+        meta: serde_json::Value,
     ) -> EditorResult<()> {
         let cmd_name = command.name();
         debug!("正在执行命令: {}", cmd_name);
@@ -163,7 +171,7 @@ impl AsyncEditor {
         command.execute(&mut tr).await?;
         tr.commit();
         // 使用高性能处理引擎处理事务
-        match self.dispatch_flow(tr).await {
+        match self.dispatch_flow_with_meta(tr, description, meta).await {
             Ok(_) => {
                 debug!("命令 '{}' 执行成功", cmd_name);
                 Ok(())
@@ -174,7 +182,12 @@ impl AsyncEditor {
             },
         }
     }
-
+    pub async fn dispatch_flow(
+        &mut self,
+        transaction: Transaction,
+    ) -> EditorResult<()> {
+        self.dispatch_flow_with_meta(transaction, "".to_string(), serde_json::Value::Null).await
+    }
     /// 高性能事务处理方法，使用FlowEngine处理事务
     ///
     /// 与标准的dispatch方法相比，此方法具有以下优势：
@@ -188,9 +201,11 @@ impl AsyncEditor {
     ///
     /// # 返回值
     /// * `EditorResult<()>` - 处理结果，成功返回Ok(()), 失败返回错误
-    pub async fn dispatch_flow(
+    pub async fn dispatch_flow_with_meta(
         &mut self,
         transaction: Transaction,
+        description: String,
+        meta: serde_json::Value,
     ) -> EditorResult<()> {
         let start_time = std::time::Instant::now();
         let mut current_transaction = transaction;
@@ -254,7 +269,7 @@ impl AsyncEditor {
 
         // 更新状态并广播事件（状态更新无需超时保护，事件广播需要）
         if let Some(state) = current_state {
-            self.base.update_state(state.clone()).await?;
+            self.base.update_state_with_meta(state.clone(), description, meta).await?;
 
             let event_start = std::time::Instant::now();
             self.base
