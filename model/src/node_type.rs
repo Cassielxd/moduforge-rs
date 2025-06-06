@@ -9,6 +9,7 @@ use super::types::NodeId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::fmt::{self, Debug};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NodeEnum(pub Node, pub Vec<NodeEnum>);
@@ -30,7 +31,7 @@ impl NodeEnum {
     }
 }
 /// 用于描述节点类型的行为规则和属性约束，通过[Schema](super::schema::Schema)进行统一管理
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct NodeType {
     /// 节点类型的唯一标识符（例如："dw", "dxgc"）
     pub name: String,
@@ -48,6 +49,11 @@ pub struct NodeType {
     pub content_match: Option<ContentMatch>,
     /// 允许附加的Mark类型集合
     pub mark_set: Option<Vec<MarkType>>,
+}
+impl Debug for NodeType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("NodeType").field("name", &self.name).field("spec", &self.spec).field("desc", &self.desc).field("groups", &self.groups).field("attrs", &self.attrs).field("default_attrs", &self.default_attrs).field("mark_set", &self.mark_set).finish()
+    }
 }
 
 impl NodeType {
@@ -203,24 +209,30 @@ impl NodeType {
         // 首先创建需要填充的内容
         let mut filled_nodes = Vec::new();
         let mut content_ids = Vec::new();
-
+        
         if let Some(content_match) = &self.content_match {
             if let Some(matched) =
                 content_match.match_fragment(&content, schema)
             {
-                if let Some(needed_types) = matched.fill(&content, true, schema)
+                if let Some(needed_type_names) = matched.fill(&content, true, schema)
                 {
-                    // 对每个需要的类型，尝试复用content中的节点或创建新节点
-                    for node_type in needed_types {
+                    // 对每个需要的类型名称，从 schema 中获取完整的 NodeType 并创建节点
+                    for type_name in needed_type_names {
+                        // 从 schema 中获取完整的 NodeType
+                        let complete_node_type = schema.nodes.get(&type_name)
+                            .expect(&format!("无法在 schema 中找到节点类型: {}", type_name));
+                        
                         // 在content中查找同类型的节点
                         let existing_node =
-                            content.iter().find(|n| n.r#type == node_type.name);
+                            content.iter().find(|n| n.r#type == type_name);
 
                         if let Some(node) = existing_node {
                             // 复用现有节点
                             content_ids.push(node.id.clone());
-                            // 递归创建节点及其子节点，保留原始节点的内容
-                            let child_nodes = node_type.create_and_fill(
+                            // 递归创建节点及其子节点
+                            // 对于现有节点，我们需要让它重新填充其必需的子内容
+                            // 不传递现有的子节点，而是让 fill 方法重新推导需要的节点
+                            let child_nodes = complete_node_type.create_and_fill(
                                 Some(node.id.clone()),
                                 Some(
                                     &node
@@ -231,7 +243,7 @@ impl NodeType {
                                         .map(|(k, v)| (k.clone(), v.clone()))
                                         .collect(),
                                 ), // 使用节点的原始属性
-                                vec![], // 子节点内容会在递归时处理
+                                vec![], // 传递空内容，让 fill 方法推导需要的子节点
                                 Some(
                                     node.marks
                                         .clone()
@@ -243,13 +255,13 @@ impl NodeType {
                             );
                             filled_nodes.push(child_nodes);
                         } else {
-                            // 创建新节点
+                            // 创建新节点 - 让子节点类型自己决定是否需要创建子内容
                             let new_id = IdGenerator::get_id();
                             content_ids.push(new_id.clone());
-                            let child_nodes = node_type.create_and_fill(
+                            let child_nodes = complete_node_type.create_and_fill(
                                 Some(new_id),
                                 None,
-                                vec![],
+                                vec![], // 新节点从空内容开始，让递归调用处理必需的子节点
                                 None,
                                 schema,
                             );
@@ -260,12 +272,20 @@ impl NodeType {
             }
         }
 
+        // 重要修复：确保父节点的 content_ids 包含递归创建的所有子节点的 ID
+        // 从 filled_nodes 中提取实际创建的节点 ID，更新 content_ids
+        let mut final_content_ids = Vec::new();
+        for filled_node in &filled_nodes {
+            let (child_node, _) = filled_node.clone().into_parts();
+            final_content_ids.push(child_node.id);
+        }
+
         NodeEnum(
             Node::new(
                 &id,
                 self.name.clone(),
                 attrs,
-                content_ids,
+                final_content_ids,
                 self.compute_marks(marks),
             ),
             filled_nodes,

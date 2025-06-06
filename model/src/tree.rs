@@ -7,7 +7,7 @@ use serde_json::Value;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use lru::LruCache;
-
+use std::fmt::{self, Debug};
 use crate::error::PoolResult;
 use crate::node_type::NodeEnum;
 use crate::{
@@ -22,13 +22,20 @@ use crate::{
 static SHARD_INDEX_CACHE: Lazy<RwLock<LruCache<String, usize>>> = 
     Lazy::new(|| RwLock::new(LruCache::new(NonZeroUsize::new(10000).unwrap())));
 
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tree {
     pub root_id: NodeId,
     pub nodes: Vector<im::HashMap<NodeId, Arc<Node>>>, // 分片存储节点数据
     pub parent_map: im::HashMap<NodeId, NodeId>,
     #[serde(skip)]
     num_shards: usize, // 缓存分片数量，避免重复计算
+}
+impl Debug for Tree {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        //输出的时候 过滤掉空的 nodes 节点
+        let nodes = self.nodes.iter().filter(|node| !node.is_empty()).collect::<Vec<_>>();
+        f.debug_struct("Tree").field("root_id", &self.root_id).field("nodes", &nodes).field("parent_map", &self.parent_map).field("num_shards", &self.num_shards).finish()
+    }
 }
 
 impl Tree {

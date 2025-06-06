@@ -175,8 +175,13 @@ pub async fn run_simple_demo() -> Result<()> {
     
     let mut editor = AsyncEditor::create(options).await
         .map_err(|e| anyhow::anyhow!("创建编辑器失败: {}", e))?;
-    
+
     println!("   ✅ 编辑器创建成功");
+
+    // 输入文档内容
+    let doc = editor.get_state().doc();
+    println!("🔍 文档内容");
+    dbg!(doc);
     
     // 5. 执行多插件协作工作流
     println!("\n🎬 第5步: 多插件协作演示");
@@ -328,7 +333,7 @@ fn create_inline_node() -> Node {
 /// 创建块级节点（可包含段落等块级元素）
 fn create_block_node() -> Node {
     let spec = NodeSpec {
-        content: Some("text*".to_string()), // 简化为文本内容
+        content: Some("table paragraph  list heading".to_string()), // 简化为文本内容
         marks: None,
         attrs: None,
         desc: Some("块级节点，用于块级内容".to_string()),

@@ -83,6 +83,9 @@ impl ContentMatch {
                 current.match_type(schema.nodes.get(&content.r#type).unwrap())
             {
                 current = next;
+            } else {
+                // 如果无法匹配某个节点类型，返回 None 表示匹配失败
+                return None;
             }
         }
         Some(current)
@@ -96,13 +99,13 @@ impl ContentMatch {
     /// - `schema`: 当前使用的文档模式
     ///
     /// # 返回值
-    /// 返回需要的节点类型列表，如果无法匹配则返回None
+    /// 返回需要的节点类型名称列表，如果无法匹配则返回None
     pub fn fill(
         &self,
         after: &Vec<Node>,
         to_end: bool,
         schema: &Schema,
-    ) -> Option<Vec<NodeType>> {
+    ) -> Option<Vec<String>> {
         let mut seen: Vec<ContentMatch> = Vec::new();
         seen.push(self.clone());
         fn search(
@@ -110,21 +113,24 @@ impl ContentMatch {
             to_end: bool,
             after: &Vec<Node>,
             match_: &ContentMatch,
-            types: &mut Vec<NodeType>,
+            types: &mut Vec<String>,
             schema: &Schema,
-        ) -> Option<Vec<NodeType>> {
+        ) -> Option<Vec<String>> {
             // 首先检查是否可以匹配当前片段
             if let Some(finished) = match_.match_fragment(after, schema) {
                 if finished.valid_end || !to_end {
                     return Some(types.clone());
                 }
+            } else if !after.is_empty() {
+                // 如果 after 不为空但无法匹配，直接返回 None
+                return None;
             }
 
             // 然后尝试按顺序匹配每个边
             for edge in &match_.next {
                 if !seen.contains(&edge.next) {
                     seen.push(edge.next.clone());
-                    types.push(edge.node_type.clone());
+                    types.push(edge.node_type.name.clone());
                     if let Some(found) =
                         search(seen, to_end, after, &edge.next, types, schema)
                     {
@@ -616,5 +622,771 @@ fn compile(
         Expr::Name { value } => {
             vec![edge(from, None, Some(value), nfa)]
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::schema::{AttributeSpec, Schema, SchemaSpec};
+    use crate::node_type::NodeSpec;
+    use std::collections::HashMap;
+    use serde_json::Value;
+
+    #[test]
+    fn test_tablerow_plus_fill() {
+        // 创建一个简单的 schema
+        let mut nodes = HashMap::new();
+        
+        // 定义 table 节点：内容为 "tablerow+"
+        nodes.insert("table".to_string(), NodeSpec {
+            content: Some("tablerow+".to_string()),
+            marks: None,
+            group: None,
+            desc: Some("表格节点".to_string()),
+            attrs: None,
+        });
+        
+        // 定义 tablerow 节点
+        nodes.insert("tablerow".to_string(), NodeSpec {
+            content: Some("tablecell+".to_string()),
+            marks: None,
+            group: None,
+            desc: Some("表格行节点".to_string()),
+            attrs: None,
+        });
+        
+        // 定义 tablecell 节点
+        nodes.insert("tablecell".to_string(), NodeSpec {
+            content: Some("text*".to_string()),
+            marks: None,
+            group: None,
+            desc: Some("表格单元格节点".to_string()),
+            attrs: None,
+        });
+        
+        // 定义 text 节点
+        nodes.insert("text".to_string(), NodeSpec {
+            content: None,
+            marks: None,
+            group: None,
+            desc: Some("文本节点".to_string()),
+            attrs: None,
+        });
+
+        let schema_spec = SchemaSpec {
+            nodes,
+            marks: HashMap::new(),
+            top_node: Some("table".to_string()),
+        };
+        
+        let schema = Schema::compile(schema_spec).unwrap();
+        let table_type = schema.nodes.get("table").unwrap();
+        
+        // 测试：当 table 的内容为空时，fill 应该返回至少一个 tablerow
+        if let Some(content_match) = &table_type.content_match {
+            println!("Table content match: {}", content_match);
+            
+            // 测试空内容的情况
+            let empty_content: Vec<Node> = vec![];
+            let result = content_match.fill(&empty_content, true, &schema);
+            
+            println!("Fill result for empty content: {:?}", result);
+            
+            if let Some(needed_types) = result {
+                println!("成功！需要的节点类型数量: {}", needed_types.len());
+                for (i, type_name) in needed_types.iter().enumerate() {
+                    println!("  第{}个需要的节点类型: {}", i + 1, type_name);
+                }
+            } else {
+                println!("填充返回了 None");
+            }
+        }
+    }
+
+    #[test]
+    fn test_table_create_and_fill() {
+        use crate::node_type::NodeType;
+        
+        // 创建一个简单的 schema
+        let mut nodes = HashMap::new();
+        
+        // 定义 table 节点：内容为 "tablerow+"
+        nodes.insert("table".to_string(), NodeSpec {
+            content: Some("tablerow+".to_string()),
+            marks: None,
+            group: None,
+            desc: Some("表格节点".to_string()),
+            attrs: None,
+        });
+        
+        // 定义 tablerow 节点
+        nodes.insert("tablerow".to_string(), NodeSpec {
+            content: Some("tablecell+".to_string()),
+            marks: None,
+            group: None,
+            desc: Some("表格行节点".to_string()),
+            attrs: None,
+        });
+        
+        // 定义 tablecell 节点
+        nodes.insert("tablecell".to_string(), NodeSpec {
+            content: Some("text*".to_string()),
+            marks: None,
+            group: None,
+            desc: Some("表格单元格节点".to_string()),
+            attrs: None,
+        });
+        
+        // 定义 text 节点
+        nodes.insert("text".to_string(), NodeSpec {
+            content: None,
+            marks: None,
+            group: None,
+            desc: Some("文本节点".to_string()),
+            attrs: None,
+        });
+
+        let schema_spec = SchemaSpec {
+            nodes,
+            marks: HashMap::new(),
+            top_node: Some("table".to_string()),
+        };
+        
+        let schema = Schema::compile(schema_spec).unwrap();
+        let table_type = schema.nodes.get("table").unwrap();
+        
+        // 测试 create_and_fill 与空内容
+        println!("=== 测试 create_and_fill ===");
+        let empty_content: Vec<Node> = vec![];
+        let result = table_type.create_and_fill(
+            None,           // id
+            None,           // attrs  
+            empty_content,  // content
+            None,           // marks
+            &schema,        // schema
+        );
+        
+        let (main_node, child_nodes) = result.into_parts();
+        println!("Main node: {:?}", main_node);
+        println!("Child nodes count: {}", child_nodes.len());
+        
+        for (i, child) in child_nodes.iter().enumerate() {
+            let (child_node, grandchildren) = child.clone().into_parts();
+            println!("  Child {}: type={}, id={}", i + 1, child_node.r#type, child_node.id);
+            println!("    Grandchildren count: {}", grandchildren.len());
+        }
+        
+        // 验证是否创建了 tablerow
+        if !child_nodes.is_empty() {
+            let (first_child, _) = child_nodes[0].clone().into_parts();
+            println!("第一个子节点类型: {}", first_child.r#type);
+        } else {
+            println!("警告：没有创建任何子节点！");
+        }
+    }
+
+    #[test]
+    fn test_edge_cases() {
+        use crate::node_type::NodeType;
+        use crate::node::Node;
+        use crate::attrs::Attrs;
+        
+        // 创建schema（与上面相同）
+        let mut nodes = HashMap::new();
+        nodes.insert("table".to_string(), NodeSpec {
+            content: Some("tablerow+".to_string()),
+            marks: None, group: None, desc: Some("表格节点".to_string()), attrs: None,
+        });
+        nodes.insert("tablerow".to_string(), NodeSpec {
+            content: Some("tablecell+".to_string()),
+            marks: None, group: None, desc: Some("表格行节点".to_string()), attrs: None,
+        });
+        nodes.insert("tablecell".to_string(), NodeSpec {
+            content: Some("text*".to_string()),
+            marks: None, group: None, desc: Some("表格单元格节点".to_string()), attrs: None,
+        });
+        nodes.insert("text".to_string(), NodeSpec {
+            content: None,
+            marks: None, group: None, desc: Some("文本节点".to_string()), attrs: None,
+        });
+
+        let schema_spec = SchemaSpec {
+            nodes, marks: HashMap::new(), top_node: Some("table".to_string()),
+        };
+        let schema = Schema::compile(schema_spec).unwrap();
+        let table_type = schema.nodes.get("table").unwrap();
+        
+        println!("=== 边界情况测试 ===");
+        
+        // 情况1: content_match 为 None
+        if table_type.content_match.is_none() {
+            println!("警告：table_type.content_match 为 None");
+            return;
+        }
+        let content_match = table_type.content_match.as_ref().unwrap();
+        
+        // 情况2: match_fragment 返回 None
+        let empty_content: Vec<Node> = vec![];
+        let matched = content_match.match_fragment(&empty_content, &schema);
+        println!("match_fragment result: {:?}", matched.is_some());
+        
+        if let Some(matched_state) = matched {
+            println!("matched state valid_end: {}", matched_state.valid_end);
+            
+            // 情况3: fill 返回 None
+            let fill_result = matched_state.fill(&empty_content, true, &schema);
+            println!("fill result: {:?}", fill_result.is_some());
+            
+            if let Some(needed_types) = fill_result {
+                println!("需要的类型数量: {}", needed_types.len());
+                for type_name in &needed_types {
+                    println!("  需要的类型: {}", type_name);
+                }
+            }
+        }
+        
+        // 情况4: 测试with to_end=false
+        if let Some(matched_state) = matched {
+            let fill_result_no_end = matched_state.fill(&empty_content, false, &schema);
+            println!("fill result (to_end=false): {:?}", fill_result_no_end.is_some());
+        }
+    }
+
+    #[test]
+    fn test_block_choice_problem() {
+        use crate::node_type::NodeType;
+        
+        // 模拟 simple_demo.rs 中的问题场景
+        let mut nodes = HashMap::new();
+        
+        // 定义 block 节点：内容为 "table paragraph list heading" (选择表达式)
+        nodes.insert("block".to_string(), NodeSpec {
+            content: Some("table paragraph list heading".to_string()),
+            marks: None,
+            group: None,
+            desc: Some("块级节点".to_string()),
+            attrs: None,
+        });
+        
+        // 定义其他节点
+        nodes.insert("table".to_string(), NodeSpec {
+            content: Some("tablerow+".to_string()),
+            marks: None, group: None, desc: Some("表格节点".to_string()), attrs: None,
+        });
+        nodes.insert("paragraph".to_string(), NodeSpec {
+            content: Some("text*".to_string()),
+            marks: None, group: None, desc: Some("段落节点".to_string()), attrs: None,
+        });
+        nodes.insert("list".to_string(), NodeSpec {
+            content: Some("listitem+".to_string()),
+            marks: None, group: None, desc: Some("列表节点".to_string()), attrs: None,
+        });
+        nodes.insert("heading".to_string(), NodeSpec {
+            content: Some("text*".to_string()),
+            marks: None, group: None, desc: Some("标题节点".to_string()), attrs: None,
+        });
+        nodes.insert("tablerow".to_string(), NodeSpec {
+            content: Some("tablecell+".to_string()),
+            marks: None, group: None, desc: Some("表格行节点".to_string()), attrs: None,
+        });
+        nodes.insert("tablecell".to_string(), NodeSpec {
+            content: Some("text*".to_string()),
+            marks: None, group: None, desc: Some("表格单元格节点".to_string()), attrs: None,
+        });
+        nodes.insert("listitem".to_string(), NodeSpec {
+            content: Some("paragraph".to_string()),
+            marks: None, group: None, desc: Some("列表项节点".to_string()), attrs: None,
+        });
+        nodes.insert("text".to_string(), NodeSpec {
+            content: None,
+            marks: None, group: None, desc: Some("文本节点".to_string()), attrs: None,
+        });
+
+        let schema_spec = SchemaSpec {
+            nodes,
+            marks: HashMap::new(),
+            top_node: Some("block".to_string()),
+        };
+        
+        let schema = Schema::compile(schema_spec).unwrap();
+        let block_type = schema.nodes.get("block").unwrap();
+        
+        println!("=== 测试 Block 选择问题 ===");
+        
+        if let Some(content_match) = &block_type.content_match {
+            println!("Block content match: {}", content_match);
+            
+            // 检查默认类型
+            let default_type = content_match.default_type();
+            if let Some(def_type) = default_type {
+                println!("默认类型: {}", def_type.name);
+                println!("默认类型是否有必须属性: {}", def_type.has_required_attrs());
+            } else {
+                println!("没有默认类型");
+            }
+            
+            // 测试空内容的填充
+            let empty_content: Vec<Node> = vec![];
+            let result = content_match.fill(&empty_content, true, &schema);
+            
+            println!("Fill result: {:?}", result.is_some());
+            if let Some(needed_types) = result {
+                println!("需要的类型数量: {}", needed_types.len());
+                for (i, type_name) in needed_types.iter().enumerate() {
+                    println!("  第{}个需要的节点类型: {}", i + 1, type_name);
+                }
+            }
+            
+            // 测试 create_and_fill
+            println!("=== 测试 Block create_and_fill ===");
+            let result = block_type.create_and_fill(
+                None,
+                None,
+                vec![],
+                None,
+                &schema,
+            );
+            
+            let (main_node, child_nodes) = result.into_parts();
+            println!("Main node type: {}", main_node.r#type);
+            println!("Child nodes count: {}", child_nodes.len());
+            
+            for (i, child) in child_nodes.iter().enumerate() {
+                let (child_node, grandchildren) = child.clone().into_parts();
+                println!("  Child {}: type={}", i + 1, child_node.r#type);
+                if child_node.r#type == "table" {
+                    println!("    Table 的 grandchildren count: {}", grandchildren.len());
+                    for (j, grandchild) in grandchildren.iter().enumerate() {
+                        let (gc_node, _) = grandchild.clone().into_parts();
+                        println!("      Grandchild {}: type={}", j + 1, gc_node.r#type);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_sequence_with_existing_nodes() {
+        use crate::node_type::NodeType;
+        use crate::node::Node;
+        use crate::attrs::Attrs;
+        
+        // 创建 schema（与上面相同）
+        let mut nodes = HashMap::new();
+        nodes.insert("block".to_string(), NodeSpec {
+            content: Some("table paragraph".to_string()), // 简化的序列
+            marks: None, group: None, desc: Some("块级节点".to_string()), attrs: None,
+        });
+        nodes.insert("table".to_string(), NodeSpec {
+            content: Some("tablerow+".to_string()),
+            marks: None, group: None, desc: Some("表格节点".to_string()), attrs: None,
+        });
+        nodes.insert("paragraph".to_string(), NodeSpec {
+            content: Some("text*".to_string()),
+            marks: None, group: None, desc: Some("段落节点".to_string()), attrs: None,
+        });
+        nodes.insert("tablerow".to_string(), NodeSpec {
+            content: Some("tablecell+".to_string()),
+            marks: None, group: None, desc: Some("表格行节点".to_string()), attrs: None,
+        });
+        nodes.insert("tablecell".to_string(), NodeSpec {
+            content: Some("text*".to_string()),
+            marks: None, group: None, desc: Some("表格单元格节点".to_string()), attrs: None,
+        });
+        nodes.insert("text".to_string(), NodeSpec {
+            content: None,
+            marks: None, group: None, desc: Some("文本节点".to_string()), attrs: None,
+        });
+
+        let schema_spec = SchemaSpec {
+            nodes, marks: HashMap::new(), top_node: Some("block".to_string()),
+        };
+        let schema = Schema::compile(schema_spec).unwrap();
+        let block_type = schema.nodes.get("block").unwrap();
+        
+        println!("=== 测试序列中已存在节点的情况 ===");
+        
+        // 创建一个已存在的 table 节点
+        let existing_table = Node::new(
+            "existing_table_123",
+            "table".to_string(),
+            Attrs::default(),
+            vec!["existing_row_456".to_string()],
+            vec![]
+        );
+        
+        // 创建一个已存在的 paragraph 节点  
+        let existing_paragraph = Node::new(
+            "existing_para_789",
+            "paragraph".to_string(),
+            Attrs::default(),
+            vec!["existing_text_000".to_string()],
+            vec![]
+        );
+        
+        let existing_content = vec![existing_table, existing_paragraph];
+        
+        println!("传入的现有内容:");
+        for (i, node) in existing_content.iter().enumerate() {
+            println!("  第{}个现有节点: type={}, id={}, content={:?}", 
+                i + 1, node.r#type, node.id, node.content);
+        }
+        
+        // 测试 create_and_fill 对已存在节点的处理
+        let result = block_type.create_and_fill(
+            None,
+            None,
+            existing_content,
+            None,
+            &schema,
+        );
+        
+        let (main_node, child_nodes) = result.into_parts();
+        println!("Main node: type={}, content={:?}", main_node.r#type, main_node.content);
+        println!("Child nodes count: {}", child_nodes.len());
+        
+        for (i, child) in child_nodes.iter().enumerate() {
+            let (child_node, grandchildren) = child.clone().into_parts();
+            println!("  Child {}: type={}, id={}", i + 1, child_node.r#type, child_node.id);
+            println!("    Content: {:?}", child_node.content);
+            println!("    Grandchildren count: {}", grandchildren.len());
+            
+            for (j, grandchild) in grandchildren.iter().enumerate() {
+                let (gc_node, _) = grandchild.clone().into_parts();
+                println!("      Grandchild {}: type={}, id={}", j + 1, gc_node.r#type, gc_node.id);
+            }
+        }
+    }
+
+    #[test]
+    fn test_table_creation_step_by_step() {
+        use crate::node_type::NodeType;
+        
+        // 创建一个简单的 schema，只有 table 和 tablerow
+        let mut nodes = HashMap::new();
+        
+        nodes.insert("table".to_string(), NodeSpec {
+            content: Some("tablerow+".to_string()),
+            marks: None, group: None, desc: Some("表格节点".to_string()), attrs: None,
+        });
+        nodes.insert("tablerow".to_string(), NodeSpec {
+            content: Some("tablecell+".to_string()),
+            marks: None, group: None, desc: Some("表格行节点".to_string()), attrs: None,
+        });
+        nodes.insert("tablecell".to_string(), NodeSpec {
+            content: Some("text*".to_string()),
+            marks: None, group: None, desc: Some("表格单元格节点".to_string()), attrs: None,
+        });
+        nodes.insert("text".to_string(), NodeSpec {
+            content: None,
+            marks: None, group: None, desc: Some("文本节点".to_string()), attrs: None,
+        });
+
+        let schema_spec = SchemaSpec {
+            nodes, marks: HashMap::new(), top_node: Some("table".to_string()),
+        };
+        let schema = Schema::compile(schema_spec).unwrap();
+        let table_type = schema.nodes.get("table").unwrap();
+        
+        println!("=== 逐步诊断 Table 创建过程 ===");
+        
+        // 第1步：检查 content_match
+        println!("第1步：检查 table 的 content_match");
+        if let Some(content_match) = &table_type.content_match {
+            println!("  ✅ content_match 存在");
+            println!("  content_match: {}", content_match);
+        } else {
+            println!("  ❌ content_match 不存在");
+            return;
+        }
+        
+        // 第2步：测试 match_fragment
+        println!("第2步：测试 match_fragment");
+        let empty_content: Vec<Node> = vec![];
+        let content_match = table_type.content_match.as_ref().unwrap();
+        
+        let matched = content_match.match_fragment(&empty_content, &schema);
+        if let Some(matched_state) = matched {
+            println!("  ✅ match_fragment 成功");
+            println!("  matched state valid_end: {}", matched_state.valid_end);
+        } else {
+            println!("  ❌ match_fragment 返回 None");
+            return;
+        }
+        
+        // 第3步：测试 fill
+        println!("第3步：测试 fill");
+        let matched_state = matched.unwrap();
+        let fill_result = matched_state.fill(&empty_content, true, &schema);
+        
+        if let Some(needed_types) = fill_result {
+            println!("  ✅ fill 成功，需要的类型数量: {}", needed_types.len());
+            for (i, type_name) in needed_types.iter().enumerate() {
+                println!("    第{}个需要的类型: {}", i + 1, type_name);
+            }
+        } else {
+            println!("  ❌ fill 返回 None");
+            return;
+        }
+        
+        // 第4步：测试完整的 create_and_fill
+        println!("第4步：测试完整的 create_and_fill");
+        let result = table_type.create_and_fill(
+            None,
+            None,
+            vec![], // 空内容
+            None,
+            &schema,
+        );
+        
+        let (main_node, child_nodes) = result.into_parts();
+        println!("  Main table node:");
+        println!("    ID: {}", main_node.id);
+        println!("    Content IDs: {:?}", main_node.content);
+        println!("  Child nodes count: {}", child_nodes.len());
+        
+        if child_nodes.is_empty() {
+            println!("  ❌ 没有创建子节点！");
+        } else {
+            for (i, child) in child_nodes.iter().enumerate() {
+                let (child_node, grandchildren) = child.clone().into_parts();
+                println!("    Child {}: type={}, id={}", i + 1, child_node.r#type, child_node.id);
+                println!("      Content IDs: {:?}", child_node.content);
+                println!("      Grandchildren count: {}", grandchildren.len());
+                
+                if child_node.r#type == "tablerow" && grandchildren.is_empty() {
+                    println!("      ❌ tablerow 没有创建 tablecell 子节点！");
+                }
+                
+                for (j, grandchild) in grandchildren.iter().enumerate() {
+                    let (gc_node, great_grandchildren) = grandchild.clone().into_parts();
+                    println!("        Grandchild {}: type={}, id={}", j + 1, gc_node.r#type, gc_node.id);
+                    println!("          Content IDs: {:?}", gc_node.content);
+                    println!("          Great-grandchildren count: {}", great_grandchildren.len());
+                }
+            }
+        }
+        
+        // 第5步：单独测试 tablerow 的创建
+        println!("第5步：单独测试 tablerow 的创建");
+        let tablerow_type = schema.nodes.get("tablerow").unwrap();
+        let tablerow_result = tablerow_type.create_and_fill(
+            None,
+            None,
+            vec![], // 空内容
+            None,
+            &schema,
+        );
+        
+        let (tr_node, tr_children) = tablerow_result.into_parts();
+        println!("  Tablerow node:");
+        println!("    ID: {}", tr_node.id);
+        println!("    Content IDs: {:?}", tr_node.content);
+        println!("    Children count: {}", tr_children.len());
+        
+        if tr_children.is_empty() {
+            println!("    ❌ tablerow 没有创建 tablecell 子节点！");
+        } else {
+            for (i, child) in tr_children.iter().enumerate() {
+                let (child_node, _) = child.clone().into_parts();
+                println!("      Child {}: type={}, id={}", i + 1, child_node.r#type, child_node.id);
+            }
+        }
+    }
+
+    #[test]
+    fn test_sequence_table_problem() {
+        use crate::node_type::NodeType;
+        
+        // 重现 "table paragraph list heading" 序列表达式的问题
+        let mut nodes = HashMap::new();
+        
+        // 定义 block 节点：内容为 "table paragraph list heading" (序列表达式)
+        nodes.insert("block".to_string(), NodeSpec {
+            content: Some("table paragraph list heading".to_string()),
+            marks: None,
+            group: None,
+            desc: Some("块级节点".to_string()),
+            attrs: None,
+        });
+        
+        // 定义各个子节点
+        nodes.insert("table".to_string(), NodeSpec {
+            content: Some("tablerow+".to_string()),
+            marks: None, group: None, desc: Some("表格节点".to_string()), attrs: None,
+        });
+        nodes.insert("paragraph".to_string(), NodeSpec {
+            content: Some("text*".to_string()),
+            marks: None, group: None, desc: Some("段落节点".to_string()), attrs: None,
+        });
+        nodes.insert("list".to_string(), NodeSpec {
+            content: Some("listitem+".to_string()),
+            marks: None, group: None, desc: Some("列表节点".to_string()), attrs: None,
+        });
+        nodes.insert("heading".to_string(), NodeSpec {
+            content: Some("text*".to_string()),
+            marks: None, group: None, desc: Some("标题节点".to_string()), attrs: None,
+        });
+        nodes.insert("tablerow".to_string(), NodeSpec {
+            content: Some("tablecell+".to_string()),
+            marks: None, group: None, desc: Some("表格行节点".to_string()), attrs: None,
+        });
+        nodes.insert("tablecell".to_string(), NodeSpec {
+            content: Some("text*".to_string()),
+            marks: None, group: None, desc: Some("表格单元格节点".to_string()), attrs: None,
+        });
+        nodes.insert("listitem".to_string(), NodeSpec {
+            content: Some("paragraph".to_string()),
+            marks: None, group: None, desc: Some("列表项节点".to_string()), attrs: None,
+        });
+        nodes.insert("text".to_string(), NodeSpec {
+            content: None,
+            marks: None, group: None, desc: Some("文本节点".to_string()), attrs: None,
+        });
+
+        let schema_spec = SchemaSpec {
+            nodes,
+            marks: HashMap::new(),
+            top_node: Some("block".to_string()),
+        };
+        
+        let schema = Schema::compile(schema_spec).unwrap();
+        let block_type = schema.nodes.get("block").unwrap();
+        
+        println!("=== 测试序列表达式中的 Table 问题 ===");
+        
+        // 创建 block 节点
+        let result = block_type.create_and_fill(
+            None,
+            None,
+            vec![], // 空内容，让 fill 方法推导所需节点
+            None,
+            &schema,
+        );
+        
+        let (main_node, child_nodes) = result.into_parts();
+        println!("Block 节点:");
+        println!("  ID: {}", main_node.id);
+        println!("  Content IDs: {:?}", main_node.content);
+        println!("  子节点数量: {}", child_nodes.len());
+        
+        // 检查每个子节点
+        for (i, child) in child_nodes.iter().enumerate() {
+            let (child_node, grandchildren) = child.clone().into_parts();
+            println!("  子节点 {}: type={}, id={}", i + 1, child_node.r#type, child_node.id);
+            println!("    Content IDs: {:?}", child_node.content);
+            println!("    孙节点数量: {}", grandchildren.len());
+            
+            // 特别检查 table 节点
+            if child_node.r#type == "table" {
+                println!("    📋 这是 Table 节点:");
+                
+                // 检查 table 的直接子节点 IDs
+                if child_node.content.is_empty() {
+                    println!("      ❌ Table 节点的 content IDs 是空的！");
+                } else {
+                    println!("      ✅ Table 节点包含 content IDs: {:?}", child_node.content);
+                }
+                
+                // 检查 table 的孙节点（tablerow）
+                if grandchildren.is_empty() {
+                    println!("      ❌ Table 节点没有创建任何孙节点（tablerow）！");
+                } else {
+                    println!("      ✅ Table 节点创建了 {} 个孙节点:", grandchildren.len());
+                    for (j, grandchild) in grandchildren.iter().enumerate() {
+                        let (gc_node, great_grandchildren) = grandchild.clone().into_parts();
+                        println!("        孙节点 {}: type={}, id={}", j + 1, gc_node.r#type, gc_node.id);
+                        println!("          Content IDs: {:?}", gc_node.content);
+                        
+                        // 检查 tablerow 的子节点（tablecell）
+                        if gc_node.r#type == "tablerow" {
+                            if great_grandchildren.is_empty() {
+                                println!("          ❌ tablerow 没有创建 tablecell 子节点！");
+                                
+                                // 深入调试 tablerow 的填充过程
+                                println!("          🔍 调试 tablerow 填充过程:");
+                                let tablerow_type = schema.nodes.get("tablerow").unwrap();
+                                if let Some(tr_content_match) = &tablerow_type.content_match {
+                                    println!("            tablerow content_match: {}", tr_content_match);
+                                    
+                                    let empty_content: Vec<Node> = vec![];
+                                    let tr_matched = tr_content_match.match_fragment(&empty_content, &schema);
+                                    if let Some(tr_matched_state) = tr_matched {
+                                        println!("            tablerow match_fragment 成功");
+                                        println!("            tablerow matched state valid_end: {}", tr_matched_state.valid_end);
+                                        
+                                        let tr_fill_result = tr_matched_state.fill(&empty_content, true, &schema);
+                                        if let Some(tr_needed_types) = tr_fill_result {
+                                            println!("            tablerow 需要的类型数量: {}", tr_needed_types.len());
+                                            for (k, type_name) in tr_needed_types.iter().enumerate() {
+                                                println!("              需要的类型 {}: {}", k + 1, type_name);
+                                            }
+                                        } else {
+                                            println!("            ❌ tablerow fill 返回 None");
+                                        }
+                                    } else {
+                                        println!("            ❌ tablerow match_fragment 返回 None");
+                                    }
+                                } else {
+                                    println!("            ❌ tablerow 没有 content_match");
+                                }
+                            } else {
+                                println!("          ✅ tablerow 创建了 {} 个 tablecell", great_grandchildren.len());
+                                for (k, ggc) in great_grandchildren.iter().enumerate() {
+                                    let (ggc_node, _) = ggc.clone().into_parts();
+                                    println!("            曾孙节点 {}: type={}, id={}", k + 1, ggc_node.r#type, ggc_node.id);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 对比：单独创建 table 节点
+        println!("\n=== 对比：单独创建 Table 节点 ===");
+        let table_type = schema.nodes.get("table").unwrap();
+        let standalone_table = table_type.create_and_fill(
+            None,
+            None,
+            vec![],
+            None,
+            &schema,
+        );
+        
+        let (st_node, st_children) = standalone_table.into_parts();
+        println!("单独的 Table 节点:");
+        println!("  ID: {}", st_node.id);
+        println!("  Content IDs: {:?}", st_node.content);
+        println!("  子节点数量: {}", st_children.len());
+        
+        for (i, child) in st_children.iter().enumerate() {
+            let (child_node, grandchildren) = child.clone().into_parts();
+            println!("    子节点 {}: type={}, id={}", i + 1, child_node.r#type, child_node.id);
+            println!("      孙节点数量: {}", grandchildren.len());
+        }
+        
+        // 额外调试：单独创建 tablerow 节点
+        println!("\n=== 额外调试：单独创建 tablerow 节点 ===");
+        let tablerow_type = schema.nodes.get("tablerow").unwrap();
+        let standalone_tablerow = tablerow_type.create_and_fill(
+            None,
+            None,
+            vec![],
+            None,
+            &schema,
+        );
+        
+        let (str_node, str_children) = standalone_tablerow.into_parts();
+        println!("单独的 tablerow 节点:");
+        println!("  ID: {}", str_node.id);
+        println!("  Content IDs: {:?}", str_node.content);
+        println!("  子节点数量: {}", str_children.len());
+        
+        for (i, child) in str_children.iter().enumerate() {
+            let (child_node, _) = child.clone().into_parts();
+            println!("    子节点 {}: type={}, id={}", i + 1, child_node.r#type, child_node.id);
+        }
     }
 }
