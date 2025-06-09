@@ -52,25 +52,150 @@ async fn initialize_editor() -> EditorResult<Editor> {
 }
 ```
 
-### 2. 插件扩展模式
-通过 Editor 的扩展系统添加功能：
+### 2. 插件和扩展开发模式
+通过 Extension 系统创建插件：
 
 ```rust
-use moduforge_core::{
-    types::{EditorOptionsBuilder, Extensions}, 
-    extension::Extension,
-    runtime::Editor
+use moduforge_core::{extension::Extension, types::Extensions};
+use moduforge_state::{
+    plugin::{Plugin, PluginSpec, PluginTrait, StateField},
+    resource::Resource,
+    state::{State, StateConfig},
+    transaction::Transaction,
+    error::StateResult,
 };
+use async_trait::async_trait;
+use std::sync::Arc;
 
-// 创建自定义扩展
-pub fn create_my_extension() -> Extension {
-    Extension::new("my_extension")
-        .add_command("my_command", my_command_handler)
-        .add_event_handler("my_event", my_event_handler)
+// 1. 定义插件状态资源
+#[derive(Debug, Clone)]
+pub struct MyPluginState {
+    pub data: im::HashMap<String, String>,
+    pub count: u64,
 }
 
-// 配置编辑器时添加扩展
-async fn create_editor_with_extensions() -> EditorResult<Editor> {
+impl Resource for MyPluginState {
+    fn name(&self) -> std::borrow::Cow<str> {
+        "MyPluginState".into()
+    }
+}
+
+impl MyPluginState {
+    pub fn new() -> Self {
+        Self {
+            data: im::HashMap::new(),
+            count: 0,
+        }
+    }
+}
+
+// 2. 实现状态字段管理器
+#[derive(Debug)]
+pub struct MyStateField;
+
+#[async_trait]
+impl StateField for MyStateField {
+    async fn init(
+        &self,
+        _config: &StateConfig,
+        _instance: Option<&State>,
+    ) -> Arc<dyn Resource> {
+        println!("初始化我的插件状态");
+        Arc::new(MyPluginState::new())
+    }
+
+    async fn apply(
+        &self,
+        tr: &Transaction,
+        value: Arc<dyn Resource>,
+        _old_state: &State,
+        _new_state: &State,
+    ) -> Arc<dyn Resource> {
+        if let Some(state) = value.downcast_arc::<MyPluginState>() {
+            let mut new_state = (**state).clone();
+            
+            // 根据事务元数据更新状态
+            if let Some(action) = tr.get_meta::<String>("action") {
+                match action.as_str() {
+                    "increment" => {
+                        new_state.count += 1;
+                        println!("插件计数器: {}", new_state.count);
+                    }
+                    "set_data" => {
+                        if let Some(key) = tr.get_meta::<String>("key") {
+                            if let Some(val) = tr.get_meta::<String>("value") {
+                                new_state.data.insert(key.as_str().to_string(), val.as_str().to_string());
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            
+            Arc::new(new_state)
+        } else {
+            value
+        }
+    }
+}
+
+// 3. 实现插件行为
+#[derive(Debug)]
+pub struct MyPlugin;
+
+#[async_trait]
+impl PluginTrait for MyPlugin {
+    async fn append_transaction(
+        &self,
+        transactions: &[Transaction],
+        _old_state: &State,
+        new_state: &State,
+    ) -> StateResult<Option<Transaction>> {
+        // 检查事务并生成附加事务
+        for tr in transactions {
+            if let Some(action) = tr.get_meta::<String>("action") {
+                if action.as_str() == "my_action" {
+                    let mut new_tr = Transaction::new(new_state);
+                    new_tr.set_meta("generated_by", "my_plugin");
+                    new_tr.set_meta("action", "increment");
+                    return Ok(Some(new_tr));
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    async fn filter_transaction(
+        &self,
+        transaction: &Transaction,
+        _state: &State,
+    ) -> bool {
+        // 过滤逻辑：拒绝某些操作
+        if let Some(action) = transaction.get_meta::<String>("action") {
+            return action.as_str() != "forbidden_action";
+        }
+        true
+    }
+}
+
+// 4. 创建完整的扩展
+pub fn create_my_extension() -> Extension {
+    let mut extension = Extension::new();
+    
+    // 创建插件
+    let plugin = Plugin::new(PluginSpec {
+        key: ("my_plugin".to_string(), "v1".to_string()),
+        state_field: Some(Arc::new(MyStateField)),
+        tr: Some(Arc::new(MyPlugin)),
+        priority: 10,
+    });
+    
+    extension.add_plugin(Arc::new(plugin));
+    extension
+}
+
+// 5. 在编辑器中使用扩展
+async fn create_editor_with_plugin() -> EditorResult<Editor> {
     let options = EditorOptionsBuilder::new()
         .add_extension(Extensions::E(create_my_extension()))
         .history_limit(100)
@@ -78,7 +203,6 @@ async fn create_editor_with_extensions() -> EditorResult<Editor> {
         
     Editor::create(options).await
 }
-```
 
 ### 3. 事务处理模式
 使用 Editor 的事务系统进行状态变更：
@@ -300,6 +424,14 @@ warn!("警告: 配置可能不正确");
 error!("错误: 操作失败");
 ```
 
+## 插件开发指南
+详细的插件开发文档请参考 `plugin-development-guide.md`，包含：
+- 完整的插件结构（Resource, StateField, PluginTrait）
+- 状态管理和事务处理
+- 插件间通信机制
+- 资源共享和性能优化
+- 完整的测试示例
+
 ## AI 助手指导原则
 当协助此项目时：
 1. 始终考虑 ModuForge-RS 的不可变数据结构范式
@@ -311,4 +443,6 @@ error!("错误: 操作失败");
 7. 考虑向后兼容性
 8. 遵循 Rust 最佳实践和惯用语法
 9. 优先考虑类型安全和内存安全
-10. 在建议更改时考虑插件和中间件架构 
+10. 在建议更改时考虑插件和中间件架构
+11. **插件开发时使用正确的三层结构：Resource + StateField + PluginTrait**
+12. **使用事务元数据进行插件间通信和状态管理** 

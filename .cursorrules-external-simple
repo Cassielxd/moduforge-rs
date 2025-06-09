@@ -59,28 +59,48 @@ fn framework_op() -> EditorResult<()> { Ok(()) }
 fn business_op() -> Result<()> { Ok(()) }
 ```
 
-### 扩展开发
+### 插件开发
 ```rust
 use moduforge_core::{extension::Extension, types::Extensions};
+use moduforge_state::{
+    plugin::{Plugin, PluginSpec, PluginTrait, StateField},
+    resource::Resource
+};
 
-pub fn create_my_extension() -> Extension {
-    Extension::new("my_extension")
-        .add_command("my_command", my_command_handler)
-}
+// 创建插件状态
+#[derive(Debug, Clone)]
+struct MyState { count: u64 }
+impl Resource for MyState { /* 实现 */ }
 
-// 使用扩展
-let options = EditorOptionsBuilder::new()
-    .add_extension(Extensions::E(create_my_extension()))
-    .build();
+// 创建插件
+let plugin = Plugin::new(PluginSpec {
+    key: ("my_plugin".to_string(), "v1".to_string()),
+    state_field: Some(Arc::new(MyStateField)),
+    tr: Some(Arc::new(MyPlugin)),
+    priority: 10,
+});
+
+// 添加到扩展
+let mut extension = Extension::new();
+extension.add_plugin(Arc::new(plugin));
 ```
 
 ## 常用导入
 ```rust
-// 核心编辑器
-use moduforge_core::{EditorResult, runtime::Editor, types::EditorOptionsBuilder};
+// 核心编辑器和扩展
+use moduforge_core::{
+    EditorResult, runtime::Editor, 
+    types::{EditorOptionsBuilder, Extensions},
+    extension::Extension
+};
 
-// 状态和事务
-use moduforge_state::{transaction::Transaction, init_logging};
+// 插件系统
+use moduforge_state::{
+    transaction::Transaction, 
+    plugin::{Plugin, PluginSpec, PluginTrait, StateField},
+    resource::Resource,
+    init_logging
+};
 
 // 数据模型
 use moduforge_model::{node::Node, mark::Mark, attrs::Attrs};
@@ -92,10 +112,8 @@ use moduforge_transform::{
     mark_step::{AddMarkStep, RemoveMarkStep}
 };
 
-// 不可变集合
+// 不可变集合和异步
 use im::{HashMap as ImHashMap, Vector as ImVector};
-
-// 异步支持
 use tokio::sync::{Arc, Mutex};
 use async_trait::async_trait;
 ```
