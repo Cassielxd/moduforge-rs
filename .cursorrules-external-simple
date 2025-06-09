@@ -1,0 +1,131 @@
+# ModuForge-RS 集成项目 - 简化规则
+# 专为使用 ModuForge-RS 库的项目定制
+
+## 核心库信息
+ModuForge-RS 是基于 Rust 的状态管理和数据转换框架，采用：
+- **不可变数据结构** (im-rs)
+- **事件驱动架构**
+- **插件系统**
+- **事务式状态管理**
+
+## 快速集成
+
+### 依赖配置
+```toml
+[dependencies]
+moduforge-core = "0.3.8"
+moduforge-model = "0.3.8"
+moduforge-state = "0.3.8"
+moduforge-transform = "0.3.8"
+
+# 必需的支持库
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+im = { version = "15.1", features = ["serde"] }
+anyhow = "1"
+async-trait = "0.1"
+```
+
+### 基本使用模式
+```rust
+// 导入核心模块
+use moduforge_core::{EditorResult, runtime::Editor, types::EditorOptionsBuilder};
+use moduforge_state::init_logging;
+
+// 初始化
+async fn setup() -> EditorResult<Editor> {
+    init_logging("info", None)?;
+    let options = EditorOptionsBuilder::new().build();
+    Editor::create(options).await
+}
+```
+
+## 代码约定
+
+### 数据结构
+- 使用 `im::HashMap`, `im::Vector` 代替标准集合
+- 优先 `Arc<T>` 进行异步共享
+- 使用 `EditorResult<T>` 处理框架错误
+
+### 错误处理
+```rust
+use moduforge_core::EditorResult;
+use anyhow::Result;
+
+// 框架操作用 EditorResult
+fn framework_op() -> EditorResult<()> { Ok(()) }
+
+// 业务逻辑用 anyhow::Result  
+fn business_op() -> Result<()> { Ok(()) }
+```
+
+### 扩展开发
+```rust
+use moduforge_core::{extension::Extension, types::Extensions};
+
+pub fn create_my_extension() -> Extension {
+    Extension::new("my_extension")
+        .add_command("my_command", my_command_handler)
+}
+
+// 使用扩展
+let options = EditorOptionsBuilder::new()
+    .add_extension(Extensions::E(create_my_extension()))
+    .build();
+```
+
+## 常用导入
+```rust
+// 核心编辑器
+use moduforge_core::{EditorResult, runtime::Editor, types::EditorOptionsBuilder};
+
+// 状态和事务
+use moduforge_state::{transaction::Transaction, init_logging};
+
+// 数据模型
+use moduforge_model::{node::Node, mark::Mark, attrs::Attrs};
+
+// 转换操作
+use moduforge_transform::{
+    node_step::{AddNodeStep, RemoveNodeStep},
+    attr_step::AttrStep,
+    mark_step::{AddMarkStep, RemoveMarkStep}
+};
+
+// 不可变集合
+use im::{HashMap as ImHashMap, Vector as ImVector};
+
+// 异步支持
+use tokio::sync::{Arc, Mutex};
+use async_trait::async_trait;
+```
+
+## 性能要点
+- 优先借用 (`&T`) 而非克隆
+- 使用 `Arc<T>` 共享数据
+- 避免在异步代码中阻塞
+- 最小化内存分配
+
+## 测试模板
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use moduforge_core::{runtime::Editor, types::EditorOptionsBuilder};
+
+    #[tokio::test]
+    async fn test_integration() {
+        let options = EditorOptionsBuilder::new().build();
+        let editor = Editor::create(options).await.unwrap();
+        // 测试逻辑
+    }
+}
+```
+
+## AI 助手提示
+在帮助此项目时请：
+1. 使用 ModuForge-RS 的不可变数据模式
+2. 建议事件驱动解决方案
+3. 遵循插件架构模式
+4. 优先类型安全和异步最佳实践
+5. 使用适当的错误处理 (`EditorResult` vs `anyhow::Result`) 

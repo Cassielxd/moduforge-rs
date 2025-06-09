@@ -19,7 +19,6 @@
 //! - `incremental_pool`: 增量更新的节点池，提供内存优化
 //!
 //! 核心类型：
-//! - `ConcreteStep`: 具体步骤枚举，表示所有可能的转换操作
 //! - `PatchStep`: 补丁步骤，用于应用补丁
 //! - `BatchStep`: 批量步骤，用于执行多个转换操作
 //! - `IncrementalNodePool`: 增量更新的节点池

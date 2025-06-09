@@ -1,0 +1,314 @@
+# ModuForge-RS 外部项目集成规则
+# 适用于引入 ModuForge-RS 作为核心库的项目
+
+## 项目概览
+这个项目使用 ModuForge-RS 作为核心状态管理和数据转换框架。ModuForge-RS 是一个基于 Rust 的不可变数据结构和事件驱动架构的框架。
+
+## ModuForge-RS 核心依赖配置
+
+### Cargo.toml 依赖配置
+在你的项目中添加以下依赖：
+
+```toml
+[dependencies]
+# ModuForge-RS 核心组件
+moduforge-core = { version = "0.3.8", path = "../moduforge-rs/core" }    # 或从 crates.io
+moduforge-model = { version = "0.3.8", path = "../moduforge-rs/model" }
+moduforge-state = { version = "0.3.8", path = "../moduforge-rs/state" }
+moduforge-transform = { version = "0.3.8", path = "../moduforge-rs/transform" }
+
+# ModuForge-RS 依赖的核心库
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive", "rc"] }
+im = { version = "15.1", features = ["serde"] }
+anyhow = "1"
+thiserror = "2.0.12"
+async-trait = "0.1"
+tracing = "0.1"
+uuid = "1"
+```
+
+## 核心架构模式
+
+### 1. 编辑器初始化模式
+使用 ModuForge-RS 的高层 Editor API：
+
+```rust
+use moduforge_core::{EditorResult, runtime::Editor, types::{EditorOptions, EditorOptionsBuilder}};
+use moduforge_state::init_logging;
+
+// 初始化编辑器
+async fn initialize_editor() -> EditorResult<Editor> {
+    // 配置日志系统
+    init_logging("info", Some("logs/app.log"))?;
+    
+    // 创建编辑器配置
+    let options = EditorOptionsBuilder::new()
+        .history_limit(100)
+        .build();
+    
+    // 创建编辑器实例
+    Editor::create(options).await
+}
+```
+
+### 2. 插件扩展模式
+通过 Editor 的扩展系统添加功能：
+
+```rust
+use moduforge_core::{
+    types::{EditorOptionsBuilder, Extensions}, 
+    extension::Extension,
+    runtime::Editor
+};
+
+// 创建自定义扩展
+pub fn create_my_extension() -> Extension {
+    Extension::new("my_extension")
+        .add_command("my_command", my_command_handler)
+        .add_event_handler("my_event", my_event_handler)
+}
+
+// 配置编辑器时添加扩展
+async fn create_editor_with_extensions() -> EditorResult<Editor> {
+    let options = EditorOptionsBuilder::new()
+        .add_extension(Extensions::E(create_my_extension()))
+        .history_limit(100)
+        .build();
+        
+    Editor::create(options).await
+}
+```
+
+### 3. 事务处理模式
+使用 Editor 的事务系统进行状态变更：
+
+```rust
+use moduforge_core::{runtime::Editor, EditorResult};
+use moduforge_transform::{
+    node_step::{AddNodeStep, RemoveNodeStep},
+    attr_step::AttrStep,
+    mark_step::{AddMarkStep, RemoveMarkStep}
+};
+use moduforge_state::transaction::{Transaction, Command};
+use std::sync::Arc;
+
+// 创建和应用事务
+async fn apply_document_changes(editor: &mut Editor) -> EditorResult<()> {
+    let mut transaction = editor.get_tr();
+    
+    // 添加具体的变更步骤
+    transaction.step(Arc::new(AddNodeStep::new(parent_id, nodes)))?;
+    transaction.step(Arc::new(AttrStep::new(node_id, attributes)))?;
+    
+    // 通过编辑器应用事务
+    editor.dispatch(transaction).await?;
+    Ok(())
+}
+```
+
+### 4. 节点和文档模型
+使用 ModuForge-RS 的节点系统：
+
+```rust
+use moduforge_model::{
+    node::Node,
+    node_type::NodeType,
+    mark::Mark,
+    attrs::Attrs,
+    schema::Schema
+};
+
+// 创建节点
+fn create_document_node() -> Node {
+    Node::new(
+        NodeType::new("paragraph", Attrs::new()),
+        /* content */
+    )
+}
+```
+
+## 代码风格指南
+
+### Rust 约定
+- 遵循 ModuForge-RS 的代码风格
+- 使用 `im::HashMap` 和 `im::Vector` 进行不可变集合操作
+- 使用 `Result<T, E>` 进行错误处理，优先使用 `EditorResult<T>`
+- 实现 `Debug`, `Clone`, `PartialEq` 派生宏
+- 使用 `async/await` 处理异步操作
+
+### 错误处理模式
+```rust
+use moduforge_core::{EditorResult, error_utils};
+use anyhow::Result;
+
+// 使用 EditorResult 处理框架相关错误
+fn framework_operation() -> EditorResult<String> {
+    // 框架操作
+    Ok("success".to_string())
+}
+
+// 使用 anyhow::Result 处理应用级错误
+fn application_operation() -> Result<String> {
+    // 应用逻辑
+    Ok("success".to_string())
+}
+```
+
+### 异步编程模式
+```rust
+use moduforge_core::async_runtime::AsyncRuntime;
+use tokio::sync::{Arc, Mutex};
+
+// 异步任务处理
+async fn process_editor_task(runtime: &AsyncRuntime) -> EditorResult<()> {
+    runtime.spawn(async {
+        // 后台任务逻辑
+    }).await?;
+    Ok(())
+}
+```
+
+## 常用导入模式
+```rust
+// 核心功能
+use moduforge_core::{
+    EditorResult,
+    runtime::Editor,
+    types::{EditorOptions, EditorOptionsBuilder, Extensions},
+    event::{Event, EventBus},
+    extension::Extension,
+    middleware::Middleware,
+};
+
+// 状态管理
+use moduforge_state::{
+    transaction::{Transaction, Command},
+    init_logging,
+    resource::Resource,
+};
+
+// 数据模型
+use moduforge_model::{
+    node::Node,
+    mark::Mark,
+    attrs::Attrs,
+    schema::Schema,
+    node_type::{NodeType, NodeEnum},
+    mark_type::MarkType,
+    node_pool::NodePool,
+};
+
+// 数据转换
+use moduforge_transform::{
+    step::{Step, StepResult},
+    transform::Transform,
+    node_step::{AddNodeStep, RemoveNodeStep, MoveNodeStep},
+    mark_step::{AddMarkStep, RemoveMarkStep},
+    attr_step::AttrStep,
+};
+
+// 不可变数据结构
+use im::{HashMap as ImHashMap, Vector as ImVector};
+
+// 异步和并发
+use tokio::{sync::{Arc, Mutex, RwLock}, spawn};
+use async_trait::async_trait;
+
+// 序列化和错误处理
+use serde::{Serialize, Deserialize};
+use anyhow::{Result, anyhow};
+use thiserror::Error;
+```
+
+## 项目结构建议
+```
+your-project/
+├── src/
+│   ├── lib.rs              # 库入口
+│   ├── plugins/            # 插件模块
+│   │   ├── mod.rs
+│   │   ├── custom_plugin.rs
+│   │   └── business_plugin.rs
+│   ├── extensions/         # 扩展模块
+│   │   ├── mod.rs
+│   │   └── custom_extensions.rs
+│   ├── middleware/         # 中间件模块
+│   │   ├── mod.rs
+│   │   └── auth_middleware.rs
+│   ├── handlers/           # 业务处理器
+│   │   ├── mod.rs
+│   │   └── document_handler.rs
+│   └── config/             # 配置模块
+│       ├── mod.rs
+│       └── app_config.rs
+├── Cargo.toml
+└── README.md
+```
+
+## 性能优化建议
+- 使用 `Arc<T>` 在异步上下文中共享所有权
+- 优先借用而不是克隆，特别是对于不可变数据
+- 使用 `tokio::spawn` 处理 CPU 密集型任务
+- 在热路径中最小化内存分配
+- 考虑使用 `smallvec` 处理小集合
+- 使用延迟求值处理昂贵的计算
+
+## 测试模式
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use moduforge_state::{State, StateConfig};
+    use tokio_test;
+
+    #[tokio::test]
+    async fn test_state_initialization() {
+        let config = StateConfig::default();
+        let state = State::new(config).await.unwrap();
+        
+        assert!(state.version() > 0);
+    }
+
+    #[tokio::test]
+    async fn test_plugin_integration() {
+        // 插件集成测试
+    }
+}
+```
+
+## 避免的反模式
+- 在生产代码中使用 `unwrap()` 或 `expect()` 而不提供合理理由
+- 忽略编译器警告
+- 在异步代码中进行阻塞操作
+- 大型函数（建议拆分为更小的函数）
+- 深层嵌套（使用早期返回和保护子句）
+- 可变全局状态
+- 忽略 ModuForge-RS 的事件驱动架构
+
+## 日志和调试
+```rust
+use moduforge_state::{info, debug, warn, error, init_logging};
+
+// 初始化日志系统
+init_logging("debug", Some("logs/app.log")).unwrap();
+
+// 使用日志宏
+info!("应用启动");
+debug!("调试信息: {:?}", data);
+warn!("警告: 配置可能不正确");
+error!("错误: 操作失败");
+```
+
+## AI 助手指导原则
+当协助此项目时：
+1. 始终考虑 ModuForge-RS 的不可变数据结构范式
+2. 建议事件驱动的状态变更解决方案
+3. 推荐适当的错误处理模式
+4. 考虑建议的性能影响
+5. 保持与现有架构模式的一致性
+6. 为新功能建议测试
+7. 考虑向后兼容性
+8. 遵循 Rust 最佳实践和惯用语法
+9. 优先考虑类型安全和内存安全
+10. 在建议更改时考虑插件和中间件架构 
