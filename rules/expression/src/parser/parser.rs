@@ -18,6 +18,8 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::Deref;
 
+/// 期望特定令牌的宏
+/// 如果令牌不匹配则返回错误节点
 macro_rules! expect {
     ($self:ident, $token:expr) => {
         if let Some(error_node) = $self.expect($token) {
@@ -25,6 +27,9 @@ macro_rules! expect {
         }
     };
 }
+
+/// 分配格式化字符串的宏
+/// 将格式化后的字符串分配到内存池中
 macro_rules! afmt {
     ($self:expr, $($arg:tt)*) => {{
         let formatted = format!($($arg)*);
@@ -32,23 +37,38 @@ macro_rules! afmt {
     }}
 }
 
+/// 基础解析器结构体
+/// 用作解析器类型标记
 #[derive(Debug)]
 pub struct BaseParser;
 
+/// 通用解析器结构体
+/// 
+/// # 泛型参数
+/// * `'arena` - 内存池生命周期，用于分配AST节点
+/// * `'token_ref` - 令牌引用生命周期
+/// * `Flavor` - 解析器类型标记（Standard 或 Unary）
 #[derive(Debug)]
 pub struct Parser<'arena, 'token_ref, Flavor> {
-    tokens: &'token_ref [Token<'arena>],
-    current: Cell<Option<&'token_ref Token<'arena>>>,
-    pub(crate) bump: &'arena Bump,
-    position: Cell<usize>,
-    depth: Cell<u8>,
-    marker_flavor: PhantomData<Flavor>,
-    has_range_operator: bool,
-    pub(crate) node_metadata:
-        Option<RefCell<HashMap<usize, NodeMetadata, BuildNoHashHasher<usize>>>>,
+    tokens: &'token_ref [Token<'arena>],    // 令牌数组
+    current: Cell<Option<&'token_ref Token<'arena>>>, // 当前令牌
+    pub(crate) bump: &'arena Bump,          // 内存分配池
+    position: Cell<usize>,                  // 当前位置
+    depth: Cell<u8>,                        // 嵌套深度
+    marker_flavor: PhantomData<Flavor>,     // 类型标记
+    has_range_operator: bool,               // 是否包含范围操作符
+    pub(crate) node_metadata: Option<RefCell<HashMap<usize, NodeMetadata, BuildNoHashHasher<usize>>>>, // 节点元数据
 }
 
 impl<'arena, 'token_ref> Parser<'arena, 'token_ref, BaseParser> {
+    /// 尝试创建新的基础解析器
+    /// 
+    /// # 参数
+    /// * `tokens` - 令牌数组
+    /// * `bump` - 内存分配池
+    /// 
+    /// # 返回值
+    /// 返回解析器或解析错误
     pub fn try_new(
         tokens: &'token_ref [Token<'arena>],
         bump: &'arena Bump,
@@ -70,6 +90,8 @@ impl<'arena, 'token_ref> Parser<'arena, 'token_ref, BaseParser> {
         })
     }
 
+    /// 转换为标准解析器
+    /// 标准解析器支持完整的表达式语法
     pub fn standard(self) -> Parser<'arena, 'token_ref, Standard> {
         Parser {
             tokens: self.tokens,
@@ -83,6 +105,8 @@ impl<'arena, 'token_ref> Parser<'arena, 'token_ref, BaseParser> {
         }
     }
 
+    /// 转换为一元解析器
+    /// 一元解析器专门用于布尔表达式求值
     pub fn unary(self) -> Parser<'arena, 'token_ref, Unary> {
         Parser {
             tokens: self.tokens,
@@ -98,19 +122,24 @@ impl<'arena, 'token_ref> Parser<'arena, 'token_ref, BaseParser> {
 }
 
 impl<'arena, 'token_ref, Flavor> Parser<'arena, 'token_ref, Flavor> {
+    /// 启用元数据收集
+    /// 收集节点的位置信息等元数据
     pub fn with_metadata(mut self) -> Parser<'arena, 'token_ref, Flavor> {
         self.node_metadata = Some(Default::default());
         self
     }
 
+    /// 获取当前令牌
     pub(crate) fn current(&self) -> Option<&Token<'arena>> {
         self.current.get()
     }
 
+    /// 获取当前令牌类型
     pub(crate) fn current_kind(&self) -> Option<&TokenKind> {
         self.current.get().map(|token| &token.kind)
     }
 
+    /// 获取当前令牌开始位置
     fn token_start(&self) -> u32 {
         match self.current() {
             None => self.tokens.last().map(|t| t.span.1).unwrap_or_default(),
@@ -118,6 +147,7 @@ impl<'arena, 'token_ref, Flavor> Parser<'arena, 'token_ref, Flavor> {
         }
     }
 
+    /// 获取当前令牌结束位置（未使用）
     #[allow(dead_code)]
     fn token_end(&self) -> u32 {
         match self.current() {
@@ -126,6 +156,7 @@ impl<'arena, 'token_ref, Flavor> Parser<'arena, 'token_ref, Flavor> {
         }
     }
 
+    /// 获取前一个令牌的结束位置
     pub(crate) fn prev_token_end(&self) -> u32 {
         let Some(pos) = self.position().checked_sub(1) else {
             return self.token_start();
@@ -137,10 +168,12 @@ impl<'arena, 'token_ref, Flavor> Parser<'arena, 'token_ref, Flavor> {
         }
     }
 
+    /// 获取当前位置
     fn position(&self) -> usize {
         self.position.get()
     }
 
+    /// 设置位置并更新当前令牌
     fn set_position(&self, position: usize) -> bool {
         let target_token = self.tokens.get(position);
 
@@ -150,14 +183,24 @@ impl<'arena, 'token_ref, Flavor> Parser<'arena, 'token_ref, Flavor> {
         target_token.is_some()
     }
 
+    /// 获取当前嵌套深度
     pub(crate) fn depth(&self) -> u8 {
         self.depth.get()
     }
 
+    /// 检查是否已到达令牌流末尾
     pub(crate) fn is_done(&self) -> bool {
         self.current.get().is_none()
     }
 
+    /// 创建新的AST节点并收集元数据
+    /// 
+    /// # 参数
+    /// * `node` - 要创建的节点
+    /// * `gen_metadata` - 生成元数据的函数
+    /// 
+    /// # 返回值
+    /// 返回分配在内存池中的节点引用
     pub(crate) fn node<F>(&self, node: Node<'arena>, gen_metadata: F) -> &'arena Node<'arena>
     where
         F: FnOnce(MetadataHelper<'_, 'arena>) -> NodeMetadata,
@@ -179,12 +222,27 @@ impl<'arena, 'token_ref, Flavor> Parser<'arena, 'token_ref, Flavor> {
         node
     }
 
+    /// 创建错误节点
+    /// 
+    /// # 参数
+    /// * `error` - 错误信息
+    /// 
+    /// # 返回值
+    /// 返回包含错误信息的AST节点
     pub(crate) fn error(&self, error: AstNodeError<'arena>) -> &'arena Node<'arena> {
         self.node(Node::Error { error, node: None }, |_| NodeMetadata {
             span: (self.prev_token_end(), self.prev_token_end()),
         })
     }
 
+    /// 创建带有关联节点的错误节点
+    /// 
+    /// # 参数
+    /// * `error` - 错误信息
+    /// * `node` - 关联的节点
+    /// 
+    /// # 返回值
+    /// 返回包含错误信息和关联节点的AST节点
     pub(crate) fn error_with_node(
         &self,
         error: AstNodeError<'arena>,

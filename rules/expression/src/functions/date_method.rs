@@ -1,3 +1,7 @@
+//! 日期方法模块
+//! 
+//! 提供各种日期和时间的操作方法，包括算术运算、比较、格式化和属性获取
+
 use crate::functions::defs::{
     CompositeFunction, FunctionDefinition, FunctionSignature, StaticFunction,
 };
@@ -5,46 +9,84 @@ use crate::vm::date::DurationUnit;
 use std::rc::Rc;
 use strum_macros::{Display, EnumIter, EnumString, IntoStaticStr};
 
+/// 日期方法枚举
+/// 
+/// 定义了所有可用的日期操作方法
 #[derive(Debug, PartialEq, Eq, Hash, Display, EnumString, EnumIter, IntoStaticStr, Clone, Copy)]
 #[strum(serialize_all = "camelCase")]
 pub enum DateMethod {
+    // 算术运算
+    /// 日期加法：向日期添加时间间隔
     Add,
+    /// 日期减法：从日期减去时间间隔
     Sub,
+    /// 设置日期组件：设置年、月、日等特定组件
     Set,
+    /// 格式化：将日期格式化为字符串
     Format,
+    /// 开始时间：获取某个时间单位的开始时间（如月初、年初）
     StartOf,
+    /// 结束时间：获取某个时间单位的结束时间（如月末、年末）
     EndOf,
+    /// 时间差：计算两个日期之间的差值
     Diff,
+    /// 时区转换：将日期转换到指定时区
     Tz,
 
-    // Compare
+    // 比较方法
+    /// 相同判断：检查两个日期是否相同
     IsSame,
+    /// 早于判断：检查第一个日期是否早于第二个日期
     IsBefore,
+    /// 晚于判断：检查第一个日期是否晚于第二个日期
     IsAfter,
+    /// 相同或早于：检查第一个日期是否相同或早于第二个日期
     IsSameOrBefore,
+    /// 相同或晚于：检查第一个日期是否相同或晚于第二个日期
     IsSameOrAfter,
 
-    // Getters
+    // 属性获取方法
+    /// 秒：获取日期的秒数
     Second,
+    /// 分钟：获取日期的分钟数
     Minute,
+    /// 小时：获取日期的小时数
     Hour,
+    /// 日：获取日期的天数
     Day,
+    /// 年中的天：获取日期在一年中的第几天
     DayOfYear,
+    /// 周：获取日期在一年中的第几周
     Week,
+    /// 星期几：获取日期是星期几
     Weekday,
+    /// 月：获取日期的月份
     Month,
+    /// 季度：获取日期所在的季度
     Quarter,
+    /// 年：获取日期的年份
     Year,
+    /// 时间戳：获取日期的Unix时间戳
     Timestamp,
+    /// 时区名称：获取日期的时区名称
     OffsetName,
 
+    // 状态检查方法
+    /// 有效性检查：检查日期是否有效
     IsValid,
+    /// 昨天判断：检查日期是否为昨天
     IsYesterday,
+    /// 今天判断：检查日期是否为今天
     IsToday,
+    /// 明天判断：检查日期是否为明天
     IsTomorrow,
+    /// 闰年判断：检查日期所在年份是否为闰年
     IsLeapYear,
 }
 
+/// 比较操作类型
+/// 
+/// 用于统一处理各种日期比较操作
 enum CompareOperation {
     IsSame,
     IsBefore,
@@ -53,6 +95,9 @@ enum CompareOperation {
     IsSameOrAfter,
 }
 
+/// 属性获取操作类型
+/// 
+/// 用于统一处理各种日期属性获取操作
 enum GetterOperation {
     Second,
     Minute,
@@ -75,12 +120,16 @@ enum GetterOperation {
 }
 
 impl From<&DateMethod> for Rc<dyn FunctionDefinition> {
+    /// 将日期方法枚举转换为函数定义
+    /// 
+    /// 为每个日期方法创建相应的函数定义，包括函数签名和实现
     fn from(value: &DateMethod) -> Self {
         use crate::variable::VariableType as VT;
         use DateMethod as DM;
 
         let unit_vt = DurationUnit::variable_type();
 
+        // 操作签名：支持字符串和数字+单位两种形式
         let op_signature = vec![
             FunctionSignature {
                 parameters: vec![VT::Date, VT::String],
@@ -93,14 +142,17 @@ impl From<&DateMethod> for Rc<dyn FunctionDefinition> {
         ];
 
         match value {
+            // 日期加法：支持字符串和数字+单位
             DM::Add => Rc::new(CompositeFunction {
                 implementation: Rc::new(imp::add),
                 signatures: op_signature.clone(),
             }),
+            // 日期减法：支持字符串和数字+单位
             DM::Sub => Rc::new(CompositeFunction {
                 implementation: Rc::new(imp::sub),
                 signatures: op_signature.clone(),
             }),
+            // 设置日期组件：单位 + 数值
             DM::Set => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::set),
                 signature: FunctionSignature {
@@ -108,6 +160,7 @@ impl From<&DateMethod> for Rc<dyn FunctionDefinition> {
                     return_type: VT::Date,
                 },
             }),
+            // 时区转换
             DM::Tz => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::tz),
                 signature: FunctionSignature {
@@ -115,6 +168,7 @@ impl From<&DateMethod> for Rc<dyn FunctionDefinition> {
                     return_type: VT::Date,
                 },
             }),
+            // 格式化：支持默认格式和自定义格式
             DM::Format => Rc::new(CompositeFunction {
                 implementation: Rc::new(imp::format),
                 signatures: vec![
@@ -128,6 +182,7 @@ impl From<&DateMethod> for Rc<dyn FunctionDefinition> {
                     },
                 ],
             }),
+            // 获取时间单位的开始时间
             DM::StartOf => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::start_of),
                 signature: FunctionSignature {
@@ -135,6 +190,7 @@ impl From<&DateMethod> for Rc<dyn FunctionDefinition> {
                     return_type: VT::Date,
                 },
             }),
+            // 获取时间单位的结束时间
             DM::EndOf => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::end_of),
                 signature: FunctionSignature {
@@ -142,6 +198,7 @@ impl From<&DateMethod> for Rc<dyn FunctionDefinition> {
                     return_type: VT::Date,
                 },
             }),
+            // 计算时间差：支持默认单位和指定单位
             DM::Diff => Rc::new(CompositeFunction {
                 implementation: Rc::new(imp::diff),
                 signatures: vec![
@@ -155,12 +212,14 @@ impl From<&DateMethod> for Rc<dyn FunctionDefinition> {
                     },
                 ],
             }),
+            // 日期比较方法
             DateMethod::IsSame => imp::compare_using(CompareOperation::IsSame),
             DateMethod::IsBefore => imp::compare_using(CompareOperation::IsBefore),
             DateMethod::IsAfter => imp::compare_using(CompareOperation::IsAfter),
             DateMethod::IsSameOrBefore => imp::compare_using(CompareOperation::IsSameOrBefore),
             DateMethod::IsSameOrAfter => imp::compare_using(CompareOperation::IsSameOrAfter),
 
+            // 日期属性获取方法
             DateMethod::Second => imp::getter(GetterOperation::Second),
             DateMethod::Minute => imp::getter(GetterOperation::Minute),
             DateMethod::Hour => imp::getter(GetterOperation::Hour),
@@ -174,6 +233,7 @@ impl From<&DateMethod> for Rc<dyn FunctionDefinition> {
             DateMethod::Timestamp => imp::getter(GetterOperation::Timestamp),
             DateMethod::OffsetName => imp::getter(GetterOperation::OffsetName),
 
+            // 日期状态检查方法
             DateMethod::IsValid => imp::getter(GetterOperation::IsValid),
             DateMethod::IsYesterday => imp::getter(GetterOperation::IsYesterday),
             DateMethod::IsToday => imp::getter(GetterOperation::IsToday),

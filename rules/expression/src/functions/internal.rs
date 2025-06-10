@@ -1,63 +1,106 @@
+//! 内置函数模块
+//! 
+//! 提供表达式系统中的所有内置函数，包括通用、字符串、数学、类型和映射相关函数
+
 use crate::functions::defs::{
     CompositeFunction, FunctionDefinition, FunctionSignature, StaticFunction,
 };
 use std::rc::Rc;
 use strum_macros::{Display, EnumIter, EnumString, IntoStaticStr};
 
+/// 内置函数枚举
+/// 
+/// 定义了表达式系统中所有可用的内置函数
 #[derive(Debug, PartialEq, Eq, Hash, Display, EnumString, EnumIter, IntoStaticStr, Clone, Copy)]
 #[strum(serialize_all = "camelCase")]
 pub enum InternalFunction {
-    // General
+    // 通用函数
+    /// 长度函数：获取字符串长度或数组元素个数
     Len,
+    /// 包含函数：检查字符串包含子串或数组包含元素
     Contains,
+    /// 扁平化函数：将嵌套数组展平为一维数组
     Flatten,
 
-    // String
+    // 字符串函数
+    /// 转大写：将字符串转换为大写
     Upper,
+    /// 转小写：将字符串转换为小写
     Lower,
+    /// 去空格：移除字符串两端的空白字符
     Trim,
+    /// 开始匹配：检查字符串是否以指定前缀开始
     StartsWith,
+    /// 结束匹配：检查字符串是否以指定后缀结束
     EndsWith,
+    /// 正则匹配：检查字符串是否匹配正则表达式
     Matches,
+    /// 提取匹配：使用正则表达式提取字符串中的匹配内容
     Extract,
+    /// 模糊匹配：计算两个字符串或字符串数组的相似度
     FuzzyMatch,
+    /// 分割：使用分隔符将字符串分割为数组
     Split,
 
-    // Math
+    // 数学函数
+    /// 绝对值：返回数字的绝对值
     Abs,
+    /// 求和：计算数组中所有数字的和
     Sum,
+    /// 平均值：计算数组中所有数字的平均值
     Avg,
+    /// 最小值：返回数组中的最小值
     Min,
+    /// 最大值：返回数组中的最大值
     Max,
+    /// 随机数：生成0到指定数字之间的随机数
     Rand,
+    /// 中位数：计算数组的中位数
     Median,
+    /// 众数：计算数组的众数
     Mode,
+    /// 向下取整：返回不大于给定数字的最大整数
     Floor,
+    /// 向上取整：返回不小于给定数字的最小整数
     Ceil,
+    /// 四舍五入：对数字进行四舍五入
     Round,
+    /// 截断：截断数字的小数部分
     Trunc,
 
-    // Type
+    // 类型函数
+    /// 数字检查：检查值是否为数字类型
     IsNumeric,
+    /// 字符串转换：将值转换为字符串
     String,
+    /// 数字转换：将值转换为数字
     Number,
+    /// 布尔转换：将值转换为布尔值
     Bool,
+    /// 类型获取：返回值的类型名称
     Type,
 
-    // Map
+    // 映射函数
+    /// 键列表：获取对象的所有键
     Keys,
+    /// 值列表：获取对象的所有值
     Values,
 
+    /// 日期函数：创建或解析日期（使用简写'd'）
     #[strum(serialize = "d")]
     Date,
 }
 
 impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
+    /// 将内置函数枚举转换为函数定义
+    /// 
+    /// 为每个内置函数创建相应的函数定义，包括函数签名和实现
     fn from(value: &InternalFunction) -> Self {
         use crate::variable::VariableType as VT;
         use InternalFunction as IF;
 
         let s: Rc<dyn FunctionDefinition> = match value {
+            // 长度函数：支持字符串和数组
             IF::Len => Rc::new(CompositeFunction {
                 implementation: Rc::new(imp::len),
                 signatures: vec![
@@ -66,6 +109,7 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
                 ],
             }),
 
+            // 包含函数：支持字符串包含和数组包含
             IF::Contains => Rc::new(CompositeFunction {
                 implementation: Rc::new(imp::contains),
                 signatures: vec![
@@ -80,26 +124,31 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
                 ],
             }),
 
+            // 扁平化函数：将嵌套数组展平
             IF::Flatten => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::flatten),
                 signature: FunctionSignature::single(VT::Any.array(), VT::Any.array()),
             }),
 
+            // 字符串转大写
             IF::Upper => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::upper),
                 signature: FunctionSignature::single(VT::String, VT::String),
             }),
 
+            // 字符串转小写
             IF::Lower => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::lower),
                 signature: FunctionSignature::single(VT::String, VT::String),
             }),
 
+            // 字符串去空格
             IF::Trim => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::trim),
                 signature: FunctionSignature::single(VT::String, VT::String),
             }),
 
+            // 字符串开始匹配
             IF::StartsWith => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::starts_with),
                 signature: FunctionSignature {
@@ -108,6 +157,7 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
                 },
             }),
 
+            // 字符串结束匹配
             IF::EndsWith => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::ends_with),
                 signature: FunctionSignature {
@@ -116,6 +166,7 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
                 },
             }),
 
+            // 正则表达式匹配
             IF::Matches => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::matches),
                 signature: FunctionSignature {
@@ -124,6 +175,7 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
                 },
             }),
 
+            // 正则表达式提取
             IF::Extract => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::extract),
                 signature: FunctionSignature {
@@ -132,6 +184,7 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
                 },
             }),
 
+            // 字符串分割
             IF::Split => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::split),
                 signature: FunctionSignature {
@@ -140,6 +193,7 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
                 },
             }),
 
+            // 模糊匹配：支持单个字符串和字符串数组
             IF::FuzzyMatch => Rc::new(CompositeFunction {
                 implementation: Rc::new(imp::fuzzy_match),
                 signatures: vec![
@@ -154,26 +208,31 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
                 ],
             }),
 
+            // 绝对值
             IF::Abs => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::abs),
                 signature: FunctionSignature::single(VT::Number, VT::Number),
             }),
 
+            // 随机数生成
             IF::Rand => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::rand),
                 signature: FunctionSignature::single(VT::Number, VT::Number),
             }),
 
+            // 向下取整
             IF::Floor => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::floor),
                 signature: FunctionSignature::single(VT::Number, VT::Number),
             }),
 
+            // 向上取整
             IF::Ceil => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::ceil),
                 signature: FunctionSignature::single(VT::Number, VT::Number),
             }),
 
+            // 四舍五入：支持指定小数位数
             IF::Round => Rc::new(CompositeFunction {
                 implementation: Rc::new(imp::round),
                 signatures: vec![
@@ -188,6 +247,7 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
                 ],
             }),
 
+            // 截断：支持指定小数位数
             IF::Trunc => Rc::new(CompositeFunction {
                 implementation: Rc::new(imp::trunc),
                 signatures: vec![
@@ -202,16 +262,19 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
                 ],
             }),
 
+            // 求和
             IF::Sum => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::sum),
                 signature: FunctionSignature::single(VT::Number.array(), VT::Number),
             }),
 
+            // 平均值
             IF::Avg => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::avg),
                 signature: FunctionSignature::single(VT::Number.array(), VT::Number),
             }),
 
+            // 最小值
             IF::Min => Rc::new(CompositeFunction {
                 implementation: Rc::new(imp::min),
                 signatures: vec![
@@ -220,6 +283,7 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
                 ],
             }),
 
+            // 最大值
             IF::Max => Rc::new(CompositeFunction {
                 implementation: Rc::new(imp::max),
                 signatures: vec![
@@ -228,41 +292,49 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
                 ],
             }),
 
+            // 中位数
             IF::Median => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::median),
                 signature: FunctionSignature::single(VT::Number.array(), VT::Number),
             }),
 
+            // 众数
             IF::Mode => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::mode),
                 signature: FunctionSignature::single(VT::Number.array(), VT::Number),
             }),
 
+            // 类型获取
             IF::Type => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::to_type),
                 signature: FunctionSignature::single(VT::Any, VT::String),
             }),
 
+            // 字符串转换
             IF::String => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::to_string),
                 signature: FunctionSignature::single(VT::Any, VT::String),
             }),
 
+            // 布尔转换
             IF::Bool => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::to_bool),
                 signature: FunctionSignature::single(VT::Any, VT::Bool),
             }),
 
+            // 数字检查
             IF::IsNumeric => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::is_numeric),
                 signature: FunctionSignature::single(VT::Any, VT::Bool),
             }),
 
+            // 数字转换
             IF::Number => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::to_number),
                 signature: FunctionSignature::single(VT::Any, VT::Number),
             }),
 
+            // 键列表
             IF::Keys => Rc::new(CompositeFunction {
                 implementation: Rc::new(imp::keys),
                 signatures: vec![
@@ -271,6 +343,7 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
                 ],
             }),
 
+            // 值列表
             IF::Values => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::values),
                 signature: FunctionSignature::single(
@@ -279,6 +352,7 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
                 ),
             }),
 
+            // 日期函数
             IF::Date => Rc::new(CompositeFunction {
                 implementation: Rc::new(imp::date),
                 signatures: vec![
@@ -302,6 +376,9 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
     }
 }
 
+/// 内置函数实现模块
+/// 
+/// 包含所有内置函数的具体实现代码
 pub(crate) mod imp {
     use crate::functions::arguments::Arguments;
     use crate::vm::VmDate;
@@ -319,6 +396,15 @@ pub(crate) mod imp {
     use std::rc::Rc;
     use std::str::FromStr;
 
+    /// 辅助函数：从参数中提取数字数组
+    /// 
+    /// # 参数
+    /// * `args` - 函数参数
+    /// * `pos` - 参数位置
+    /// 
+    /// # 返回值
+    /// * `Ok(Vec<Decimal>)` - 成功提取的数字数组
+    /// * `Err` - 参数不是数组或包含非数字元素
     fn __internal_number_array(args: &Arguments, pos: usize) -> anyhow::Result<Vec<Decimal>> {
         let a = args.array(pos)?;
         let arr = a.borrow();
@@ -329,11 +415,24 @@ pub(crate) mod imp {
             .context("Expected a number array")
     }
 
+    /// 联合类型：表示数字数组或日期数组
     enum Either<A, B> {
         Left(A),
         Right(B),
     }
 
+    /// 辅助函数：从参数中提取数字数组或日期数组
+    /// 
+    /// 根据数组的第一个元素类型自动判断是数字数组还是日期数组
+    /// 
+    /// # 参数
+    /// * `args` - 函数参数
+    /// * `pos` - 参数位置
+    /// 
+    /// # 返回值
+    /// * `Ok(Either::Left(Vec<Decimal>))` - 数字数组
+    /// * `Ok(Either::Right(Vec<VmDate>))` - 日期数组
+    /// * `Err` - 参数无效或类型不匹配
     fn __internal_number_or_date_array(
         args: &Arguments,
         pos: usize,
@@ -362,6 +461,9 @@ pub(crate) mod imp {
         }
     }
 
+    /// 字符串开始匹配函数实现
+    /// 
+    /// 检查第一个字符串是否以第二个字符串开始
     pub fn starts_with(args: Arguments) -> anyhow::Result<V> {
         let a = args.str(0)?;
         let b = args.str(1)?;
@@ -369,6 +471,9 @@ pub(crate) mod imp {
         Ok(V::Bool(a.starts_with(b)))
     }
 
+    /// 字符串结束匹配函数实现
+    /// 
+    /// 检查第一个字符串是否以第二个字符串结束
     pub fn ends_with(args: Arguments) -> anyhow::Result<V> {
         let a = args.str(0)?;
         let b = args.str(1)?;
@@ -376,6 +481,9 @@ pub(crate) mod imp {
         Ok(V::Bool(a.ends_with(b)))
     }
 
+    /// 正则表达式匹配函数实现
+    /// 
+    /// 使用正则表达式检查字符串是否匹配模式
     pub fn matches(args: Arguments) -> anyhow::Result<V> {
         let a = args.str(0)?;
         let b = args.str(1)?;
@@ -385,21 +493,34 @@ pub(crate) mod imp {
         Ok(V::Bool(regex.is_match(a.as_ref())))
     }
 
+    /// 字符串转大写函数实现
+    /// 
+    /// 将字符串转换为大写形式
     pub fn upper(args: Arguments) -> anyhow::Result<V> {
         let a = args.str(0)?;
         Ok(V::String(a.to_uppercase().into()))
     }
 
+    /// 字符串转小写函数实现
+    /// 
+    /// 将字符串转换为小写形式
     pub fn lower(args: Arguments) -> anyhow::Result<V> {
         let a = args.str(0)?;
         Ok(V::String(a.to_lowercase().into()))
     }
 
+    /// 字符串去空格函数实现
+    /// 
+    /// 移除字符串两端的空白字符
     pub fn trim(args: Arguments) -> anyhow::Result<V> {
         let a = args.str(0)?;
         Ok(V::String(a.trim().into()))
     }
 
+    /// 正则表达式提取函数实现
+    /// 
+    /// 使用正则表达式从字符串中提取匹配的捕获组
+    /// 返回包含所有捕获组的字符串数组
     pub fn extract(args: Arguments) -> anyhow::Result<V> {
         let a = args.str(0)?;
         let b = args.str(1)?;
@@ -421,6 +542,9 @@ pub(crate) mod imp {
         Ok(V::from_array(captures))
     }
 
+    /// 字符串分割函数实现
+    /// 
+    /// 使用指定分隔符将字符串分割为字符串数组
     pub fn split(args: Arguments) -> anyhow::Result<V> {
         let a = args.str(0)?;
         let b = args.str(1)?;
@@ -434,6 +558,9 @@ pub(crate) mod imp {
         Ok(V::from_array(arr))
     }
 
+    /// 数组扁平化函数实现
+    /// 
+    /// 将嵌套数组展平为一维数组，非数组元素保持不变
     pub fn flatten(args: Arguments) -> anyhow::Result<V> {
         let a = args.array(0)?;
 
@@ -450,21 +577,33 @@ pub(crate) mod imp {
         Ok(V::from_array(flat_arr))
     }
 
+    /// 绝对值函数实现
+    /// 
+    /// 返回数字的绝对值
     pub fn abs(args: Arguments) -> anyhow::Result<V> {
         let a = args.number(0)?;
         Ok(V::Number(a.abs()))
     }
 
+    /// 向上取整函数实现
+    /// 
+    /// 返回不小于给定数字的最小整数
     pub fn ceil(args: Arguments) -> anyhow::Result<V> {
         let a = args.number(0)?;
         Ok(V::Number(a.ceil()))
     }
 
+    /// 向下取整函数实现
+    /// 
+    /// 返回不大于给定数字的最大整数
     pub fn floor(args: Arguments) -> anyhow::Result<V> {
         let a = args.number(0)?;
         Ok(V::Number(a.floor()))
     }
 
+    /// 四舍五入函数实现
+    /// 
+    /// 对数字进行四舍五入，可选择指定小数位数
     pub fn round(args: Arguments) -> anyhow::Result<V> {
         let a = args.number(0)?;
         let dp = args
@@ -479,6 +618,9 @@ pub(crate) mod imp {
         )))
     }
 
+    /// 截断函数实现
+    /// 
+    /// 截断数字的小数部分，可选择指定保留的小数位数
     pub fn trunc(args: Arguments) -> anyhow::Result<V> {
         let a = args.number(0)?;
         let dp = args
@@ -490,6 +632,9 @@ pub(crate) mod imp {
         Ok(V::Number(a.trunc_with_scale(dp)))
     }
 
+    /// 随机数生成函数实现
+    /// 
+    /// 生成0到指定数字之间的随机整数
     pub fn rand(args: Arguments) -> anyhow::Result<V> {
         let a = args.number(0)?;
         let upper_range = a.round().to_i64().context("Invalid upper range")?;
@@ -498,21 +643,27 @@ pub(crate) mod imp {
         Ok(V::Number(Decimal::from(random_number)))
     }
 
+    /// 最小值函数实现
+    /// 
+    /// 返回数字数组或日期数组中的最小值
     pub fn min(args: Arguments) -> anyhow::Result<V> {
         let a = __internal_number_or_date_array(&args, 0)?;
 
         match a {
             Either::Left(arr) => {
-                let max = arr.into_iter().min().context("Empty array")?;
-                Ok(V::Number(Decimal::from(max)))
+                let min = arr.into_iter().min().context("Empty array")?;
+                Ok(V::Number(Decimal::from(min)))
             }
             Either::Right(arr) => {
-                let max = arr.into_iter().min().context("Empty array")?;
-                Ok(V::Dynamic(Rc::new(max)))
+                let min = arr.into_iter().min().context("Empty array")?;
+                Ok(V::Dynamic(Rc::new(min)))
             }
         }
     }
 
+    /// 最大值函数实现
+    /// 
+    /// 返回数字数组或日期数组中的最大值
     pub fn max(args: Arguments) -> anyhow::Result<V> {
         let a = __internal_number_or_date_array(&args, 0)?;
 
@@ -528,6 +679,9 @@ pub(crate) mod imp {
         }
     }
 
+    /// 平均值函数实现
+    /// 
+    /// 计算数字数组的算术平均值
     pub fn avg(args: Arguments) -> anyhow::Result<V> {
         let a = __internal_number_array(&args, 0)?;
         let sum = a.iter().fold(Decimal::ZERO, |acc, x| acc + x);
@@ -538,6 +692,9 @@ pub(crate) mod imp {
         )))
     }
 
+    /// 求和函数实现
+    /// 
+    /// 计算数字数组中所有元素的和
     pub fn sum(args: Arguments) -> anyhow::Result<V> {
         let a = __internal_number_array(&args, 0)?;
         let sum = a.iter().fold(Decimal::ZERO, |acc, v| acc + v);
@@ -545,15 +702,20 @@ pub(crate) mod imp {
         Ok(V::Number(Decimal::from(sum)))
     }
 
+    /// 中位数函数实现
+    /// 
+    /// 计算数字数组的中位数（中间值）
     pub fn median(args: Arguments) -> anyhow::Result<V> {
         let mut a = __internal_number_array(&args, 0)?;
         a.sort();
 
         let center = a.len() / 2;
         if a.len() % 2 == 1 {
+            // 奇数个元素，取中间的元素
             let center_num = a.get(center).context("Index out of bounds")?;
             Ok(V::Number(*center_num))
         } else {
+            // 偶数个元素，取中间两个元素的平均值
             let center_left = a.get(center - 1).context("Index out of bounds")?;
             let center_right = a.get(center).context("Index out of bounds")?;
 
@@ -562,6 +724,9 @@ pub(crate) mod imp {
         }
     }
 
+    /// 众数函数实现
+    /// 
+    /// 计算数字数组的众数（出现次数最多的值）
     pub fn mode(args: Arguments) -> anyhow::Result<V> {
         let a = __internal_number_array(&args, 0)?;
         let mut counts = BTreeMap::new();

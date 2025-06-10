@@ -1,3 +1,8 @@
+//! 虚拟机核心实现
+//! 
+//! 实现基于栈的虚拟机，用于执行编译器生成的操作码。
+//! 支持变量操作、函数调用、控制流、算术运算等完整的表达式执行功能。
+
 use crate::compiler::{Compare, FetchFastTarget, Jump, Opcode};
 use crate::functions::arguments::Arguments;
 use crate::functions::registry::FunctionRegistry;
@@ -13,21 +18,36 @@ use rust_decimal::{Decimal, MathematicalOps};
 use std::rc::Rc;
 use std::string::String as StdString;
 
+/// 作用域结构
+/// 
+/// 用于闭包函数执行时的作用域管理，保存数组迭代状态
 #[derive(Debug)]
 pub struct Scope {
+    /// 当前迭代的数组
     array: Variable,
+    /// 数组长度
     len: usize,
+    /// 当前迭代位置
     iter: usize,
+    /// 满足条件的元素计数
     count: usize,
 }
 
+/// 虚拟机主结构
+/// 
+/// 基于栈的虚拟机实现，负责执行操作码序列
 #[derive(Debug)]
 pub struct VM {
+    /// 作用域栈：用于嵌套作用域管理
     scopes: Vec<Scope>,
+    /// 操作数栈：存储运算过程中的中间值
     stack: Vec<Variable>
 }
 
 impl VM {
+    /// 创建新的虚拟机实例
+    /// 
+    /// 初始化空的作用域栈和操作数栈
     pub fn new() -> Self {
         Self {
             scopes: Default::default(),
@@ -35,6 +55,16 @@ impl VM {
         }
     }
 
+    /// 运行字节码
+    /// 
+    /// 清空栈状态并执行给定的操作码序列
+    /// 
+    /// # 参数
+    /// * `bytecode` - 要执行的操作码数组
+    /// * `env` - 执行环境变量
+    /// 
+    /// # 返回值
+    /// * `VMResult<Variable>` - 执行结果或错误
     pub fn run(&mut self, bytecode: &[Opcode], env: Variable) -> VMResult<Variable> {
         self.stack.clear();
         self.scopes.clear();
@@ -44,14 +74,27 @@ impl VM {
     }
 }
 
+/// 虚拟机内部执行器
+/// 
+/// 实际的字节码执行逻辑，管理程序计数器和栈操作
 struct VMInner<'parent_ref, 'bytecode_ref> {
+    /// 作用域栈引用
     scopes: &'parent_ref mut Vec<Scope>,
+    /// 操作数栈引用
     stack: &'parent_ref mut Vec<Variable>,
+    /// 字节码数组引用
     bytecode: &'bytecode_ref [Opcode],
+    /// 程序计数器：指向当前执行的操作码位置
     ip: u32,
 }
 
 impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
+    /// 创建新的虚拟机内部执行器
+    /// 
+    /// # 参数
+    /// * `bytecode` - 字节码数组
+    /// * `stack` - 操作数栈
+    /// * `scopes` - 作用域栈
     pub fn new(
         bytecode: &'bytecode_ref [Opcode],
         stack: &'parent_ref mut Vec<Variable>,
@@ -65,17 +108,33 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
         }
     }
 
+    /// 向栈中压入值
+    /// 
+    /// # 参数
+    /// * `var` - 要压入的变量
     fn push(&mut self, var: Variable) {
         self.stack.push(var);
     }
 
+    /// 从栈中弹出值
+    /// 
+    /// # 返回值
+    /// * `VMResult<Variable>` - 弹出的变量或栈为空的错误
     fn pop(&mut self) -> VMResult<Variable> {
         self.stack.pop().ok_or_else(|| StackOutOfBounds {
             stack: format!("{:?}", self.stack),
         })
     }
 
-
+    /// 执行字节码
+    /// 
+    /// 主执行循环，逐个处理操作码直到程序结束
+    /// 
+    /// # 参数
+    /// * `env` - 执行环境变量
+    /// 
+    /// # 返回值
+    /// * `VMResult<Variable>` - 执行结果或错误
     pub fn run(&mut self, env: Variable) -> VMResult<Variable> {
         if self.ip != 0 {
             self.ip = 0;
@@ -93,22 +152,33 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
             self.ip += 1;
 
             match op {
+                // 基本值压栈操作
+                /// 压入空值
                 Opcode::PushNull => self.push(Null),
+                /// 压入布尔值
                 Opcode::PushBool(b) => self.push(Bool(*b)),
+                /// 压入数字
                 Opcode::PushNumber(n) => self.push(Number(*n)),
+                /// 压入字符串
                 Opcode::PushString(s) => self.push(String(Rc::from(s.as_ref()))),
+                /// 弹出栈顶值（丢弃）
                 Opcode::Pop => {
                     self.pop()?;
                 }
+                
+                // 变量访问操作
+                /// 通用属性访问：object[key] 或 array[index]
                 Opcode::Fetch => {
-                    let b = self.pop()?;
-                    let a = self.pop()?;
+                    let b = self.pop()?; // 索引或键
+                    let a = self.pop()?; // 对象或数组
 
                     match (a, b) {
+                        // 对象属性访问
                         (Object(o), String(s)) => {
                             let obj = o.borrow();
                             self.push(obj.get(s.as_ref()).cloned().unwrap_or(Null));
                         }
+                        // 数组索引访问
                         (Array(a), Number(n)) => {
                             let arr = a.borrow();
                             self.push(
@@ -120,6 +190,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                                 .unwrap_or(Null),
                             )
                         }
+                        // 字符串字符访问
                         (String(str), Number(n)) => {
                             let index = n.to_usize().ok_or_else(|| OpcodeErr {
                                 opcode: "Fetch".into(),
@@ -135,6 +206,8 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         _ => self.push(Null),
                     }
                 }
+                
+                /// 快速路径访问：优化的属性访问
                 Opcode::FetchFast(path) => {
                     let variable = path.iter().fold(Null, |v, p| match p {
                         FetchFastTarget::Root => env.clone(),
@@ -156,6 +229,8 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
 
                     self.push(variable);
                 }
+                
+                /// 获取环境变量
                 Opcode::FetchEnv(f) => match &env {
                     Object(o) => {
                         let obj = o.borrow();
@@ -172,9 +247,14 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         });
                     }
                 },
+                
+                /// 获取根环境
                 Opcode::FetchRootEnv => {
                     self.push(env.clone());
                 }
+                
+                // 一元运算操作
+                /// 数字取负
                 Opcode::Negate => {
                     let a = self.pop()?;
                     match a {
@@ -189,6 +269,8 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         }
                     }
                 }
+                
+                /// 逻辑非
                 Opcode::Not => {
                     let a = self.pop()?;
                     match a {
@@ -201,36 +283,51 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         }
                     }
                 }
+                
+                // 比较运算操作
+                /// 相等比较
                 Opcode::Equal => {
                     let b = self.pop()?;
                     let a = self.pop()?;
                     match (a, b) {
+                        // 数字相等比较
                         (Number(a), Number(b)) => {
                             self.push(Bool(a == b));
                         }
+                        // 布尔值相等比较
                         (Bool(a), Bool(b)) => {
                             self.push(Bool(a == b));
                         }
+                        // 字符串相等比较
                         (String(a), String(b)) => {
                             self.push(Bool(a == b));
                         }
+                        // 空值相等比较
                         (Null, Null) => {
                             self.push(Bool(true));
                         }
+                        // 动态类型（日期）相等比较
                         (Dynamic(a), Dynamic(b)) => {
                             let a = a.as_date();
                             let b = b.as_date();
 
                             self.push(Bool(a.is_some() && b.is_some() && a == b));
                         }
+                        // 不同类型不相等
                         _ => {
                             self.push(Bool(false));
                         }
                     }
                 }
+                
+                // 控制流操作
+                /// 跳转指令：根据不同条件执行跳转
                 Opcode::Jump(kind, j) => match kind {
+                    /// 无条件向前跳转
                     Jump::Forward => self.ip += j,
+                    /// 无条件向后跳转
                     Jump::Backward => self.ip -= j,
+                    /// 条件跳转：栈顶值为true时跳转
                     Jump::IfTrue => {
                         let a = self.stack.last().ok_or_else(|| OpcodeErr {
                             opcode: "JumpIfTrue".into(),
@@ -250,6 +347,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                             }
                         }
                     }
+                    /// 条件跳转：栈顶值为false时跳转
                     Jump::IfFalse => {
                         let a = self.stack.last().ok_or_else(|| OpcodeErr {
                             opcode: "JumpIfFalse".into(),
@@ -270,6 +368,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                             }
                         }
                     }
+                    /// 条件跳转：栈顶值不为null时跳转
                     Jump::IfNotNull => {
                         let a = self.stack.last().ok_or_else(|| OpcodeErr {
                             opcode: "JumpIfNull".into(),
@@ -283,6 +382,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                             }
                         }
                     }
+                    /// 条件跳转：迭代结束时跳转
                     Jump::IfEnd => {
                         let scope = self.scopes.last().ok_or_else(|| OpcodeErr {
                             opcode: "JumpIfEnd".into(),
@@ -294,11 +394,15 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         }
                     }
                 },
+                
+                // 成员关系操作
+                /// 包含检查：检查元素是否在集合或区间中
                 Opcode::In => {
-                    let b = self.pop()?;
-                    let a = self.pop()?;
+                    let b = self.pop()?; // 容器（数组或区间）
+                    let a = self.pop()?; // 要检查的元素
 
                     match (a, &b) {
+                        // 检查数字是否在数组中
                         (Number(a), Array(b)) => {
                             let arr = b.borrow();
                             let is_in = arr.iter().any(|b| match b {
@@ -308,6 +412,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
 
                             self.push(Bool(is_in));
                         }
+                        // 检查数字是否在区间中
                         (Number(v), Dynamic(d)) => {
                             let Some(i) = d.as_any().downcast_ref::<VmInterval>() else {
                                 return Err(OpcodeErr {

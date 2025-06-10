@@ -5,55 +5,63 @@ use std::str::FromStr;
 use nohash_hasher::IsEnabled;
 use strum_macros::{Display, EnumIter, EnumString, FromRepr, IntoStaticStr};
 
-/// Contains information from lexical analysis
+/// 令牌结构体
+/// 包含词法分析过程中识别出的令牌信息
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Token<'a> {
-    pub span: (u32, u32),
-    pub kind: TokenKind,
-    pub value: &'a str,
+    pub span: (u32, u32),    // 令牌在源代码中的位置范围（开始位置，结束位置）
+    pub kind: TokenKind,     // 令牌的类型
+    pub value: &'a str,      // 令牌的原始字符串值
 }
 
-/// Classification of tokens
+/// 令牌类型枚举
+/// 定义了表达式中可能出现的所有令牌类型
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Display)]
 pub enum TokenKind {
-    Identifier(Identifier),
-    Boolean(bool),
-    Number,
-    QuotationMark(QuotationMark),
-    Literal,
-    Operator(Operator),
-    Bracket(Bracket),
-    TemplateString(TemplateString),
+    Identifier(Identifier),                 // 标识符（变量名、关键字等）
+    Boolean(bool),                          // 布尔值（true/false）
+    Number,                                 // 数字
+    QuotationMark(QuotationMark),          // 引号（单引号、双引号、反引号）
+    Literal,                               // 字面量（字符串内容等）
+    Operator(Operator),                    // 操作符
+    Bracket(Bracket),                      // 括号
+    TemplateString(TemplateString),        // 模板字符串相关标记
 }
 
+/// 特殊标识符枚举
+/// 定义了表达式中的特殊标识符
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Display, EnumString, IntoStaticStr)]
 pub enum Identifier {
     #[strum(serialize = "$")]
-    ContextReference,
+    ContextReference,     // 上下文引用 $
     #[strum(serialize = "$root")]
-    RootReference,
+    RootReference,        // 根引用 $root
     #[strum(serialize = "#")]
-    CallbackReference,
+    CallbackReference,    // 回调引用 #
     #[strum(serialize = "null")]
-    Null,
+    Null,                 // 空值 null
 }
 
+/// 引号类型枚举
+/// 定义了不同类型的引号
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Display, EnumString, IntoStaticStr)]
 pub enum QuotationMark {
     #[strum(serialize = "'")]
-    SingleQuote,
+    SingleQuote,          // 单引号 '
     #[strum(serialize = "\"")]
-    DoubleQuote,
+    DoubleQuote,          // 双引号 "
     #[strum(serialize = "`")]
-    Backtick,
+    Backtick,             // 反引号 `（用于模板字符串）
 }
 
+/// 模板字符串标记枚举
+/// 用于标识模板字符串中的表达式开始和结束
 #[derive(Debug, PartialEq, Eq, Clone, Copy, EnumString, IntoStaticStr)]
 pub enum TemplateString {
     #[strum(serialize = "${")]
-    ExpressionStart,
+    ExpressionStart,      // 表达式开始标记 ${
     #[strum(serialize = "}")]
-    ExpressionEnd,
+    ExpressionEnd,        // 表达式结束标记 }
 }
 
 impl Display for TemplateString {
@@ -65,16 +73,18 @@ impl Display for TemplateString {
     }
 }
 
+/// 操作符枚举
+/// 定义了表达式中的各种操作符
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Operator {
-    Arithmetic(ArithmeticOperator),
-    Logical(LogicalOperator),
-    Comparison(ComparisonOperator),
-    Range,        // ..
-    Comma,        // ,
-    Slice,        // :
-    Dot,          // .
-    QuestionMark, // ?
+    Arithmetic(ArithmeticOperator),    // 算术操作符
+    Logical(LogicalOperator),          // 逻辑操作符
+    Comparison(ComparisonOperator),    // 比较操作符
+    Range,                             // 范围操作符 ..
+    Comma,                             // 逗号 ,
+    Slice,                             // 切片操作符 :
+    Dot,                               // 点操作符 .
+    QuestionMark,                      // 问号 ?
 }
 
 impl Display for Operator {
@@ -95,6 +105,8 @@ impl Display for Operator {
 impl FromStr for Operator {
     type Err = strum::ParseError;
 
+    /// 从字符串解析操作符
+    /// 按优先级尝试解析不同类型的操作符
     fn from_str(operator: &str) -> Result<Self, Self::Err> {
         match operator {
             ".." => Ok(Operator::Range),
@@ -110,68 +122,76 @@ impl FromStr for Operator {
     }
 }
 
+/// 算术操作符枚举
+/// 定义了基本的算术运算操作符
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Display, EnumString)]
 pub enum ArithmeticOperator {
     #[strum(serialize = "+")]
-    Add,
+    Add,          // 加法 +
     #[strum(serialize = "-")]
-    Subtract,
+    Subtract,     // 减法 -
     #[strum(serialize = "*")]
-    Multiply,
+    Multiply,     // 乘法 *
     #[strum(serialize = "/")]
-    Divide,
+    Divide,       // 除法 /
     #[strum(serialize = "%")]
-    Modulus,
+    Modulus,      // 取模 %
     #[strum(serialize = "^")]
-    Power,
+    Power,        // 幂运算 ^
 }
 
+/// 逻辑操作符枚举
+/// 定义了逻辑运算操作符
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Display, EnumString)]
 pub enum LogicalOperator {
     #[strum(serialize = "and")]
-    And,
+    And,                    // 逻辑与 and
     #[strum(serialize = "or")]
-    Or,
+    Or,                     // 逻辑或 or
     #[strum(serialize = "not", serialize = "!")]
-    Not,
+    Not,                    // 逻辑非 not 或 !
     #[strum(serialize = "??")]
-    NullishCoalescing,
+    NullishCoalescing,      // 空值合并操作符 ??
 }
 
+/// 比较操作符枚举
+/// 定义了比较运算操作符
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Display, EnumString)]
 pub enum ComparisonOperator {
     #[strum(serialize = "==")]
-    Equal,
+    Equal,                  // 等于 ==
     #[strum(serialize = "!=")]
-    NotEqual,
+    NotEqual,               // 不等于 !=
     #[strum(serialize = "<")]
-    LessThan,
+    LessThan,               // 小于 <
     #[strum(serialize = ">")]
-    GreaterThan,
+    GreaterThan,            // 大于 >
     #[strum(serialize = "<=")]
-    LessThanOrEqual,
+    LessThanOrEqual,        // 小于等于 <=
     #[strum(serialize = ">=")]
-    GreaterThanOrEqual,
+    GreaterThanOrEqual,     // 大于等于 >=
     #[strum(serialize = "in")]
-    In,
+    In,                     // 包含 in
     #[strum(serialize = "not in")]
-    NotIn,
+    NotIn,                  // 不包含 not in
 }
 
+/// 括号枚举
+/// 定义了各种类型的括号
 #[derive(Debug, PartialEq, Eq, Clone, Copy, EnumString, IntoStaticStr, EnumIter, FromRepr)]
 pub enum Bracket {
     #[strum(serialize = "(")]
-    LeftParenthesis,
+    LeftParenthesis,        // 左圆括号 (
     #[strum(serialize = ")")]
-    RightParenthesis,
+    RightParenthesis,       // 右圆括号 )
     #[strum(serialize = "[")]
-    LeftSquareBracket,
+    LeftSquareBracket,      // 左方括号 [
     #[strum(serialize = "]")]
-    RightSquareBracket,
+    RightSquareBracket,     // 右方括号 ]
     #[strum(serialize = "{")]
-    LeftCurlyBracket,
+    LeftCurlyBracket,       // 左花括号 {
     #[strum(serialize = "}")]
-    RightCurlyBracket,
+    RightCurlyBracket,      // 右花括号 }
 }
 
 impl Display for Bracket {
@@ -188,6 +208,8 @@ impl Display for Bracket {
 }
 
 impl Operator {
+    /// 获取操作符的变体编号
+    /// 用于哈希和比较操作，为每个操作符分配唯一的数字标识
     pub fn variant(&self) -> u8 {
         match &self {
             Operator::Arithmetic(a) => match a {
@@ -224,9 +246,12 @@ impl Operator {
 }
 
 impl Hash for Operator {
+    /// 为操作符实现哈希
+    /// 使用变体编号作为哈希值
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write_u8(self.variant());
     }
 }
 
+// 启用nohash_hasher优化
 impl IsEnabled for Operator {}

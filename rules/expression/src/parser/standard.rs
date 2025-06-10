@@ -5,10 +5,14 @@ use crate::parser::parser::Parser;
 use crate::parser::result::ParserResult;
 use crate::parser::NodeMetadata;
 
+/// 标准解析器结构体
+/// 用于解析完整的表达式，支持所有语法特性
 #[derive(Debug)]
 pub struct Standard;
 
 impl<'arena, 'token_ref> Parser<'arena, 'token_ref, Standard> {
+    /// 执行标准解析
+    /// 解析完整的表达式并返回解析结果
     pub fn parse(&self) -> ParserResult<'arena> {
         let root = self.binary_expression(0);
 
@@ -19,32 +23,43 @@ impl<'arena, 'token_ref> Parser<'arena, 'token_ref, Standard> {
         }
     }
 
+    /// 解析二元表达式
+    /// 使用算符优先级分析法解析二元操作符表达式
+    /// 
+    /// # 参数
+    /// * `precedence` - 最小优先级，只处理优先级不低于此值的操作符
     #[cfg_attr(feature = "stack-protection", recursive::recursive)]
     fn binary_expression(&self, precedence: u8) -> &'arena Node<'arena> {
+        // 解析左操作数
         let mut node_left = self.unary_expression();
         let Some(mut token) = self.current() else {
             return node_left;
         };
 
+        // 处理二元操作符序列
         while let TokenKind::Operator(operator) = &token.kind {
             if self.is_done() {
                 break;
             }
 
+            // 检查操作符是否为有效的二元操作符
             let Some(op) = BINARY_OPERATORS.get(operator) else {
                 break;
             };
 
+            // 检查优先级：如果当前操作符优先级低于最小优先级，则停止
             if op.precedence < precedence {
                 break;
             }
 
             self.next();
+            // 根据结合性确定右操作数的最小优先级
             let node_right = match op.associativity {
-                Associativity::Left => self.binary_expression(op.precedence + 1),
-                _ => self.binary_expression(op.precedence),
+                Associativity::Left => self.binary_expression(op.precedence + 1), // 左结合：提高优先级
+                _ => self.binary_expression(op.precedence),                        // 右结合：保持优先级
             };
 
+            // 创建二元操作节点
             node_left = self.node(
                 Node::Binary {
                     operator: *operator,
@@ -56,12 +71,14 @@ impl<'arena, 'token_ref> Parser<'arena, 'token_ref, Standard> {
                 },
             );
 
+            // 获取下一个令牌继续处理
             let Some(t) = self.current() else {
                 break;
             };
             token = t;
         }
 
+        // 在最低优先级（0）时处理条件表达式（三元操作符）
         if precedence == 0 {
             if let Some(conditional_node) =
                 self.conditional(node_left, |_| self.binary_expression(0))
@@ -73,6 +90,8 @@ impl<'arena, 'token_ref> Parser<'arena, 'token_ref, Standard> {
         node_left
     }
 
+    /// 解析一元表达式
+    /// 处理一元操作符、括号表达式、区间表达式和字面量
     fn unary_expression(&self) -> &'arena Node<'arena> {
         let Some(token) = self.current() else {
             return self.error(AstNodeError::Custom {
@@ -81,6 +100,7 @@ impl<'arena, 'token_ref> Parser<'arena, 'token_ref, Standard> {
             });
         };
 
+        // 处理回调引用 (#)
         if self.depth() > 0 && token.kind == TokenKind::Identifier(Identifier::CallbackReference) {
             self.next();
 
@@ -88,6 +108,7 @@ impl<'arena, 'token_ref> Parser<'arena, 'token_ref, Standard> {
             return self.with_postfix(node, |_| self.binary_expression(0));
         }
 
+        // 处理一元操作符（如 +x, -x, !x）
         if let TokenKind::Operator(operator) = &token.kind {
             let Some(unary_operator) = UNARY_OPERATORS.get(operator) else {
                 return self.error(AstNodeError::UnexpectedToken {
@@ -115,10 +136,12 @@ impl<'arena, 'token_ref> Parser<'arena, 'token_ref, Standard> {
             return node;
         }
 
+        // 尝试解析区间表达式（如 [1, 10]、(0, 100) 等）
         if let Some(interval_node) = self.interval(|_| self.binary_expression(0)) {
             return interval_node;
         }
 
+        // 处理括号表达式
         if token.kind == TokenKind::Bracket(Bracket::LeftParenthesis) {
             let p_start = self.current().map(|s| s.span.0);
 
@@ -135,6 +158,7 @@ impl<'arena, 'token_ref> Parser<'arena, 'token_ref, Standard> {
             return self.with_postfix(expr, |_| self.binary_expression(0));
         }
 
+        // 解析字面量（数字、字符串、标识符等）
         self.literal(|_| self.binary_expression(0))
     }
 }
