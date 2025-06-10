@@ -21,11 +21,10 @@ use moduforge_state::State;
 
 type ADefHasher = BuildHasherDefault<AHasher>;
 
-/// Isolate is a component that encapsulates an isolated environment for executing expressions.
+/// Isolate 是一个组件，用于封装一个隔离的环境，用于执行表达式。
 ///
-/// Rerunning the Isolate allows for efficient memory reuse through an arena allocator.
-/// The arena allocator optimizes memory management by reusing memory blocks for subsequent evaluations,
-/// contributing to improved performance and resource utilization in scenarios where the Isolate is reused multiple times.
+/// 重新运行 Isolate 允许通过 arena 分配器进行高效的内存重用。
+/// arena 分配器通过重用内存块来优化内存管理，从而在 Isolate 被多次重用时提高性能和资源利用率。
 /// 
 /// 🆕 现在支持扩展机制和State集成
 #[derive(Debug)]
@@ -229,25 +228,25 @@ impl<'a> Isolate<'a> {
 /// Errors which happen within isolate or during evaluation
 #[derive(Debug, Error)]
 pub enum IsolateError {
-    #[error("Lexer error: {source}")]
+    #[error("词法分析器错误: {source}")]
     LexerError { source: LexerError },
 
-    #[error("Parser error: {source}")]
+    #[error("解析器错误: {source}")]
     ParserError { source: ParserError },
 
-    #[error("Compiler error: {source}")]
+    #[error("编译器错误: {source}")]
     CompilerError { source: CompilerError },
 
-    #[error("VM error: {source}")]
+    #[error("虚拟机错误: {source}")]
     VMError { source: VMError },
 
-    #[error("Value cast error")]
+    #[error("值转换错误")]
     ValueCastError,
 
-    #[error("Failed to compute reference")]
+    #[error("计算引用失败")]
     ReferenceError,
 
-    #[error("Missing context reference")]
+    #[error("缺少上下文引用")]
     MissingContextReference,
 }
 

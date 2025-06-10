@@ -10,19 +10,19 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum EvaluationError {
-    #[error("Loader error")]
+    #[error("加载器错误")]
     LoaderError(Box<LoaderError>),
 
-    #[error("Node error")]
+    #[error("节点错误")]
     NodeError(Box<NodeError>),
 
-    #[error("Depth limit exceeded")]
+    #[error("深度限制超出")]
     DepthLimitExceeded,
 
-    #[error("Invalid graph")]
+    #[error("无效的图")]
     InvalidGraph(Box<DecisionGraphValidationError>),
 
-    #[error("Validation failed")]
+    #[error("验证失败")]
     Validation(Box<Value>),
 }
 

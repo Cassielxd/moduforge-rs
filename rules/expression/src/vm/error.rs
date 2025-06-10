@@ -12,7 +12,7 @@ pub enum VMError {
     /// 操作码执行错误
     /// 
     /// 当特定操作码执行失败时产生，包含操作码名称和错误信息
-    #[error("Opcode {opcode}: {message}")]
+    #[error("操作码 {opcode}: {message}")]
     OpcodeErr { 
         /// 操作码名称
         opcode: String, 
@@ -23,7 +23,7 @@ pub enum VMError {
     /// 操作码索引越界错误
     /// 
     /// 当程序计数器指向无效的操作码位置时产生
-    #[error("Opcode out of bounds")]
+    #[error("操作码越界")]
     OpcodeOutOfBounds { 
         /// 无效的索引位置
         index: usize, 
@@ -34,7 +34,7 @@ pub enum VMError {
     /// 栈操作越界错误
     /// 
     /// 当尝试从空栈弹出元素或栈索引无效时产生
-    #[error("Stack out of bounds")]
+    #[error("栈越界")]
     StackOutOfBounds { 
         /// 当前栈状态的调试信息
         stack: String 
@@ -43,7 +43,7 @@ pub enum VMError {
     /// 日期时间解析错误
     /// 
     /// 当无法解析日期时间字符串时产生
-    #[error("Failed to parse date time")]
+    #[error("解析日期时间失败")]
     ParseDateTimeErr { 
         /// 导致解析失败的时间戳字符串
         timestamp: String 
@@ -52,7 +52,7 @@ pub enum VMError {
     /// 数字转换错误
     /// 
     /// 当数字类型转换失败时产生
-    #[error("Number conversion error")]
+    #[error("数字转换错误")]
     NumberConversionError,
 }
 

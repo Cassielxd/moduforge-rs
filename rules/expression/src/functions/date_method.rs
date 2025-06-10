@@ -268,7 +268,7 @@ mod imp {
                 let unit = __internal_extract_duration_unit(args, from + 1)?;
                 Ok(Duration::from_unit(*n, unit).context("Invalid duration unit")?)
             }
-            _ => Err(anyhow!("Invalid duration arguments")),
+            _ => Err(anyhow!("无效的时间参数")),
         }
     }
 
@@ -277,7 +277,7 @@ mod imp {
         pos: usize,
     ) -> anyhow::Result<DurationUnit> {
         let unit_str = args.str(pos)?;
-        DurationUnit::parse(unit_str).context("Invalid duration unit")
+        DurationUnit::parse(unit_str).context("无效的持续时间单位")
     }
 
     fn __internal_extract_duration_unit_opt(
@@ -290,7 +290,7 @@ mod imp {
         };
 
         Ok(Some(
-            DurationUnit::parse(unit_str).context("Invalid duration unit")?,
+            DurationUnit::parse(unit_str).context("无效的持续时间单位")?,
         ))
     }
 
@@ -315,7 +315,7 @@ mod imp {
         let unit = __internal_extract_duration_unit(&args, 1)?;
         let value = args.number(2)?;
 
-        let value_u32 = value.to_u32().context("Invalid duration value")?;
+        let value_u32 = value.to_u32().context("无效的持续时间值")?;
 
         let date_time = this.set(value_u32, unit);
         Ok(V::Dynamic(Rc::new(date_time)))
@@ -365,7 +365,7 @@ mod imp {
         let this = args.dynamic::<VmDate>(0)?;
         let tz_str = args.str(1)?;
 
-        let timezone = Tz::from_str(tz_str).context("Invalid timezone")?;
+        let timezone = Tz::from_str(tz_str).context("无效的时区")?;
         Ok(V::Dynamic(Rc::new(this.tz(timezone))))
     }
 

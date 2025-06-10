@@ -3,7 +3,7 @@ use serde_json::json;
 use rust_decimal_macros::dec;
 
 fn main() {
-    println!("=== Zen Expression 编译与VM执行过程演示 ===\n");
+    println!("=== rules_expression 编译与VM执行过程演示 ===\n");
 
     // 演示1: 基础表达式编译和执行
     demo_basic_compilation();

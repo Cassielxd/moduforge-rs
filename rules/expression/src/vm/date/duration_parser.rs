@@ -6,20 +6,20 @@ use thiserror::Error;
 
 #[derive(Debug, PartialEq, Clone, Error)]
 pub(crate) enum DurationParseError {
-    #[error("Invalid character at {0}")]
+    #[error("无效的字符 at {0}")]
     InvalidCharacter(usize),
-    #[error("Expected number at {0}")]
+    #[error("期望数字 at {0}")]
     NumberExpected(usize),
-    #[error("Unknown time unit {unit}")]
+    #[error("未知的时间单位 {unit}")]
     UnknownUnit {
         start: usize,
         end: usize,
         value: u64,
         unit: String,
     },
-    #[error("Number is too large")]
+    #[error("数字太大")]
     NumberOverflow,
-    #[error("Value is empty")]
+    #[error("值为空")]
     Empty,
 }
 

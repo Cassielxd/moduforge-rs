@@ -153,21 +153,21 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
 
             match op {
                 // 基本值压栈操作
-                /// 压入空值
+                // 压入空值
                 Opcode::PushNull => self.push(Null),
-                /// 压入布尔值
+                // 压入布尔值
                 Opcode::PushBool(b) => self.push(Bool(*b)),
-                /// 压入数字
+                // 压入数字
                 Opcode::PushNumber(n) => self.push(Number(*n)),
-                /// 压入字符串
+                // 压入字符串
                 Opcode::PushString(s) => self.push(String(Rc::from(s.as_ref()))),
-                /// 弹出栈顶值（丢弃）
+                // 弹出栈顶值（丢弃）
                 Opcode::Pop => {
                     self.pop()?;
                 }
                 
                 // 变量访问操作
-                /// 通用属性访问：object[key] 或 array[index]
+                // 通用属性访问：object[key] 或 array[index]
                 Opcode::Fetch => {
                     let b = self.pop()?; // 索引或键
                     let a = self.pop()?; // 对象或数组
@@ -184,7 +184,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                             self.push(
                                 arr.get(n.to_usize().ok_or_else(|| OpcodeErr {
                                     opcode: "Fetch".into(),
-                                    message: "Failed to convert to usize".into(),
+                                    message: "转换为 usize 失败".into(),
                                 })?)
                                 .cloned()
                                 .unwrap_or(Null),
@@ -194,7 +194,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         (String(str), Number(n)) => {
                             let index = n.to_usize().ok_or_else(|| OpcodeErr {
                                 opcode: "Fetch".into(),
-                                message: "Failed to convert to usize".into(),
+                                message: "转换为 usize 失败".into(),
                             })?;
 
                             if let Some(slice) = str.get(index..index + 1) {
@@ -207,7 +207,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                     }
                 }
                 
-                /// 快速路径访问：优化的属性访问
+                // 快速路径访问：优化的属性访问
                 Opcode::FetchFast(path) => {
                     let variable = path.iter().fold(Null, |v, p| match p {
                         FetchFastTarget::Root => env.clone(),
@@ -230,7 +230,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                     self.push(variable);
                 }
                 
-                /// 获取环境变量
+                // 获取环境变量
                 Opcode::FetchEnv(f) => match &env {
                     Object(o) => {
                         let obj = o.borrow();
@@ -243,7 +243,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                     _ => {
                         return Err(OpcodeErr {
                             opcode: "FetchEnv".into(),
-                            message: "Unsupported type".into(),
+                            message: "不支持的类型".into(),
                         });
                     }
                 },
@@ -264,7 +264,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         _ => {
                             return Err(OpcodeErr {
                                 opcode: "Negate".into(),
-                                message: "Unsupported type".into(),
+                                message: "不支持的类型".into(),
                             });
                         }
                     }
@@ -278,7 +278,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         _ => {
                             return Err(OpcodeErr {
                                 opcode: "Not".into(),
-                                message: "Unsupported type".into(),
+                                message: "不支持的类型".into(),
                             });
                         }
                     }
@@ -331,7 +331,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                     Jump::IfTrue => {
                         let a = self.stack.last().ok_or_else(|| OpcodeErr {
                             opcode: "JumpIfTrue".into(),
-                            message: "Undefined object key".into(),
+                            message: "未定义的对象键".into(),
                         })?;
                         match a {
                             Bool(a) => {
@@ -351,7 +351,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                     Jump::IfFalse => {
                         let a = self.stack.last().ok_or_else(|| OpcodeErr {
                             opcode: "JumpIfFalse".into(),
-                            message: "Empty array".into(),
+                            message: "空数组".into(),
                         })?;
 
                         match a {
@@ -363,7 +363,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                             _ => {
                                 return Err(OpcodeErr {
                                     opcode: "JumpIfFalse".into(),
-                                    message: "Unsupported type".into(),
+                                    message: "不支持的类型".into(),
                                 });
                             }
                         }
@@ -372,7 +372,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                     Jump::IfNotNull => {
                         let a = self.stack.last().ok_or_else(|| OpcodeErr {
                             opcode: "JumpIfNull".into(),
-                            message: "Empty array".into(),
+                            message: "空数组".into(),
                         })?;
 
                         match a {
@@ -386,7 +386,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                     Jump::IfEnd => {
                         let scope = self.scopes.last().ok_or_else(|| OpcodeErr {
                             opcode: "JumpIfEnd".into(),
-                            message: "Empty stack".into(),
+                            message: "空栈".into(),
                         })?;
 
                         if scope.iter >= scope.len {
@@ -417,7 +417,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                             let Some(i) = d.as_any().downcast_ref::<VmInterval>() else {
                                 return Err(OpcodeErr {
                                     opcode: "In".into(),
-                                    message: "Unsupported type".into(),
+                                    message: "不支持的类型".into(),
                                 });
                             };
 
@@ -432,14 +432,14 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                             let Some(d) = d.as_date() else {
                                 return Err(OpcodeErr {
                                     opcode: "In".into(),
-                                    message: "Unsupported type".into(),
+                                    message: "不支持的类型".into(),
                                 });
                             };
 
                             let Some(i) = i.as_any().downcast_ref::<VmInterval>() else {
                                 return Err(OpcodeErr {
                                     opcode: "In".into(),
-                                    message: "Unsupported type".into(),
+                                    message: "不支持的类型".into(),
                                 });
                             };
 
@@ -454,7 +454,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                             let Some(a) = a.as_date() else {
                                 return Err(OpcodeErr {
                                     opcode: "In".into(),
-                                    message: "Unsupported type".into(),
+                                    message: "不支持的类型".into(),
                                 });
                             };
 
@@ -500,7 +500,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         _ => {
                             return Err(OpcodeErr {
                                 opcode: "In".into(),
-                                message: "Unsupported type".into(),
+                                message: "不支持的类型".into(),
                             });
                         }
                     }
@@ -526,7 +526,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                                 _ => {
                                     return Err(OpcodeErr {
                                         opcode: "Compare".into(),
-                                        message: "Unsupported type".into(),
+                                        message: "不支持的类型".into(),
                                     })
                                 }
                             };
@@ -536,7 +536,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         _ => {
                             return Err(OpcodeErr {
                                 opcode: "Compare".into(),
-                                message: "Unsupported type".into(),
+                                message: "不支持的类型".into(),
                             });
                         }
                     }
@@ -558,7 +558,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         _ => {
                             return Err(OpcodeErr {
                                 opcode: "Add".into(),
-                                message: "Unsupported type".into(),
+                                message: "不支持的类型".into(),
                             });
                         }
                     }
@@ -572,7 +572,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         _ => {
                             return Err(OpcodeErr {
                                 opcode: "Subtract".into(),
-                                message: "Unsupported type".into(),
+                                message: "不支持的类型".into(),
                             });
                         }
                     }
@@ -586,7 +586,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         _ => {
                             return Err(OpcodeErr {
                                 opcode: "Multiply".into(),
-                                message: "Unsupported type".into(),
+                                message: "不支持的类型".into(),
                             });
                         }
                     }
@@ -600,7 +600,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         _ => {
                             return Err(OpcodeErr {
                                 opcode: "Divide".into(),
-                                message: "Unsupported type".into(),
+                                message: "不支持的类型".into(),
                             });
                         }
                     }
@@ -614,7 +614,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         _ => {
                             return Err(OpcodeErr {
                                 opcode: "Modulo".into(),
-                                message: "Unsupported type".into(),
+                                message: "不支持的类型".into(),
                             });
                         }
                     }
@@ -630,7 +630,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                                 .or_else(|| Decimal::from_f64(a.to_f64()?.powf(b.to_f64()?)))
                                 .ok_or_else(|| OpcodeErr {
                                     opcode: "Exponent".into(),
-                                    message: "Failed to calculate exponent".into(),
+                                    message: "计算指数失败".into(),
                                 })?;
 
                             self.push(Number(result));
@@ -638,7 +638,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         _ => {
                             return Err(OpcodeErr {
                                 opcode: "Exponent".into(),
-                                message: "Unsupported type".into(),
+                                message: "不支持的类型".into(),
                             });
                         }
                     }
@@ -667,7 +667,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                                 _ => {
                                     return Err(OpcodeErr {
                                         opcode: "Interval".into(),
-                                        message: "Unsupported type".into(),
+                                        message: "不支持的类型".into(),
                                     })
                                 }
                             };
@@ -684,7 +684,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         _ => {
                             return Err(OpcodeErr {
                                 opcode: "Interval".into(),
-                                message: "Unsupported type".into(),
+                                message: "不支持的类型".into(),
                             });
                         }
                     }
@@ -696,7 +696,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                     let (Array(a), String(separator)) = (a, &b) else {
                         return Err(OpcodeErr {
                             opcode: "Join".into(),
-                            message: "Unsupported type".into(),
+                            message: "不支持的类型".into(),
                         });
                     };
 
@@ -708,7 +708,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                             String(str) => Ok(str.clone()),
                             _ => Err(OpcodeErr {
                                 opcode: "Join".into(),
-                                message: format!("Unexpected type in array on index {i}"),
+                                message: format!("数组中索引 {i} 的类型不支持"),
                             }),
                         })
                         .collect::<Result<Vec<_>, _>>()?;
@@ -737,11 +737,11 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         (Number(f), Number(t)) => {
                             let from = f.to_usize().ok_or_else(|| OpcodeErr {
                                 opcode: "Slice".into(),
-                                message: "Failed to get range from".into(),
+                                message: "获取范围失败".into(),
                             })?;
                             let to = t.to_usize().ok_or_else(|| OpcodeErr {
                                 opcode: "Slice".into(),
-                                message: "Failed to get range to".into(),
+                                message: "获取范围失败".into(),
                             })?;
 
                             match current {
@@ -749,7 +749,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                                     let arr = a.borrow();
                                     let slice = arr.get(from..=to).ok_or_else(|| OpcodeErr {
                                         opcode: "Slice".into(),
-                                        message: "Index out of range".into(),
+                                        message: "索引超出范围".into(),
                                     })?;
 
                                     self.push(Variable::from_array(slice.to_vec()));
@@ -757,7 +757,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                                 String(s) => {
                                     let slice = s.get(from..=to).ok_or_else(|| OpcodeErr {
                                         opcode: "Slice".into(),
-                                        message: "Index out of range".into(),
+                                        message: "索引超出范围".into(),
                                     })?;
 
                                     self.push(String(Rc::from(slice)));
@@ -765,7 +765,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                                 _ => {
                                     return Err(OpcodeErr {
                                         opcode: "Slice".into(),
-                                        message: "Unsupported type".into(),
+                                        message: "不支持的类型".into(),
                                     });
                                 }
                             }
@@ -773,7 +773,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         _ => {
                             return Err(OpcodeErr {
                                 opcode: "Slice".into(),
-                                message: "Unsupported type".into(),
+                                message: "不支持的类型".into(),
                             });
                         }
                     }
@@ -783,13 +783,13 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                     let Number(s) = size else {
                         return Err(OpcodeErr {
                             opcode: "Array".into(),
-                            message: "Unsupported type".into(),
+                            message: "不支持的类型".into(),
                         });
                     };
 
                     let to = s.round().to_usize().ok_or_else(|| OpcodeErr {
                         opcode: "Array".into(),
-                        message: "Failed to extract argument".into(),
+                        message: "提取参数失败".into(),
                     })?;
 
                     let mut arr = Vec::with_capacity(to);
@@ -805,13 +805,13 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                     let Number(s) = size else {
                         return Err(OpcodeErr {
                             opcode: "Array".into(),
-                            message: "Unsupported type".into(),
+                            message: "不支持的类型".into(),
                         });
                     };
 
                     let to = s.round().to_usize().ok_or_else(|| OpcodeErr {
                         opcode: "Array".into(),
-                        message: "Failed to extract argument".into(),
+                        message: "提取参数失败".into(),
                     })?;
 
                     let mut map = HashMap::with_capacity(to);
@@ -820,7 +820,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         let String(key) = self.pop()? else {
                             return Err(OpcodeErr {
                                 opcode: "Object".into(),
-                                message: "Unexpected key value".to_string(),
+                                message: "意外的键值".to_string(),
                             });
                         };
 
@@ -832,7 +832,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                 Opcode::Len => {
                     let current = self.stack.last().ok_or_else(|| OpcodeErr {
                         opcode: "Len".into(),
-                        message: "Empty stack".into(),
+                        message: "空栈".into(),
                     })?;
 
                     let len_var =
@@ -850,7 +850,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                     let Array(a) = current else {
                         return Err(OpcodeErr {
                             opcode: "Flatten".into(),
-                            message: "Unsupported type".into(),
+                            message: "不支持的类型".into(),
                         });
                     };
 
@@ -870,7 +870,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                 Opcode::IncrementIt => {
                     let scope = self.scopes.last_mut().ok_or_else(|| OpcodeErr {
                         opcode: "IncrementIt".into(),
-                        message: "Empty scope".into(),
+                        message: "空作用域".into(),
                     })?;
 
                     scope.iter += 1;
@@ -878,7 +878,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                 Opcode::IncrementCount => {
                     let scope = self.scopes.last_mut().ok_or_else(|| OpcodeErr {
                         opcode: "IncrementCount".into(),
-                        message: "Empty scope".into(),
+                        message: "空作用域".into(),
                     })?;
 
                     scope.count += 1;
@@ -886,7 +886,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                 Opcode::GetCount => {
                     let scope = self.scopes.last().ok_or_else(|| OpcodeErr {
                         opcode: "GetCount".into(),
-                        message: "Empty scope".into(),
+                        message: "空作用域".into(),
                     })?;
 
                     self.push(Number(scope.count.into()));
@@ -894,7 +894,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                 Opcode::GetLen => {
                     let scope = self.scopes.last().ok_or_else(|| OpcodeErr {
                         opcode: "GetLen".into(),
-                        message: "Empty scope".into(),
+                        message: "空作用域".into(),
                     })?;
 
                     self.push(Number(scope.len.into()));
@@ -902,7 +902,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                 Opcode::Pointer => {
                     let scope = self.scopes.last().ok_or_else(|| OpcodeErr {
                         opcode: "Pointer".into(),
-                        message: "Empty scope".into(),
+                        message: "空作用域".into(),
                     })?;
 
                     match &scope.array {
@@ -912,7 +912,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                             let variable =
                                 arr.get(scope.iter).cloned().ok_or_else(|| OpcodeErr {
                                     opcode: "Pointer".into(),
-                                    message: "Scope array out of bounds".into(),
+                                    message: "作用域数组超出范围".into(),
                                 })?;
 
                             self.push(variable);
@@ -920,7 +920,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         _ => {
                             return Err(OpcodeErr {
                                 opcode: "Pointer".into(),
-                                message: "Unsupported scope type".into(),
+                                message: "不支持的作用域类型".into(),
                             });
                         }
                     }
@@ -951,7 +951,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                     let Some(scope) = maybe_scope else {
                         return Err(OpcodeErr {
                             opcode: "Begin".into(),
-                            message: "Unsupported type".into(),
+                            message: "不支持的类型".into(),
                         });
                     };
 
@@ -964,7 +964,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                     let function =
                         FunctionRegistry::get_definition(kind).ok_or_else(|| OpcodeErr {
                             opcode: "CallFunction".into(),
-                            message: format!("Function `{kind}` not found"),
+                            message: format!("函数 `{kind}` 未找到"),
                         })?;
 
                     let params_start = self.stack.len().saturating_sub(*arg_count as usize);
@@ -972,7 +972,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         .call(Arguments(&self.stack[params_start..]))
                         .map_err(|err| OpcodeErr {
                             opcode: "CallFunction".into(),
-                            message: format!("Function `{kind}` failed: {err}"),
+                            message: format!("函数 `{kind}` 调用失败: {err}"),
                         })?;
 
                     self.stack.drain(params_start..);
@@ -981,7 +981,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                 Opcode::CallMethod { kind, arg_count } => {
                     let method = MethodRegistry::get_definition(kind).ok_or_else(|| OpcodeErr {
                         opcode: "CallMethod".into(),
-                        message: format!("Method `{kind}` not found"),
+                        message: format!("方法 `{kind}` 未找到"),
                     })?;
 
                     let params_start = self.stack.len().saturating_sub(*arg_count as usize) - 1;
@@ -989,7 +989,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                         .call(Arguments(&self.stack[params_start..]))
                         .map_err(|err| OpcodeErr {
                             opcode: "CallMethod".into(),
-                            message: format!("Method `{kind}` failed: {err}"),
+                            message: format!("方法 `{kind}` 调用失败: {err}"),
                         })?;
 
                     self.stack.drain(params_start..);

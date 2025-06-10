@@ -499,7 +499,7 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                     if arguments.len() < min_params || arguments.len() > max_params {
                         return Err(CompilerError::InvalidFunctionCall {
                             name: kind.to_string(),
-                            message: "Invalid number of arguments".to_string(),
+                            message: "无效的参数数量".to_string(),
                         });
                     }
 

@@ -849,7 +849,7 @@ pub(crate) mod imp {
             }
             _ => {
                 return Err(anyhow!(
-                    "Cannot determine contains for type {} and {}",
+                    "无法确定类型 {} 和 {} 的包含关系",
                     a.type_name(),
                     b.type_name()
                 ));
@@ -873,7 +873,7 @@ pub(crate) mod imp {
                 let a = _a.borrow();
                 let mut sims = Vec::with_capacity(a.len());
                 for v in a.iter() {
-                    let s = v.as_str().context("Expected string array")?;
+                    let s = v.as_str().context("期望字符串数组")?;
 
                     let sim = Decimal::from_f64(strsim::normalized_damerau_levenshtein(
                         s.as_ref(),
@@ -885,7 +885,7 @@ pub(crate) mod imp {
 
                 V::from_array(sims)
             }
-            _ => return Err(anyhow!("Fuzzy match not available for type")),
+            _ => return Err(anyhow!("模糊匹配不适用于类型 {} ", a.type_name())),
         };
 
         Ok(val)
@@ -911,7 +911,7 @@ pub(crate) mod imp {
                 V::from_array(keys)
             }
             _ => {
-                return Err(anyhow!("Cannot determine keys of type {}", a.type_name()));
+                return Err(anyhow!("无法确定类型 {} 的键", a.type_name()));
             }
         };
 
@@ -930,7 +930,7 @@ pub(crate) mod imp {
         let provided = args.ovar(0);
         let tz = args
             .ostr(1)?
-            .map(|v| Tz::from_str(v).context("Invalid timezone"))
+            .map(|v| Tz::from_str(v).context("无效的时区"))
             .transpose()?;
 
         let date_time = match provided {

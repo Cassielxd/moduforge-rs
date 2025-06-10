@@ -93,7 +93,7 @@ impl FunctionDefinition for CustomFunctionDefinition {
 
         if args.len() != self.required_parameters() {
             typecheck.general = Some(format!(
-                "Expected `{}` arguments, got `{}`.",
+                "期望 `{}` 参数, 实际 `{}` 参数.",
                 self.required_parameters(),
                 args.len()
             ));
@@ -109,7 +109,7 @@ impl FunctionDefinition for CustomFunctionDefinition {
                 typecheck.arguments.push((
                     i,
                     format!(
-                        "Argument of type `{arg}` is not assignable to parameter of type `{expected_type}`.",
+                        "参数类型 `{arg}` 不能赋值给参数类型 `{expected_type}`.",
                     ),
                 ));
             }

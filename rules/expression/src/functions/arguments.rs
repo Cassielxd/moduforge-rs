@@ -46,7 +46,7 @@ impl<'a> Arguments<'a> {
     /// * `Err` - 参数不存在或索引越界
     pub fn var(&self, pos: usize) -> anyhow::Result<&'a Variable> {
         self.ovar(pos)
-            .with_context(|| format!("Argument on {pos} position out of bounds"))
+            .with_context(|| format!("参数索引越界: {pos}"))
     }
 
     /// 获取可选布尔值
@@ -63,7 +63,7 @@ impl<'a> Arguments<'a> {
             Some(v) => v
                 .as_bool()
                 .map(Some)
-                .with_context(|| format!("Argument on {pos} is not a bool")),
+                .with_context(|| format!("参数索引 {pos} 不是布尔类型")),
             None => Ok(None),
         }
     }
@@ -78,7 +78,7 @@ impl<'a> Arguments<'a> {
     /// * `Err` - 参数不存在或不是布尔类型
     pub fn bool(&self, pos: usize) -> anyhow::Result<bool> {
         self.obool(pos)?
-            .with_context(|| format!("Argument on {pos} position is not a valid bool"))
+            .with_context(|| format!("参数索引 {pos} 不是布尔类型"))
     }
 
     /// 获取可选字符串
@@ -95,7 +95,7 @@ impl<'a> Arguments<'a> {
             Some(v) => v
                 .as_str()
                 .map(Some)
-                .with_context(|| format!("Argument on {pos} is not a string")),
+                .with_context(|| format!("参数索引 {pos} 不是字符串类型")),
             None => Ok(None),
         }
     }
@@ -110,7 +110,7 @@ impl<'a> Arguments<'a> {
     /// * `Err` - 参数不存在或不是字符串类型
     pub fn str(&self, pos: usize) -> anyhow::Result<&'a str> {
         self.ostr(pos)?
-            .with_context(|| format!("Argument on {pos} position is not a valid string"))
+            .with_context(|| format!("参数索引 {pos} 不是字符串类型"))
     }
 
     /// 获取可选数字
@@ -127,7 +127,7 @@ impl<'a> Arguments<'a> {
             Some(v) => v
                 .as_number()
                 .map(Some)
-                .with_context(|| format!("Argument on {pos} is not a number")),
+                .with_context(|| format!("参数索引 {pos} 不是数字类型")),
             None => Ok(None),
         }
     }
@@ -142,7 +142,7 @@ impl<'a> Arguments<'a> {
     /// * `Err` - 参数不存在或不是数字类型
     pub fn number(&self, pos: usize) -> anyhow::Result<Decimal> {
         self.onumber(pos)?
-            .with_context(|| format!("Argument on {pos} position is not a valid number"))
+            .with_context(|| format!("参数索引 {pos} 不是数字类型"))
     }
 
     /// 获取可选数组
@@ -159,7 +159,7 @@ impl<'a> Arguments<'a> {
             Some(v) => v
                 .as_array()
                 .map(Some)
-                .with_context(|| format!("Argument on {pos} is not a array")),
+                .with_context(|| format!("参数索引 {pos} 不是数组类型")),
             None => Ok(None),
         }
     }
@@ -174,7 +174,7 @@ impl<'a> Arguments<'a> {
     /// * `Err` - 参数不存在或不是数组类型
     pub fn array(&self, pos: usize) -> anyhow::Result<RcCell<Vec<Variable>>> {
         self.oarray(pos)?
-            .with_context(|| format!("Argument on {pos} position is not a valid array"))
+            .with_context(|| format!("参数索引 {pos} 不是数组类型"))
     }
 
     /// 获取可选对象
@@ -194,7 +194,7 @@ impl<'a> Arguments<'a> {
             Some(v) => v
                 .as_object()
                 .map(Some)
-                .with_context(|| format!("Argument on {pos} is not a object")),
+                .with_context(|| format!("参数索引 {pos} 不是对象类型")),
             None => Ok(None),
         }
     }
@@ -209,7 +209,7 @@ impl<'a> Arguments<'a> {
     /// * `Err` - 参数不存在或不是对象类型
     pub fn object(&self, pos: usize) -> anyhow::Result<RcCell<HashMap<Rc<str>, Variable>>> {
         self.oobject(pos)?
-            .with_context(|| format!("Argument on {pos} position is not a valid object"))
+            .with_context(|| format!("参数索引 {pos} 不是对象类型"))
     }
 
     /// 获取可选动态类型变量
@@ -244,6 +244,6 @@ impl<'a> Arguments<'a> {
     /// * `Err` - 参数不存在或不是指定动态类型
     pub fn dynamic<T: DynamicVariable + 'static>(&self, pos: usize) -> anyhow::Result<&T> {
         self.odynamic(pos)?
-            .with_context(|| format!("Argument on {pos} position is not a valid dynamic"))
+            .with_context(|| format!("参数索引 {pos} 不是动态类型"))
     }
 }

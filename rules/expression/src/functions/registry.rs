@@ -30,7 +30,7 @@ pub struct FunctionRegistry {
 }
 
 impl FunctionRegistry {
-    /// 线程本地存储的注册表实例
+    // 线程本地存储的注册表实例
     thread_local!(
         static INSTANCE: RefCell<FunctionRegistry> = RefCell::new(FunctionRegistry::new_internal())
     );
