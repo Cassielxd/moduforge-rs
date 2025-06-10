@@ -6,6 +6,7 @@ members = [
    "state",
    "core",
    "macros/*",
+   "rules/*",
    "demo"
    ]
 exclude = [
@@ -53,3 +54,18 @@ lru = "0.14.0"
 parking_lot = "0.12"
 
 
+ahash = "0.8"
+rust_decimal = "1"
+rust_decimal_macros = "1"
+json_dotpath = "1"
+once_cell = "1"
+petgraph = "0.8"
+criterion = "0.5"
+bumpalo = "3"
+fastrand = "2"
+humantime = "2"
+recursive = "0.1"
+regex = "1"
+regex-lite = "0.1"
+strum = "0.27"
+strum_macros = "0.27"
