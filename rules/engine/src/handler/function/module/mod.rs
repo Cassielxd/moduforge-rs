@@ -13,6 +13,7 @@ use crate::handler::function::module::zen::ZenModule;
 pub(crate) mod console;
 pub(crate) mod http;
 pub(crate) mod zen;
+pub mod custom;
 
 static JS_BUNDLE: Bundle = embed! {
     "dayjs": "js/dayjs.mjs",

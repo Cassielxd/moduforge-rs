@@ -9,11 +9,11 @@ pub use crate::functions::custom::CustomFunction;
 use std::fmt::Display;
 use strum_macros::{Display, EnumIter, EnumString, IntoStaticStr};
 
-pub(crate) mod arguments;
+pub  mod arguments;
 mod date_method;
-pub(crate) mod defs;
+pub  mod defs;
 mod deprecated;
-pub(crate) mod internal;
+pub  mod internal;
 mod method;
 pub(crate) mod registry;
 pub  mod custom;

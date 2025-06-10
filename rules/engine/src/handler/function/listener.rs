@@ -6,12 +6,12 @@ use rquickjs::Ctx;
 use crate::handler::function::error::FunctionResult;
 
 #[derive(Clone, PartialEq)]
-pub(crate) enum RuntimeEvent {
+pub  enum RuntimeEvent {
     Startup,
     SoftReset,
 }
 
-pub(crate) trait RuntimeListener {
+pub  trait RuntimeListener {
     fn on_event<'js>(
         &self,
         ctx: Ctx<'js>,

@@ -3,6 +3,7 @@ use crate::handler::decision::DecisionHandler;
 use crate::handler::expression::ExpressionHandler;
 use crate::handler::function::function::{Function, FunctionConfig};
 use crate::handler::function::module::console::ConsoleListener;
+use crate::handler::function::module::custom::CustomListener;
 use crate::handler::function::module::zen::ZenListener;
 use crate::handler::function::FunctionHandler;
 use crate::handler::function_v1;
@@ -105,6 +106,7 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
 
         let function = Function::create(FunctionConfig {
             listeners: Some(vec![
+                Box::new(CustomListener{}),
                 Box::new(ConsoleListener),
                 Box::new(ZenListener {
                     loader: self.loader.clone(),
