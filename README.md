@@ -381,7 +381,7 @@ Moduforge,是基于当前计价软件延伸出来的，因此它与 计价 的�
 
 ### 🎋 业务模型映射
 
-#### [Node模型到建筑预算的精确映射](./node-budget-mapping.md)
+#### [Node模型到建筑预算的精确映射](./docs/node-budget-mapping.md)
 **详细介绍了如何将ModuForge的Node模型精确映射到建筑预算业务**
 
 - **核心内容**：
@@ -399,7 +399,7 @@ Moduforge,是基于当前计价软件延伸出来的，因此它与 计价 的�
 
 ### 🚀 架构应用场景
 
-#### [架构适用业务场景分析](./architecture_use_cases.md)
+#### [架构适用业务场景分析](./docs/architecture_use_cases.md)
 **深入分析ModuForge架构在不同业务场景中的适用性**
 
 - **业务场景分类**：
@@ -417,7 +417,7 @@ Moduforge,是基于当前计价软件延伸出来的，因此它与 计价 的�
 
 ### 🔗 业务依赖设计
 
-#### [A业务依赖B业务的可插拔架构设计](./business_dependency_design.md)
+#### [A业务依赖B业务的可插拔架构设计](./docs/business_dependency_design.md)
 **传统的业务依赖管理器方案**
 
 - **设计特点**：
@@ -431,7 +431,7 @@ Moduforge,是基于当前计价软件延伸出来的，因此它与 计价 的�
   - BusinessDependency：依赖关系描述
   - 完整的A业务和B业务插件实现示例
 
-#### [基于Transaction Meta的业务依赖解耦设计](./meta_based_dependency_design.md)
+#### [基于Transaction Meta的业务依赖解耦设计](./docs/meta_based_dependency_design.md)
 **推荐的轻量级业务依赖方案**
 
 - **设计优势**：
@@ -448,7 +448,7 @@ Moduforge,是基于当前计价软件延伸出来的，因此它与 计价 的�
 
 ### 📈 架构分析
 
-#### [架构限制性分析](./architecture_limitations_analysis.md)
+#### [架构限制性分析](./docs/architecture_limitations_analysis.md)
 **客观分析ModuForge架构的优势与限制**
 
 - **分析维度**：
@@ -457,7 +457,7 @@ Moduforge,是基于当前计价软件延伸出来的，因此它与 计价 的�
   - 复杂度分析（开发难度、学习曲线、维护成本）
   - 适用性边界（适合与不适合的业务场景）
 
-#### [简化版历史管理增强](./simple_enhanced_history.md)
+#### [简化版历史管理增强](./docs/simple_enhanced_history.md)
 **历史管理和撤销重做功能的设计实现**
 
 - **核心功能**：
