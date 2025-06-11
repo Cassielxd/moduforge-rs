@@ -1,34 +1,23 @@
-# ZEN Engine
+# moduforge-rules-engine 引擎
 
-ZEN Engine is business friendly Open-Source Business Rules Engine
-(BRE) to execute decision models according to the GoRules JSON
-Decision Model (JDM) standard. It is written in Rust and provides
-native bindings for NodeJS and Python. ZEN Engine allows to load
-and execute JSON Decision Model (JDM) from JSON files.
+moduforge-rules-engine 引擎是一个对业务友好的开源业务规则引擎（BRE），基于  [Zen Engine](https://github.com/zen-engine/zen-engine)进行二次开发，完全兼容zen-engine，在此基础上 增加了规则引擎的易用性，并添加了规则引擎的扩展功能，把State 注入上下文中。在自定义方法中可以获取State对象。
 
-## Resources
+## 资源
 
-[Documentation](https://gorules.io/docs/)
+[文档](https://gorules.io/docs/)
 
-[Online Rules Engine Editor](https://editor.gorules.io/)
+[在线规则引擎编辑器](https://editor.gorules.io/)
 
-## Installation
 
-Add the following to your Cargo.toml file:
 
-```toml
-[dependencies]
-zen-engine = "0"
-```
+## 使用方法
 
-## Usage
-
-To execute a simple decision using a Noop (default) loader you can use the code below.
+要使用 Noop（默认）加载器执行简单决策，您可以使用以下代码：
 
 ```rust
 use serde_json::json;
-use zen_engine::DecisionEngine;
-use zen_engine::model::DecisionContent;
+use moduforge_rules_engine::DecisionEngine;
+use moduforge_rules_engine::model::DecisionContent;
 
 async fn evaluate() {
     let decision_content: DecisionContent = serde_json::from_str(include_str!("jdm_graph.json")).unwrap();
@@ -39,62 +28,57 @@ async fn evaluate() {
 }
 ```
 
-Alternatively, you may create decision indirectly without constructing the engine utilising
-`Decision::from` function.
+另外，您也可以使用 `Decision::from` 函数间接创建决策，而无需构建引擎。
 
-## Loaders
+## 加载器
 
-For more advanced use cases where you want to load multiple decisions and utilise graphs you
-may use one of the following pre-made loaders:
+对于更高级的用例，当您需要加载多个决策并使用图时，您可以使用以下预制的加载器之一：
 
-- FilesystemLoader - with a given path as a root it tries to load a decision based on relative path
-- MemoryLoader - works as a HashMap (key-value store)
-- ClosureLoader - allows for definition of simple async callback function which takes key as a parameter
-  and returns an `Arc<DecisionContent>` instance
-- NoopLoader - (default) fails to load decision, allows for usage of create_decision
-  (mostly existing for streamlining API across languages)
+- FilesystemLoader - 使用给定路径作为根目录，尝试基于相对路径加载决策
+- MemoryLoader - 作为 HashMap（键值存储）工作
+- ClosureLoader - 允许定义简单的异步回调函数，该函数接收键作为参数并返回 `Arc<DecisionContent>` 实例
+- NoopLoader - （默认）无法加载决策，允许使用 create_decision（主要用于跨语言统一 API）
 
-### Filesystem loader
+### 文件系统加载器
 
-Assuming that you have a folder with decision models (.json files) which is located under /app/decisions,
-you may use FilesystemLoader in the following way:
+假设您有一个位于 /app/decisions 下的决策模型文件夹（.json 文件），您可以按以下方式使用 FilesystemLoader：
 
 ```rust
 use serde_json::json;
-use zen_engine::DecisionEngine;
-use zen_engine::loader::{FilesystemLoader, FilesystemLoaderOptions};
+use moduforge_rules_engine::DecisionEngine;
+use moduforge_rules_engine::loader::{FilesystemLoader, FilesystemLoaderOptions};
 
 async fn evaluate() {
     let engine = DecisionEngine::new(FilesystemLoader::new(FilesystemLoaderOptions {
-        keep_in_memory: true, // optionally, keep in memory for increase performance
+        keep_in_memory: true, // 可选，保持在内存中以提高性能
         root: "/app/decisions"
     }));
 
     let context = json!({ "customer": { "joinedAt": "2022-01-01" } });
-    // If you plan on using it multiple times, you may cache JDM for minor performance gains
-    // In case of bindings (in other languages, this increase is much greater)
+    // 如果您计划多次使用它，可以缓存 JDM 以获得轻微的性能提升
+    // 在绑定（其他语言）的情况下，这种提升会更大
     {
         let promotion_decision = engine.get_decision("commercial/promotion.json").await.unwrap();
         let result = promotion_decision.evaluate(&context).await.unwrap();
     }
 
-    // Or on demand
+    // 或者按需加载
     {
         let result = engine.evaluate("commercial/promotion.json", &context).await.unwrap();
     }
 }
 ```
 
-### Custom loader
+### 自定义加载器
 
-You may create a custom loader for zen engine by implementing `DecisionLoader` trait.
-Here's an example of how MemoryLoader has been implemented.
+您可以通过实现 `DecisionLoader` trait 为 zen 引擎创建自定义加载器。
+以下是 MemoryLoader 的实现示例：
 
 ```rust
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use zen_engine::loader::{DecisionLoader, LoaderError, LoaderResponse};
-use zen_engine::model::DecisionContent;
+use moduforge_rules_engine::loader::{DecisionLoader, LoaderError, LoaderResponse};
+use moduforge_rules_engine::model::DecisionContent;
 
 #[derive(Debug, Default)]
 pub struct MemoryLoader {
@@ -134,4 +118,3 @@ impl DecisionLoader for MemoryLoader {
         }
     }
 }
-```
