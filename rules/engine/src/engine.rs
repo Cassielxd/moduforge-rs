@@ -10,7 +10,7 @@ use crate::EvaluationError;
 use moduforge_rules_expression::variable::Variable;
 use moduforge_rules_expression::functions::custom::CustomFunctionRegistry;
 
-/// Structure used for generating and evaluating JDM decisions
+/// 决策引擎结构体，用于生成和评估决策
 #[derive(Debug, Clone)]
 pub struct DecisionEngine<Loader, CustomNode>
 where
@@ -72,7 +72,7 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionEngine
         }
     }
 
-    /// Evaluates a decision through loader using a key
+    /// 使用 key 评估决策
     pub async fn evaluate<K>(
         &self,
         key: K,
@@ -107,7 +107,7 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionEngine
         result
     }
 
-    /// Evaluates a decision through loader using a key with advanced options
+    /// 使用 key 评估决策，并使用高级选项
     pub async fn evaluate_with_opts<K>(
         &self,
         key: K,
@@ -122,14 +122,14 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionEngine
         decision.evaluate_with_opts(context, options).await
     }
 
-    /// Creates a decision from DecisionContent, exists for easier binding creation
+    /// 从 DecisionContent 创建决策，用于更简单的绑定创建
     pub fn create_decision(&self, content: Arc<DecisionContent>) -> Decision<L, A> {
         Decision::from(content)
             .with_loader(self.loader.clone())
             .with_adapter(self.adapter.clone())
     }
 
-    /// Retrieves a decision based on the loader
+    /// 根据 loader 获取决策
     pub async fn get_decision(&self, key: &str) -> LoaderResult<Decision<L, A>> {
         let content = self.loader.load(key).await?;
         Ok(self.create_decision(content))
