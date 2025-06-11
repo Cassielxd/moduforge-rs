@@ -4,22 +4,23 @@
 //! 
 //! ## 主要功能
 //! 
-//! - **函数注册**: 在运行时启动时自动将Rust自定义函数注册到JavaScript全局作用域
+//! - **函数注册**: 在运行时启动时自动将Rust自定义函数注册到JavaScript的md命名空间
+//! - **命名空间管理**: 创建和管理md作用域，避免全局命名冲突
 //! - **类型转换**: 处理Rust和JavaScript之间的数据类型转换
 //! - **异步支持**: 提供异步函数调用支持，确保不阻塞JavaScript执行
 //! - **错误处理**: 完善的错误捕获和处理机制
 //! 
 //! ## 使用场景
 //! 
-//! 该监听器主要用于规则引擎中，允许在规则表达式中调用预定义的Rust函数，
-//! 从而扩展JavaScript运行时的功能。
+//! 该监听器主要用于规则引擎中，允许在规则表达式中通过`md.functionName()`的形式
+//! 调用预定义的Rust函数，从而扩展JavaScript运行时的功能。
 //! 
 //! ## 架构说明
 //! 
 //! ```text
-//! CustomFunctionRegistry → CustomListener → JavaScript Runtime
+//! CustomFunctionRegistry → CustomListener → JavaScript Runtime (md namespace)
 //!        ↓                      ↓                    ↓
-//!    函数定义存储           函数注册处理          函数调用执行
+//!    函数定义存储           函数注册处理          md.functionName() 调用执行
 //! ```
 
 use std::future::Future;
@@ -36,13 +37,15 @@ use rquickjs::{CatchResultExt, Ctx};
 /// 自定义函数监听器
 /// 
 /// 该监听器负责在JavaScript运行时启动时，将所有注册的自定义函数
-/// 绑定到JavaScript全局作用域中，使得这些函数可以在规则表达式中被调用
+/// 绑定到JavaScript的md命名空间中，使得这些函数可以在规则表达式中通过
+/// `md.functionName()`的形式被调用
 /// 
 /// # 工作流程
 /// 1. 监听运行时启动事件
-/// 2. 从CustomFunctionRegistry获取所有已注册的函数
-/// 3. 将每个函数包装为异步JavaScript函数
-/// 4. 注册到JavaScript全局变量中
+/// 2. 创建或获取md命名空间对象
+/// 3. 从CustomFunctionRegistry获取所有已注册的函数
+/// 4. 将每个函数包装为异步JavaScript函数
+/// 5. 注册到JavaScript的md命名空间中
 pub struct CustomListener {
     // 目前为空结构体，后续可以添加配置或状态字段
 }
@@ -68,6 +71,17 @@ impl RuntimeListener for CustomListener {
             };
             
             // 设置全局函数及变量
+            // 创建或获取 md 命名空间对象
+            let md_namespace = if ctx.globals().contains_key("md")? {
+                // 如果 md 已存在，获取它
+                ctx.globals().get("md")?
+            } else {
+                // 如果 md 不存在，创建一个新的空对象
+                let md_obj = rquickjs::Object::new(ctx.clone())?;
+                ctx.globals().set("md", md_obj.clone())?;
+                md_obj
+            };
+            
             // 从自定义函数注册表中获取所有函数名称
             let functions_keys = CustomFunctionRegistry::list_functions();
            
@@ -77,10 +91,10 @@ impl RuntimeListener for CustomListener {
                 let function_definition = CustomFunctionRegistry::get_definition(&function_key);
                 
                 if let Some(function_definition) = function_definition {
-                    // 将Rust函数包装为JavaScript异步函数并注册到全局作用域
-                    ctx.globals()
+                    // 将Rust函数包装为JavaScript异步函数并注册到md命名空间下
+                    md_namespace
                         .set(
-                            function_key, // 函数名作为全局变量名
+                            function_key, // 函数名作为md对象的属性名
                             Func::from(Async(
                                 move |ctx: Ctx<'js>, context: JsValue| {
                                     // 克隆函数定义以避免生命周期问题
