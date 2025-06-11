@@ -34,11 +34,11 @@ async fn engine_memory_loader() {
 
     assert_eq!(table.unwrap().result, json!({"output": 10}).into());
     assert_eq!(function.unwrap().result, json!({"output": 24}).into());
-    assert_eq!(not_found.unwrap_err().to_string(), "Loader error");
+    assert_eq!(not_found.unwrap_err().to_string(), "加载器错误");
 }
 
 #[tokio::test]
-#[cfg_attr(miri, ignore)]
+
 async fn engine_filesystem_loader() {
     let engine = DecisionEngine::default().with_loader(create_fs_loader().into());
     let table = engine
@@ -51,7 +51,7 @@ async fn engine_filesystem_loader() {
 
     assert_eq!(table.unwrap().result, json!({"output": 10}).into());
     assert_eq!(function.unwrap().result, json!({"output": 24}).into());
-    assert_eq!(not_found.unwrap_err().to_string(), "Loader error");
+    assert_eq!(not_found.unwrap_err().to_string(), "加载器错误");
 }
 
 #[tokio::test]
