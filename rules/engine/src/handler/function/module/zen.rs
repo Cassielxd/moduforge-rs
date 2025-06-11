@@ -13,7 +13,7 @@ use rquickjs::module::{Declarations, Exports, ModuleDef};
 use rquickjs::prelude::{Async, Func, Opt};
 use rquickjs::{CatchResultExt, Ctx, Function, Object};
 
-pub(crate) struct ZenListener<Loader, Adapter> {
+pub struct ZenListener<Loader, Adapter> {
     pub loader: Arc<Loader>,
     pub adapter: Arc<Adapter>,
 }

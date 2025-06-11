@@ -10,9 +10,9 @@ use rquickjs::{embed, Ctx, Error, Module, Object};
 use crate::handler::function::module::http::HttpModule;
 use crate::handler::function::module::zen::ZenModule;
 
-pub(crate) mod console;
-pub(crate) mod http;
-pub(crate) mod zen;
+pub  mod console;
+pub mod http;
+pub mod zen;
 pub mod custom;
 
 static JS_BUNDLE: Bundle = embed! {

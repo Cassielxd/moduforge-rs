@@ -55,7 +55,7 @@ pub struct MethodRegistry {
 }
 
 impl MethodRegistry {
-    /// 线程本地存储的方法注册表实例
+    // 线程本地存储的方法注册表实例
     thread_local!(
         static INSTANCE: RefCell<MethodRegistry> = RefCell::new(MethodRegistry::new_internal())
     );

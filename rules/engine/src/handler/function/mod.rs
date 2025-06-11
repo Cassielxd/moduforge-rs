@@ -13,11 +13,11 @@ use crate::handler::function::serde::JsValue;
 use crate::handler::node::{NodeRequest, NodeResponse, NodeResult, PartialTraceError};
 use crate::model::{DecisionNodeKind, FunctionNodeContent};
 
-pub(crate) mod error;
-pub(crate) mod function;
-pub(crate) mod listener;
-pub(crate) mod module;
-pub(crate) mod serde;
+pub mod error;
+pub mod function;
+pub mod listener;
+pub mod module;
+pub mod serde;
 
 #[derive(Serialize, Deserialize)]
 pub struct FunctionResponse {

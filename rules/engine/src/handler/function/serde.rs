@@ -8,7 +8,7 @@ use std::rc::Rc;
 use moduforge_rules_expression::variable::Variable;
 
 #[derive(Debug)]
-pub(crate) struct JsValue(pub  Variable);
+pub  struct JsValue(pub  Variable);
 
 impl<'js> FromJs<'js> for JsValue {
     fn from_js(ctx: &Ctx<'js>, v: QValue<'js>) -> rquickjs::Result<Self> {

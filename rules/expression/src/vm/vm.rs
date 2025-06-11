@@ -248,13 +248,13 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                     }
                 },
                 
-                /// 获取根环境
+                // 获取根环境
                 Opcode::FetchRootEnv => {
                     self.push(env.clone());
                 }
                 
                 // 一元运算操作
-                /// 数字取负
+                // 数字取负
                 Opcode::Negate => {
                     let a = self.pop()?;
                     match a {
@@ -270,7 +270,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                     }
                 }
                 
-                /// 逻辑非
+                // 逻辑非
                 Opcode::Not => {
                     let a = self.pop()?;
                     match a {
@@ -285,7 +285,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                 }
                 
                 // 比较运算操作
-                /// 相等比较
+                // 相等比较
                 Opcode::Equal => {
                     let b = self.pop()?;
                     let a = self.pop()?;
@@ -321,13 +321,13 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                 }
                 
                 // 控制流操作
-                /// 跳转指令：根据不同条件执行跳转
+                // 跳转指令：根据不同条件执行跳转
                 Opcode::Jump(kind, j) => match kind {
-                    /// 无条件向前跳转
+                    // 无条件向前跳转
                     Jump::Forward => self.ip += j,
-                    /// 无条件向后跳转
+                    // 无条件向后跳转
                     Jump::Backward => self.ip -= j,
-                    /// 条件跳转：栈顶值为true时跳转
+                    // 条件跳转：栈顶值为true时跳转
                     Jump::IfTrue => {
                         let a = self.stack.last().ok_or_else(|| OpcodeErr {
                             opcode: "JumpIfTrue".into(),
@@ -347,7 +347,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                             }
                         }
                     }
-                    /// 条件跳转：栈顶值为false时跳转
+                    // 条件跳转：栈顶值为false时跳转
                     Jump::IfFalse => {
                         let a = self.stack.last().ok_or_else(|| OpcodeErr {
                             opcode: "JumpIfFalse".into(),
@@ -368,7 +368,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                             }
                         }
                     }
-                    /// 条件跳转：栈顶值不为null时跳转
+                    // 条件跳转：栈顶值不为null时跳转
                     Jump::IfNotNull => {
                         let a = self.stack.last().ok_or_else(|| OpcodeErr {
                             opcode: "JumpIfNull".into(),
@@ -382,7 +382,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                             }
                         }
                     }
-                    /// 条件跳转：迭代结束时跳转
+                    // 条件跳转：迭代结束时跳转
                     Jump::IfEnd => {
                         let scope = self.scopes.last().ok_or_else(|| OpcodeErr {
                             opcode: "JumpIfEnd".into(),
@@ -396,7 +396,7 @@ impl<'arena, 'parent_ref, 'bytecode_ref> VMInner<'parent_ref, 'bytecode_ref> {
                 },
                 
                 // 成员关系操作
-                /// 包含检查：检查元素是否在集合或区间中
+                // 包含检查：检查元素是否在集合或区间中
                 Opcode::In => {
                     let b = self.pop()?; // 容器（数组或区间）
                     let a = self.pop()?; // 要检查的元素

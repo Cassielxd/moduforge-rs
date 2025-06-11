@@ -9,7 +9,7 @@ use rquickjs::prelude::Rest;
 use rquickjs::{Ctx, Object, Value};
 use serde::{Deserialize, Serialize};
 
-pub(crate) struct ConsoleListener;
+pub struct ConsoleListener;
 
 impl RuntimeListener for ConsoleListener {
     fn on_event<'js>(

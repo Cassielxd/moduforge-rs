@@ -122,15 +122,15 @@
 #![deny(clippy::unwrap_used)]
 #![allow(clippy::module_inception)]
 
-mod config;
-mod decision;
-mod engine;
-mod error;
+pub mod config;
+pub mod decision;
+pub mod engine;
+pub mod error;
 pub mod handler;
 pub mod loader;
 #[path = "model/mod.rs"]
 pub mod model;
-mod util;
+pub mod util;
 
 pub use config::ZEN_CONFIG;
 pub use decision::Decision;

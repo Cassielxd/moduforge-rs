@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use moduforge_rules_expression::variable::Variable;
 
 pub struct FunctionConfig {
-    pub(crate) listeners: Option<Vec<Box<dyn RuntimeListener>>>,
+    pub listeners: Option<Vec<Box<dyn RuntimeListener>>>,
 }
 
 pub struct Function {
@@ -94,7 +94,7 @@ impl Function {
         Ok(())
     }
 
-    pub(crate) async fn call_handler(
+    pub async fn call_handler(
         &self,
         name: &str,
         data: JsValue,
@@ -118,7 +118,7 @@ impl Function {
         Ok(k?)
     }
 
-    pub(crate) async fn extract_logs(&self) -> Vec<Log> {
+    pub async fn extract_logs(&self) -> Vec<Log> {
         let logs: Option<Vec<Log>> = async_with!(&self.ctx => |ctx| {
             let console = Console::from_context(&ctx).ok()?;
             Some(console.logs.into_inner())
