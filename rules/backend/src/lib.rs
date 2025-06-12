@@ -24,9 +24,14 @@ use std::path::PathBuf;
 use zip::ZipArchive;
 
 const IS_DEVELOPMENT: bool = cfg!(debug_assertions);
-const STATIC_RESOURCES_URL: &str = "https://your-cdn.com/static.zip"; // 替换为实际的静态资源URL
+const STATIC_RESOURCES_URL: &str = "https://pricing-dev.oss-cn-hangzhou.aliyuncs.com/static/static.zip"; // 替换为实际的静态资源URL
 
 pub async fn start_dev_server() {
+    // 确保静态资源存在
+    if let Err(e) = ensure_static_resources().await {
+        tracing::error!("确保静态资源失败: {}", e);
+    }
+
     let local_pool = LocalPoolHandle::new(available_parallelism().map(Into::into).unwrap_or(1));
 
     tracing_subscriber::registry()
@@ -66,30 +71,25 @@ pub async fn start_dev_server() {
     axum::serve(listener, app_with_layers).await.unwrap();
 }
 
-fn ensure_static_dir() -> std::io::Result<()> {
-    let work_dir = env::current_dir()?;
-    let static_path = work_dir.join("static");
-    
-    if !static_path.exists() {
-        fs::create_dir_all(&static_path)?;
-        tracing::info!("Created static directory at: {:?}", static_path);
-    }
-    
-    Ok(())
-}
-
 async fn download_static_resources() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let work_dir = env::current_dir()?;
     let zip_path = work_dir.join("static.zip");
     
     // 下载文件
-    tracing::info!("Downloading static resources from {}", STATIC_RESOURCES_URL);
+    tracing::info!("开始下载静态资源: {}", STATIC_RESOURCES_URL);
     let response = reqwest::get(STATIC_RESOURCES_URL).await?;
+    
+    if !response.status().is_success() {
+        return Err(format!("下载失败，HTTP状态码: {}", response.status()).into());
+    }
+    
     let bytes = response.bytes().await?;
+    tracing::info!("下载完成，文件大小: {} 字节", bytes.len());
     
     // 保存zip文件
     let mut file = File::create(&zip_path)?;
     file.write_all(&bytes)?;
+    tracing::info!("ZIP文件已保存到: {:?}", zip_path);
     
     Ok(zip_path)
 }
@@ -101,32 +101,51 @@ fn extract_static_resources(zip_path: &PathBuf) -> Result<(), Box<dyn std::error
     // 确保static目录存在
     if !static_path.exists() {
         fs::create_dir_all(&static_path)?;
+        tracing::info!("创建静态资源目录: {:?}", static_path);
     }
     
     // 解压文件
-    tracing::info!("Extracting static resources to {:?}", static_path);
+    tracing::info!("开始解压文件: {:?}", zip_path);
     let file = File::open(zip_path)?;
     let mut archive = ZipArchive::new(file)?;
     
+    tracing::info!("ZIP文件包含 {} 个文件", archive.len());
+    
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
-        let outpath = static_path.join(file.name());
+        let file_name = file.name();
         
-        if file.name().ends_with('/') {
+        // 如果文件名以 "static/" 开头，去掉这个前缀
+        let relative_path = if file_name.starts_with("static/") {
+            &file_name[7..] // 去掉 "static/" 前缀
+        } else {
+            file_name
+        };
+        
+        let outpath = static_path.join(relative_path);
+        tracing::info!("正在解压: {} -> {:?}", file_name, outpath);
+        
+        if file_name.ends_with('/') {
             fs::create_dir_all(&outpath)?;
+            tracing::info!("创建目录: {:?}", outpath);
         } else {
             if let Some(parent) = outpath.parent() {
                 if !parent.exists() {
                     fs::create_dir_all(parent)?;
+                    tracing::info!("创建父目录: {:?}", parent);
                 }
             }
             let mut outfile = File::create(&outpath)?;
             io::copy(&mut file, &mut outfile)?;
+            tracing::info!("解压文件完成: {:?}", outpath);
         }
     }
     
     // 清理zip文件
+    tracing::info!("清理临时ZIP文件: {:?}", zip_path);
     fs::remove_file(zip_path)?;
+    
+    tracing::info!("所有文件解压完成");
     Ok(())
 }
 
@@ -135,32 +154,24 @@ async fn ensure_static_resources() -> Result<(), Box<dyn std::error::Error>> {
     let static_path = work_dir.join("static");
     
     if !static_path.exists() {
-        tracing::info!("Static resources not found, downloading...");
+        tracing::info!("静态资源不存在，开始下载...");
         let zip_path = download_static_resources().await?;
         extract_static_resources(&zip_path)?;
-        tracing::info!("Static resources downloaded and extracted successfully");
+        tracing::info!("静态资源下载并解压成功");
     } else {
-        tracing::info!("Static resources already exist at {:?}", static_path);
+        tracing::info!("静态资源已存在: {:?}", static_path);
     }
     
     Ok(())
 }
 
 fn serve_dir_service() -> ServeDir<SetStatus<ServeFile>> {
-    // 确保静态资源存在
-    if let Err(e) = tokio::runtime::Runtime::new()
-        .unwrap()
-        .block_on(ensure_static_resources())
-    {
-        tracing::error!("Failed to ensure static resources: {}", e);
-    }
-    
     let work_dir = env::current_dir().ok().map_or("static".to_string(), |dir| {
         dir.to_string_lossy().to_string()
     });
     let static_path = Path::new(&work_dir).join("static");
     let index_path = static_path.join("index.html");
-    tracing::info!("Serving static files from: {:?}", static_path.display());
+    tracing::info!("提供静态文件: {:?}", static_path.display());
     ServeDir::new(static_path).not_found_service(ServeFile::new(index_path))
 }
 
