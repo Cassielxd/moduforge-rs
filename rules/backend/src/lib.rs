@@ -96,13 +96,6 @@ async fn download_static_resources() -> Result<PathBuf, Box<dyn std::error::Erro
 
 fn extract_static_resources(zip_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let work_dir = env::current_dir()?;
-    let static_path = work_dir.join("static");
-    
-    // 确保static目录存在
-    if !static_path.exists() {
-        fs::create_dir_all(&static_path)?;
-        tracing::info!("创建静态资源目录: {:?}", static_path);
-    }
     
     // 解压文件
     tracing::info!("开始解压文件: {:?}", zip_path);
@@ -113,19 +106,11 @@ fn extract_static_resources(zip_path: &PathBuf) -> Result<(), Box<dyn std::error
     
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
-        let file_name = file.name();
+        let outpath = work_dir.join(file.name());
         
-        // 如果文件名以 "static/" 开头，去掉这个前缀
-        let relative_path = if file_name.starts_with("static/") {
-            &file_name[7..] // 去掉 "static/" 前缀
-        } else {
-            file_name
-        };
+        tracing::info!("正在解压: {} -> {:?}", file.name(), outpath);
         
-        let outpath = static_path.join(relative_path);
-        tracing::info!("正在解压: {} -> {:?}", file_name, outpath);
-        
-        if file_name.ends_with('/') {
+        if file.name().ends_with('/') {
             fs::create_dir_all(&outpath)?;
             tracing::info!("创建目录: {:?}", outpath);
         } else {
@@ -153,14 +138,15 @@ async fn ensure_static_resources() -> Result<(), Box<dyn std::error::Error>> {
     let work_dir = env::current_dir()?;
     let static_path = work_dir.join("static");
     
-    if !static_path.exists() {
-        tracing::info!("静态资源不存在，开始下载...");
-        let zip_path = download_static_resources().await?;
-        extract_static_resources(&zip_path)?;
-        tracing::info!("静态资源下载并解压成功");
-    } else {
-        tracing::info!("静态资源已存在: {:?}", static_path);
+    if static_path.exists() {
+        tracing::info!("静态资源目录已存在: {:?}", static_path);
+        return Ok(());
     }
+    
+    tracing::info!("静态资源不存在，开始下载...");
+    let zip_path = download_static_resources().await?;
+    extract_static_resources(&zip_path)?;
+    tracing::info!("静态资源下载并解压成功");
     
     Ok(())
 }
