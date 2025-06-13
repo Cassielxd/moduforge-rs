@@ -99,12 +99,6 @@ impl PermissionMiddleware {
         matches!(role, "Editor" | "Writer")
     }
 
-    fn check_admin_permission(
-        &self,
-        role: &str,
-    ) -> bool {
-        role == "Admin"
-    }
 }
 
 #[async_trait]

@@ -19,7 +19,7 @@ impl PluginTrait for UserPlugin {
     async fn append_transaction(
         &self,
         transactions: &[Transaction],
-        old_state: &State,
+        _old_state: &State,
         new_state: &State,
     ) -> StateResult<Option<Transaction>> {
         // 检查是否有用户相关的事务
@@ -69,7 +69,7 @@ impl PluginTrait for UserPlugin {
 
     async fn filter_transaction(
         &self,
-        transaction: &Transaction,
+        _transaction: &Transaction,
         _state: &State,
     ) -> bool {
         // 用户管理插件不过滤任何事务
@@ -144,7 +144,7 @@ impl PluginTrait for AuthPlugin {
     async fn append_transaction(
         &self,
         transactions: &[Transaction],
-        old_state: &State,
+        _old_state: &State,
         new_state: &State,
     ) -> StateResult<Option<Transaction>> {
         for tr in transactions {
@@ -214,7 +214,7 @@ impl PluginTrait for AuthPlugin {
     async fn filter_transaction(
         &self,
         transaction: &Transaction,
-        state: &State,
+        _state: &State,
     ) -> bool {
         // 检查是否需要权限验证
         if let Some(action) = transaction.get_meta::<String>("action") {
@@ -293,7 +293,7 @@ impl PluginTrait for AuditPlugin {
     async fn append_transaction(
         &self,
         transactions: &[Transaction],
-        old_state: &State,
+        _old_state: &State,
         new_state: &State,
     ) -> StateResult<Option<Transaction>> {
         // 审计插件记录所有重要操作
@@ -462,7 +462,7 @@ impl PluginTrait for CachePlugin {
     async fn append_transaction(
         &self,
         transactions: &[Transaction],
-        old_state: &State,
+        _old_state: &State,
         new_state: &State,
     ) -> StateResult<Option<Transaction>> {
         for tr in transactions {

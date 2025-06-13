@@ -15,6 +15,7 @@ use std::sync::Arc;
 use anyhow::Result;
 
 // 使用已定义的模块
+#[allow(unused_imports)]
 use crate::resources::*;
 use crate::plugins::*;
 use crate::edit_commands::*;
