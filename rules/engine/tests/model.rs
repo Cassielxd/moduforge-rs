@@ -17,7 +17,8 @@ fn jdm_serde() {
             continue;
         };
 
-        let serialized = serde_json::from_str::<DecisionContent>(&file_contents).unwrap();
+        let serialized =
+            serde_json::from_str::<DecisionContent>(&file_contents).unwrap();
         assert!(serde_json::to_string(&serialized).is_ok());
     }
 }

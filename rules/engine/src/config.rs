@@ -8,9 +8,7 @@ pub struct ZenConfig {
 
 impl Default for ZenConfig {
     fn default() -> Self {
-        Self {
-            nodes_in_context: AtomicBool::new(true),
-        }
+        Self { nodes_in_context: AtomicBool::new(true) }
     }
 }
 

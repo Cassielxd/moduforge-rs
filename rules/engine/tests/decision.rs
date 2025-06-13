@@ -3,7 +3,9 @@ use serde_json::json;
 use std::ops::Deref;
 use std::sync::Arc;
 use tokio::runtime::Builder;
-use moduforge_rules_engine::{Decision, DecisionGraphValidationError, EvaluationError};
+use moduforge_rules_engine::{
+    Decision, DecisionGraphValidationError, EvaluationError,
+};
 
 mod support;
 
@@ -31,7 +33,7 @@ async fn decision_from_content_recursive() {
         EvaluationError::NodeError(e) => {
             assert_eq!(e.node_id, "0b8dcf6b-fc04-47cb-bf82-bda764e6c09b");
             assert!(e.source.to_string().contains("Loader failed"));
-        }
+        },
         _ => assert!(false, "Depth limit not exceeded"),
     }
 
@@ -40,7 +42,7 @@ async fn decision_from_content_recursive() {
     match new_result.unwrap_err().deref() {
         EvaluationError::NodeError(e) => {
             assert_eq!(e.source.to_string(), "Depth limit exceeded")
-        }
+        },
         _ => assert!(false, "Depth limit not exceeded"),
     }
 }
@@ -76,12 +78,10 @@ fn decision_expression_node() {
 fn decision_validation() {
     let cyclic_decision = Decision::from(load_test_data("error-cyclic.json"));
     let cyclic_error = cyclic_decision.validate().unwrap_err();
-    assert!(matches!(
-        cyclic_error,
-        DecisionGraphValidationError::CyclicGraph
-    ));
+    assert!(matches!(cyclic_error, DecisionGraphValidationError::CyclicGraph));
 
-    let missing_input_decision = Decision::from(load_test_data("error-missing-input.json"));
+    let missing_input_decision =
+        Decision::from(load_test_data("error-missing-input.json"));
     let missing_input_error = missing_input_decision.validate().unwrap_err();
     assert!(matches!(
         missing_input_error,

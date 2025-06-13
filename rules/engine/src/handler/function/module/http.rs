@@ -17,7 +17,10 @@ pub(crate) struct HttpResponse<'js> {
 }
 
 impl<'js> IntoJs<'js> for HttpResponse<'js> {
-    fn into_js(self, ctx: &Ctx<'js>) -> rquickjs::Result<Value<'js>> {
+    fn into_js(
+        self,
+        ctx: &Ctx<'js>,
+    ) -> rquickjs::Result<Value<'js>> {
         let object = Object::new(ctx.clone())?;
         object.set("data", self.data)?;
         object.set("headers", self.headers)?;
@@ -43,9 +46,8 @@ async fn execute_http<'js>(
     }
 
     if let Some(config) = config {
-        builder = builder
-            .headers(config.headers)
-            .query(config.params.as_slice());
+        builder =
+            builder.headers(config.headers).query(config.params.as_slice());
 
         if let Some(data) = config.data {
             builder = builder.json(&data.0);
@@ -79,9 +81,13 @@ pub(crate) struct HttpConfig {
 }
 
 impl<'js> FromJs<'js> for HttpConfig {
-    fn from_js(ctx: &Ctx<'js>, value: Value<'js>) -> rquickjs::Result<Self> {
+    fn from_js(
+        ctx: &Ctx<'js>,
+        value: Value<'js>,
+    ) -> rquickjs::Result<Self> {
         let object = value.into_object().or_throw(ctx)?;
-        let headers_obj: Option<Object<'js>> = object.get("headers").or_throw(ctx)?;
+        let headers_obj: Option<Object<'js>> =
+            object.get("headers").or_throw(ctx)?;
         let headers = if let Some(headers_obj) = headers_obj {
             let mut header_map = HeaderMap::with_capacity(headers_obj.len());
             for result in headers_obj.into_iter() {
@@ -101,7 +107,8 @@ impl<'js> FromJs<'js> for HttpConfig {
                 };
 
                 let key_value = key.to_string()?;
-                let key = HeaderName::from_str(key_value.as_str()).or_throw(&ctx)?;
+                let key =
+                    HeaderName::from_str(key_value.as_str()).or_throw(&ctx)?;
                 if let Some(str_value) = str_value {
                     header_map.insert(key, str_value.parse().or_throw(&ctx)?);
                 }
@@ -112,7 +119,8 @@ impl<'js> FromJs<'js> for HttpConfig {
             HeaderMap::default()
         };
 
-        let params_obj: Option<Object<'js>> = object.get("params").or_throw(ctx)?;
+        let params_obj: Option<Object<'js>> =
+            object.get("params").or_throw(ctx)?;
         let params = if let Some(params_obj) = params_obj {
             let mut params = Vec::with_capacity(params_obj.len());
             for result in params_obj.into_iter() {
@@ -144,20 +152,12 @@ impl<'js> FromJs<'js> for HttpConfig {
 
         let data_obj: Option<Value<'js>> = object.get("data").ok();
         let data = if let Some(data_obj) = data_obj {
-            Some(
-                JsValue::from_js(&ctx, data_obj)
-                    .catch(&ctx)
-                    .or_throw(&ctx)?,
-            )
+            Some(JsValue::from_js(&ctx, data_obj).catch(&ctx).or_throw(&ctx)?)
         } else {
             None
         };
 
-        Ok(Self {
-            headers,
-            params,
-            data,
-        })
+        Ok(Self { headers, params, data })
     }
 }
 
@@ -228,7 +228,10 @@ impl ModuleDef for HttpModule {
         Ok(())
     }
 
-    fn evaluate<'js>(ctx: &Ctx<'js>, exports: &Exports<'js>) -> rquickjs::Result<()> {
+    fn evaluate<'js>(
+        ctx: &Ctx<'js>,
+        exports: &Exports<'js>,
+    ) -> rquickjs::Result<()> {
         export_default(ctx, exports, |default| {
             default.set("get", Func::from(Async(get)))?;
             default.set("head", Func::from(Async(head)))?;

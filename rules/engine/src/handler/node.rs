@@ -29,7 +29,10 @@ pub struct NodeError {
 }
 
 impl Display for NodeError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut Formatter<'_>,
+    ) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
 }
@@ -41,7 +44,10 @@ pub(crate) struct PartialTraceError {
 }
 
 impl Display for PartialTraceError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut Formatter<'_>,
+    ) -> std::fmt::Result {
         write!(f, "{}", self.message)
     }
 }

@@ -36,7 +36,10 @@ impl Default for VariableType {
 }
 
 impl Display for VariableType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
         match self {
             VariableType::Any => write!(f, "any"),
             VariableType::Null => write!(f, "null"),
@@ -64,7 +67,7 @@ impl Display for VariableType {
                 }
 
                 Ok(())
-            }
+            },
             VariableType::Array(v) => write!(f, "{v}[]"),
             VariableType::Object(_) => write!(f, "object"),
         }
@@ -72,7 +75,10 @@ impl Display for VariableType {
 }
 
 impl Hash for VariableType {
-    fn hash<H: Hasher>(&self, state: &mut H) {
+    fn hash<H: Hasher>(
+        &self,
+        state: &mut H,
+    ) {
         match &self {
             VariableType::Any => 0.hash(state),
             VariableType::Null => 1.hash(state),
@@ -84,16 +90,16 @@ impl Hash for VariableType {
             VariableType::Const(c) => {
                 7.hash(state);
                 c.hash(state)
-            }
+            },
             VariableType::Enum(name, e) => {
                 8.hash(state);
                 name.hash(state);
                 e.hash(state)
-            }
+            },
             VariableType::Array(arr) => {
                 9.hash(state);
                 arr.hash(state)
-            }
+            },
             VariableType::Object(obj) => {
                 10.hash(state);
 
@@ -101,7 +107,7 @@ impl Hash for VariableType {
                 pairs.sort_by_key(|i| i.0);
 
                 Hash::hash(&pairs, state);
-            }
+            },
         }
     }
 }

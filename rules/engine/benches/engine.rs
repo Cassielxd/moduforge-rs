@@ -12,17 +12,17 @@ fn create_graph() -> DecisionEngine<FilesystemLoader, NoopCustomNode> {
     let cargo_root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let loader = FilesystemLoader::new(FilesystemLoaderOptions {
         keep_in_memory: true,
-        root: cargo_root
-            .join("../../")
-            .join("test-data")
-            .to_str()
-            .unwrap(),
+        root: cargo_root.join("../../").join("test-data").to_str().unwrap(),
     });
 
     DecisionEngine::new(Arc::new(loader), Arc::new(NoopCustomNode::default()))
 }
 
-fn bench_decision(b: &mut Bencher, key: &str, context: Variable) {
+fn bench_decision(
+    b: &mut Bencher,
+    key: &str,
+    context: Variable,
+) {
     let rt = Runtime::new().unwrap();
     let graph = create_graph();
 
@@ -32,12 +32,18 @@ fn bench_decision(b: &mut Bencher, key: &str, context: Variable) {
     });
 }
 
-fn bench_loader(b: &mut Bencher, key: &str, context: Variable) {
+fn bench_loader(
+    b: &mut Bencher,
+    key: &str,
+    context: Variable,
+) {
     let rt = Runtime::new().unwrap();
     let graph = create_graph();
 
     b.to_async(&rt).iter(|| async {
-        criterion::black_box(graph.evaluate(key, context.clone()).await.unwrap());
+        criterion::black_box(
+            graph.evaluate(key, context.clone()).await.unwrap(),
+        );
     });
 }
 

@@ -12,7 +12,10 @@ use std::rc::Rc;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-pub struct DecisionHandler<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> {
+pub struct DecisionHandler<
+    L: DecisionLoader + 'static,
+    A: CustomNodeAdapter + 'static,
+> {
     trace: bool,
     loader: Arc<L>,
     adapter: Arc<A>,
@@ -21,7 +24,9 @@ pub struct DecisionHandler<L: DecisionLoader + 'static, A: CustomNodeAdapter + '
     validator_cache: ValidatorCache,
 }
 
-impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionHandler<L, A> {
+impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static>
+    DecisionHandler<L, A>
+{
     pub fn new(
         trace: bool,
         max_depth: u8,
@@ -30,14 +35,7 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionHandle
         js_function: Option<Rc<Function>>,
         validator_cache: ValidatorCache,
     ) -> Self {
-        Self {
-            trace,
-            loader,
-            adapter,
-            max_depth,
-            js_function,
-            validator_cache,
-        }
+        Self { trace, loader, adapter, max_depth, js_function, validator_cache }
     }
 
     pub fn handle<'s, 'arg, 'recursion>(

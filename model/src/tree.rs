@@ -15,11 +15,11 @@ use crate::{
     mark::Mark,
     node::Node,
     ops::{AttrsRef, MarkRef, NodeRef},
-    types::NodeId
+    types::NodeId,
 };
 
 // 全局LRU缓存用于存储NodeId到分片索引的映射
-static SHARD_INDEX_CACHE: Lazy<RwLock<LruCache<String, usize>>> = 
+static SHARD_INDEX_CACHE: Lazy<RwLock<LruCache<String, usize>>> =
     Lazy::new(|| RwLock::new(LruCache::new(NonZeroUsize::new(10000).unwrap())));
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
@@ -31,10 +31,22 @@ pub struct Tree {
     num_shards: usize, // 缓存分片数量，避免重复计算
 }
 impl Debug for Tree {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
         //输出的时候 过滤掉空的 nodes 节点
-        let nodes = self.nodes.iter().filter(|node| !node.is_empty()).collect::<Vec<_>>();
-        f.debug_struct("Tree").field("root_id", &self.root_id).field("nodes", &nodes).field("parent_map", &self.parent_map).field("num_shards", &self.num_shards).finish()
+        let nodes = self
+            .nodes
+            .iter()
+            .filter(|node| !node.is_empty())
+            .collect::<Vec<_>>();
+        f.debug_struct("Tree")
+            .field("root_id", &self.root_id)
+            .field("nodes", &nodes)
+            .field("parent_map", &self.parent_map)
+            .field("num_shards", &self.num_shards)
+            .finish()
     }
 }
 
@@ -51,23 +63,26 @@ impl Tree {
                 return index;
             }
         }
-        
+
         // 缓存未命中，计算哈希值
         let mut hasher = DefaultHasher::new();
         id.hash(&mut hasher);
         let index = (hasher.finish() as usize) % self.num_shards;
-        
+
         // 更新缓存
         {
             let mut cache = SHARD_INDEX_CACHE.write();
             cache.put(id.clone(), index);
         }
-        
+
         index
     }
 
     #[inline]
-    pub fn get_shard_indices(&self, ids: &[&NodeId]) -> Vec<usize> {
+    pub fn get_shard_indices(
+        &self,
+        ids: &[&NodeId],
+    ) -> Vec<usize> {
         ids.iter().map(|id| self.get_shard_index(id)).collect()
     }
 
@@ -79,7 +94,7 @@ impl Tree {
     ) -> Vec<(usize, &'a NodeId)> {
         let mut results = Vec::with_capacity(ids.len());
         let mut cache_misses = Vec::new();
-        
+
         // 批量检查缓存
         {
             let cache = SHARD_INDEX_CACHE.read();
@@ -91,7 +106,7 @@ impl Tree {
                 }
             }
         }
-        
+
         // 批量计算缓存未命中的项
         if !cache_misses.is_empty() {
             let mut cache = SHARD_INDEX_CACHE.write();
@@ -103,7 +118,7 @@ impl Tree {
                 results.push((index, id));
             }
         }
-        
+
         results
     }
 
@@ -234,7 +249,8 @@ impl Tree {
         node: Node,
     ) -> PoolResult<()> {
         let shard_index = self.get_shard_index(&node.id);
-        self.nodes[shard_index] = self.nodes[shard_index].update(node.id.clone(), Arc::new(node));
+        self.nodes[shard_index] =
+            self.nodes[shard_index].update(node.id.clone(), Arc::new(node));
         Ok(())
     }
 
@@ -253,8 +269,6 @@ impl Tree {
         parent_id: &NodeId,
         nodes: Vec<NodeEnum>,
     ) -> PoolResult<()> {
-  
-
         // 检查父节点是否存在
         let parent_shard_index = self.get_shard_index(&parent_id);
         let parent_node = self.nodes[parent_shard_index]
@@ -268,13 +282,14 @@ impl Tree {
         new_parent.content.extend(zenliang);
 
         // 更新当前节点
-        self.nodes[parent_shard_index] =
-            self.nodes[parent_shard_index].update(parent_id.clone(), Arc::new(new_parent));
+        self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
+            .update(parent_id.clone(), Arc::new(new_parent));
 
         // 使用队列进行广度优先遍历，处理所有子节点
         let mut node_queue = Vec::new();
         node_queue.push((nodes, parent_id.clone()));
-        while let Some((current_children, current_parent_id)) = node_queue.pop() {
+        while let Some((current_children, current_parent_id)) = node_queue.pop()
+        {
             for child in current_children {
                 // 处理每个子节点
                 let (mut child_node, grand_children) = child.into_parts();
@@ -423,8 +438,12 @@ impl Tree {
             .get(id)
             .ok_or(error_helpers::node_not_found(id.clone()))?;
         let mut new_node = node.as_ref().clone();
-        new_node.marks =
-            new_node.marks.iter().filter(|&m| m.r#type != mark_name).cloned().collect();
+        new_node.marks = new_node
+            .marks
+            .iter()
+            .filter(|&m| m.r#type != mark_name)
+            .cloned()
+            .collect();
         self.nodes[shard_index] =
             self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
         Ok(())
@@ -435,7 +454,7 @@ impl Tree {
     ) -> Option<im::Vector<Mark>> {
         self.get_node(id).map(|n| n.marks.clone())
     }
-    
+
     pub fn remove_mark(
         &mut self,
         id: &NodeId,
@@ -505,23 +524,25 @@ impl Tree {
         if let Some(pos) = position {
             // 确保position不超过当前content的长度
             let insert_pos = pos.min(new_target_parent.content.len());
-            
+
             if insert_pos == new_target_parent.content.len() {
                 // 在末尾插入
                 new_target_parent.content.push_back(node_id.clone());
             } else {
                 // 在指定位置插入
                 let mut new_content = im::Vector::new();
-                
+
                 // 添加position之前的所有元素
-                for (i, child_id) in new_target_parent.content.iter().enumerate() {
+                for (i, child_id) in
+                    new_target_parent.content.iter().enumerate()
+                {
                     if i == insert_pos {
                         // 在这个位置插入新节点
                         new_content.push_back(node_id.clone());
                     }
                     new_content.push_back(child_id.clone());
                 }
-                
+
                 new_target_parent.content = new_content;
             }
         } else {
@@ -593,9 +614,12 @@ impl Tree {
         // 从父节点的content中移除该节点
         if let Some(parent_id) = self.parent_map.get(node_id).cloned() {
             let parent_shard_index = self.get_shard_index(&parent_id);
-            if let Some(parent_node) = self.nodes[parent_shard_index].get(&parent_id) {
+            if let Some(parent_node) =
+                self.nodes[parent_shard_index].get(&parent_id)
+            {
                 let mut new_parent = parent_node.as_ref().clone();
-                new_parent.content = new_parent.content
+                new_parent.content = new_parent
+                    .content
                     .iter()
                     .filter(|&id| id != node_id)
                     .cloned()
@@ -608,7 +632,7 @@ impl Tree {
         // 删除子树（remove_subtree内部已经处理了节点的删除和parent_map的清理）
         let mut remove_nodes = Vec::new();
         self.remove_subtree(node_id, &mut remove_nodes)?;
-        
+
         // remove_subtree已经删除了所有节点，包括node_id本身，所以这里不需要再次删除
         Ok(())
     }
@@ -698,13 +722,7 @@ mod tests {
     use serde_json::json;
 
     fn create_test_node(id: &str) -> Node {
-        Node::new(
-            id,
-            "test".to_string(),
-            Attrs::default(),
-            vec![],
-            vec![],
-        )
+        Node::new(id, "test".to_string(), Attrs::default(), vec![], vec![])
     }
 
     #[test]
@@ -719,10 +737,10 @@ mod tests {
     fn test_add_node() {
         let root = create_test_node("root");
         let mut tree = Tree::new(root.clone());
-        
+
         let child = create_test_node("child");
         let nodes = vec![child.clone()];
-        
+
         tree.add_node(&root.id, &nodes).unwrap();
         dbg!(&tree);
         assert!(tree.contains_node(&child.id));
@@ -733,10 +751,10 @@ mod tests {
     fn test_remove_node() {
         let root = create_test_node("root");
         let mut tree = Tree::new(root.clone());
-       
+
         let child = create_test_node("child");
         let nodes = vec![child.clone()];
-        
+
         tree.add_node(&root.id, &nodes).unwrap();
         dbg!(&tree);
         tree.remove_node(&root.id, vec![child.id.clone()]).unwrap();
@@ -751,20 +769,20 @@ mod tests {
         let parent1 = create_test_node("parent1");
         let parent2 = create_test_node("parent2");
         let mut tree = Tree::new(parent1.clone());
-        
+
         // 将 parent2 添加为 parent1 的子节点
         tree.add_node(&parent1.id, &vec![parent2.clone()]).unwrap();
-        
+
         // 创建三个子节点
         let child1 = create_test_node("child1");
         let child2 = create_test_node("child2");
         let child3 = create_test_node("child3");
-        
+
         // 将所有子节点添加到 parent1 下
         tree.add_node(&parent1.id, &vec![child1.clone()]).unwrap();
         tree.add_node(&parent1.id, &vec![child2.clone()]).unwrap();
         tree.add_node(&parent1.id, &vec![child3.clone()]).unwrap();
-        
+
         // 验证初始状态
         let parent1_children = tree.children(&parent1.id).unwrap();
         assert_eq!(parent1_children.len(), 4); // parent2 + 3 children
@@ -772,20 +790,20 @@ mod tests {
         assert_eq!(parent1_children[1], child1.id);
         assert_eq!(parent1_children[2], child2.id);
         assert_eq!(parent1_children[3], child3.id);
-        
+
         // 将 child1 移动到 parent2 下
         tree.move_node(&parent1.id, &parent2.id, &child1.id, None).unwrap();
-        
+
         // 验证移动后的状态
         let parent1_children = tree.children(&parent1.id).unwrap();
         let parent2_children = tree.children(&parent2.id).unwrap();
         assert_eq!(parent1_children.len(), 3); // parent2 + 2 children
         assert_eq!(parent2_children.len(), 1); // child1
         assert_eq!(parent2_children[0], child1.id);
-        
+
         // 将 child2 移动到 parent2 下，放在 child1 后面
         tree.move_node(&parent1.id, &parent2.id, &child2.id, Some(1)).unwrap();
-        
+
         // 验证最终状态
         let parent1_children = tree.children(&parent1.id).unwrap();
         let parent2_children = tree.children(&parent2.id).unwrap();
@@ -793,7 +811,7 @@ mod tests {
         assert_eq!(parent2_children.len(), 2); // child1 + child2
         assert_eq!(parent2_children[0], child1.id);
         assert_eq!(parent2_children[1], child2.id);
-        
+
         // 验证父节点关系
         let child1_parent = tree.get_parent_node(&child1.id).unwrap();
         let child2_parent = tree.get_parent_node(&child2.id).unwrap();
@@ -805,12 +823,12 @@ mod tests {
     fn test_update_attr() {
         let root = create_test_node("root");
         let mut tree = Tree::new(root.clone());
-        
+
         let mut attrs = HashMap::new();
         attrs.insert("key".to_string(), json!("value"));
-        
+
         tree.update_attr(&root.id, attrs).unwrap();
-        
+
         let node = tree.get_node(&root.id).unwrap();
         dbg!(&node);
         assert_eq!(node.attrs.get("key").unwrap(), &json!("value"));
@@ -820,11 +838,8 @@ mod tests {
     fn test_add_mark() {
         let root = create_test_node("root");
         let mut tree = Tree::new(root.clone());
-        
-        let mark = Mark {
-            r#type: "test".to_string(),
-            attrs: Attrs::default(),
-        };
+
+        let mark = Mark { r#type: "test".to_string(), attrs: Attrs::default() };
         tree.add_mark(&root.id, &vec![mark.clone()]).unwrap();
         dbg!(&tree);
         let node = tree.get_node(&root.id).unwrap();
@@ -835,11 +850,8 @@ mod tests {
     fn test_remove_mark() {
         let root = create_test_node("root");
         let mut tree = Tree::new(root.clone());
-        
-        let mark = Mark {
-            r#type: "test".to_string(),
-            attrs: Attrs::default(),
-        };
+
+        let mark = Mark { r#type: "test".to_string(), attrs: Attrs::default() };
         tree.add_mark(&root.id, &vec![mark.clone()]).unwrap();
         dbg!(&tree);
         tree.remove_mark(&root.id, mark.clone()).unwrap();
@@ -852,10 +864,10 @@ mod tests {
     fn test_all_children() {
         let root = create_test_node("root");
         let mut tree = Tree::new(root.clone());
-        
+
         let child1 = create_test_node("child1");
         let child2 = create_test_node("child2");
-        
+
         tree.add_node(&root.id, &vec![child1.clone()]).unwrap();
         tree.add_node(&root.id, &vec![child2.clone()]).unwrap();
         dbg!(&tree);
@@ -867,13 +879,13 @@ mod tests {
     fn test_children_count() {
         let root = create_test_node("root");
         let mut tree = Tree::new(root.clone());
-        
+
         let child1 = create_test_node("child1");
         let child2 = create_test_node("child2");
-        
+
         tree.add_node(&root.id, &vec![child1.clone()]).unwrap();
         tree.add_node(&root.id, &vec![child2.clone()]).unwrap();
-        
+
         assert_eq!(tree.children_count(&root.id), 2);
     }
 
@@ -881,17 +893,17 @@ mod tests {
     fn test_remove_node_by_id_updates_parent() {
         let root = create_test_node("root");
         let mut tree = Tree::new(root.clone());
-        
+
         let child = create_test_node("child");
         tree.add_node(&root.id, &vec![child.clone()]).unwrap();
-        
+
         // 验证子节点被添加
         assert_eq!(tree.children_count(&root.id), 1);
         assert!(tree.contains_node(&child.id));
-        
+
         // 删除子节点
         tree.remove_node_by_id(&child.id).unwrap();
-        
+
         // 验证子节点被删除且父节点的content被更新
         assert_eq!(tree.children_count(&root.id), 0);
         assert!(!tree.contains_node(&child.id));
@@ -901,28 +913,28 @@ mod tests {
     fn test_move_node_position_edge_cases() {
         let root = create_test_node("root");
         let mut tree = Tree::new(root.clone());
-        
+
         let container = create_test_node("container");
         tree.add_node(&root.id, &vec![container.clone()]).unwrap();
-        
+
         let child1 = create_test_node("child1");
         let child2 = create_test_node("child2");
         let child3 = create_test_node("child3");
-        
+
         tree.add_node(&root.id, &vec![child1.clone()]).unwrap();
         tree.add_node(&root.id, &vec![child2.clone()]).unwrap();
         tree.add_node(&root.id, &vec![child3.clone()]).unwrap();
-        
+
         // 测试移动到超出范围的位置（应该插入到末尾）
         tree.move_node(&root.id, &container.id, &child1.id, Some(100)).unwrap();
-        
+
         let container_children = tree.children(&container.id).unwrap();
         assert_eq!(container_children.len(), 1);
         assert_eq!(container_children[0], child1.id);
-        
+
         // 测试移动到位置0
         tree.move_node(&root.id, &container.id, &child2.id, Some(0)).unwrap();
-        
+
         let container_children = tree.children(&container.id).unwrap();
         assert_eq!(container_children.len(), 2);
         assert_eq!(container_children[0], child2.id);
@@ -933,7 +945,7 @@ mod tests {
     fn test_cannot_remove_root_node() {
         let root = create_test_node("root");
         let mut tree = Tree::new(root.clone());
-        
+
         // 尝试删除根节点应该失败
         let result = tree.remove_node_by_id(&root.id);
         assert!(result.is_err());
@@ -943,10 +955,10 @@ mod tests {
     fn test_get_parent_node() {
         let root = create_test_node("root");
         let mut tree = Tree::new(root.clone());
-        
+
         let child = create_test_node("child");
         tree.add_node(&root.id, &vec![child.clone()]).unwrap();
-        
+
         let parent = tree.get_parent_node(&child.id).unwrap();
         assert_eq!(parent.id, root.id);
     }

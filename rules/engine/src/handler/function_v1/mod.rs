@@ -18,11 +18,17 @@ pub struct FunctionHandler {
 static MAX_DURATION: Duration = Duration::from_millis(500);
 
 impl FunctionHandler {
-    pub fn new(trace: bool, runtime: Runtime) -> Self {
+    pub fn new(
+        trace: bool,
+        runtime: Runtime,
+    ) -> Self {
         Self { trace, runtime }
     }
 
-    pub async fn handle(&self, request: NodeRequest) -> NodeResult {
+    pub async fn handle(
+        &self,
+        request: NodeRequest,
+    ) -> NodeResult {
         let content = match &request.node.kind {
             DecisionNodeKind::FunctionNode { content } => match content {
                 FunctionNodeContent::Version1(content) => Ok(content),
@@ -32,7 +38,8 @@ impl FunctionHandler {
         }?;
 
         let start = Instant::now();
-        let interrupt_handler = Box::new(move || start.elapsed() > MAX_DURATION);
+        let interrupt_handler =
+            Box::new(move || start.elapsed() > MAX_DURATION);
         self.runtime.set_interrupt_handler(Some(interrupt_handler));
 
         let mut script = Script::new(self.runtime.clone());

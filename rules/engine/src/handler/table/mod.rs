@@ -15,7 +15,11 @@ pub(crate) struct RowOutput {
 type OutputMap = Vec<(String, RowOutputKind)>;
 
 impl RowOutput {
-    pub fn push<K: Into<String>>(&mut self, key: K, value: RowOutputKind) {
+    pub fn push<K: Into<String>>(
+        &mut self,
+        key: K,
+        value: RowOutputKind,
+    ) {
         self.output.push((key.into(), value))
     }
 
@@ -26,7 +30,7 @@ impl RowOutput {
             match kind {
                 RowOutputKind::Variable(variable) => {
                     object.dot_insert(key.as_str(), variable.clone());
-                }
+                },
             }
         }
 

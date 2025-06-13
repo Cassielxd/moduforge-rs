@@ -2,7 +2,9 @@ use bumpalo::Bump;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use moduforge_rules_expression::functions::{DeprecatedFunction, FunctionKind};
-use moduforge_rules_expression::lexer::{Bracket, ComparisonOperator, Lexer, LogicalOperator, Operator};
+use moduforge_rules_expression::lexer::{
+    Bracket, ComparisonOperator, Lexer, LogicalOperator, Operator,
+};
 use moduforge_rules_expression::parser::{Node, Parser};
 
 struct UnaryTest {
@@ -44,12 +46,16 @@ fn unary_test() {
                     operator: Operator::Logical(LogicalOperator::Or),
                     left: &Node::Binary {
                         left: &Node::Identifier("$"),
-                        operator: Operator::Comparison(ComparisonOperator::Equal),
+                        operator: Operator::Comparison(
+                            ComparisonOperator::Equal,
+                        ),
                         right: &Node::String("a"),
                     },
                     right: &Node::Binary {
                         left: &Node::Identifier("$"),
-                        operator: Operator::Comparison(ComparisonOperator::Equal),
+                        operator: Operator::Comparison(
+                            ComparisonOperator::Equal,
+                        ),
                         right: &Node::String("b"),
                     },
                 },
@@ -104,7 +110,11 @@ fn unary_test() {
             result: &Node::Binary {
                 operator: Operator::Comparison(ComparisonOperator::In),
                 left: &Node::Identifier("$"),
-                right: &Node::Array(&[&Node::Number(D1), &Node::Number(D2), &Node::Number(D3)]),
+                right: &Node::Array(&[
+                    &Node::Number(D1),
+                    &Node::Number(D2),
+                    &Node::Number(D3),
+                ]),
             },
         },
         UnaryTest {

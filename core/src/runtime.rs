@@ -65,7 +65,11 @@ impl Editor {
             state: state.clone(),
             extension_manager,
             history_manager: HistoryManager::new(
-                HistoryEntryWithMeta::new(state.clone(), "init".to_string(), serde_json::Value::Null),
+                HistoryEntryWithMeta::new(
+                    state.clone(),
+                    "init".to_string(),
+                    serde_json::Value::Null,
+                ),
                 options.get_history_limit(),
             ),
             options,
@@ -119,7 +123,8 @@ impl Editor {
     ) -> EditorResult<()> {
         debug!("执行前置中间件链");
         for middleware in &self.options.get_middleware_stack().middlewares {
-            let timeout = std::time::Duration::from_millis(DEFAULT_MIDDLEWARE_TIMEOUT_MS);
+            let timeout =
+                std::time::Duration::from_millis(DEFAULT_MIDDLEWARE_TIMEOUT_MS);
             match tokio::time::timeout(
                 timeout,
                 middleware.before_dispatch(transaction),
@@ -154,7 +159,8 @@ impl Editor {
     ) -> EditorResult<()> {
         debug!("执行后置中间件链");
         for middleware in &self.options.get_middleware_stack().middlewares {
-            let timeout = std::time::Duration::from_millis(DEFAULT_MIDDLEWARE_TIMEOUT_MS);
+            let timeout =
+                std::time::Duration::from_millis(DEFAULT_MIDDLEWARE_TIMEOUT_MS);
             let middleware_result = match tokio::time::timeout(
                 timeout,
                 middleware.after_dispatch(state.clone(), transactions),
@@ -176,7 +182,8 @@ impl Editor {
                 },
             };
 
-            if let Some(mut transaction) = middleware_result.additional_transaction
+            if let Some(mut transaction) =
+                middleware_result.additional_transaction
             {
                 transaction.commit();
                 let TransactionResult { state: new_state, transactions: trs } =
@@ -227,7 +234,12 @@ impl Editor {
         &mut self,
         transaction: Transaction,
     ) -> EditorResult<()> {
-        self.dispatch_with_meta(transaction, "".to_string(), serde_json::Value::Null).await
+        self.dispatch_with_meta(
+            transaction,
+            "".to_string(),
+            serde_json::Value::Null,
+        )
+        .await
     }
     /// 更新编辑器状态并记录到历史记录 包含描述和元信息
     pub async fn dispatch_with_meta(
@@ -236,7 +248,6 @@ impl Editor {
         description: String,
         meta: serde_json::Value,
     ) -> EditorResult<()> {
-        
         let old_id = self.get_state().version;
         // 保存当前事务的副本，用于中间件处理
         let mut current_transaction = transaction;
@@ -261,7 +272,8 @@ impl Editor {
 
         // 如果有新的状态，更新编辑器状态并记录到历史记录
         if let Some(state) = state_update {
-            self.update_state_with_meta(state.clone(), description, meta).await?;
+            self.update_state_with_meta(state.clone(), description, meta)
+                .await?;
             self.emit_event(Event::TrApply(
                 old_id,
                 Arc::new(transactions),
@@ -276,7 +288,12 @@ impl Editor {
         &mut self,
         state: Arc<State>,
     ) -> EditorResult<()> {
-        self.update_state_with_meta(state, "".to_string(), serde_json::Value::Null).await
+        self.update_state_with_meta(
+            state,
+            "".to_string(),
+            serde_json::Value::Null,
+        )
+        .await
     }
     /// 更新编辑器状态并记录到历史记录 包含描述和元信息
     pub async fn update_state_with_meta(
@@ -286,7 +303,11 @@ impl Editor {
         meta: serde_json::Value,
     ) -> EditorResult<()> {
         self.state = state.clone();
-        self.history_manager.insert(HistoryEntryWithMeta::new(state, description, meta));
+        self.history_manager.insert(HistoryEntryWithMeta::new(
+            state,
+            description,
+            meta,
+        ));
         Ok(())
     }
 

@@ -432,7 +432,7 @@ where
 
     /// 优雅地关闭处理器
     /// 等待所有正在处理的任务完成后再关闭
-    pub  fn shutdown(&mut self) -> Result<(), ProcessorError> {
+    pub fn shutdown(&mut self) -> Result<(), ProcessorError> {
         if let Some(shutdown_tx) = self.shutdown_tx.take() {
             shutdown_tx.send(()).map_err(|_| {
                 ProcessorError::InternalError(
@@ -458,7 +458,7 @@ where
     fn drop(&mut self) {
         if self.shutdown_tx.is_some() {
             // 创建一个新的运行时来处理异步关闭
-           let _ = self.shutdown();
+            let _ = self.shutdown();
         }
     }
 }

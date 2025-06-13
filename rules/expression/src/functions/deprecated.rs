@@ -1,10 +1,12 @@
 //! 已废弃函数模块
-//! 
+//!
 //! 包含为了向后兼容而保留的已废弃函数。
 //! 这些函数在新版本中已被更好的替代方案取代，不建议在新代码中使用。
 
 use crate::functions::arguments::Arguments;
-use crate::functions::defs::{FunctionDefinition, FunctionSignature, StaticFunction};
+use crate::functions::defs::{
+    FunctionDefinition, FunctionSignature, StaticFunction,
+};
 use crate::vm::helpers::{date_time, date_time_end_of, date_time_start_of, time};
 use crate::Variable as V;
 use anyhow::{anyhow, Context};
@@ -14,9 +16,20 @@ use std::rc::Rc;
 use strum_macros::{Display, EnumIter, EnumString, IntoStaticStr};
 
 /// 已废弃函数枚举
-/// 
+///
 /// 定义了所有已废弃的函数，这些函数保留用于向后兼容
-#[derive(Debug, PartialEq, Eq, Hash, Display, EnumString, EnumIter, IntoStaticStr, Clone, Copy)]
+#[derive(
+    Debug,
+    PartialEq,
+    Eq,
+    Hash,
+    Display,
+    EnumString,
+    EnumIter,
+    IntoStaticStr,
+    Clone,
+    Copy,
+)]
 #[strum(serialize_all = "camelCase")]
 pub enum DeprecatedFunction {
     /// 日期解析函数（已废弃，请使用d()函数）
@@ -51,7 +64,7 @@ pub enum DeprecatedFunction {
 
 impl From<&DeprecatedFunction> for Rc<dyn FunctionDefinition> {
     /// 将已废弃函数枚举转换为函数定义
-    /// 
+    ///
     /// 为每个已废弃函数创建相应的函数定义，保持向后兼容性
     fn from(value: &DeprecatedFunction) -> Self {
         use crate::variable::VariableType as VT;
@@ -157,10 +170,10 @@ mod imp {
     use super::*;
     use crate::vm::helpers::DateUnit;
 
-    fn __internal_convert_datetime(timestamp: &V) -> anyhow::Result<NaiveDateTime> {
-        timestamp
-            .try_into()
-            .context("Failed to convert value to date time")
+    fn __internal_convert_datetime(
+        timestamp: &V
+    ) -> anyhow::Result<NaiveDateTime> {
+        timestamp.try_into().context("Failed to convert value to date time")
     }
 
     pub fn parse_date(args: Arguments) -> anyhow::Result<V> {
@@ -171,7 +184,7 @@ mod imp {
                 let dt = date_time(a.as_ref())?;
                 #[allow(deprecated)]
                 dt.timestamp()
-            }
+            },
             V::Number(a) => a.to_i64().context("Number overflow")?,
             _ => return Err(anyhow!("Unsupported type for date function")),
         };
@@ -262,10 +275,11 @@ mod imp {
         let unit_name = args.str(1)?;
 
         let datetime = __internal_convert_datetime(&timestamp)?;
-        let unit = DateUnit::try_from(unit_name).context("Invalid date unit")?;
+        let unit =
+            DateUnit::try_from(unit_name).context("Invalid date unit")?;
 
-        let result =
-            date_time_start_of(datetime, unit).context("Failed to calculate start of period")?;
+        let result = date_time_start_of(datetime, unit)
+            .context("Failed to calculate start of period")?;
 
         #[allow(deprecated)]
         Ok(V::Number(result.timestamp().into()))
@@ -276,10 +290,11 @@ mod imp {
         let unit_name = args.str(1)?;
 
         let datetime = __internal_convert_datetime(&timestamp)?;
-        let unit = DateUnit::try_from(unit_name).context("Invalid date unit")?;
+        let unit =
+            DateUnit::try_from(unit_name).context("Invalid date unit")?;
 
-        let result =
-            date_time_end_of(datetime, unit).context("Failed to calculate end of period")?;
+        let result = date_time_end_of(datetime, unit)
+            .context("Failed to calculate end of period")?;
 
         #[allow(deprecated)]
         Ok(V::Number(result.timestamp().into()))

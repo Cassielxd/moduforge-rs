@@ -4,7 +4,9 @@ use std::sync::Arc;
 use crate::decision::Decision;
 use crate::handler::custom_node_adapter::{CustomNodeAdapter, NoopCustomNode};
 use crate::handler::graph::DecisionGraphResponse;
-use crate::loader::{ClosureLoader, DecisionLoader, LoaderResponse, LoaderResult, NoopLoader};
+use crate::loader::{
+    ClosureLoader, DecisionLoader, LoaderResponse, LoaderResult, NoopLoader,
+};
 use crate::model::DecisionContent;
 use crate::EvaluationError;
 use moduforge_rules_expression::variable::Variable;
@@ -36,32 +38,40 @@ impl Default for DecisionEngine<NoopLoader, NoopCustomNode> {
     }
 }
 
-impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionEngine<L, A> {
-    pub fn new(loader: Arc<L>, adapter: Arc<A>) -> Self {
+impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static>
+    DecisionEngine<L, A>
+{
+    pub fn new(
+        loader: Arc<L>,
+        adapter: Arc<A>,
+    ) -> Self {
         Self { loader, adapter }
     }
 
-    pub fn with_adapter<CustomNode>(self, adapter: Arc<CustomNode>) -> DecisionEngine<L, CustomNode>
+    pub fn with_adapter<CustomNode>(
+        self,
+        adapter: Arc<CustomNode>,
+    ) -> DecisionEngine<L, CustomNode>
     where
         CustomNode: CustomNodeAdapter,
     {
-        DecisionEngine {
-            loader: self.loader,
-            adapter,
-        }
+        DecisionEngine { loader: self.loader, adapter }
     }
 
-    pub fn with_loader<Loader>(self, loader: Arc<Loader>) -> DecisionEngine<Loader, A>
+    pub fn with_loader<Loader>(
+        self,
+        loader: Arc<Loader>,
+    ) -> DecisionEngine<Loader, A>
     where
         Loader: DecisionLoader,
     {
-        DecisionEngine {
-            loader,
-            adapter: self.adapter,
-        }
+        DecisionEngine { loader, adapter: self.adapter }
     }
 
-    pub fn with_closure_loader<F, O>(self, loader: F) -> DecisionEngine<ClosureLoader<F>, A>
+    pub fn with_closure_loader<F, O>(
+        self,
+        loader: F,
+    ) -> DecisionEngine<ClosureLoader<F>, A>
     where
         F: Fn(String) -> O + Sync + Send,
         O: Future<Output = LoaderResponse> + Send,
@@ -81,8 +91,7 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionEngine
     where
         K: AsRef<str>,
     {
-        self.evaluate_with_opts(key, context, Default::default())
-            .await
+        self.evaluate_with_opts(key, context, Default::default()).await
     }
     pub async fn evaluate_with_state_and_opts<K>(
         &self,
@@ -96,13 +105,13 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionEngine
     {
         // 设置 thread_local State
         CustomFunctionRegistry::set_current_state(Some(state));
-        
+
         // 执行评估
         let result = self.evaluate_with_opts(key, context, options).await;
-        
+
         // 清理 thread_local State
         CustomFunctionRegistry::set_current_state(None);
-        
+
         result
     }
     /// 使用 State 评估决策 - 通过 thread_local 设置 State
@@ -117,13 +126,13 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionEngine
     {
         // 设置 thread_local State
         CustomFunctionRegistry::set_current_state(Some(state));
-        
+
         // 执行评估
         let result = self.evaluate(key, context).await;
-        
+
         // 清理 thread_local State
         CustomFunctionRegistry::set_current_state(None);
-        
+
         result
     }
 
@@ -143,14 +152,20 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionEngine
     }
 
     /// 从 DecisionContent 创建决策，用于更简单的绑定创建
-    pub fn create_decision(&self, content: Arc<DecisionContent>) -> Decision<L, A> {
+    pub fn create_decision(
+        &self,
+        content: Arc<DecisionContent>,
+    ) -> Decision<L, A> {
         Decision::from(content)
             .with_loader(self.loader.clone())
             .with_adapter(self.adapter.clone())
     }
 
     /// 根据 loader 获取决策
-    pub async fn get_decision(&self, key: &str) -> LoaderResult<Decision<L, A>> {
+    pub async fn get_decision(
+        &self,
+        key: &str,
+    ) -> LoaderResult<Decision<L, A>> {
         let content = self.loader.load(key).await?;
         Ok(self.create_decision(content))
     }

@@ -200,22 +200,20 @@ impl EditorOptionsBuilder {
     }
 }
 
-
 /// 带元信息的历史记录项
 #[derive(Debug, Clone)]
 pub struct HistoryEntryWithMeta {
     /// 状态快照
     pub state: Arc<State>,
-    
+
     /// 操作描述
     pub description: String,
-    
+
     /// 时间戳
     pub timestamp: SystemTime,
-    
+
     pub meta: serde_json::Value,
 }
-
 
 impl HistoryEntryWithMeta {
     pub fn new(
@@ -223,11 +221,6 @@ impl HistoryEntryWithMeta {
         description: String,
         meta: serde_json::Value,
     ) -> Self {
-        Self {
-            state,
-            description,
-            timestamp: SystemTime::now(),
-            meta,
-        }
+        Self { state, description, timestamp: SystemTime::now(), meta }
     }
 }

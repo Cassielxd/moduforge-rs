@@ -11,10 +11,10 @@ use crate::handler::function::module::custom::ModuforgeModule;
 use crate::handler::function::module::http::HttpModule;
 use crate::handler::function::module::zen::ZenModule;
 
-pub  mod console;
+pub mod console;
+pub mod custom;
 pub mod http;
 pub mod zen;
-pub mod custom;
 
 static JS_BUNDLE: Bundle = embed! {
     "dayjs": "js/dayjs.mjs",
@@ -30,26 +30,41 @@ impl ModuleLoader {
         Self(Rc::new(RefCell::new(BaseModuleLoader::new())))
     }
 
-    pub fn add_module(&self, module: String) {
+    pub fn add_module(
+        &self,
+        module: String,
+    ) {
         let reference = self.0.borrow_mut();
         reference.add_module(module);
     }
 
-    pub fn has_module(&self, module: &str) -> bool {
+    pub fn has_module(
+        &self,
+        module: &str,
+    ) -> bool {
         let reference = self.0.borrow();
         reference.has_module(module)
     }
 }
 
 impl Resolver for ModuleLoader {
-    fn resolve<'js>(&mut self, ctx: &Ctx<'js>, base: &str, name: &str) -> rquickjs::Result<String> {
+    fn resolve<'js>(
+        &mut self,
+        ctx: &Ctx<'js>,
+        base: &str,
+        name: &str,
+    ) -> rquickjs::Result<String> {
         let mut inner = self.0.borrow_mut();
         inner.deref_mut().resolve(ctx, base, name)
     }
 }
 
 impl Loader for ModuleLoader {
-    fn load<'js>(&mut self, ctx: &Ctx<'js>, name: &str) -> rquickjs::Result<Module<'js, Declared>> {
+    fn load<'js>(
+        &mut self,
+        ctx: &Ctx<'js>,
+        name: &str,
+    ) -> rquickjs::Result<Module<'js, Declared>> {
         let mut inner = self.0.borrow_mut();
         inner.deref_mut().load(ctx, name)
     }
@@ -63,7 +78,11 @@ struct BaseModuleLoader {
 
 impl BaseModuleLoader {
     pub fn new() -> Self {
-        let mut hs = HashSet::from(["zen".to_string(), "http".to_string(), "moduforge".to_string()]);
+        let mut hs = HashSet::from([
+            "zen".to_string(),
+            "http".to_string(),
+            "moduforge".to_string(),
+        ]);
 
         JS_BUNDLE.iter().for_each(|(key, _)| {
             hs.insert(key.to_string());
@@ -79,19 +98,30 @@ impl BaseModuleLoader {
         }
     }
 
-    pub fn add_module(&self, value: String) {
+    pub fn add_module(
+        &self,
+        value: String,
+    ) {
         let mut modules = self.defined_modules.borrow_mut();
         modules.insert(value);
     }
 
-    pub fn has_module(&self, value: &str) -> bool {
+    pub fn has_module(
+        &self,
+        value: &str,
+    ) -> bool {
         let modules = self.defined_modules.borrow();
         modules.contains(value)
     }
 }
 
 impl Resolver for &mut BaseModuleLoader {
-    fn resolve<'js>(&mut self, ctx: &Ctx<'js>, base: &str, name: &str) -> rquickjs::Result<String> {
+    fn resolve<'js>(
+        &mut self,
+        ctx: &Ctx<'js>,
+        base: &str,
+        name: &str,
+    ) -> rquickjs::Result<String> {
         if let Ok(b) = self.bundle.resolve(ctx, base, name) {
             return Ok(b);
         }
@@ -106,10 +136,12 @@ impl Resolver for &mut BaseModuleLoader {
 }
 
 impl Loader for &mut BaseModuleLoader {
-    fn load<'js>(&mut self, ctx: &Ctx<'js>, name: &str) -> rquickjs::Result<Module<'js, Declared>> {
-        self.bundle
-            .load(ctx, name)
-            .or_else(|_| self.md_loader.load(ctx, name))
+    fn load<'js>(
+        &mut self,
+        ctx: &Ctx<'js>,
+        name: &str,
+    ) -> rquickjs::Result<Module<'js, Declared>> {
+        self.bundle.load(ctx, name).or_else(|_| self.md_loader.load(ctx, name))
     }
 }
 

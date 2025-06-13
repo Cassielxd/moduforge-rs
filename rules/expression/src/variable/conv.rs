@@ -18,9 +18,9 @@ impl From<Value> for Variable {
                     .expect("Allowed number"),
             ),
             Value::String(s) => Variable::String(Rc::from(s.as_str())),
-            Value::Array(arr) => {
-                Variable::from_array(arr.into_iter().map(Variable::from).collect())
-            }
+            Value::Array(arr) => Variable::from_array(
+                arr.into_iter().map(Variable::from).collect(),
+            ),
             Value::Object(obj) => Variable::from_object(
                 obj.into_iter()
                     .map(|(k, v)| (Rc::from(k.as_str()), Variable::from(v)))
@@ -41,7 +41,9 @@ impl From<&Value> for Variable {
                     .expect("Allowed number"),
             ),
             Value::String(s) => Variable::String(Rc::from(s.as_str())),
-            Value::Array(arr) => Variable::from_array(arr.iter().map(Variable::from).collect()),
+            Value::Array(arr) => {
+                Variable::from_array(arr.iter().map(Variable::from).collect())
+            },
             Value::Object(obj) => Variable::from_object(
                 obj.iter()
                     .map(|(k, v)| (Rc::from(k.as_str()), Variable::from(v)))
@@ -56,9 +58,9 @@ impl From<Variable> for Value {
         match value {
             Variable::Null => Value::Null,
             Variable::Bool(b) => Value::Bool(b),
-            Variable::Number(n) => {
-                Value::Number(Number::from_string_unchecked(n.normalize().to_string()))
-            }
+            Variable::Number(n) => Value::Number(
+                Number::from_string_unchecked(n.normalize().to_string()),
+            ),
             Variable::String(s) => Value::String(s.to_string()),
             Variable::Array(arr) => {
                 let vec = Rc::try_unwrap(arr)
@@ -69,7 +71,7 @@ impl From<Variable> for Value {
                     });
 
                 Value::Array(vec.into_iter().map(Value::from).collect())
-            }
+            },
             Variable::Object(obj) => {
                 let hmap = Rc::try_unwrap(obj)
                     .map(|a| a.into_inner())
@@ -83,7 +85,7 @@ impl From<Variable> for Value {
                         .map(|(k, v)| (k.to_string(), Value::from(v)))
                         .collect(),
                 )
-            }
+            },
             Variable::Dynamic(d) => d.to_value(),
         }
     }

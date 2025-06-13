@@ -2,7 +2,8 @@ use crate::lexer::codes::{is_token_type, token_type};
 use crate::lexer::cursor::{Cursor, CursorItem};
 use crate::lexer::error::LexerResult;
 use crate::lexer::token::{
-    Bracket, ComparisonOperator, Identifier, LogicalOperator, Operator, Token, TokenKind,
+    Bracket, ComparisonOperator, Identifier, LogicalOperator, Operator, Token,
+    TokenKind,
 };
 use crate::lexer::{LexerError, QuotationMark, TemplateString};
 use std::str::FromStr;
@@ -11,7 +12,7 @@ use std::str::FromStr;
 /// 负责将字符串转换为令牌序列
 #[derive(Debug, Default)]
 pub struct Lexer<'arena> {
-    tokens: Vec<Token<'arena>>,    // 存储解析出的令牌
+    tokens: Vec<Token<'arena>>, // 存储解析出的令牌
 }
 
 impl<'arena> Lexer<'arena> {
@@ -22,7 +23,10 @@ impl<'arena> Lexer<'arena> {
 
     /// 对输入字符串进行词法分析
     /// 返回解析出的令牌数组的引用
-    pub fn tokenize(&mut self, source: &'arena str) -> LexerResult<&[Token<'arena>]> {
+    pub fn tokenize(
+        &mut self,
+        source: &'arena str,
+    ) -> LexerResult<&[Token<'arena>]> {
         self.tokens.clear();
 
         Scanner::new(source, &mut self.tokens).scan()?;
@@ -33,19 +37,18 @@ impl<'arena> Lexer<'arena> {
 /// 扫描器结构体
 /// 执行实际的词法分析工作
 struct Scanner<'arena, 'self_ref> {
-    cursor: Cursor<'arena>,                 // 字符串游标
+    cursor: Cursor<'arena>,                    // 字符串游标
     tokens: &'self_ref mut Vec<Token<'arena>>, // 令牌向量的可变引用
-    source: &'arena str,                    // 源字符串
+    source: &'arena str,                       // 源字符串
 }
 
 impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
     /// 创建新的扫描器
-    pub fn new(source: &'arena str, tokens: &'self_ref mut Vec<Token<'arena>>) -> Self {
-        Self {
-            cursor: Cursor::from(source),
-            source,
-            tokens,
-        }
+    pub fn new(
+        source: &'arena str,
+        tokens: &'self_ref mut Vec<Token<'arena>>,
+    ) -> Self {
+        Self { cursor: Cursor::from(source), source, tokens }
     }
 
     /// 执行扫描过程
@@ -60,7 +63,10 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
 
     /// 扫描单个字符项
     /// 根据字符类型调用相应的处理方法
-    pub(crate) fn scan_cursor_item(&mut self, cursor_item: CursorItem) -> LexerResult<()> {
+    pub(crate) fn scan_cursor_item(
+        &mut self,
+        cursor_item: CursorItem,
+    ) -> LexerResult<()> {
         let (i, s) = cursor_item;
 
         match s {
@@ -68,18 +74,19 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
             token_type!("space") => {
                 self.cursor.next();
                 Ok(())
-            }
-            '\'' => self.string(QuotationMark::SingleQuote),     // 单引号字符串
-            '"' => self.string(QuotationMark::DoubleQuote),      // 双引号字符串
-            token_type!("digit") => self.number(),               // 数字
-            token_type!("bracket") => self.bracket(),            // 括号
-            token_type!("cmp_operator") => self.cmp_operator(),  // 比较操作符
-            token_type!("operator") => self.operator(),          // 其他操作符
+            },
+            '\'' => self.string(QuotationMark::SingleQuote), // 单引号字符串
+            '"' => self.string(QuotationMark::DoubleQuote),  // 双引号字符串
+            token_type!("digit") => self.number(),           // 数字
+            token_type!("bracket") => self.bracket(),        // 括号
+            token_type!("cmp_operator") => self.cmp_operator(), // 比较操作符
+            token_type!("operator") => self.operator(),      // 其他操作符
             token_type!("question_mark") => self.question_mark(), // 问号
-            '`' => self.template_string(),                       // 模板字符串
-            '.' => self.dot(),                                   // 点操作符
-            token_type!("alpha") => self.identifier(),           // 标识符
-            _ => Err(LexerError::UnmatchedSymbol {               // 未知字符
+            '`' => self.template_string(),                   // 模板字符串
+            '.' => self.dot(),                               // 点操作符
+            token_type!("alpha") => self.identifier(),       // 标识符
+            _ => Err(LexerError::UnmatchedSymbol {
+                // 未知字符
                 symbol: s,
                 position: i as u32,
             }),
@@ -92,15 +99,15 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
         self.cursor.next().ok_or_else(|| {
             let (a, b) = self.cursor.peek_back().unwrap_or((0, ' '));
 
-            LexerError::UnexpectedEof {
-                symbol: b,
-                position: a as u32,
-            }
+            LexerError::UnexpectedEof { symbol: b, position: a as u32 }
         })
     }
 
     /// 添加令牌到令牌向量
-    fn push(&mut self, token: Token<'arena>) {
+    fn push(
+        &mut self,
+        token: Token<'arena>,
+    ) {
         self.tokens.push(token);
     }
 
@@ -116,8 +123,8 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
             value: QuotationMark::Backtick.into(),
         });
 
-        let mut in_expression = false;  // 是否在表达式内部
-        let mut str_start = start + 1;  // 字符串内容开始位置
+        let mut in_expression = false; // 是否在表达式内部
+        let mut str_start = start + 1; // 字符串内容开始位置
         loop {
             let (e, c) = self.next()?;
 
@@ -141,7 +148,7 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
                     });
 
                     break;
-                }
+                },
                 // 在字符串中遇到 $，检查是否是表达式开始
                 ('$', false) => {
                     in_expression = self.cursor.next_if_is("{");
@@ -155,32 +162,36 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
 
                         // 添加表达式开始标记
                         self.tokens.push(Token {
-                            kind: TokenKind::TemplateString(TemplateString::ExpressionStart),
+                            kind: TokenKind::TemplateString(
+                                TemplateString::ExpressionStart,
+                            ),
                             span: (e as u32, (e + 2) as u32),
                             value: TemplateString::ExpressionStart.into(),
                         });
                     }
-                }
+                },
                 // 在表达式中遇到 }，表达式结束
                 ('}', true) => {
                     in_expression = false;
                     self.tokens.push(Token {
-                        kind: TokenKind::TemplateString(TemplateString::ExpressionEnd),
+                        kind: TokenKind::TemplateString(
+                            TemplateString::ExpressionEnd,
+                        ),
                         span: (str_start as u32, e as u32),
                         value: TemplateString::ExpressionEnd.into(),
                     });
 
                     str_start = e + 1;
-                }
+                },
                 // 在字符串中继续读取
                 (_, false) => {
                     // Continue reading string
-                }
+                },
                 // 在表达式中，递归解析字符
                 (_, true) => {
                     self.cursor.back();
                     self.scan_cursor_item((e, c))?;
-                }
+                },
             }
         }
 
@@ -188,7 +199,10 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
     }
 
     /// 处理普通字符串（单引号或双引号包围）
-    fn string(&mut self, quote_kind: QuotationMark) -> LexerResult<()> {
+    fn string(
+        &mut self,
+        quote_kind: QuotationMark,
+    ) -> LexerResult<()> {
         let (start, opener) = self.next()?;
         let end: usize;
 
@@ -230,7 +244,7 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
     fn number(&mut self) -> LexerResult<()> {
         let (start, _) = self.next()?;
         let mut end = start;
-        let mut fractal = false;  // 是否已有小数点
+        let mut fractal = false; // 是否已有小数点
 
         // 读取数字字符、下划线和小数点
         while let Some((e, c)) = self
@@ -263,13 +277,17 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
             end = e_pos;
 
             // 处理可选的正负号
-            if let Some((sign_pos, _)) = self.cursor.next_if(|c| c == '+' || c == '-') {
+            if let Some((sign_pos, _)) =
+                self.cursor.next_if(|c| c == '+' || c == '-')
+            {
                 end = sign_pos;
             }
 
             // 读取指数部分的数字
             let mut has_exponent_digits = false;
-            while let Some((exp_pos, _)) = self.cursor.next_if(|c| is_token_type!(c, "digit")) {
+            while let Some((exp_pos, _)) =
+                self.cursor.next_if(|c| is_token_type!(c, "digit"))
+            {
                 end = exp_pos;
                 has_exponent_digits = true;
             }
@@ -301,12 +319,12 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
         let value = &self.source[start..=start];
         let span = (start as u32, (start + 1) as u32);
         self.push(Token {
-            kind: TokenKind::Bracket(Bracket::from_str(value).map_err(|_| {
-                LexerError::UnexpectedSymbol {
+            kind: TokenKind::Bracket(Bracket::from_str(value).map_err(
+                |_| LexerError::UnexpectedSymbol {
                     symbol: value.to_string(),
                     span,
-                }
-            })?),
+                },
+            )?),
             span,
             value,
         });
@@ -328,12 +346,12 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
         let value = &self.source[start..=end];
         let span = (start as u32, (end + 1) as u32);
         self.push(Token {
-            kind: TokenKind::Operator(Operator::from_str(value).map_err(|_| {
-                LexerError::UnexpectedSymbol {
+            kind: TokenKind::Operator(Operator::from_str(value).map_err(
+                |_| LexerError::UnexpectedSymbol {
                     symbol: value.to_string(),
                     span,
-                }
-            })?),
+                },
+            )?),
             span,
             value,
         });
@@ -354,12 +372,12 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
 
         let value = &self.source[start..=end];
         self.push(Token {
-            kind: TokenKind::Operator(Operator::from_str(value).map_err(|_| {
-                LexerError::UnexpectedSymbol {
+            kind: TokenKind::Operator(Operator::from_str(value).map_err(
+                |_| LexerError::UnexpectedSymbol {
                     symbol: value.to_string(),
                     span: (start as u32, (end + 1) as u32),
-                }
-            })?),
+                },
+            )?),
             span: (start as u32, (end + 1) as u32),
             value,
         });
@@ -376,7 +394,9 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
 
         // 检查是否是空值合并操作符 ??
         if self.cursor.next_if(|c| c == '?').is_some() {
-            kind = TokenKind::Operator(Operator::Logical(LogicalOperator::NullishCoalescing));
+            kind = TokenKind::Operator(Operator::Logical(
+                LogicalOperator::NullishCoalescing,
+            ));
             end += 1;
         }
 
@@ -398,12 +418,12 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
         let value = &self.source[start..=start];
         let span = (start as u32, (start + 1) as u32);
         self.push(Token {
-            kind: TokenKind::Operator(Operator::from_str(value).map_err(|_| {
-                LexerError::UnexpectedSymbol {
+            kind: TokenKind::Operator(Operator::from_str(value).map_err(
+                |_| LexerError::UnexpectedSymbol {
                     symbol: value.to_string(),
                     span,
-                }
-            })?),
+                },
+            )?),
             span,
             value,
         });
@@ -413,13 +433,18 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
 
     /// 处理 not 关键字
     /// 支持 not 和 not in 两种形式
-    fn not(&mut self, start: usize) -> LexerResult<()> {
+    fn not(
+        &mut self,
+        start: usize,
+    ) -> LexerResult<()> {
         if self.cursor.next_if_is(" in ") {
             // not in 操作符
             let end = self.cursor.position();
 
             self.push(Token {
-                kind: TokenKind::Operator(Operator::Comparison(ComparisonOperator::NotIn)),
+                kind: TokenKind::Operator(Operator::Comparison(
+                    ComparisonOperator::NotIn,
+                )),
                 span: (start as u32, (end - 1) as u32),
                 value: "not in",
             })
@@ -428,7 +453,9 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
             let end = self.cursor.position();
 
             self.push(Token {
-                kind: TokenKind::Operator(Operator::Logical(LogicalOperator::Not)),
+                kind: TokenKind::Operator(Operator::Logical(
+                    LogicalOperator::Not,
+                )),
                 span: (start as u32, end as u32),
                 value: "not",
             })
@@ -444,7 +471,9 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
         let mut end = start;
 
         // 读取完整的标识符（字母、数字、下划线等）
-        while let Some((e, _)) = self.cursor.next_if(|c| is_token_type!(c, "alphanumeric")) {
+        while let Some((e, _)) =
+            self.cursor.next_if(|c| is_token_type!(c, "alphanumeric"))
+        {
             end = e;
         }
 
@@ -452,18 +481,24 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
         match value {
             // 逻辑操作符
             "and" => self.push(Token {
-                kind: TokenKind::Operator(Operator::Logical(LogicalOperator::And)),
+                kind: TokenKind::Operator(Operator::Logical(
+                    LogicalOperator::And,
+                )),
                 span: (start as u32, (end + 1) as u32),
                 value,
             }),
             "or" => self.push(Token {
-                kind: TokenKind::Operator(Operator::Logical(LogicalOperator::Or)),
+                kind: TokenKind::Operator(Operator::Logical(
+                    LogicalOperator::Or,
+                )),
                 span: (start as u32, (end + 1) as u32),
                 value,
             }),
             // 比较操作符
             "in" => self.push(Token {
-                kind: TokenKind::Operator(Operator::Comparison(ComparisonOperator::In)),
+                kind: TokenKind::Operator(Operator::Comparison(
+                    ComparisonOperator::In,
+                )),
                 span: (start as u32, (end + 1) as u32),
                 value,
             }),

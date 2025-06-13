@@ -1,6 +1,8 @@
 use crate::engine::EvaluationOptions;
 use crate::handler::custom_node_adapter::{CustomNodeAdapter, NoopCustomNode};
-use crate::handler::graph::{DecisionGraph, DecisionGraphConfig, DecisionGraphResponse};
+use crate::handler::graph::{
+    DecisionGraph, DecisionGraphConfig, DecisionGraphResponse,
+};
 use crate::loader::{CachedLoader, DecisionLoader, NoopLoader};
 use crate::model::DecisionContent;
 use crate::util::validator_cache::ValidatorCache;
@@ -52,7 +54,10 @@ where
     L: DecisionLoader + 'static,
     A: CustomNodeAdapter + 'static,
 {
-    pub fn with_loader<Loader>(self, loader: Arc<Loader>) -> Decision<Loader, A>
+    pub fn with_loader<Loader>(
+        self,
+        loader: Arc<Loader>,
+    ) -> Decision<Loader, A>
     where
         Loader: DecisionLoader,
     {
@@ -64,7 +69,10 @@ where
         }
     }
 
-    pub fn with_adapter<Adapter>(self, adapter: Arc<Adapter>) -> Decision<L, Adapter>
+    pub fn with_adapter<Adapter>(
+        self,
+        adapter: Arc<Adapter>,
+    ) -> Decision<L, Adapter>
     where
         Adapter: CustomNodeAdapter,
     {
@@ -92,13 +100,13 @@ where
     ) -> Result<DecisionGraphResponse, Box<EvaluationError>> {
         // 设置 thread_local State
         CustomFunctionRegistry::set_current_state(Some(state));
-        
+
         // 执行评估
         let result = self.evaluate(context).await;
-        
+
         // 清理 thread_local State
         CustomFunctionRegistry::set_current_state(None);
-        
+
         result
     }
 

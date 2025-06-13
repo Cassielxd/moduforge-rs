@@ -27,7 +27,10 @@ pub enum EvaluationError {
 }
 
 impl Serialize for EvaluationError {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<S>(
+        &self,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -35,7 +38,7 @@ impl Serialize for EvaluationError {
         match self {
             EvaluationError::DepthLimitExceeded => {
                 map.serialize_entry("type", "DepthLimitExceeded")?;
-            }
+            },
             EvaluationError::NodeError(err) => {
                 map.serialize_entry("type", "NodeError")?;
                 map.serialize_entry("nodeId", &err.node_id)?;
@@ -44,27 +47,27 @@ impl Serialize for EvaluationError {
                 if let Some(trace) = &err.trace {
                     map.serialize_entry("trace", &trace)?;
                 }
-            }
+            },
             EvaluationError::LoaderError(err) => {
                 map.serialize_entry("type", "LoaderError")?;
                 match err.as_ref() {
                     LoaderError::Internal { key, source } => {
                         map.serialize_entry("key", key)?;
                         map.serialize_entry("source", &source.to_string())?;
-                    }
+                    },
                     LoaderError::NotFound(key) => {
                         map.serialize_entry("key", key)?;
-                    }
+                    },
                 }
-            }
+            },
             EvaluationError::InvalidGraph(err) => {
                 map.serialize_entry("type", "InvalidGraph")?;
                 map.serialize_entry("source", err)?;
-            }
+            },
             EvaluationError::Validation(err) => {
                 map.serialize_entry("type", "Validation")?;
                 map.serialize_entry("source", err)?;
-            }
+            },
         }
 
         map.end()
@@ -119,7 +122,8 @@ impl<'a> From<ValidationError<'a>> for ValidationErrorJson {
 
 impl<'a> From<ErrorIterator<'a>> for Box<EvaluationError> {
     fn from(error_iter: ErrorIterator<'a>) -> Self {
-        let errors: Vec<ValidationErrorJson> = error_iter.into_iter().map(From::from).collect();
+        let errors: Vec<ValidationErrorJson> =
+            error_iter.into_iter().map(From::from).collect();
 
         let mut json_map = Map::new();
         json_map.insert(
@@ -127,9 +131,7 @@ impl<'a> From<ErrorIterator<'a>> for Box<EvaluationError> {
             serde_json::to_value(errors).unwrap_or_default(),
         );
 
-        Box::new(EvaluationError::Validation(Box::new(Value::Object(
-            json_map,
-        ))))
+        Box::new(EvaluationError::Validation(Box::new(Value::Object(json_map))))
     }
 }
 

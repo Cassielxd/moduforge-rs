@@ -1,5 +1,5 @@
 //! 内置函数模块
-//! 
+//!
 //! 提供表达式系统中的所有内置函数，包括通用、字符串、数学、类型和映射相关函数
 
 use crate::functions::defs::{
@@ -9,9 +9,20 @@ use std::rc::Rc;
 use strum_macros::{Display, EnumIter, EnumString, IntoStaticStr};
 
 /// 内置函数枚举
-/// 
+///
 /// 定义了表达式系统中所有可用的内置函数
-#[derive(Debug, PartialEq, Eq, Hash, Display, EnumString, EnumIter, IntoStaticStr, Clone, Copy)]
+#[derive(
+    Debug,
+    PartialEq,
+    Eq,
+    Hash,
+    Display,
+    EnumString,
+    EnumIter,
+    IntoStaticStr,
+    Clone,
+    Copy,
+)]
 #[strum(serialize_all = "camelCase")]
 pub enum InternalFunction {
     // 通用函数
@@ -93,7 +104,7 @@ pub enum InternalFunction {
 
 impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
     /// 将内置函数枚举转换为函数定义
-    /// 
+    ///
     /// 为每个内置函数创建相应的函数定义，包括函数签名和实现
     fn from(value: &InternalFunction) -> Self {
         use crate::variable::VariableType as VT;
@@ -127,7 +138,10 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
             // 扁平化函数：将嵌套数组展平
             IF::Flatten => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::flatten),
-                signature: FunctionSignature::single(VT::Any.array(), VT::Any.array()),
+                signature: FunctionSignature::single(
+                    VT::Any.array(),
+                    VT::Any.array(),
+                ),
             }),
 
             // 字符串转大写
@@ -265,13 +279,19 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
             // 求和
             IF::Sum => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::sum),
-                signature: FunctionSignature::single(VT::Number.array(), VT::Number),
+                signature: FunctionSignature::single(
+                    VT::Number.array(),
+                    VT::Number,
+                ),
             }),
 
             // 平均值
             IF::Avg => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::avg),
-                signature: FunctionSignature::single(VT::Number.array(), VT::Number),
+                signature: FunctionSignature::single(
+                    VT::Number.array(),
+                    VT::Number,
+                ),
             }),
 
             // 最小值
@@ -295,13 +315,19 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
             // 中位数
             IF::Median => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::median),
-                signature: FunctionSignature::single(VT::Number.array(), VT::Number),
+                signature: FunctionSignature::single(
+                    VT::Number.array(),
+                    VT::Number,
+                ),
             }),
 
             // 众数
             IF::Mode => Rc::new(StaticFunction {
                 implementation: Rc::new(imp::mode),
-                signature: FunctionSignature::single(VT::Number.array(), VT::Number),
+                signature: FunctionSignature::single(
+                    VT::Number.array(),
+                    VT::Number,
+                ),
             }),
 
             // 类型获取
@@ -338,8 +364,14 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
             IF::Keys => Rc::new(CompositeFunction {
                 implementation: Rc::new(imp::keys),
                 signatures: vec![
-                    FunctionSignature::single(VT::Object(Default::default()), VT::String.array()),
-                    FunctionSignature::single(VT::Any.array(), VT::Number.array()),
+                    FunctionSignature::single(
+                        VT::Object(Default::default()),
+                        VT::String.array(),
+                    ),
+                    FunctionSignature::single(
+                        VT::Any.array(),
+                        VT::Number.array(),
+                    ),
                 ],
             }),
 
@@ -377,7 +409,7 @@ impl From<&InternalFunction> for Rc<dyn FunctionDefinition> {
 }
 
 /// 内置函数实现模块
-/// 
+///
 /// 包含所有内置函数的具体实现代码
 pub(crate) mod imp {
     use crate::functions::arguments::Arguments;
@@ -397,15 +429,18 @@ pub(crate) mod imp {
     use std::str::FromStr;
 
     /// 辅助函数：从参数中提取数字数组
-    /// 
+    ///
     /// # 参数
     /// * `args` - 函数参数
     /// * `pos` - 参数位置
-    /// 
+    ///
     /// # 返回值
     /// * `Ok(Vec<Decimal>)` - 成功提取的数字数组
     /// * `Err` - 参数不是数组或包含非数字元素
-    fn __internal_number_array(args: &Arguments, pos: usize) -> anyhow::Result<Vec<Decimal>> {
+    fn __internal_number_array(
+        args: &Arguments,
+        pos: usize,
+    ) -> anyhow::Result<Vec<Decimal>> {
         let a = args.array(pos)?;
         let arr = a.borrow();
 
@@ -422,13 +457,13 @@ pub(crate) mod imp {
     }
 
     /// 辅助函数：从参数中提取数字数组或日期数组
-    /// 
+    ///
     /// 根据数组的第一个元素类型自动判断是数字数组还是日期数组
-    /// 
+    ///
     /// # 参数
     /// * `args` - 函数参数
     /// * `pos` - 参数位置
-    /// 
+    ///
     /// # 返回值
     /// * `Ok(Either::Left(Vec<Decimal>))` - 数字数组
     /// * `Ok(Either::Right(Vec<VmDate>))` - 日期数组
@@ -462,7 +497,7 @@ pub(crate) mod imp {
     }
 
     /// 字符串开始匹配函数实现
-    /// 
+    ///
     /// 检查第一个字符串是否以第二个字符串开始
     pub fn starts_with(args: Arguments) -> anyhow::Result<V> {
         let a = args.str(0)?;
@@ -472,7 +507,7 @@ pub(crate) mod imp {
     }
 
     /// 字符串结束匹配函数实现
-    /// 
+    ///
     /// 检查第一个字符串是否以第二个字符串结束
     pub fn ends_with(args: Arguments) -> anyhow::Result<V> {
         let a = args.str(0)?;
@@ -482,19 +517,20 @@ pub(crate) mod imp {
     }
 
     /// 正则表达式匹配函数实现
-    /// 
+    ///
     /// 使用正则表达式检查字符串是否匹配模式
     pub fn matches(args: Arguments) -> anyhow::Result<V> {
         let a = args.str(0)?;
         let b = args.str(1)?;
 
-        let regex = Regex::new(b.as_ref()).context("Invalid regular expression")?;
+        let regex =
+            Regex::new(b.as_ref()).context("Invalid regular expression")?;
 
         Ok(V::Bool(regex.is_match(a.as_ref())))
     }
 
     /// 字符串转大写函数实现
-    /// 
+    ///
     /// 将字符串转换为大写形式
     pub fn upper(args: Arguments) -> anyhow::Result<V> {
         let a = args.str(0)?;
@@ -502,7 +538,7 @@ pub(crate) mod imp {
     }
 
     /// 字符串转小写函数实现
-    /// 
+    ///
     /// 将字符串转换为小写形式
     pub fn lower(args: Arguments) -> anyhow::Result<V> {
         let a = args.str(0)?;
@@ -510,7 +546,7 @@ pub(crate) mod imp {
     }
 
     /// 字符串去空格函数实现
-    /// 
+    ///
     /// 移除字符串两端的空白字符
     pub fn trim(args: Arguments) -> anyhow::Result<V> {
         let a = args.str(0)?;
@@ -518,14 +554,15 @@ pub(crate) mod imp {
     }
 
     /// 正则表达式提取函数实现
-    /// 
+    ///
     /// 使用正则表达式从字符串中提取匹配的捕获组
     /// 返回包含所有捕获组的字符串数组
     pub fn extract(args: Arguments) -> anyhow::Result<V> {
         let a = args.str(0)?;
         let b = args.str(1)?;
 
-        let regex = Regex::new(b.as_ref()).context("Invalid regular expression")?;
+        let regex =
+            Regex::new(b.as_ref()).context("Invalid regular expression")?;
 
         let captures = regex
             .captures(a.as_ref())
@@ -543,23 +580,21 @@ pub(crate) mod imp {
     }
 
     /// 字符串分割函数实现
-    /// 
+    ///
     /// 使用指定分隔符将字符串分割为字符串数组
     pub fn split(args: Arguments) -> anyhow::Result<V> {
         let a = args.str(0)?;
         let b = args.str(1)?;
 
         let arr = Vec::from_iter(
-            a.split(b)
-                .into_iter()
-                .map(|s| V::String(s.to_string().into())),
+            a.split(b).into_iter().map(|s| V::String(s.to_string().into())),
         );
 
         Ok(V::from_array(arr))
     }
 
     /// 数组扁平化函数实现
-    /// 
+    ///
     /// 将嵌套数组展平为一维数组，非数组元素保持不变
     pub fn flatten(args: Arguments) -> anyhow::Result<V> {
         let a = args.array(0)?;
@@ -570,7 +605,7 @@ pub(crate) mod imp {
             V::Array(b) => {
                 let arr = b.borrow();
                 arr.iter().for_each(|v| flat_arr.push(v.clone()))
-            }
+            },
             _ => flat_arr.push(v.clone()),
         });
 
@@ -578,7 +613,7 @@ pub(crate) mod imp {
     }
 
     /// 绝对值函数实现
-    /// 
+    ///
     /// 返回数字的绝对值
     pub fn abs(args: Arguments) -> anyhow::Result<V> {
         let a = args.number(0)?;
@@ -586,7 +621,7 @@ pub(crate) mod imp {
     }
 
     /// 向上取整函数实现
-    /// 
+    ///
     /// 返回不小于给定数字的最小整数
     pub fn ceil(args: Arguments) -> anyhow::Result<V> {
         let a = args.number(0)?;
@@ -594,7 +629,7 @@ pub(crate) mod imp {
     }
 
     /// 向下取整函数实现
-    /// 
+    ///
     /// 返回不大于给定数字的最大整数
     pub fn floor(args: Arguments) -> anyhow::Result<V> {
         let a = args.number(0)?;
@@ -602,7 +637,7 @@ pub(crate) mod imp {
     }
 
     /// 四舍五入函数实现
-    /// 
+    ///
     /// 对数字进行四舍五入，可选择指定小数位数
     pub fn round(args: Arguments) -> anyhow::Result<V> {
         let a = args.number(0)?;
@@ -619,7 +654,7 @@ pub(crate) mod imp {
     }
 
     /// 截断函数实现
-    /// 
+    ///
     /// 截断数字的小数部分，可选择指定保留的小数位数
     pub fn trunc(args: Arguments) -> anyhow::Result<V> {
         let a = args.number(0)?;
@@ -633,7 +668,7 @@ pub(crate) mod imp {
     }
 
     /// 随机数生成函数实现
-    /// 
+    ///
     /// 生成0到指定数字之间的随机整数
     pub fn rand(args: Arguments) -> anyhow::Result<V> {
         let a = args.number(0)?;
@@ -644,7 +679,7 @@ pub(crate) mod imp {
     }
 
     /// 最小值函数实现
-    /// 
+    ///
     /// 返回数字数组或日期数组中的最小值
     pub fn min(args: Arguments) -> anyhow::Result<V> {
         let a = __internal_number_or_date_array(&args, 0)?;
@@ -653,16 +688,16 @@ pub(crate) mod imp {
             Either::Left(arr) => {
                 let min = arr.into_iter().min().context("Empty array")?;
                 Ok(V::Number(Decimal::from(min)))
-            }
+            },
             Either::Right(arr) => {
                 let min = arr.into_iter().min().context("Empty array")?;
                 Ok(V::Dynamic(Rc::new(min)))
-            }
+            },
         }
     }
 
     /// 最大值函数实现
-    /// 
+    ///
     /// 返回数字数组或日期数组中的最大值
     pub fn max(args: Arguments) -> anyhow::Result<V> {
         let a = __internal_number_or_date_array(&args, 0)?;
@@ -671,29 +706,28 @@ pub(crate) mod imp {
             Either::Left(arr) => {
                 let max = arr.into_iter().max().context("Empty array")?;
                 Ok(V::Number(Decimal::from(max)))
-            }
+            },
             Either::Right(arr) => {
                 let max = arr.into_iter().max().context("Empty array")?;
                 Ok(V::Dynamic(Rc::new(max)))
-            }
+            },
         }
     }
 
     /// 平均值函数实现
-    /// 
+    ///
     /// 计算数字数组的算术平均值
     pub fn avg(args: Arguments) -> anyhow::Result<V> {
         let a = __internal_number_array(&args, 0)?;
         let sum = a.iter().fold(Decimal::ZERO, |acc, x| acc + x);
 
         Ok(V::Number(Decimal::from(
-            sum.checked_div(Decimal::from(a.len()))
-                .context("Empty array")?,
+            sum.checked_div(Decimal::from(a.len())).context("Empty array")?,
         )))
     }
 
     /// 求和函数实现
-    /// 
+    ///
     /// 计算数字数组中所有元素的和
     pub fn sum(args: Arguments) -> anyhow::Result<V> {
         let a = __internal_number_array(&args, 0)?;
@@ -703,7 +737,7 @@ pub(crate) mod imp {
     }
 
     /// 中位数函数实现
-    /// 
+    ///
     /// 计算数字数组的中位数（中间值）
     pub fn median(args: Arguments) -> anyhow::Result<V> {
         let mut a = __internal_number_array(&args, 0)?;
@@ -716,7 +750,8 @@ pub(crate) mod imp {
             Ok(V::Number(*center_num))
         } else {
             // 偶数个元素，取中间两个元素的平均值
-            let center_left = a.get(center - 1).context("Index out of bounds")?;
+            let center_left =
+                a.get(center - 1).context("Index out of bounds")?;
             let center_right = a.get(center).context("Index out of bounds")?;
 
             let median = ((*center_left) + (*center_right)) / dec!(2);
@@ -725,7 +760,7 @@ pub(crate) mod imp {
     }
 
     /// 众数函数实现
-    /// 
+    ///
     /// 计算数字数组的众数（出现次数最多的值）
     pub fn mode(args: Arguments) -> anyhow::Result<V> {
         let a = __internal_number_array(&args, 0)?;
@@ -772,7 +807,12 @@ pub(crate) mod imp {
             V::Bool(v) => Rc::from(v.to_string().as_str()),
             V::Number(n) => Rc::from(n.to_string().as_str()),
             V::String(s) => s.clone(),
-            _ => return Err(anyhow!("Cannot convert type {} to string", a.type_name())),
+            _ => {
+                return Err(anyhow!(
+                    "Cannot convert type {} to string",
+                    a.type_name()
+                ));
+            },
         };
 
         Ok(V::String(val))
@@ -787,12 +827,17 @@ pub(crate) mod imp {
                 Decimal::from_str_exact(s)
                     .or_else(|_| Decimal::from_scientific(s))
                     .context("Invalid number")?
-            }
+            },
             V::Bool(b) => match *b {
                 true => Decimal::ONE,
                 false => Decimal::ZERO,
             },
-            _ => return Err(anyhow!("Cannot convert type {} to number", a.type_name())),
+            _ => {
+                return Err(anyhow!(
+                    "Cannot convert type {} to number",
+                    a.type_name()
+                ));
+            },
         };
 
         Ok(V::Number(val))
@@ -807,7 +852,7 @@ pub(crate) mod imp {
                 Decimal::from_str_exact(s)
                     .or_else(|_| Decimal::from_scientific(s))
                     .is_ok()
-            }
+            },
             _ => false,
         };
 
@@ -821,10 +866,13 @@ pub(crate) mod imp {
             V::Array(s) => {
                 let arr = s.borrow();
                 arr.len()
-            }
+            },
             _ => {
-                return Err(anyhow!("Cannot determine len of type {}", a.type_name()));
-            }
+                return Err(anyhow!(
+                    "Cannot determine len of type {}",
+                    a.type_name()
+                ));
+            },
         };
 
         Ok(V::Number(len.into()))
@@ -846,14 +894,14 @@ pub(crate) mod imp {
                     (V::Null, V::Null) => true,
                     _ => false,
                 })
-            }
+            },
             _ => {
                 return Err(anyhow!(
                     "无法确定类型 {} 和 {} 的包含关系",
                     a.type_name(),
                     b.type_name()
                 ));
-            }
+            },
         };
 
         Ok(V::Bool(val))
@@ -865,27 +913,34 @@ pub(crate) mod imp {
 
         let val = match a {
             V::String(a) => {
-                let sim = strsim::normalized_damerau_levenshtein(a.as_ref(), b.as_ref());
+                let sim = strsim::normalized_damerau_levenshtein(
+                    a.as_ref(),
+                    b.as_ref(),
+                );
                 // This is okay, as NDL will return [0, 1]
                 V::Number(Decimal::from_f64(sim).unwrap_or(dec!(0)))
-            }
+            },
             V::Array(_a) => {
                 let a = _a.borrow();
                 let mut sims = Vec::with_capacity(a.len());
                 for v in a.iter() {
                     let s = v.as_str().context("期望字符串数组")?;
 
-                    let sim = Decimal::from_f64(strsim::normalized_damerau_levenshtein(
-                        s.as_ref(),
-                        b.as_ref(),
-                    ))
+                    let sim = Decimal::from_f64(
+                        strsim::normalized_damerau_levenshtein(
+                            s.as_ref(),
+                            b.as_ref(),
+                        ),
+                    )
                     .unwrap_or(dec!(0));
                     sims.push(V::Number(sim));
                 }
 
                 V::from_array(sims)
-            }
-            _ => return Err(anyhow!("模糊匹配不适用于类型 {} ", a.type_name())),
+            },
+            _ => {
+                return Err(anyhow!("模糊匹配不适用于类型 {} ", a.type_name()));
+            },
         };
 
         Ok(val)
@@ -903,16 +958,17 @@ pub(crate) mod imp {
                     .collect();
 
                 V::from_array(indices)
-            }
+            },
             V::Object(a) => {
                 let obj = a.borrow();
-                let keys = obj.iter().map(|(key, _)| V::String(key.clone())).collect();
+                let keys =
+                    obj.iter().map(|(key, _)| V::String(key.clone())).collect();
 
                 V::from_array(keys)
-            }
+            },
             _ => {
                 return Err(anyhow!("无法确定类型 {} 的键", a.type_name()));
-            }
+            },
         };
 
         Ok(var)

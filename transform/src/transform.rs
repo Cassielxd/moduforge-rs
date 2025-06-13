@@ -12,10 +12,7 @@ enum LazyDoc {
     /// 原始文档，未进行任何修改
     Original(Arc<NodePool>),
     /// 需要重新计算的状态，包含基础文档和待应用的步骤
-    Pending {
-        base: Arc<NodePool>,
-        steps: im::Vector<Arc<dyn Step>>,
-    },
+    Pending { base: Arc<NodePool>, steps: im::Vector<Arc<dyn Step>> },
     /// 已计算的最新状态
     Computed(Arc<NodePool>),
 }
@@ -62,7 +59,7 @@ impl Transform {
             LazyDoc::Pending { base, steps } => {
                 // 延迟计算：只有在需要时才重新计算文档状态
                 self.compute_doc_state(base.clone(), steps.clone())
-            }
+            },
         }
     }
 
@@ -82,7 +79,7 @@ impl Transform {
         let schema = self.schema.clone();
         let draft = self.get_draft();
         let result: StepResult = step.apply(draft, schema)?;
-        
+
         match result.failed {
             Some(message) => Err(anyhow::anyhow!(message)),
             None => {
@@ -98,14 +95,17 @@ impl Transform {
     }
 
     /// 添加一个步骤及其结果到事务中
-    fn add_step(&mut self, step: Arc<dyn Step>) {
+    fn add_step(
+        &mut self,
+        step: Arc<dyn Step>,
+    ) {
         // 生成反向步骤
         if let Some(invert_step) = step.invert(&self.base_doc.get_inner()) {
             self.invert_steps.push_back(invert_step);
         }
-        
+
         self.steps.push_back(step.clone());
-        
+
         // 标记需要延迟重新计算，而不是立即计算
         self.lazy_doc = LazyDoc::Pending {
             base: self.base_doc.clone(),
@@ -133,10 +133,13 @@ impl Transform {
     }
 
     /// 批量应用步骤（优化版本）
-    pub fn apply_steps_batch(&mut self, steps: Vec<Arc<dyn Step>>) -> TransformResult<()> {
+    pub fn apply_steps_batch(
+        &mut self,
+        steps: Vec<Arc<dyn Step>>,
+    ) -> TransformResult<()> {
         let schema = self.schema.clone();
         let base_doc_inner = self.base_doc.get_inner().clone();
-        
+
         // 收集反向步骤
         let mut new_invert_steps = Vec::new();
         for step in &steps {
@@ -144,9 +147,9 @@ impl Transform {
                 new_invert_steps.push(invert_step);
             }
         }
-        
+
         let draft = self.get_draft();
-        
+
         // 批量应用，减少中间状态创建
         for step in &steps {
             let result = step.apply(draft, schema.clone())?;
@@ -154,7 +157,7 @@ impl Transform {
                 return Err(anyhow::anyhow!(message));
             }
         }
-        
+
         // 更新步骤列表
         for step in steps {
             self.steps.push_back(step);
@@ -169,7 +172,7 @@ impl Transform {
             steps: self.steps.clone(),
         };
         self.needs_recompute = true;
-        
+
         Ok(())
     }
 
@@ -177,7 +180,8 @@ impl Transform {
     /// 保留历史记录（steps 和 invert_steps）以支持回滚功能
     pub fn commit(&mut self) {
         if self.needs_recompute && self.draft.is_some() {
-            let new_doc = NodePool::new(Arc::new(self.draft.as_ref().unwrap().clone()));
+            let new_doc =
+                NodePool::new(Arc::new(self.draft.as_ref().unwrap().clone()));
             self.base_doc = new_doc.clone();
             self.lazy_doc = LazyDoc::Computed(new_doc);
             self.draft = None;
@@ -196,13 +200,16 @@ impl Transform {
     }
 
     /// 回滚指定数量的步骤
-    pub fn rollback_steps(&mut self, count: usize) -> TransformResult<()> {
+    pub fn rollback_steps(
+        &mut self,
+        count: usize,
+    ) -> TransformResult<()> {
         if count > self.invert_steps.len() {
             return Err(anyhow::anyhow!("回滚步骤数量超出历史记录"));
         }
 
         let schema = self.schema.clone();
-        
+
         // 收集要应用的反向步骤
         let mut invert_steps_to_apply = Vec::new();
         for _ in 0..count {
@@ -213,7 +220,7 @@ impl Transform {
         }
 
         let draft = self.get_draft();
-        
+
         // 应用反向步骤
         for invert_step in invert_steps_to_apply {
             invert_step.apply(draft, schema.clone())?;

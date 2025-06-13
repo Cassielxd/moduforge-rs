@@ -39,11 +39,17 @@ impl FilesystemLoader {
         Self { root, memory_refs }
     }
 
-    fn key_to_path<K: AsRef<str>>(&self, key: K) -> PathBuf {
+    fn key_to_path<K: AsRef<str>>(
+        &self,
+        key: K,
+    ) -> PathBuf {
         Path::new(&self.root).join(key.as_ref())
     }
 
-    async fn read_from_file<K>(&self, key: K) -> LoaderResponse
+    async fn read_from_file<K>(
+        &self,
+        key: K,
+    ) -> LoaderResponse
     where
         K: AsRef<str>,
     {
@@ -56,7 +62,9 @@ impl FilesystemLoader {
 
         let path = self.key_to_path(key.as_ref());
         if !Path::exists(&path) {
-            return Err(LoaderError::NotFound(String::from(key.as_ref())).into());
+            return Err(
+                LoaderError::NotFound(String::from(key.as_ref())).into()
+            );
         }
 
         let file = File::open(path).map_err(|e| LoaderError::Internal {
@@ -66,9 +74,11 @@ impl FilesystemLoader {
 
         let reader = BufReader::new(file);
         let result: DecisionContent =
-            serde_json::from_reader(reader).map_err(|e| LoaderError::Internal {
-                key: String::from(key.as_ref()),
-                source: e.into(),
+            serde_json::from_reader(reader).map_err(|e| {
+                LoaderError::Internal {
+                    key: String::from(key.as_ref()),
+                    source: e.into(),
+                }
             })?;
 
         let ptr = Arc::new(result);
@@ -82,7 +92,10 @@ impl FilesystemLoader {
 }
 
 impl DecisionLoader for FilesystemLoader {
-    fn load<'a>(&'a self, key: &'a str) -> impl Future<Output = LoaderResponse> + 'a {
+    fn load<'a>(
+        &'a self,
+        key: &'a str,
+    ) -> impl Future<Output = LoaderResponse> + 'a {
         async move { self.read_from_file(key).await }
     }
 }

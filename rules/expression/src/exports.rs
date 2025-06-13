@@ -3,7 +3,10 @@ use crate::variable::Variable;
 use crate::{Expression, Isolate, IsolateError};
 
 /// Evaluates a standard expression
-pub fn evaluate_expression(expression: &str, context: Variable) -> Result<Variable, IsolateError> {
+pub fn evaluate_expression(
+    expression: &str,
+    context: Variable,
+) -> Result<Variable, IsolateError> {
     Isolate::with_environment(context).run_standard(expression)
 }
 
@@ -25,12 +28,16 @@ pub fn evaluate_unary_expression(
 }
 
 /// Compiles a standard expression
-pub fn compile_expression(expression: &str) -> Result<Expression<Standard>, IsolateError> {
+pub fn compile_expression(
+    expression: &str
+) -> Result<Expression<Standard>, IsolateError> {
     Isolate::new().compile_standard(expression)
 }
 
 /// Compiles an unary expression
-pub fn compile_unary_expression(expression: &str) -> Result<Expression<Unary>, IsolateError> {
+pub fn compile_unary_expression(
+    expression: &str
+) -> Result<Expression<Unary>, IsolateError> {
     Isolate::new().compile_unary(expression)
 }
 
@@ -42,7 +49,9 @@ mod test {
     #[test]
     fn example() {
         let context = json!({ "tax": { "percentage": 10 } });
-        let tax_amount = evaluate_expression("50 * tax.percentage / 100", context.into()).unwrap();
+        let tax_amount =
+            evaluate_expression("50 * tax.percentage / 100", context.into())
+                .unwrap();
 
         assert_eq!(tax_amount, json!(5).into());
     }

@@ -1,6 +1,6 @@
 use moduforge_rules_expression::lexer::{
-    ArithmeticOperator, Bracket, ComparisonOperator, Identifier, Lexer, LogicalOperator, Operator,
-    QuotationMark, Token, TokenKind,
+    ArithmeticOperator, Bracket, ComparisonOperator, Identifier, Lexer,
+    LogicalOperator, Operator, QuotationMark, Token, TokenKind,
 };
 
 struct LexerTest {
@@ -124,26 +124,10 @@ fn lexer_test() {
         LexerTest {
             test: "0.5 0.025 1 02 1_000_000 _42 -0.5",
             result: Vec::from([
-                Token {
-                    kind: TokenKind::Number,
-                    span: (0, 3),
-                    value: "0.5",
-                },
-                Token {
-                    kind: TokenKind::Number,
-                    span: (4, 9),
-                    value: "0.025",
-                },
-                Token {
-                    kind: TokenKind::Number,
-                    span: (10, 11),
-                    value: "1",
-                },
-                Token {
-                    kind: TokenKind::Number,
-                    span: (12, 14),
-                    value: "02",
-                },
+                Token { kind: TokenKind::Number, span: (0, 3), value: "0.5" },
+                Token { kind: TokenKind::Number, span: (4, 9), value: "0.025" },
+                Token { kind: TokenKind::Number, span: (10, 11), value: "1" },
+                Token { kind: TokenKind::Number, span: (12, 14), value: "02" },
                 Token {
                     kind: TokenKind::Number,
                     span: (15, 24),
@@ -155,35 +139,27 @@ fn lexer_test() {
                     value: "_42",
                 },
                 Token {
-                    kind: TokenKind::Operator(Operator::Arithmetic(ArithmeticOperator::Subtract)),
+                    kind: TokenKind::Operator(Operator::Arithmetic(
+                        ArithmeticOperator::Subtract,
+                    )),
                     span: (29, 30),
                     value: "-",
                 },
-                Token {
-                    kind: TokenKind::Number,
-                    span: (30, 33),
-                    value: "0.5",
-                },
+                Token { kind: TokenKind::Number, span: (30, 33), value: "0.5" },
             ]),
         },
         LexerTest {
             test: "a and orb().val",
             result: Vec::from([
+                Token { kind: TokenKind::Literal, span: (0, 1), value: "a" },
                 Token {
-                    kind: TokenKind::Literal,
-                    span: (0, 1),
-                    value: "a",
-                },
-                Token {
-                    kind: TokenKind::Operator(Operator::Logical(LogicalOperator::And)),
+                    kind: TokenKind::Operator(Operator::Logical(
+                        LogicalOperator::And,
+                    )),
                     span: (2, 5),
                     value: "and",
                 },
-                Token {
-                    kind: TokenKind::Literal,
-                    span: (6, 9),
-                    value: "orb",
-                },
+                Token { kind: TokenKind::Literal, span: (6, 9), value: "orb" },
                 Token {
                     kind: TokenKind::Bracket(Bracket::LeftParenthesis),
                     span: (9, 10),
@@ -209,43 +185,29 @@ fn lexer_test() {
         LexerTest {
             test: "foo.bar",
             result: Vec::from([
-                Token {
-                    kind: TokenKind::Literal,
-                    span: (0, 3),
-                    value: "foo",
-                },
+                Token { kind: TokenKind::Literal, span: (0, 3), value: "foo" },
                 Token {
                     kind: TokenKind::Operator(Operator::Dot),
                     span: (3, 4),
                     value: ".",
                 },
-                Token {
-                    kind: TokenKind::Literal,
-                    span: (4, 7),
-                    value: "bar",
-                },
+                Token { kind: TokenKind::Literal, span: (4, 7), value: "bar" },
             ]),
         },
         LexerTest {
             test: "foo .bar == .baz",
             result: Vec::from([
-                Token {
-                    kind: TokenKind::Literal,
-                    span: (0, 3),
-                    value: "foo",
-                },
+                Token { kind: TokenKind::Literal, span: (0, 3), value: "foo" },
                 Token {
                     kind: TokenKind::Operator(Operator::Dot),
                     span: (4, 5),
                     value: ".",
                 },
+                Token { kind: TokenKind::Literal, span: (5, 8), value: "bar" },
                 Token {
-                    kind: TokenKind::Literal,
-                    span: (5, 8),
-                    value: "bar",
-                },
-                Token {
-                    kind: TokenKind::Operator(Operator::Comparison(ComparisonOperator::Equal)),
+                    kind: TokenKind::Operator(Operator::Comparison(
+                        ComparisonOperator::Equal,
+                    )),
                     span: (9, 11),
                     value: "==",
                 },
@@ -264,11 +226,7 @@ fn lexer_test() {
         LexerTest {
             test: "func()",
             result: Vec::from([
-                Token {
-                    kind: TokenKind::Literal,
-                    span: (0, 4),
-                    value: "func",
-                },
+                Token { kind: TokenKind::Literal, span: (0, 4), value: "func" },
                 Token {
                     kind: TokenKind::Bracket(Bracket::LeftParenthesis),
                     span: (4, 5),
@@ -285,27 +243,25 @@ fn lexer_test() {
             test: "not abc not in i not(false) not  ",
             result: Vec::from([
                 Token {
-                    kind: TokenKind::Operator(Operator::Logical(LogicalOperator::Not)),
+                    kind: TokenKind::Operator(Operator::Logical(
+                        LogicalOperator::Not,
+                    )),
                     span: (0, 3),
                     value: "not",
                 },
+                Token { kind: TokenKind::Literal, span: (4, 7), value: "abc" },
                 Token {
-                    kind: TokenKind::Literal,
-                    span: (4, 7),
-                    value: "abc",
-                },
-                Token {
-                    kind: TokenKind::Operator(Operator::Comparison(ComparisonOperator::NotIn)),
+                    kind: TokenKind::Operator(Operator::Comparison(
+                        ComparisonOperator::NotIn,
+                    )),
                     span: (8, 14),
                     value: "not in",
                 },
+                Token { kind: TokenKind::Literal, span: (15, 16), value: "i" },
                 Token {
-                    kind: TokenKind::Literal,
-                    span: (15, 16),
-                    value: "i",
-                },
-                Token {
-                    kind: TokenKind::Operator(Operator::Logical(LogicalOperator::Not)),
+                    kind: TokenKind::Operator(Operator::Logical(
+                        LogicalOperator::Not,
+                    )),
                     span: (17, 20),
                     value: "not",
                 },
@@ -325,7 +281,9 @@ fn lexer_test() {
                     value: ")",
                 },
                 Token {
-                    kind: TokenKind::Operator(Operator::Logical(LogicalOperator::Not)),
+                    kind: TokenKind::Operator(Operator::Logical(
+                        LogicalOperator::Not,
+                    )),
                     span: (28, 31),
                     value: "not",
                 },
@@ -335,7 +293,9 @@ fn lexer_test() {
             test: "not in_var",
             result: Vec::from([
                 Token {
-                    kind: TokenKind::Operator(Operator::Logical(LogicalOperator::Not)),
+                    kind: TokenKind::Operator(Operator::Logical(
+                        LogicalOperator::Not,
+                    )),
                     span: (0, 3),
                     value: "not",
                 },
@@ -354,21 +314,13 @@ fn lexer_test() {
                     span: (0, 1),
                     value: "[",
                 },
-                Token {
-                    kind: TokenKind::Number,
-                    span: (1, 2),
-                    value: "1",
-                },
+                Token { kind: TokenKind::Number, span: (1, 2), value: "1" },
                 Token {
                     kind: TokenKind::Operator(Operator::Range),
                     span: (2, 4),
                     value: "..",
                 },
-                Token {
-                    kind: TokenKind::Number,
-                    span: (4, 5),
-                    value: "5",
-                },
+                Token { kind: TokenKind::Number, span: (4, 5), value: "5" },
                 Token {
                     kind: TokenKind::Bracket(Bracket::RightParenthesis),
                     span: (5, 6),
@@ -401,11 +353,7 @@ fn lexer_test() {
                     span: (14, 15),
                     value: ">",
                 },
-                Token {
-                    kind: TokenKind::Number,
-                    span: (16, 19),
-                    value: "500",
-                },
+                Token { kind: TokenKind::Number, span: (16, 19), value: "500" },
                 Token {
                     kind: TokenKind::Operator(Operator::QuestionMark),
                     span: (20, 21),

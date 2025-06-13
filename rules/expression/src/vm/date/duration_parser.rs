@@ -11,12 +11,7 @@ pub(crate) enum DurationParseError {
     #[error("期望数字 at {0}")]
     NumberExpected(usize),
     #[error("未知的时间单位 {unit}")]
-    UnknownUnit {
-        start: usize,
-        end: usize,
-        value: u64,
-        unit: String,
-    },
+    UnknownUnit { start: usize, end: usize, value: u64, unit: String },
     #[error("数字太大")]
     NumberOverflow,
     #[error("值为空")]
@@ -40,63 +35,75 @@ impl DurationParser<'_> {
             match c {
                 '0'..='9' => {
                     return Ok(Some(c as u64 - '0' as u64));
-                }
+                },
                 c if c.is_whitespace() => continue,
                 _ => {
                     return Err(DurationParseError::NumberExpected(off));
-                }
+                },
             }
         }
         Ok(None)
     }
-    fn parse_unit(&mut self, n: u64, start: usize, end: usize) -> Result<(), DurationParseError> {
-        let unit = DurationUnit::parse(&self.src[start..end]).ok_or_else(|| {
-            DurationParseError::UnknownUnit {
-                start,
-                end,
-                unit: self.src[start..end].to_string(),
-                value: n,
-            }
-        })?;
+    fn parse_unit(
+        &mut self,
+        n: u64,
+        start: usize,
+        end: usize,
+    ) -> Result<(), DurationParseError> {
+        let unit =
+            DurationUnit::parse(&self.src[start..end]).ok_or_else(|| {
+                DurationParseError::UnknownUnit {
+                    start,
+                    end,
+                    unit: self.src[start..end].to_string(),
+                    value: n,
+                }
+            })?;
 
         match unit {
             DurationUnit::Quarter => {
-                self.duration.months = n.to_i32().ok_or(DurationParseError::NumberOverflow)? * 3
-            }
+                self.duration.months =
+                    n.to_i32().ok_or(DurationParseError::NumberOverflow)? * 3
+            },
             DurationUnit::Month => {
-                self.duration.months = n.to_i32().ok_or(DurationParseError::NumberOverflow)?
-            }
+                self.duration.months =
+                    n.to_i32().ok_or(DurationParseError::NumberOverflow)?
+            },
             DurationUnit::Year => {
-                self.duration.years = n.to_i32().ok_or(DurationParseError::NumberOverflow)?
-            }
+                self.duration.years =
+                    n.to_i32().ok_or(DurationParseError::NumberOverflow)?
+            },
             _ => {
                 // No-op
-            }
+            },
         }
 
         match unit.as_secs() {
             Some(secs) => {
-                self.duration.seconds = self
-                    .duration
-                    .seconds
-                    .checked_add(
-                        secs.to_i64()
-                            .ok_or(DurationParseError::NumberOverflow)?
-                            .checked_mul(n.to_i64().ok_or(DurationParseError::NumberOverflow)?)
-                            .ok_or(DurationParseError::NumberOverflow)?,
-                    )
-                    .ok_or(DurationParseError::NumberOverflow)?
-            }
+                self.duration.seconds =
+                    self.duration
+                        .seconds
+                        .checked_add(
+                            secs.to_i64()
+                                .ok_or(DurationParseError::NumberOverflow)?
+                                .checked_mul(n.to_i64().ok_or(
+                                    DurationParseError::NumberOverflow,
+                                )?)
+                                .ok_or(DurationParseError::NumberOverflow)?,
+                        )
+                        .ok_or(DurationParseError::NumberOverflow)?
+            },
             None => {
                 // No-op
-            }
+            },
         };
 
         Ok(())
     }
 
     pub fn parse(mut self) -> Result<Duration, DurationParseError> {
-        let mut n = self.parse_first_char()?.ok_or(DurationParseError::Empty)?;
+        let mut n =
+            self.parse_first_char()?.ok_or(DurationParseError::Empty)?;
         'outer: loop {
             let mut off = self.off();
             while let Some(c) = self.iter.next() {
@@ -106,14 +113,14 @@ impl DurationParser<'_> {
                             .checked_mul(10)
                             .and_then(|x| x.checked_add(c as u64 - '0' as u64))
                             .ok_or(DurationParseError::NumberOverflow)?;
-                    }
-                    c if c.is_whitespace() => {}
+                    },
+                    c if c.is_whitespace() => {},
                     'a'..='z' | 'A'..='Z' => {
                         break;
-                    }
+                    },
                     _ => {
                         return Err(DurationParseError::InvalidCharacter(off));
-                    }
+                    },
                 }
                 off = self.off();
             }
@@ -125,12 +132,12 @@ impl DurationParser<'_> {
                         self.parse_unit(n, start, off)?;
                         n = c as u64 - '0' as u64;
                         continue 'outer;
-                    }
+                    },
                     c if c.is_whitespace() => break,
-                    'a'..='z' | 'A'..='Z' => {}
+                    'a'..='z' | 'A'..='Z' => {},
                     _ => {
                         return Err(DurationParseError::InvalidCharacter(off));
-                    }
+                    },
                 }
                 off = self.off();
             }

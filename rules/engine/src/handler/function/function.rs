@@ -7,7 +7,9 @@ use crate::handler::function::module::console::{Console, Log};
 use crate::handler::function::module::ModuleLoader;
 use crate::handler::function::serde::JsValue;
 use rquickjs::promise::MaybePromise;
-use rquickjs::{async_with, AsyncContext, AsyncRuntime, CatchResultExt, Ctx, Module};
+use rquickjs::{
+    async_with, AsyncContext, AsyncRuntime, CatchResultExt, Ctx, Module,
+};
 use serde::{Deserialize, Serialize};
 use moduforge_rules_expression::variable::Variable;
 
@@ -27,8 +29,7 @@ impl Function {
         let module_loader = ModuleLoader::new();
         let rt = Arc::new(AsyncRuntime::new()?);
 
-        rt.set_loader(module_loader.clone(), module_loader.clone())
-            .await;
+        rt.set_loader(module_loader.clone(), module_loader.clone()).await;
 
         let ctx = AsyncContext::full(&rt).await?;
         let this = Self {
@@ -42,9 +43,15 @@ impl Function {
         Ok(this)
     }
 
-    async fn dispatch_event_inner(&self, ctx: &Ctx<'_>, event: RuntimeEvent) -> FunctionResult {
+    async fn dispatch_event_inner(
+        &self,
+        ctx: &Ctx<'_>,
+        event: RuntimeEvent,
+    ) -> FunctionResult {
         for listener in &self.listeners {
-            if let Err(err) = listener.on_event(ctx.clone(), event.clone()).await {
+            if let Err(err) =
+                listener.on_event(ctx.clone(), event.clone()).await
+            {
                 return Err(err.into());
             };
         }
@@ -52,7 +59,10 @@ impl Function {
         Ok(())
     }
 
-    async fn dispatch_event(&self, event: RuntimeEvent) -> FunctionResult {
+    async fn dispatch_event(
+        &self,
+        event: RuntimeEvent,
+    ) -> FunctionResult {
         async_with!(&self.ctx => |ctx| {
             self.dispatch_event_inner(&ctx, event).await
         })
@@ -67,7 +77,11 @@ impl Function {
         &self.rt
     }
 
-    pub fn suggest_module_name<'a>(&self, name: &str, source: &str) -> String {
+    pub fn suggest_module_name<'a>(
+        &self,
+        name: &str,
+        source: &str,
+    ) -> String {
         let declarative_name = format!("node:{name}");
 
         if self.module_loader.has_module(&declarative_name) {
@@ -78,7 +92,11 @@ impl Function {
         }
     }
 
-    pub async fn register_module(&self, name: &str, source: &str) -> FunctionResult {
+    pub async fn register_module(
+        &self,
+        name: &str,
+        source: &str,
+    ) -> FunctionResult {
         let maybe_error: Option<FunctionError> = async_with!(&self.ctx => |ctx| {
             if let Err(err) = Module::declare(ctx.clone(), name.as_bytes().to_vec(), source.as_bytes().to_vec()).catch(&ctx) {
                 return Some(err.into())

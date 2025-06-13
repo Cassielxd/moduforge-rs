@@ -25,13 +25,20 @@ impl From<ParserError> for TemplateRenderError {
 }
 
 impl Serialize for TemplateRenderError {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<S>(
+        &self,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         match self {
-            TemplateRenderError::IsolateError(isolate) => isolate.serialize(serializer),
-            TemplateRenderError::ParserError(parser) => parser.serialize(serializer),
+            TemplateRenderError::IsolateError(isolate) => {
+                isolate.serialize(serializer)
+            },
+            TemplateRenderError::ParserError(parser) => {
+                parser.serialize(serializer)
+            },
         }
     }
 }
@@ -46,7 +53,10 @@ pub enum ParserError {
 }
 
 impl Serialize for ParserError {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<S>(
+        &self,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -55,8 +65,12 @@ impl Serialize for ParserError {
         map.serialize_entry("type", "templateParserError")?;
 
         match self {
-            ParserError::OpenBracket => map.serialize_entry("value", "openBracket")?,
-            ParserError::CloseBracket => map.serialize_entry("value", "closeBracket")?,
+            ParserError::OpenBracket => {
+                map.serialize_entry("value", "openBracket")?
+            },
+            ParserError::CloseBracket => {
+                map.serialize_entry("value", "closeBracket")?
+            },
         }
 
         map.end()

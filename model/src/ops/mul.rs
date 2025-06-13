@@ -1,8 +1,6 @@
 use std::ops::Mul;
 
-use crate::{
-    error::PoolResult, id_generator::IdGenerator, types::NodeId
-};
+use crate::{error::PoolResult, id_generator::IdGenerator, types::NodeId};
 
 use super::NodeRef;
 
@@ -15,7 +13,8 @@ impl<'a> Mul<usize> for NodeRef<'a> {
         count: usize,
     ) -> Self::Output {
         // 获取当前节点
-        if let Some(current_node) = self.tree.get_node(&self.key.clone().into()) {
+        if let Some(current_node) = self.tree.get_node(&self.key.clone().into())
+        {
             let mut nodes = Vec::new();
             for _ in 0..count {
                 // 创建节点的副本
@@ -25,7 +24,9 @@ impl<'a> Mul<usize> for NodeRef<'a> {
                 nodes.push(node);
             }
             // 添加到当前节点的父节点中
-            if let Some(parent) = self.tree.get_parent_node(&self.key.clone().into()) {
+            if let Some(parent) =
+                self.tree.get_parent_node(&self.key.clone().into())
+            {
                 self.tree.add_node(&parent.id, &nodes)?;
             }
         }
@@ -62,7 +63,7 @@ impl<'a> Mul<Vec<NodeId>> for NodeRef<'a> {
         node_ids: Vec<NodeId>,
     ) -> Self::Output {
         let mut cloned_nodes = Vec::new();
-        
+
         for node_id in node_ids {
             if let Some(source_node) = self.tree.get_node(&node_id) {
                 let mut node = source_node.as_ref().clone();
@@ -71,11 +72,11 @@ impl<'a> Mul<Vec<NodeId>> for NodeRef<'a> {
                 cloned_nodes.push(node);
             }
         }
-        
+
         if !cloned_nodes.is_empty() {
             self.tree.add_node(&self.key.clone().into(), &cloned_nodes)?;
         }
-        
+
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
-} 
+}

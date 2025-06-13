@@ -11,8 +11,11 @@ pub struct MemoryLoader {
 }
 
 impl MemoryLoader {
-    pub fn add<K, D>(&self, key: K, content: D)
-    where
+    pub fn add<K, D>(
+        &self,
+        key: K,
+        content: D,
+    ) where
         K: Into<String>,
         D: Into<DecisionContent>,
     {
@@ -20,7 +23,10 @@ impl MemoryLoader {
         mref.insert(key.into(), Arc::new(content.into()));
     }
 
-    pub fn get<K>(&self, key: K) -> Option<Arc<DecisionContent>>
+    pub fn get<K>(
+        &self,
+        key: K,
+    ) -> Option<Arc<DecisionContent>>
     where
         K: AsRef<str>,
     {
@@ -28,7 +34,10 @@ impl MemoryLoader {
         mref.get(key.as_ref()).map(|r| r.clone())
     }
 
-    pub fn remove<K>(&self, key: K) -> bool
+    pub fn remove<K>(
+        &self,
+        key: K,
+    ) -> bool
     where
         K: AsRef<str>,
     {
@@ -38,7 +47,10 @@ impl MemoryLoader {
 }
 
 impl DecisionLoader for MemoryLoader {
-    fn load<'a>(&'a self, key: &'a str) -> impl Future<Output = LoaderResponse> + 'a {
+    fn load<'a>(
+        &'a self,
+        key: &'a str,
+    ) -> impl Future<Output = LoaderResponse> + 'a {
         async move {
             self.get(&key)
                 .ok_or_else(|| LoaderError::NotFound(key.to_string()).into())

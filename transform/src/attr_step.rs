@@ -93,13 +93,7 @@ mod tests {
     use serde_json::json;
 
     fn create_test_node(id: &str) -> Node {
-        Node::new(
-            id,
-            "test".to_string(),
-            Attrs::default(),
-            vec![],
-            vec![],
-        )
+        Node::new(id, "test".to_string(), Attrs::default(), vec![], vec![])
     }
 
     fn create_test_schema() -> Arc<Schema> {
@@ -107,14 +101,17 @@ mod tests {
         let mut attrs = HashMap::new();
         attrs.insert("name".to_string(), AttributeSpec { default: None });
         attrs.insert("age".to_string(), AttributeSpec { default: None });
-        
-        nodes.insert("test".to_string(), NodeSpec {
-            content: None,
-            marks: None,
-            group: None,
-            desc: Some("Test node".to_string()),
-            attrs: Some(attrs),
-        });
+
+        nodes.insert(
+            "test".to_string(),
+            NodeSpec {
+                content: None,
+                marks: None,
+                group: None,
+                desc: Some("Test node".to_string()),
+                attrs: Some(attrs),
+            },
+        );
 
         let spec = SchemaSpec {
             nodes,
@@ -141,10 +138,10 @@ mod tests {
         // 创建测试节点和树
         let node = create_test_node("node1");
         let mut tree = Tree::new(node);
-        
+
         // 创建测试 schema
         let schema = create_test_schema();
-        
+
         // 创建属性步骤
         let mut values = HashMap::new();
         values.insert("name".to_string(), json!("test"));
@@ -166,10 +163,10 @@ mod tests {
         // 创建测试节点和树
         let node = create_test_node("node1");
         let mut tree = Tree::new(node);
-        
+
         // 创建测试 schema
         let schema = create_test_schema();
-        
+
         // 创建包含无效属性的步骤
         let mut values = HashMap::new();
         values.insert("invalid_attr".to_string(), json!("test"));
@@ -189,10 +186,10 @@ mod tests {
         // 创建测试树（不包含目标节点）
         let node: Node = create_test_node("root");
         let mut tree = Tree::new(node);
-        
+
         // 创建测试 schema
         let schema = create_test_schema();
-        
+
         // 创建属性步骤
         let mut values = HashMap::new();
         values.insert("name".to_string(), json!("test"));
@@ -211,9 +208,10 @@ mod tests {
 
         let serialized = Step::serialize(&step);
         assert!(serialized.is_some());
-        
+
         // 验证序列化后的数据可以反序列化
-        let deserialized: AttrStep = serde_json::from_slice(&serialized.unwrap()).unwrap();
+        let deserialized: AttrStep =
+            serde_json::from_slice(&serialized.unwrap()).unwrap();
         assert_eq!(deserialized.id, "node1");
         assert_eq!(deserialized.values.get("name").unwrap(), &json!("test"));
     }
@@ -223,10 +221,10 @@ mod tests {
         // 创建测试节点和树
         let node = create_test_node("node1");
         let mut tree = Tree::new(node);
-        
+
         // 创建测试 schema
         let schema = create_test_schema();
-        
+
         // 设置初始属性
         let mut values = HashMap::new();
         values.insert("name".to_string(), json!("original_name"));
@@ -253,11 +251,10 @@ mod tests {
         // 应用反转步骤
         let inverted_step = inverted.unwrap();
         inverted_step.apply(&mut tree, schema).unwrap();
-        
+
         // 验证属性是否恢复到原始值
         let node = tree.get_node(&"node1".to_string()).unwrap();
         assert_eq!(node.attrs.get("name").unwrap(), &json!("original_name"));
         assert_eq!(node.attrs.get("age").unwrap(), &json!(25));
     }
 }
- 

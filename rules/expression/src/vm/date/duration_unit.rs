@@ -1,12 +1,12 @@
 //! 时间单位枚举模块
-//! 
+//!
 //! 定义日期时间计算中使用的各种时间单位，支持解析和转换功能。
 
 use crate::variable::VariableType;
 use std::rc::Rc;
 
 /// 时间间隔单位枚举
-/// 
+///
 /// 定义日期时间操作中支持的各种时间单位
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum DurationUnit {
@@ -30,19 +30,19 @@ pub(crate) enum DurationUnit {
 
 impl DurationUnit {
     /// 获取时间单位的变量类型定义
-    /// 
+    ///
     /// 返回包含所有支持的时间单位字符串表示的枚举类型
-    /// 
+    ///
     /// # 返回值
     /// * `VariableType` - 包含所有时间单位别名的枚举变量类型
     pub fn variable_type() -> VariableType {
         VariableType::Enum(
             Some(Rc::from("DurationUnit")),
             vec![
-                "seconds", "second", "secs", "sec", "s", "minutes", "minute", "min", "mins", "m",
-                "hours", "hour", "hr", "hrs", "h", "days", "day", "d", "weeks", "week", "w",
-                "months", "month", "mo", "M", "quarters", "quarter", "qtr", "q", "years", "year",
-                "y",
+                "seconds", "second", "secs", "sec", "s", "minutes", "minute",
+                "min", "mins", "m", "hours", "hour", "hr", "hrs", "h", "days",
+                "day", "d", "weeks", "week", "w", "months", "month", "mo", "M",
+                "quarters", "quarter", "qtr", "q", "years", "year", "y",
             ]
             .into_iter()
             .map(Into::into)
@@ -51,12 +51,12 @@ impl DurationUnit {
     }
 
     /// 从字符串解析时间单位
-    /// 
+    ///
     /// 支持多种别名形式，包括单复数形式和缩写
-    /// 
+    ///
     /// # 参数
     /// * `unit` - 时间单位字符串
-    /// 
+    ///
     /// # 返回值
     /// * `Some(DurationUnit)` - 成功解析的时间单位
     /// * `None` - 无法识别的时间单位字符串
@@ -75,10 +75,10 @@ impl DurationUnit {
     }
 
     /// 获取时间单位对应的秒数
-    /// 
+    ///
     /// 固定时间单位（秒、分、时、天、周）可以精确转换为秒数，
     /// 而日历单位（月、季度、年）由于长度可变，返回None。
-    /// 
+    ///
     /// # 返回值
     /// * `Some(u64)` - 该时间单位对应的秒数
     /// * `None` - 日历单位无法精确转换为秒数
@@ -97,9 +97,9 @@ impl DurationUnit {
     }
 
     /// 获取时间单位对应的毫秒数
-    /// 
+    ///
     /// 基于秒数计算毫秒数，日历单位同样返回None。
-    /// 
+    ///
     /// # 返回值
     /// * `Some(f64)` - 该时间单位对应的毫秒数
     /// * `None` - 日历单位无法精确转换为毫秒数

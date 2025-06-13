@@ -17,7 +17,7 @@ impl<'a> From<Cow<'a, Value>> for VariableType {
                 };
 
                 VariableType::from(arr)
-            }
+            },
             Value::Object(_) => {
                 let Value::Object(obj) = value.into_owned() else {
                     panic!("unexpected type of value, expected object");
@@ -28,7 +28,7 @@ impl<'a> From<Cow<'a, Value>> for VariableType {
                         .map(|(k, v)| (Rc::from(k.as_str()), Rc::new(v.into())))
                         .collect(),
                 )
-            }
+            },
         }
     }
 }
@@ -51,12 +51,13 @@ impl From<Vec<Value>> for VariableType {
             return VariableType::Array(Rc::new(VariableType::Any));
         }
 
-        let result_type = arr
-            .into_iter()
-            .fold(None, |acc: Option<VariableType>, b| match acc {
+        let result_type = arr.into_iter().fold(
+            None,
+            |acc: Option<VariableType>, b| match acc {
                 Some(a) => Some(a.merge(&VariableType::from(b))),
                 None => Some(VariableType::from(b)),
-            });
+            },
+        );
 
         VariableType::Array(Rc::new(result_type.unwrap_or(VariableType::Any)))
     }
@@ -68,9 +69,8 @@ impl From<&Vec<Value>> for VariableType {
             return VariableType::Array(Rc::new(VariableType::Any));
         }
 
-        let result_type = arr
-            .iter()
-            .fold(None, |acc: Option<VariableType>, b| match acc {
+        let result_type =
+            arr.iter().fold(None, |acc: Option<VariableType>, b| match acc {
                 Some(a) => Some(a.merge(&VariableType::from(b))),
                 None => Some(VariableType::from(b)),
             });

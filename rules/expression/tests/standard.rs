@@ -4,7 +4,8 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
 use moduforge_rules_expression::lexer::{
-    ArithmeticOperator, Bracket, ComparisonOperator, Lexer, LogicalOperator, Operator,
+    ArithmeticOperator, Bracket, ComparisonOperator, Lexer, LogicalOperator,
+    Operator,
 };
 use moduforge_rules_expression::parser::{Node, Parser};
 
@@ -36,38 +37,14 @@ fn standard_test() {
                 right: &Node::Number(D25),
             },
         },
-        StandardTest {
-            src: "a",
-            result: &Node::Identifier("a"),
-        },
-        StandardTest {
-            src: "'str'",
-            result: &Node::String("str"),
-        },
-        StandardTest {
-            src: "3",
-            result: &Node::Number(D3),
-        },
-        StandardTest {
-            src: "10_000_000",
-            result: &Node::Number(D10_000_000),
-        },
-        StandardTest {
-            src: "2.5",
-            result: &Node::Number(D2P5),
-        },
-        StandardTest {
-            src: "true",
-            result: &Node::Bool(true),
-        },
-        StandardTest {
-            src: "false",
-            result: &Node::Bool(false),
-        },
-        StandardTest {
-            src: "null",
-            result: &Node::Null,
-        },
+        StandardTest { src: "a", result: &Node::Identifier("a") },
+        StandardTest { src: "'str'", result: &Node::String("str") },
+        StandardTest { src: "3", result: &Node::Number(D3) },
+        StandardTest { src: "10_000_000", result: &Node::Number(D10_000_000) },
+        StandardTest { src: "2.5", result: &Node::Number(D2P5) },
+        StandardTest { src: "true", result: &Node::Bool(true) },
+        StandardTest { src: "false", result: &Node::Bool(false) },
+        StandardTest { src: "null", result: &Node::Null },
         StandardTest {
             src: "-3",
             result: &Node::Unary {
@@ -88,7 +65,9 @@ fn standard_test() {
             result: &Node::Binary {
                 left: &Node::Parenthesized(&Node::Binary {
                     left: &Node::Number(D1),
-                    operator: Operator::Arithmetic(ArithmeticOperator::Subtract),
+                    operator: Operator::Arithmetic(
+                        ArithmeticOperator::Subtract,
+                    ),
                     right: &Node::Number(D2),
                 }),
                 operator: Operator::Arithmetic(ArithmeticOperator::Multiply),
@@ -196,7 +175,9 @@ fn standard_test() {
                     node: &Node::Number(D0),
                 },
                 right: &Node::Unary {
-                    operator: Operator::Arithmetic(ArithmeticOperator::Subtract),
+                    operator: Operator::Arithmetic(
+                        ArithmeticOperator::Subtract,
+                    ),
                     node: &Node::Number(D1),
                 },
                 operator: Operator::Comparison(ComparisonOperator::NotEqual),
@@ -269,10 +250,7 @@ fn standard_test() {
                 to: None,
             },
         },
-        StandardTest {
-            src: "[]",
-            result: &Node::Array(&[]),
-        },
+        StandardTest { src: "[]", result: &Node::Array(&[]) },
         StandardTest {
             src: "0 in []",
             result: &Node::Binary {
@@ -317,7 +295,11 @@ fn standard_test() {
 
 #[test]
 fn failure_tests() {
-    let tests: Vec<&str> = Vec::from(["a + b ++", "null.nested.property", "false.nested.property"]);
+    let tests: Vec<&str> = Vec::from([
+        "a + b ++",
+        "null.nested.property",
+        "false.nested.property",
+    ]);
 
     let mut lexer = Lexer::new();
     let mut bump = Bump::new();

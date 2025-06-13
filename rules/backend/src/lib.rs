@@ -24,7 +24,8 @@ use std::path::PathBuf;
 use zip::ZipArchive;
 
 const IS_DEVELOPMENT: bool = cfg!(debug_assertions);
-const STATIC_RESOURCES_URL: &str = "https://pricing-dev.oss-cn-hangzhou.aliyuncs.com/static/static.zip"; // 替换为实际的静态资源URL
+const STATIC_RESOURCES_URL: &str =
+    "https://pricing-dev.oss-cn-hangzhou.aliyuncs.com/static/static.zip"; // 替换为实际的静态资源URL
 
 pub async fn start_dev_server() {
     // 确保静态资源存在
@@ -32,17 +33,22 @@ pub async fn start_dev_server() {
         tracing::error!("确保静态资源失败: {}", e);
     }
 
-    let local_pool = LocalPoolHandle::new(available_parallelism().map(Into::into).unwrap_or(1));
+    let local_pool = LocalPoolHandle::new(
+        available_parallelism().map(Into::into).unwrap_or(1),
+    );
 
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "devtool_rules_backend=info,tower_http=info".into()),
+                .unwrap_or_else(|_| {
+                    "devtool_rules_backend=info,tower_http=info".into()
+                }),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let host_address = IS_DEVELOPMENT.then_some("127.0.0.1").unwrap_or("0.0.0.0");
+    let host_address =
+        IS_DEVELOPMENT.then_some("127.0.0.1").unwrap_or("0.0.0.0");
     let listener_address = format!("{host_address}:3000");
 
     let app = Router::new()
@@ -54,16 +60,14 @@ pub async fn start_dev_server() {
         .layer(Extension(local_pool))
         .nest_service("/", serve_dir_service());
 
-    let listener = tokio::net::TcpListener::bind(listener_address)
-        .await
-        .unwrap();
+    let listener =
+        tokio::net::TcpListener::bind(listener_address).await.unwrap();
     let compression_layer = CompressionLayer::new().gzip(true).br(true);
 
     tracing::info!("🚀 Listening on http://{}", listener.local_addr().unwrap());
 
-    let mut app_with_layers = app
-        .layer(TraceLayer::new_for_http())
-        .layer(compression_layer);
+    let mut app_with_layers =
+        app.layer(TraceLayer::new_for_http()).layer(compression_layer);
     if let Ok(_) = env::var("CORS_PERMISSIVE") {
         app_with_layers = app_with_layers.layer(CorsLayer::permissive())
     }
@@ -71,45 +75,50 @@ pub async fn start_dev_server() {
     axum::serve(listener, app_with_layers).await.unwrap();
 }
 
-async fn download_static_resources() -> Result<PathBuf, Box<dyn std::error::Error>> {
+async fn download_static_resources(
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let work_dir = env::current_dir()?;
     let zip_path = work_dir.join("static.zip");
-    
+
     // 下载文件
     tracing::info!("开始下载静态资源: {}", STATIC_RESOURCES_URL);
     let response = reqwest::get(STATIC_RESOURCES_URL).await?;
-    
+
     if !response.status().is_success() {
-        return Err(format!("下载失败，HTTP状态码: {}", response.status()).into());
+        return Err(
+            format!("下载失败，HTTP状态码: {}", response.status()).into()
+        );
     }
-    
+
     let bytes = response.bytes().await?;
     tracing::info!("下载完成，文件大小: {} 字节", bytes.len());
-    
+
     // 保存zip文件
     let mut file = File::create(&zip_path)?;
     file.write_all(&bytes)?;
     tracing::info!("ZIP文件已保存到: {:?}", zip_path);
-    
+
     Ok(zip_path)
 }
 
-fn extract_static_resources(zip_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+fn extract_static_resources(
+    zip_path: &PathBuf
+) -> Result<(), Box<dyn std::error::Error>> {
     let work_dir = env::current_dir()?;
-    
+
     // 解压文件
     tracing::info!("开始解压文件: {:?}", zip_path);
     let file = File::open(zip_path)?;
     let mut archive = ZipArchive::new(file)?;
-    
+
     tracing::info!("ZIP文件包含 {} 个文件", archive.len());
-    
+
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
         let outpath = work_dir.join(file.name());
-        
+
         tracing::info!("正在解压: {} -> {:?}", file.name(), outpath);
-        
+
         if file.name().ends_with('/') {
             fs::create_dir_all(&outpath)?;
             tracing::info!("创建目录: {:?}", outpath);
@@ -125,11 +134,11 @@ fn extract_static_resources(zip_path: &PathBuf) -> Result<(), Box<dyn std::error
             tracing::info!("解压文件完成: {:?}", outpath);
         }
     }
-    
+
     // 清理zip文件
     tracing::info!("清理临时ZIP文件: {:?}", zip_path);
     fs::remove_file(zip_path)?;
-    
+
     tracing::info!("所有文件解压完成");
     Ok(())
 }
@@ -137,24 +146,24 @@ fn extract_static_resources(zip_path: &PathBuf) -> Result<(), Box<dyn std::error
 async fn ensure_static_resources() -> Result<(), Box<dyn std::error::Error>> {
     let work_dir = env::current_dir()?;
     let static_path = work_dir.join("static");
-    
+
     if static_path.exists() {
         tracing::info!("静态资源目录已存在: {:?}", static_path);
         return Ok(());
     }
-    
+
     tracing::info!("静态资源不存在，开始下载...");
     let zip_path = download_static_resources().await?;
     extract_static_resources(&zip_path)?;
     tracing::info!("静态资源下载并解压成功");
-    
+
     Ok(())
 }
 
 fn serve_dir_service() -> ServeDir<SetStatus<ServeFile>> {
-    let work_dir = env::current_dir().ok().map_or("static".to_string(), |dir| {
-        dir.to_string_lossy().to_string()
-    });
+    let work_dir = env::current_dir()
+        .ok()
+        .map_or("static".to_string(), |dir| dir.to_string_lossy().to_string());
     let static_path = Path::new(&work_dir).join("static");
     let index_path = static_path.join("index.html");
     tracing::info!("提供静态文件: {:?}", static_path.display());
@@ -183,17 +192,16 @@ async fn simulate(
             decision
                 .evaluate_with_opts(
                     payload.context.into(),
-                    EvaluationOptions {
-                        trace: Some(true),
-                        max_depth: None,
-                    },
+                    EvaluationOptions { trace: Some(true), max_depth: None },
                 )
                 .await
                 .map(serde_json::to_value)
         })
         .await
         .expect("Thread failed to join")?
-        .map_err(|_| SimulateError::from(Box::new(EvaluationError::DepthLimitExceeded)))?;
+        .map_err(|_| {
+            SimulateError::from(Box::new(EvaluationError::DepthLimitExceeded))
+        })?;
 
     Ok(Json(result))
 }

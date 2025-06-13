@@ -70,12 +70,12 @@ pub mod variable;
 pub mod vm;
 
 pub use exports::{
-    compile_expression, compile_unary_expression, evaluate_expression, evaluate_unary_expression,
+    compile_expression, compile_unary_expression, evaluate_expression,
+    evaluate_unary_expression,
 };
 pub use expression::{Expression, ExpressionKind};
 pub use isolate::{Isolate, IsolateError};
 pub use variable::Variable;
-
 
 // 导出自定义函数相关
 pub use functions::custom::{CustomFunction, CustomFunctionRegistry};

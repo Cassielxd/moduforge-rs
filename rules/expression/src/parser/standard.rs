@@ -25,11 +25,14 @@ impl<'arena, 'token_ref> Parser<'arena, 'token_ref, Standard> {
 
     /// 解析二元表达式
     /// 使用算符优先级分析法解析二元操作符表达式
-    /// 
+    ///
     /// # 参数
     /// * `precedence` - 最小优先级，只处理优先级不低于此值的操作符
     #[cfg_attr(feature = "stack-protection", recursive::recursive)]
-    fn binary_expression(&self, precedence: u8) -> &'arena Node<'arena> {
+    fn binary_expression(
+        &self,
+        precedence: u8,
+    ) -> &'arena Node<'arena> {
         // 解析左操作数
         let mut node_left = self.unary_expression();
         let Some(mut token) = self.current() else {
@@ -55,8 +58,10 @@ impl<'arena, 'token_ref> Parser<'arena, 'token_ref, Standard> {
             self.next();
             // 根据结合性确定右操作数的最小优先级
             let node_right = match op.associativity {
-                Associativity::Left => self.binary_expression(op.precedence + 1), // 左结合：提高优先级
-                _ => self.binary_expression(op.precedence),                        // 右结合：保持优先级
+                Associativity::Left => {
+                    self.binary_expression(op.precedence + 1)
+                }, // 左结合：提高优先级
+                _ => self.binary_expression(op.precedence), // 右结合：保持优先级
             };
 
             // 创建二元操作节点
@@ -95,16 +100,22 @@ impl<'arena, 'token_ref> Parser<'arena, 'token_ref, Standard> {
     fn unary_expression(&self) -> &'arena Node<'arena> {
         let Some(token) = self.current() else {
             return self.error(AstNodeError::Custom {
-                message: self.bump.alloc_str("Unexpected end of unary expression"),
+                message: self
+                    .bump
+                    .alloc_str("Unexpected end of unary expression"),
                 span: (self.prev_token_end(), self.prev_token_end()),
             });
         };
 
         // 处理回调引用 (#)
-        if self.depth() > 0 && token.kind == TokenKind::Identifier(Identifier::CallbackReference) {
+        if self.depth() > 0
+            && token.kind
+                == TokenKind::Identifier(Identifier::CallbackReference)
+        {
             self.next();
 
-            let node = self.node(Node::Pointer, |_| NodeMetadata { span: token.span });
+            let node =
+                self.node(Node::Pointer, |_| NodeMetadata { span: token.span });
             return self.with_postfix(node, |_| self.binary_expression(0));
         }
 
@@ -113,7 +124,9 @@ impl<'arena, 'token_ref> Parser<'arena, 'token_ref, Standard> {
             let Some(unary_operator) = UNARY_OPERATORS.get(operator) else {
                 return self.error(AstNodeError::UnexpectedToken {
                     expected: "UnaryOperator",
-                    received: self.bump.alloc_str(token.kind.to_string().as_str()),
+                    received: self
+                        .bump
+                        .alloc_str(token.kind.to_string().as_str()),
                     span: token.span,
                 });
             };
@@ -121,10 +134,7 @@ impl<'arena, 'token_ref> Parser<'arena, 'token_ref, Standard> {
             self.next();
             let expr = self.binary_expression(unary_operator.precedence);
             let node = self.node(
-                Node::Unary {
-                    operator: *operator,
-                    node: expr,
-                },
+                Node::Unary { operator: *operator, node: expr },
                 |h| NodeMetadata {
                     span: (
                         token.span.0,
@@ -137,7 +147,9 @@ impl<'arena, 'token_ref> Parser<'arena, 'token_ref, Standard> {
         }
 
         // 尝试解析区间表达式（如 [1, 10]、(0, 100) 等）
-        if let Some(interval_node) = self.interval(|_| self.binary_expression(0)) {
+        if let Some(interval_node) =
+            self.interval(|_| self.binary_expression(0))
+        {
             return interval_node;
         }
 
@@ -147,13 +159,16 @@ impl<'arena, 'token_ref> Parser<'arena, 'token_ref, Standard> {
 
             self.next();
             let binary_node = self.binary_expression(0);
-            if let Some(error_node) = self.expect(TokenKind::Bracket(Bracket::RightParenthesis)) {
+            if let Some(error_node) =
+                self.expect(TokenKind::Bracket(Bracket::RightParenthesis))
+            {
                 return error_node;
             };
 
-            let expr = self.node(Node::Parenthesized(binary_node), |_| NodeMetadata {
-                span: (p_start.unwrap_or_default(), self.prev_token_end()),
-            });
+            let expr =
+                self.node(Node::Parenthesized(binary_node), |_| NodeMetadata {
+                    span: (p_start.unwrap_or_default(), self.prev_token_end()),
+                });
 
             return self.with_postfix(expr, |_| self.binary_expression(0));
         }

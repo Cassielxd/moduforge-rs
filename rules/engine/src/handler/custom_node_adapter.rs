@@ -10,14 +10,20 @@ use moduforge_rules_expression::variable::Variable;
 use moduforge_rules_template::TemplateRenderError;
 
 pub trait CustomNodeAdapter {
-    fn handle(&self, request: CustomNodeRequest) -> impl std::future::Future<Output = NodeResult>;
+    fn handle(
+        &self,
+        request: CustomNodeRequest,
+    ) -> impl std::future::Future<Output = NodeResult>;
 }
 
 #[derive(Default, Debug)]
 pub struct NoopCustomNode;
 
 impl CustomNodeAdapter for NoopCustomNode {
-    async fn handle(&self, _: CustomNodeRequest) -> NodeResult {
+    async fn handle(
+        &self,
+        _: CustomNodeRequest,
+    ) -> NodeResult {
         Err(anyhow!("Custom node handler not provided"))
     }
 }
@@ -41,7 +47,10 @@ impl TryFrom<NodeRequest> for CustomNodeRequest {
 }
 
 impl CustomNodeRequest {
-    pub fn get_field(&self, path: &str) -> Result<Option<Variable>, TemplateRenderError> {
+    pub fn get_field(
+        &self,
+        path: &str,
+    ) -> Result<Option<Variable>, TemplateRenderError> {
         let Some(selected_value) = self.get_field_raw(path) else {
             return Ok(None);
         };
@@ -50,11 +59,17 @@ impl CustomNodeRequest {
             return Ok(Some(selected_value));
         };
 
-        let template_value = moduforge_rules_template::render(template.as_ref(), self.input.clone())?;
+        let template_value = moduforge_rules_template::render(
+            template.as_ref(),
+            self.input.clone(),
+        )?;
         Ok(Some(template_value))
     }
 
-    fn get_field_raw(&self, path: &str) -> Option<Variable> {
+    fn get_field_raw(
+        &self,
+        path: &str,
+    ) -> Option<Variable> {
         self.node.config.dot_get(path).ok().flatten()
     }
 }

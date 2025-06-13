@@ -99,7 +99,9 @@ impl PluginSpec {
     ) -> StateResult<Option<Transaction>> {
         match &self.tr {
             Some(transaction) => {
-                let tr = transaction.append_transaction(trs, old_state, new_state).await?;
+                let tr = transaction
+                    .append_transaction(trs, old_state, new_state)
+                    .await?;
                 if let Some(mut tr) = tr {
                     tr.commit();
                     Ok(Some(tr))

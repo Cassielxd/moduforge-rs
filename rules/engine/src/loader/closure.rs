@@ -26,7 +26,10 @@ where
     F: Fn(String) -> O + Sync + Send,
     O: Future<Output = LoaderResponse> + Send,
 {
-    fn load<'a>(&'a self, key: &'a str) -> impl Future<Output = LoaderResponse> + 'a {
+    fn load<'a>(
+        &'a self,
+        key: &'a str,
+    ) -> impl Future<Output = LoaderResponse> + 'a {
         async move {
             let closure = &self.closure;
             closure(key.to_string()).await

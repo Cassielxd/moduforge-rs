@@ -39,22 +39,10 @@ fn isolate_standard_test() {
                 "c": 1
             }),
             cases: Vec::from([
-                TestCase {
-                    expr: "a + b - c",
-                    result: json!(8),
-                },
-                TestCase {
-                    expr: "b^a",
-                    result: json!(216),
-                },
-                TestCase {
-                    expr: "c * b / a",
-                    result: json!(2),
-                },
-                TestCase {
-                    expr: "abs(a - b - c)",
-                    result: json!(4),
-                },
+                TestCase { expr: "a + b - c", result: json!(8) },
+                TestCase { expr: "b^a", result: json!(216) },
+                TestCase { expr: "c * b / a", result: json!(2) },
+                TestCase { expr: "abs(a - b - c)", result: json!(4) },
             ]),
         },
         TestEnv {
@@ -67,30 +55,15 @@ fn isolate_standard_test() {
 
             }),
             cases: Vec::from([
-                TestCase {
-                    expr: "a",
-                    result: json!(3.14),
-                },
-                TestCase {
-                    expr: "b",
-                    result: json!(2),
-                },
+                TestCase { expr: "a", result: json!(3.14) },
+                TestCase { expr: "b", result: json!(2) },
                 TestCase {
                     expr: "e",
                     result: json!(9_223_372_036_854_775_807i64),
                 },
-                TestCase {
-                    expr: "a + b",
-                    result: json!(5.14),
-                },
-                TestCase {
-                    expr: "(b + c) - (c + b)",
-                    result: json!(0),
-                },
-                TestCase {
-                    expr: "d",
-                    result: json!(18446744073709551615u64),
-                },
+                TestCase { expr: "a + b", result: json!(5.14) },
+                TestCase { expr: "(b + c) - (c + b)", result: json!(0) },
+                TestCase { expr: "d", result: json!(18446744073709551615u64) },
             ]),
         },
         TestEnv {
@@ -102,26 +75,11 @@ fn isolate_standard_test() {
                 "f": false,
             }),
             cases: Vec::from([
-                TestCase {
-                    expr: "a == a and a != b",
-                    result: json!(true),
-                },
-                TestCase {
-                    expr: "b - a > c",
-                    result: json!(true),
-                },
-                TestCase {
-                    expr: "b < a or a > b",
-                    result: json!(false),
-                },
-                TestCase {
-                    expr: "t or f",
-                    result: json!(true),
-                },
-                TestCase {
-                    expr: "t and f",
-                    result: json!(false),
-                },
+                TestCase { expr: "a == a and a != b", result: json!(true) },
+                TestCase { expr: "b - a > c", result: json!(true) },
+                TestCase { expr: "b < a or a > b", result: json!(false) },
+                TestCase { expr: "t or f", result: json!(true) },
+                TestCase { expr: "t and f", result: json!(false) },
             ]),
         },
         TestEnv {
@@ -353,10 +311,7 @@ fn isolate_standard_test() {
                     expr: "contains(purchaseAmounts, 150)",
                     result: json!(false),
                 },
-                TestCase {
-                    expr: "len(purchaseAmounts)",
-                    result: json!(4),
-                },
+                TestCase { expr: "len(purchaseAmounts)", result: json!(4) },
             ]),
         },
         TestEnv {
@@ -394,10 +349,7 @@ fn isolate_standard_test() {
                     expr: r#"weekdayString(date("2022-11-14"))"#,
                     result: json!("Mon"),
                 },
-                TestCase {
-                    expr: r#"year("2022-01-01")"#,
-                    result: json!(2022),
-                },
+                TestCase { expr: r#"year("2022-01-01")"#, result: json!(2022) },
                 TestCase {
                     expr: r#"year(date("2022-01-01"))"#,
                     result: json!(2022),
@@ -407,50 +359,20 @@ fn isolate_standard_test() {
         TestEnv {
             env: json!({}),
             cases: Vec::from([
-                TestCase {
-                    expr: r#"sum([1, 2, 3])"#,
-                    result: json!(6),
-                },
-                TestCase {
-                    expr: r#"avg([1, 2, 3])"#,
-                    result: json!(2),
-                },
-                TestCase {
-                    expr: r#"min([1, 2, 3])"#,
-                    result: json!(1),
-                },
-                TestCase {
-                    expr: r#"max([1, 2, 3])"#,
-                    result: json!(3),
-                },
-                TestCase {
-                    expr: r#"floor(3.5)"#,
-                    result: json!(3),
-                },
-                TestCase {
-                    expr: r#"ceil(3.5)"#,
-                    result: json!(4),
-                },
-                TestCase {
-                    expr: r#"round(4.7)"#,
-                    result: json!(5),
-                },
-                TestCase {
-                    expr: r#"rand(10) <= 10"#,
-                    result: json!(true),
-                },
-                TestCase {
-                    expr: r#"10 % 4"#,
-                    result: json!(2),
-                },
+                TestCase { expr: r#"sum([1, 2, 3])"#, result: json!(6) },
+                TestCase { expr: r#"avg([1, 2, 3])"#, result: json!(2) },
+                TestCase { expr: r#"min([1, 2, 3])"#, result: json!(1) },
+                TestCase { expr: r#"max([1, 2, 3])"#, result: json!(3) },
+                TestCase { expr: r#"floor(3.5)"#, result: json!(3) },
+                TestCase { expr: r#"ceil(3.5)"#, result: json!(4) },
+                TestCase { expr: r#"round(4.7)"#, result: json!(5) },
+                TestCase { expr: r#"rand(10) <= 10"#, result: json!(true) },
+                TestCase { expr: r#"10 % 4"#, result: json!(2) },
                 TestCase {
                     expr: r#"true ? 10.0 == 10 : 1.0"#,
                     result: json!(true),
                 },
-                TestCase {
-                    expr: r#"median([1, 2, 3])"#,
-                    result: json!(2),
-                },
+                TestCase { expr: r#"median([1, 2, 3])"#, result: json!(2) },
                 TestCase {
                     expr: r#"median([1, 2, 3, 4])"#,
                     result: json!(2.5),
@@ -483,10 +405,7 @@ fn isolate_standard_test() {
                 "numbers": [[1, 2, 3], [4, 5, 6], [7, 8 ,9]]
             }),
             cases: Vec::from([
-                TestCase {
-                    expr: r#"numbers[0]"#,
-                    result: json!([1, 2, 3]),
-                },
+                TestCase { expr: r#"numbers[0]"#, result: json!([1, 2, 3]) },
                 TestCase {
                     expr: r#"map(numbers, sum(#))"#,
                     result: json!([6, 15, 24]),
@@ -506,10 +425,7 @@ fn isolate_standard_test() {
                 "numbers": [[1, 2, 3], [4, 5, 6], [7, 8 ,9]]
             }),
             cases: Vec::from([
-                TestCase {
-                    expr: r#"numbers[0]"#,
-                    result: json!([1, 2, 3]),
-                },
+                TestCase { expr: r#"numbers[0]"#, result: json!([1, 2, 3]) },
                 TestCase {
                     expr: r#"map(numbers, sum(#))"#,
                     result: json!([6, 15, 24]),
@@ -542,7 +458,11 @@ fn isolate_standard_test() {
                 },
                 TestCase {
                     expr: r#"map(cart, map(#.categories, #.categoryId))"#,
-                    result: json!([["cat1", "cat2"], ["cat3", "cat4"], ["cat1", "cat5"],]),
+                    result: json!([
+                        ["cat1", "cat2"],
+                        ["cat3", "cat4"],
+                        ["cat1", "cat5"],
+                    ]),
                 },
             ]),
         },
@@ -687,61 +607,23 @@ fn isolate_unary_tests() {
             }),
             reference: "sum(filter(customer.purchaseAmounts, # < 300))",
             cases: Vec::from([
-                TestCase {
-                    expr: "300",
-                    result: json!(true),
-                },
-                TestCase {
-                    expr: ")100..200(",
-                    result: json!(true),
-                },
-                TestCase {
-                    expr: "in [100..300]",
-                    result: json!(true),
-                },
-                TestCase {
-                    expr: "[100, 200, 300]",
-                    result: json!(true),
-                },
-                TestCase {
-                    expr: "100, 200, 300",
-                    result: json!(true),
-                },
-                TestCase {
-                    expr: "not in [250, 350]",
-                    result: json!(true),
-                },
-                TestCase {
-                    expr: "> 250",
-                    result: json!(true),
-                },
-                TestCase {
-                    expr: "< 350",
-                    result: json!(true),
-                },
-                TestCase {
-                    expr: "== 300",
-                    result: json!(true),
-                },
-                TestCase {
-                    expr: "!= 301",
-                    result: json!(true),
-                },
-                TestCase {
-                    expr: ">= 300 and <= 300",
-                    result: json!(true),
-                },
+                TestCase { expr: "300", result: json!(true) },
+                TestCase { expr: ")100..200(", result: json!(true) },
+                TestCase { expr: "in [100..300]", result: json!(true) },
+                TestCase { expr: "[100, 200, 300]", result: json!(true) },
+                TestCase { expr: "100, 200, 300", result: json!(true) },
+                TestCase { expr: "not in [250, 350]", result: json!(true) },
+                TestCase { expr: "> 250", result: json!(true) },
+                TestCase { expr: "< 350", result: json!(true) },
+                TestCase { expr: "== 300", result: json!(true) },
+                TestCase { expr: "!= 301", result: json!(true) },
+                TestCase { expr: ">= 300 and <= 300", result: json!(true) },
             ]),
         },
     ]);
 
     let mut isolate = Isolate::new();
-    for UnaryTestEnv {
-        env,
-        cases,
-        reference,
-    } in tests
-    {
+    for UnaryTestEnv { env, cases, reference } in tests {
         isolate.set_environment(env.into());
         isolate.set_reference(reference).unwrap();
 
@@ -769,7 +651,8 @@ mod test {
                 continue;
             };
 
-            let (expression, input_str, output_str) = (row.index(0), row.index(1), row.index(2));
+            let (expression, input_str, output_str) =
+                (row.index(0), row.index(1), row.index(2));
             if expression.starts_with("#") {
                 continue;
             }
@@ -809,7 +692,6 @@ mod test {
         test_csv_standard(csv_data);
     }
 
-
     #[test]
     fn test_unary_csv() {
         let csv_data = include_str!("data/unary.csv");
@@ -822,7 +704,8 @@ mod test {
                 continue;
             };
 
-            let (expression, input_str, output_str) = (row.index(0), row.index(1), row.index(2));
+            let (expression, input_str, output_str) =
+                (row.index(0), row.index(1), row.index(2));
             if expression.starts_with("#") {
                 continue;
             }

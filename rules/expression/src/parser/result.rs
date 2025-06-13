@@ -6,16 +6,17 @@ use std::collections::HashMap;
 /// 包含解析生成的AST根节点和相关元数据
 #[derive(Debug)]
 pub struct ParserResult<'a> {
-    pub root: &'a Node<'a>,        // AST的根节点
-    pub is_complete: bool,          // 解析是否完整（是否处理了所有令牌）
-    pub metadata: Option<HashMap<usize, NodeMetadata, BuildNoHashHasher<usize>>>, // 节点元数据映射
+    pub root: &'a Node<'a>, // AST的根节点
+    pub is_complete: bool,  // 解析是否完整（是否处理了所有令牌）
+    pub metadata:
+        Option<HashMap<usize, NodeMetadata, BuildNoHashHasher<usize>>>, // 节点元数据映射
 }
 
 /// 节点元数据结构体
 /// 存储节点在源代码中的位置信息
 #[derive(Debug, Clone)]
 pub struct NodeMetadata {
-    pub span: (u32, u32),          // 节点在源代码中的位置范围（开始位置，结束位置）
+    pub span: (u32, u32), // 节点在源代码中的位置范围（开始位置，结束位置）
 }
 
 impl<'a> ParserResult<'a> {

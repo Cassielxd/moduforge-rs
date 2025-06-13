@@ -23,15 +23,20 @@ impl Script {
         Self { runtime }
     }
 
-    pub async fn call<P>(&mut self, source: &str, args: &P) -> anyhow::Result<EvaluateResponse>
+    pub async fn call<P>(
+        &mut self,
+        source: &str,
+        args: &P,
+    ) -> anyhow::Result<EvaluateResponse>
     where
         P: Serialize,
     {
         let runtime = &self.runtime;
-        let context = Context::full(&runtime).context("Failed to create context")?;
+        let context =
+            Context::full(&runtime).context("Failed to create context")?;
 
-        let args_str =
-            serde_json::to_string(args).context("Failed to serialize function arguments")?;
+        let args_str = serde_json::to_string(args)
+            .context("Failed to serialize function arguments")?;
 
         let json_response = context.with(|ctx| -> anyhow::Result<String> {
             Module::evaluate(
@@ -52,11 +57,15 @@ impl Script {
                 .map_err(|e| map_js_error(&ctx, e))
         })?;
 
-        serde_json::from_str(json_response.as_str()).context("Failed to parse function result")
+        serde_json::from_str(json_response.as_str())
+            .context("Failed to parse function result")
     }
 }
 
-fn map_js_error(ctx: &Ctx, e: QError) -> anyhow::Error {
+fn map_js_error(
+    ctx: &Ctx,
+    e: QError,
+) -> anyhow::Error {
     let error = JsValue::from_js(&ctx, ctx.catch())
         .map(|v| v.0)
         .unwrap_or(Variable::String(Rc::from(e.to_string().as_str())));

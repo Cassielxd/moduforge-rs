@@ -1,5 +1,5 @@
 //! 函数定义接口模块
-//! 
+//!
 //! 定义了函数的基本接口和具体实现类型，包括静态函数和复合函数
 
 use crate::functions::arguments::Arguments;
@@ -10,21 +10,33 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 /// 函数定义特征
-/// 
+///
 /// 所有函数（内置、自定义、已废弃）都必须实现此特征
-pub trait FunctionDefinition:Any {
+pub trait FunctionDefinition: Any {
     /// 返回必需参数的数量
     fn required_parameters(&self) -> usize;
     /// 返回可选参数的数量
     fn optional_parameters(&self) -> usize;
     /// 检查参数类型是否匹配
-    fn check_types(&self, args: &[Rc<VariableType>]) -> FunctionTypecheck;
+    fn check_types(
+        &self,
+        args: &[Rc<VariableType>],
+    ) -> FunctionTypecheck;
     /// 执行函数调用
-    fn call(&self, args: Arguments) -> anyhow::Result<Variable>;
+    fn call(
+        &self,
+        args: Arguments,
+    ) -> anyhow::Result<Variable>;
     /// 获取指定位置参数的类型
-    fn param_type(&self, index: usize) -> Option<VariableType>;
+    fn param_type(
+        &self,
+        index: usize,
+    ) -> Option<VariableType>;
     /// 获取指定位置参数类型的字符串表示
-    fn param_type_str(&self, index: usize) -> String;
+    fn param_type_str(
+        &self,
+        index: usize,
+    ) -> String;
     /// 获取函数返回值类型
     fn return_type(&self) -> VariableType;
     /// 获取函数返回值类型的字符串表示
@@ -32,7 +44,7 @@ pub trait FunctionDefinition:Any {
 }
 
 /// 函数类型检查结果
-/// 
+///
 /// 包含类型检查过程中发现的错误信息和推断的返回类型
 #[derive(Debug, Default)]
 pub struct FunctionTypecheck {
@@ -45,7 +57,7 @@ pub struct FunctionTypecheck {
 }
 
 /// 函数签名
-/// 
+///
 /// 描述函数的参数类型和返回类型
 #[derive(Clone)]
 pub struct FunctionSignature {
@@ -57,20 +69,20 @@ pub struct FunctionSignature {
 
 impl FunctionSignature {
     /// 创建单参数函数签名
-    /// 
+    ///
     /// # 参数
     /// * `parameter` - 参数类型
     /// * `return_type` - 返回类型
-    pub fn single(parameter: VariableType, return_type: VariableType) -> Self {
-        Self {
-            parameters: vec![parameter],
-            return_type,
-        }
+    pub fn single(
+        parameter: VariableType,
+        return_type: VariableType,
+    ) -> Self {
+        Self { parameters: vec![parameter], return_type }
     }
 }
 
 /// 静态函数
-/// 
+///
 /// 具有固定签名的函数实现
 #[derive(Clone)]
 pub struct StaticFunction {
@@ -92,7 +104,10 @@ impl FunctionDefinition for StaticFunction {
     }
 
     /// 检查参数类型是否与签名匹配
-    fn check_types(&self, args: &[Rc<VariableType>]) -> FunctionTypecheck {
+    fn check_types(
+        &self,
+        args: &[Rc<VariableType>],
+    ) -> FunctionTypecheck {
         let mut typecheck = FunctionTypecheck::default();
         typecheck.return_type = self.signature.return_type.clone();
 
@@ -106,10 +121,8 @@ impl FunctionDefinition for StaticFunction {
         }
 
         // 检查每个参数类型
-        for (i, (arg, expected_type)) in args
-            .iter()
-            .zip(self.signature.parameters.iter())
-            .enumerate()
+        for (i, (arg, expected_type)) in
+            args.iter().zip(self.signature.parameters.iter()).enumerate()
         {
             if !arg.satisfies(expected_type) {
                 typecheck.arguments.push((
@@ -125,17 +138,26 @@ impl FunctionDefinition for StaticFunction {
     }
 
     /// 执行函数调用
-    fn call(&self, args: Arguments) -> anyhow::Result<Variable> {
+    fn call(
+        &self,
+        args: Arguments,
+    ) -> anyhow::Result<Variable> {
         (&self.implementation)(args)
     }
 
     /// 获取指定位置的参数类型
-    fn param_type(&self, index: usize) -> Option<VariableType> {
+    fn param_type(
+        &self,
+        index: usize,
+    ) -> Option<VariableType> {
         self.signature.parameters.get(index).cloned()
     }
 
     /// 获取指定位置参数类型的字符串表示
-    fn param_type_str(&self, index: usize) -> String {
+    fn param_type_str(
+        &self,
+        index: usize,
+    ) -> String {
         self.signature
             .parameters
             .get(index)
@@ -155,7 +177,7 @@ impl FunctionDefinition for StaticFunction {
 }
 
 /// 复合函数
-/// 
+///
 /// 支持多个函数重载的函数实现
 #[derive(Clone)]
 pub struct CompositeFunction {
@@ -168,11 +190,7 @@ pub struct CompositeFunction {
 impl FunctionDefinition for CompositeFunction {
     /// 返回最少参数数量（所有重载中参数最少的）
     fn required_parameters(&self) -> usize {
-        self.signatures
-            .iter()
-            .map(|x| x.parameters.len())
-            .min()
-            .unwrap_or(0)
+        self.signatures.iter().map(|x| x.parameters.len()).min().unwrap_or(0)
     }
 
     /// 返回可选参数数量（最多参数数量 - 最少参数数量）
@@ -189,7 +207,10 @@ impl FunctionDefinition for CompositeFunction {
     }
 
     /// 检查参数类型是否匹配任一重载
-    fn check_types(&self, args: &[Rc<VariableType>]) -> FunctionTypecheck {
+    fn check_types(
+        &self,
+        args: &[Rc<VariableType>],
+    ) -> FunctionTypecheck {
         let mut typecheck = FunctionTypecheck::default();
         if self.signatures.is_empty() {
             typecheck.general = Some("No implementation".to_string());
@@ -254,18 +275,26 @@ impl FunctionDefinition for CompositeFunction {
             })
             .collect::<Vec<_>>()
             .join("\n");
-        typecheck.general = Some(format!("No function overload matches provided arguments. Available overloads:\n{available_signatures}"));
+        typecheck.general = Some(format!(
+            "No function overload matches provided arguments. Available overloads:\n{available_signatures}"
+        ));
 
         typecheck
     }
 
     /// 执行函数调用
-    fn call(&self, args: Arguments) -> anyhow::Result<Variable> {
+    fn call(
+        &self,
+        args: Arguments,
+    ) -> anyhow::Result<Variable> {
         (&self.implementation)(args)
     }
 
     /// 获取指定位置的参数类型（所有重载中该位置类型的并集）
-    fn param_type(&self, index: usize) -> Option<VariableType> {
+    fn param_type(
+        &self,
+        index: usize,
+    ) -> Option<VariableType> {
         self.signatures
             .iter()
             .filter_map(|sig| sig.parameters.get(index))
@@ -274,7 +303,10 @@ impl FunctionDefinition for CompositeFunction {
     }
 
     /// 获取指定位置参数类型的字符串表示（包含所有可能的类型）
-    fn param_type_str(&self, index: usize) -> String {
+    fn param_type_str(
+        &self,
+        index: usize,
+    ) -> String {
         let possible_types: Vec<String> = self
             .signatures
             .iter()

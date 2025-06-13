@@ -8,15 +8,20 @@ use std::rc::Rc;
 use moduforge_rules_expression::variable::Variable;
 
 #[derive(Debug)]
-pub  struct JsValue(pub  Variable);
+pub struct JsValue(pub Variable);
 
 impl<'js> FromJs<'js> for JsValue {
-    fn from_js(ctx: &Ctx<'js>, v: QValue<'js>) -> rquickjs::Result<Self> {
+    fn from_js(
+        ctx: &Ctx<'js>,
+        v: QValue<'js>,
+    ) -> rquickjs::Result<Self> {
         let computed_value = match v.type_of() {
-            Type::Uninitialized | Type::Undefined | Type::Null => Variable::Null,
-            Type::Bool => {
-                Variable::Bool(v.as_bool().or_throw_msg(ctx, "failed to convert to bool")?)
-            }
+            Type::Uninitialized | Type::Undefined | Type::Null => {
+                Variable::Null
+            },
+            Type::Bool => Variable::Bool(
+                v.as_bool().or_throw_msg(ctx, "failed to convert to bool")?,
+            ),
             Type::Int => Variable::Number(Decimal::from(
                 v.as_int().or_throw_msg(ctx, "failed to convert to int")?,
             )),
@@ -47,11 +52,15 @@ impl<'js> FromJs<'js> for JsValue {
 
                 let mut js_arr = Vec::with_capacity(arr.len());
                 for x in arr.into_iter() {
-                    js_arr.push(JsValue::from_js(ctx, x.or_throw(ctx)?).or_throw(ctx)?.0)
+                    js_arr.push(
+                        JsValue::from_js(ctx, x.or_throw(ctx)?)
+                            .or_throw(ctx)?
+                            .0,
+                    )
                 }
 
                 Variable::from_array(js_arr)
-            }
+            },
             Type::Object => {
                 let object = v
                     .into_object()
@@ -67,7 +76,7 @@ impl<'js> FromJs<'js> for JsValue {
                 }
 
                 Variable::from_object(js_object)
-            }
+            },
             Type::Exception => {
                 let exception = v
                     .into_exception()
@@ -77,7 +86,7 @@ impl<'js> FromJs<'js> for JsValue {
                 let description = exception.to_string();
 
                 json!({ "message": message, "description": description }).into()
-            }
+            },
             Type::Function => json!("[Function]").into(),
             Type::Module => json!("[Module]").into(),
             Type::Constructor => json!("[Constructor]").into(),
@@ -87,7 +96,7 @@ impl<'js> FromJs<'js> for JsValue {
                 let promise = v.into_promise().or_throw(ctx)?;
                 let val: JsValue = promise.finish()?;
                 val.0
-            }
+            },
         };
 
         Ok(JsValue(computed_value))
@@ -95,7 +104,10 @@ impl<'js> FromJs<'js> for JsValue {
 }
 
 impl<'js> IntoJs<'js> for JsValue {
-    fn into_js(self, ctx: &Ctx<'js>) -> rquickjs::Result<QValue<'js>> {
+    fn into_js(
+        self,
+        ctx: &Ctx<'js>,
+    ) -> rquickjs::Result<QValue<'js>> {
         let res = match self.0 {
             Variable::Null => QValue::new_null(ctx.clone()),
             Variable::Bool(b) => QValue::new_bool(ctx.clone(), b),
@@ -114,7 +126,7 @@ impl<'js> IntoJs<'js> for JsValue {
                 }
 
                 qarr.into_value()
-            }
+            },
             Variable::Object(o) => {
                 let qmap = rquickjs::Object::new(ctx.clone())?;
 
@@ -124,7 +136,7 @@ impl<'js> IntoJs<'js> for JsValue {
                 }
 
                 qmap.into_value()
-            }
+            },
             Variable::Dynamic(d) => d.to_string().into_js(ctx)?,
         };
 

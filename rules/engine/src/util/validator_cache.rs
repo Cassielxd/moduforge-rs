@@ -11,7 +11,10 @@ pub struct ValidatorCache {
 }
 
 impl ValidatorCache {
-    pub async fn get(&self, key: u64) -> Option<Arc<Validator>> {
+    pub async fn get(
+        &self,
+        key: u64,
+    ) -> Option<Arc<Validator>> {
         let read = self.inner.read().await;
         read.get(&key).cloned()
     }

@@ -10,7 +10,10 @@ use moduforge_rules_expression::variable::Variable;
 
 pub use crate::error::{ParserError, TemplateRenderError};
 
-pub fn render(template: &str, context: Variable) -> Result<Variable, TemplateRenderError> {
+pub fn render(
+    template: &str,
+    context: Variable,
+) -> Result<Variable, TemplateRenderError> {
     let tokens = Lexer::from(template.trim()).collect();
     let nodes = Parser::from(tokens.as_slice()).collect()?;
 

@@ -10,7 +10,9 @@ use crate::handler::function::error::FunctionResult;
 use crate::handler::function::function::{Function, HandlerResponse};
 use crate::handler::function::module::console::Log;
 use crate::handler::function::serde::JsValue;
-use crate::handler::node::{NodeRequest, NodeResponse, NodeResult, PartialTraceError};
+use crate::handler::node::{
+    NodeRequest, NodeResponse, NodeResult, PartialTraceError,
+};
 use crate::model::{DecisionNodeKind, FunctionNodeContent};
 
 pub mod error;
@@ -35,16 +37,19 @@ pub struct FunctionHandler {
 static MAX_DURATION: Duration = Duration::from_millis(5_000);
 
 impl FunctionHandler {
-    pub fn new(function: Rc<Function>, trace: bool, iteration: u8, max_depth: u8) -> Self {
-        Self {
-            function,
-            trace,
-            iteration,
-            max_depth,
-        }
+    pub fn new(
+        function: Rc<Function>,
+        trace: bool,
+        iteration: u8,
+        max_depth: u8,
+    ) -> Self {
+        Self { function, trace, iteration, max_depth }
     }
 
-    pub async fn handle(&self, request: NodeRequest) -> NodeResult {
+    pub async fn handle(
+        &self,
+        request: NodeRequest,
+    ) -> NodeResult {
         let content = match &request.node.kind {
             DecisionNodeKind::FunctionNode { content } => match content {
                 FunctionNodeContent::Version2(content) => Ok(content),
@@ -57,15 +62,14 @@ impl FunctionHandler {
         let module_name = self
             .function
             .suggest_module_name(request.node.id.as_str(), &content.source);
-        let interrupt_handler = Box::new(move || start.elapsed() > MAX_DURATION);
+        let interrupt_handler =
+            Box::new(move || start.elapsed() > MAX_DURATION);
         self.function
             .runtime()
             .set_interrupt_handler(Some(interrupt_handler))
             .await;
 
-        self.attach_globals()
-            .await
-            .map_err(|e| anyhow!(e.to_string()))?;
+        self.attach_globals().await.map_err(|e| anyhow!(e.to_string()))?;
 
         self.function
             .register_module(&module_name, content.source.as_str())
@@ -82,9 +86,11 @@ impl FunctionHandler {
 
                 Ok(NodeResponse {
                     output: response.data,
-                    trace_data: self.trace.then(|| json!({ "log": response.logs })),
+                    trace_data: self
+                        .trace
+                        .then(|| json!({ "log": response.logs })),
                 })
-            }
+            },
             Err(e) => {
                 let mut log = self.function.extract_logs().await;
                 log.push(Log {
@@ -96,7 +102,7 @@ impl FunctionHandler {
                     message: e.to_string(),
                     trace: Some(json!({ "log": log })),
                 }))
-            }
+            },
         }
     }
 

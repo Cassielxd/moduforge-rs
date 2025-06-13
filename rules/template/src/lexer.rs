@@ -39,7 +39,9 @@ impl<'source> Lexer<'source> {
 
                 self.cursor.next();
                 self.tokens.push(Token::OpenBracket);
-            } else if char == '}' && matches!(self.cursor.peek(), Some((_, '}'))) {
+            } else if char == '}'
+                && matches!(self.cursor.peek(), Some((_, '}')))
+            {
                 self.flush(index);
 
                 self.cursor.next();
@@ -53,7 +55,10 @@ impl<'source> Lexer<'source> {
         self.tokens
     }
 
-    fn flush(&mut self, index: usize) {
+    fn flush(
+        &mut self,
+        index: usize,
+    ) {
         if let Some(start) = self.text_start {
             self.tokens.push(Token::Text(&self.source[start..index]));
             self.text_start = None;

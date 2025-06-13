@@ -6,7 +6,11 @@ use std::future::Future;
 use moduforge_rules_expression::{Isolate, Variable};
 
 impl TransformAttributes {
-    pub(crate) async fn run_with<F, Fut>(&self, node_input: Variable, evaluate: F) -> NodeResult
+    pub(crate) async fn run_with<F, Fut>(
+        &self,
+        node_input: Variable,
+        evaluate: F,
+    ) -> NodeResult
     where
         F: Fn(Variable) -> Fut,
         Fut: Future<Output = NodeResult>,
@@ -17,7 +21,8 @@ impl TransformAttributes {
                 let mut isolate = Isolate::new();
                 isolate.set_environment(node_input.clone());
                 // 直接使用 run_standard，表达式系统会自动使用 thread_local State
-                let calculated_input = isolate.run_standard(input_field.as_str())?;
+                let calculated_input =
+                    isolate.run_standard(input_field.as_str())?;
 
                 let nodes = node_input.dot("$nodes").unwrap_or(Variable::Null);
                 match &calculated_input {
@@ -33,14 +38,14 @@ impl TransformAttributes {
                             .collect();
 
                         Variable::from_array(s)
-                    }
+                    },
                     _ => {
                         let new_input = calculated_input.depth_clone(1);
                         new_input.dot_insert("$nodes", nodes);
                         new_input
-                    }
+                    },
                 }
-            }
+            },
         };
 
         let mut trace_data: Option<Value> = None;
@@ -53,9 +58,10 @@ impl TransformAttributes {
 
                 response.output.dot_remove("$nodes");
                 response.output
-            }
+            },
             TransformExecutionMode::Loop => {
-                let input_array_ref = input.as_array().context("Expected an array")?;
+                let input_array_ref =
+                    input.as_array().context("Expected an array")?;
                 let input_array = input_array_ref.borrow();
 
                 let mut output_array = Vec::with_capacity(input_array.len());
@@ -67,7 +73,8 @@ impl TransformAttributes {
                     }
 
                     if self.pass_through {
-                        response.output = input.clone().merge_clone(&response.output);
+                        response.output =
+                            input.clone().merge_clone(&response.output);
                     }
 
                     response.output.dot_remove("$nodes");
@@ -76,7 +83,7 @@ impl TransformAttributes {
 
                 trace_data.replace(Value::Array(trace_datum));
                 Variable::from_array(output_array)
-            }
+            },
         };
 
         if let Some(output_path) = &self.output_path {

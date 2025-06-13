@@ -4,7 +4,10 @@ use criterion::{criterion_group, criterion_main, Bencher, Criterion};
 use moduforge_rules_expression::lexer::Lexer;
 use moduforge_rules_expression::parser::Parser;
 
-fn bench_source(b: &mut Bencher, src: &'static str) {
+fn bench_source(
+    b: &mut Bencher,
+    src: &'static str,
+) {
     let mut lexer = Lexer::new();
     let mut bump = Bump::new();
     let tokens = lexer.tokenize(src).unwrap();

@@ -1,9 +1,6 @@
 use std::ops::Shl;
 
-use crate::{
-    error::PoolResult,
-    node::Node,
-};
+use crate::{error::PoolResult, node::Node};
 
 use super::{NodeRef};
 
@@ -46,17 +43,26 @@ impl<'a> Shl<usize> for NodeRef<'a> {
         positions: usize,
     ) -> Self::Output {
         // 获取当前节点在父节点中的位置
-        if let Some(parent) = self.tree.get_parent_node(&self.key.clone().into()) {
+        if let Some(parent) =
+            self.tree.get_parent_node(&self.key.clone().into())
+        {
             let siblings = self.tree.children(&parent.id).unwrap_or_default();
-            
-            if let Some(current_index) = siblings.iter().position(|id| id.clone() == self.key) {
+
+            if let Some(current_index) =
+                siblings.iter().position(|id| id.clone() == self.key)
+            {
                 // 计算新位置，不能小于0
                 let new_index = current_index.saturating_sub(positions);
-                
+
                 // 如果位置有变化，执行移动
                 if new_index != current_index {
                     //这里只需要修改  content 中的顺序就行，不需要删除和添加
-                    let mut node = self.tree.get_node(&self.key.clone().into()).unwrap().as_ref().clone();
+                    let mut node = self
+                        .tree
+                        .get_node(&self.key.clone().into())
+                        .unwrap()
+                        .as_ref()
+                        .clone();
                     let mut content = node.content.clone();
                     content.swap(current_index, new_index);
                     node.content = content;
@@ -64,7 +70,7 @@ impl<'a> Shl<usize> for NodeRef<'a> {
                 }
             }
         }
-        
+
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
 }

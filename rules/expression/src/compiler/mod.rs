@@ -11,6 +11,6 @@ mod error;
 mod opcode;
 
 // 公开导出的类型和结构
-pub use compiler::Compiler;                 // 编译器主结构
-pub use error::CompilerError;               // 编译错误类型
+pub use compiler::Compiler; // 编译器主结构
+pub use error::CompilerError; // 编译错误类型
 pub use opcode::{Compare, FetchFastTarget, Jump, Opcode}; // 操作码相关类型

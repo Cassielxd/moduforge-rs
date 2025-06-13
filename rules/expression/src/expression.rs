@@ -31,22 +31,26 @@ impl<Kind> Expression<Kind> {
 
 impl Expression<Standard> {
     pub fn new_standard(bytecode: Arc<Vec<Opcode>>) -> Self {
-        Expression {
-            bytecode,
-            _marker: PhantomData,
-        }
+        Expression { bytecode, _marker: PhantomData }
     }
 
     pub fn kind(&self) -> ExpressionKind {
         ExpressionKind::Standard
     }
 
-    pub fn evaluate(&self, context: Variable) -> Result<Variable, IsolateError> {
+    pub fn evaluate(
+        &self,
+        context: Variable,
+    ) -> Result<Variable, IsolateError> {
         let mut vm = VM::new();
         self.evaluate_with(context, &mut vm)
     }
 
-    pub fn evaluate_with(&self, context: Variable, vm: &mut VM) -> Result<Variable, IsolateError> {
+    pub fn evaluate_with(
+        &self,
+        context: Variable,
+        vm: &mut VM,
+    ) -> Result<Variable, IsolateError> {
         let output = vm.run(self.bytecode.as_slice(), context)?;
         Ok(output)
     }
@@ -54,22 +58,26 @@ impl Expression<Standard> {
 
 impl Expression<Unary> {
     pub fn new_unary(bytecode: Arc<Vec<Opcode>>) -> Self {
-        Expression {
-            bytecode,
-            _marker: PhantomData,
-        }
+        Expression { bytecode, _marker: PhantomData }
     }
 
     pub fn kind(&self) -> ExpressionKind {
         ExpressionKind::Unary
     }
 
-    pub fn evaluate(&self, context: Variable) -> Result<bool, IsolateError> {
+    pub fn evaluate(
+        &self,
+        context: Variable,
+    ) -> Result<bool, IsolateError> {
         let mut vm = VM::new();
         self.evaluate_with(context, &mut vm)
     }
 
-    pub fn evaluate_with(&self, context: Variable, vm: &mut VM) -> Result<bool, IsolateError> {
+    pub fn evaluate_with(
+        &self,
+        context: Variable,
+        vm: &mut VM,
+    ) -> Result<bool, IsolateError> {
         let Some(context_object_ref) = context.as_object() else {
             return Err(IsolateError::MissingContextReference);
         };

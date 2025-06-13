@@ -1,8 +1,10 @@
 //! 自定义函数模块
-//! 
+//!
 //! 支持在运行时动态注册自定义函数，并可以访问State
 
-use crate::functions::defs::{FunctionDefinition, FunctionSignature, StaticFunction};
+use crate::functions::defs::{
+    FunctionDefinition, FunctionSignature, StaticFunction,
+};
 use crate::functions::arguments::Arguments;
 use crate::variable::{Variable, VariableType};
 use moduforge_state::State;
@@ -27,7 +29,10 @@ impl CustomFunction {
 }
 
 impl Display for CustomFunction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
         write!(f, "{}", self.name)
     }
 }
@@ -46,7 +51,9 @@ impl TryFrom<&str> for CustomFunction {
 }
 
 /// 自定义函数的执行器类型
-pub type CustomFunctionExecutor = Box<dyn Fn(&Arguments, Option<&Arc<State>>) -> AnyhowResult<Variable> + 'static>;
+pub type CustomFunctionExecutor = Box<
+    dyn Fn(&Arguments, Option<&Arc<State>>) -> AnyhowResult<Variable> + 'static,
+>;
 
 /// 自定义函数定义
 pub struct CustomFunctionDefinition {
@@ -64,16 +71,15 @@ impl CustomFunctionDefinition {
         signature: FunctionSignature,
         executor: CustomFunctionExecutor,
     ) -> Self {
-        Self {
-            name,
-            signature,
-            executor,
-        }
+        Self { name, signature, executor }
     }
 }
 
 impl FunctionDefinition for CustomFunctionDefinition {
-    fn call(&self, args: Arguments) -> AnyhowResult<Variable> {
+    fn call(
+        &self,
+        args: Arguments,
+    ) -> AnyhowResult<Variable> {
         // 尝试获取State上下文（如果可用）
         let state = CURRENT_STATE.with(|s| s.borrow().clone());
         (self.executor)(&args, state.as_ref())
@@ -87,8 +93,12 @@ impl FunctionDefinition for CustomFunctionDefinition {
         0 // 暂时不支持可选参数
     }
 
-    fn check_types(&self, args: &[Rc<VariableType>]) -> crate::functions::defs::FunctionTypecheck {
-        let mut typecheck = crate::functions::defs::FunctionTypecheck::default();
+    fn check_types(
+        &self,
+        args: &[Rc<VariableType>],
+    ) -> crate::functions::defs::FunctionTypecheck {
+        let mut typecheck =
+            crate::functions::defs::FunctionTypecheck::default();
         typecheck.return_type = self.signature.return_type.clone();
 
         if args.len() != self.required_parameters() {
@@ -100,10 +110,8 @@ impl FunctionDefinition for CustomFunctionDefinition {
         }
 
         // 检查每个参数类型
-        for (i, (arg, expected_type)) in args
-            .iter()
-            .zip(self.signature.parameters.iter())
-            .enumerate()
+        for (i, (arg, expected_type)) in
+            args.iter().zip(self.signature.parameters.iter()).enumerate()
         {
             if !arg.satisfies(expected_type) {
                 typecheck.arguments.push((
@@ -118,11 +126,17 @@ impl FunctionDefinition for CustomFunctionDefinition {
         typecheck
     }
 
-    fn param_type(&self, index: usize) -> Option<VariableType> {
+    fn param_type(
+        &self,
+        index: usize,
+    ) -> Option<VariableType> {
         self.signature.parameters.get(index).cloned()
     }
 
-    fn param_type_str(&self, index: usize) -> String {
+    fn param_type_str(
+        &self,
+        index: usize,
+    ) -> String {
         self.signature
             .parameters
             .get(index)
@@ -155,9 +169,7 @@ impl CustomFunctionRegistry {
     );
 
     fn new() -> Self {
-        Self {
-            functions: HashMap::new(),
-        }
+        Self { functions: HashMap::new() }
     }
 
     /// 注册自定义函数
@@ -171,8 +183,12 @@ impl CustomFunctionRegistry {
             if reg.functions.contains_key(&name) {
                 return Err(format!("函数 '{}' 已经存在", name));
             }
-            
-            let definition = CustomFunctionDefinition::new(name.clone(), signature, executor);
+
+            let definition = CustomFunctionDefinition::new(
+                name.clone(),
+                signature,
+                executor,
+            );
             reg.functions.insert(name, Rc::new(definition));
             Ok(())
         })
@@ -181,7 +197,8 @@ impl CustomFunctionRegistry {
     /// 获取函数定义
     pub fn get_definition(name: &str) -> Option<Rc<dyn FunctionDefinition>> {
         Self::INSTANCE.with(|registry| {
-            registry.borrow()
+            registry
+                .borrow()
                 .functions
                 .get(name)
                 .map(|def| def.clone() as Rc<dyn FunctionDefinition>)
@@ -190,9 +207,8 @@ impl CustomFunctionRegistry {
 
     /// 检查函数是否已注册
     pub fn is_registered(name: &str) -> bool {
-        Self::INSTANCE.with(|registry| {
-            registry.borrow().functions.contains_key(name)
-        })
+        Self::INSTANCE
+            .with(|registry| registry.borrow().functions.contains_key(name))
     }
 
     /// 设置当前State上下文
@@ -219,8 +235,8 @@ impl CustomFunctionRegistry {
 
 impl From<&CustomFunction> for Rc<dyn FunctionDefinition> {
     fn from(custom: &CustomFunction) -> Self {
-        CustomFunctionRegistry::get_definition(&custom.name)
-            .unwrap_or_else(|| {
+        CustomFunctionRegistry::get_definition(&custom.name).unwrap_or_else(
+            || {
                 // 如果函数不存在，返回一个错误函数
                 Rc::new(StaticFunction {
                     signature: FunctionSignature {
@@ -231,6 +247,7 @@ impl From<&CustomFunction> for Rc<dyn FunctionDefinition> {
                         Err(anyhow::anyhow!("自定义函数未找到"))
                     }),
                 })
-            })
+            },
+        )
     }
-} 
+}

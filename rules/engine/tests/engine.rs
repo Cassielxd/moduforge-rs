@@ -81,7 +81,7 @@ async fn engine_custom_function() {
         |_args, state_opt| {
             if let Some(state) = state_opt {
                 // 从 State 获取基本信息
-                let info = format!("State版本: {}", state.version);
+                let info = format!("标题版本: {}", state.version);
                 Ok(Variable::String(std::rc::Rc::from(info)))
             } else {
                 Ok(Variable::String(std::rc::Rc::from("无法访问文档")))

@@ -47,10 +47,7 @@ pub struct Console {
 #[rquickjs::methods(rename_all = "camelCase")]
 impl Console {
     fn new() -> Self {
-        Self {
-            logs: Default::default(),
-            created_at: Instant::now(),
-        }
+        Self { logs: Default::default(), created_at: Instant::now() }
     }
 
     #[qjs(skip)]
@@ -65,18 +62,22 @@ impl Console {
         Ok(obj)
     }
 
-    pub fn log<'js>(&self, ctx: Ctx<'js>, args: Rest<Value<'js>>) -> rquickjs::Result<()> {
+    pub fn log<'js>(
+        &self,
+        ctx: Ctx<'js>,
+        args: Rest<Value<'js>>,
+    ) -> rquickjs::Result<()> {
         let config: Object = ctx.globals().get("config").or_throw(&ctx)?;
         let trace: bool = config.get("trace").or_throw(&ctx)?;
         if !trace {
             return Ok(());
         }
 
-        let step1 = args
-            .0
-            .into_iter()
-            .map(|arg| ctx.json_stringify(arg))
-            .collect::<Result<Vec<Option<rquickjs::String<'js>>>, _>>()?;
+        let step1 =
+            args.0
+                .into_iter()
+                .map(|arg| ctx.json_stringify(arg))
+                .collect::<Result<Vec<Option<rquickjs::String<'js>>>, _>>()?;
 
         let step2 = step1
             .into_iter()
@@ -97,7 +98,10 @@ impl Console {
         Ok(())
     }
 
-    pub async fn sleep(&self, duration_ms: u64) -> rquickjs::Result<()> {
+    pub async fn sleep(
+        &self,
+        duration_ms: u64,
+    ) -> rquickjs::Result<()> {
         tokio::time::sleep(Duration::from_millis(duration_ms)).await;
         Ok(())
     }

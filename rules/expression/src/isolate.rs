@@ -25,7 +25,7 @@ type ADefHasher = BuildHasherDefault<AHasher>;
 ///
 /// 重新运行 Isolate 允许通过 arena 分配器进行高效的内存重用。
 /// arena 分配器通过重用内存块来优化内存管理，从而在 Isolate 被多次重用时提高性能和资源利用率。
-/// 
+///
 /// 🆕 现在支持扩展机制和State集成
 #[derive(Debug)]
 pub struct Isolate<'arena> {
@@ -60,33 +60,41 @@ impl<'a> Isolate<'a> {
         isolate
     }
 
-    pub fn set_environment(&mut self, variable: Variable) {
+    pub fn set_environment(
+        &mut self,
+        variable: Variable,
+    ) {
         self.environment.replace(variable);
     }
 
-    pub fn update_environment<F>(&mut self, mut updater: F)
-    where
+    pub fn update_environment<F>(
+        &mut self,
+        mut updater: F,
+    ) where
         F: FnMut(Option<&mut Variable>),
     {
         updater(self.environment.as_mut());
     }
 
-    pub fn set_reference(&mut self, reference: &'a str) -> Result<(), IsolateError> {
+    pub fn set_reference(
+        &mut self,
+        reference: &'a str,
+    ) -> Result<(), IsolateError> {
         let reference_value = match self.references.get(reference) {
             Some(value) => value.clone(),
             None => {
                 let result = self.run_standard(reference)?;
-                self.references
-                    .insert(reference.to_string(), result.clone());
+                self.references.insert(reference.to_string(), result.clone());
                 result
-            }
+            },
         };
 
         if !matches!(&mut self.environment, Some(Variable::Object(_))) {
             self.environment.replace(Variable::empty_object());
         }
 
-        let Some(Variable::Object(environment_object_ref)) = &self.environment else {
+        let Some(Variable::Object(environment_object_ref)) = &self.environment
+        else {
             return Err(IsolateError::ReferenceError);
         };
 
@@ -96,7 +104,10 @@ impl<'a> Isolate<'a> {
         Ok(())
     }
 
-    pub fn get_reference(&self, reference: &str) -> Option<Variable> {
+    pub fn get_reference(
+        &self,
+        reference: &str,
+    ) -> Option<Variable> {
         self.references.get(reference).cloned()
     }
 
@@ -104,7 +115,11 @@ impl<'a> Isolate<'a> {
         self.references.clear();
     }
 
-    fn run_internal(&mut self, source: &'a str, kind: ExpressionKind) -> Result<(), IsolateError> {
+    fn run_internal(
+        &mut self,
+        source: &'a str,
+        kind: ExpressionKind,
+    ) -> Result<(), IsolateError> {
         self.bump.with_mut(|b| b.reset());
         let bump = self.bump.get();
 
@@ -133,64 +148,89 @@ impl<'a> Isolate<'a> {
         Ok(Expression::new_standard(Arc::new(bytecode)))
     }
 
-    pub fn run_standard(&mut self, source: &'a str) -> Result<Variable, IsolateError> {
+    pub fn run_standard(
+        &mut self,
+        source: &'a str,
+    ) -> Result<Variable, IsolateError> {
         self.run_internal(source, ExpressionKind::Standard)?;
 
         let bytecode = self.compiler.get_bytecode();
-        let result = self
-            .vm
-            .run(bytecode, self.environment.clone().unwrap_or(Variable::Null))?;
+        let result = self.vm.run(
+            bytecode,
+            self.environment.clone().unwrap_or(Variable::Null),
+        )?;
 
         Ok(result)
     }
 
     /// 运行标准表达式，并传入State供自定义函数使用
-    pub fn run_standard_with_state(&mut self, source: &'a str, state: Arc<State>) -> Result<Variable, IsolateError> {
+    pub fn run_standard_with_state(
+        &mut self,
+        source: &'a str,
+        state: Arc<State>,
+    ) -> Result<Variable, IsolateError> {
         // 设置State上下文给自定义函数使用
-        crate::functions::custom::CustomFunctionRegistry::set_current_state(Some(state));
-        
+        crate::functions::custom::CustomFunctionRegistry::set_current_state(
+            Some(state),
+        );
+
         // 运行表达式
         let result = self.run_standard(source);
-        
+
         // 清理State上下文
-        crate::functions::custom::CustomFunctionRegistry::set_current_state(None);
-        
+        crate::functions::custom::CustomFunctionRegistry::set_current_state(
+            None,
+        );
+
         result
     }
 
-    pub fn compile_unary(&mut self, source: &'a str) -> Result<Expression<Unary>, IsolateError> {
+    pub fn compile_unary(
+        &mut self,
+        source: &'a str,
+    ) -> Result<Expression<Unary>, IsolateError> {
         self.run_internal(source, ExpressionKind::Unary)?;
         let bytecode = self.compiler.get_bytecode().to_vec();
 
         Ok(Expression::new_unary(Arc::new(bytecode)))
     }
 
-    pub fn run_unary(&mut self, source: &'a str) -> Result<bool, IsolateError> {
+    pub fn run_unary(
+        &mut self,
+        source: &'a str,
+    ) -> Result<bool, IsolateError> {
         self.run_internal(source, ExpressionKind::Unary)?;
 
         let bytecode = self.compiler.get_bytecode();
-        let result = self
-            .vm
-            .run(bytecode, self.environment.clone().unwrap_or(Variable::Null))?;
+        let result = self.vm.run(
+            bytecode,
+            self.environment.clone().unwrap_or(Variable::Null),
+        )?;
 
         result.as_bool().ok_or_else(|| IsolateError::ValueCastError)
     }
 
     /// 运行一元表达式，并传入State供自定义函数使用
-    pub fn run_unary_with_state(&mut self, source: &'a str, state: Arc<State>) -> Result<bool, IsolateError> {
+    pub fn run_unary_with_state(
+        &mut self,
+        source: &'a str,
+        state: Arc<State>,
+    ) -> Result<bool, IsolateError> {
         // 设置State上下文给自定义函数使用
-        crate::functions::custom::CustomFunctionRegistry::set_current_state(Some(state));
-        
+        crate::functions::custom::CustomFunctionRegistry::set_current_state(
+            Some(state),
+        );
+
         // 运行表达式
         let result = self.run_unary(source);
-        
+
         // 清理State上下文
-        crate::functions::custom::CustomFunctionRegistry::set_current_state(None);
-        
+        crate::functions::custom::CustomFunctionRegistry::set_current_state(
+            None,
+        );
+
         result
     }
-
-    
 
     /// 注册自定义函数（可在表达式中直接调用）
     pub fn register_custom_function<F>(
@@ -200,7 +240,11 @@ impl<'a> Isolate<'a> {
         executor: F,
     ) -> Result<(), String>
     where
-        F: Fn(&crate::functions::arguments::Arguments, Option<&Arc<moduforge_state::State>>) -> Result<Variable, anyhow::Error> + 'static,
+        F: Fn(
+                &crate::functions::arguments::Arguments,
+                Option<&Arc<moduforge_state::State>>,
+            ) -> Result<Variable, anyhow::Error>
+            + 'static,
     {
         let signature = crate::functions::defs::FunctionSignature {
             parameters: params,
@@ -251,7 +295,10 @@ pub enum IsolateError {
 }
 
 impl Serialize for IsolateError {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<S>(
+        &self,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -260,29 +307,29 @@ impl Serialize for IsolateError {
         match &self {
             IsolateError::ReferenceError => {
                 map.serialize_entry("type", "referenceError")?;
-            }
+            },
             IsolateError::MissingContextReference => {
                 map.serialize_entry("type", "missingContextReference")?;
-            }
+            },
             IsolateError::ValueCastError => {
                 map.serialize_entry("type", "valueCastError")?;
-            }
+            },
             IsolateError::LexerError { source } => {
                 map.serialize_entry("type", "lexerError")?;
                 map.serialize_entry("source", source.to_string().as_str())?;
-            }
+            },
             IsolateError::ParserError { source } => {
                 map.serialize_entry("type", "parserError")?;
                 map.serialize_entry("source", source.to_string().as_str())?;
-            }
+            },
             IsolateError::CompilerError { source } => {
                 map.serialize_entry("type", "compilerError")?;
                 map.serialize_entry("source", source.to_string().as_str())?;
-            }
+            },
             IsolateError::VMError { source } => {
                 map.serialize_entry("type", "vmError")?;
                 map.serialize_entry("source", source.to_string().as_str())?;
-            }
+            },
         }
 
         map.end()

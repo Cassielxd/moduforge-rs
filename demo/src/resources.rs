@@ -35,27 +35,39 @@ impl UserState {
             total_users: 0,
         }
     }
-    
-    pub fn login_user(&mut self, user_id: String) {
+
+    pub fn login_user(
+        &mut self,
+        user_id: String,
+    ) {
         let user_info = UserInfo {
             user_id: user_id.clone(),
             username: format!("user_{}", user_id),
             last_login: SystemTime::now(),
             role: "user".to_string(),
         };
-        
+
         self.logged_in_users.insert(user_id.clone(), user_info);
         self.total_users += 1;
-        
-        println!("   👤 用户 {} 已登录，当前总用户数: {}", user_id, self.total_users);
+
+        println!(
+            "   👤 用户 {} 已登录，当前总用户数: {}",
+            user_id, self.total_users
+        );
     }
-    
-    pub fn logout_user(&mut self, user_id: &str) {
+
+    pub fn logout_user(
+        &mut self,
+        user_id: &str,
+    ) {
         self.logged_in_users.remove(user_id);
         println!("   👋 用户 {} 已登出", user_id);
     }
-    
-    pub fn get_user_role(&self, user_id: &str) -> Option<String> {
+
+    pub fn get_user_role(
+        &self,
+        user_id: &str,
+    ) -> Option<String> {
         self.logged_in_users.get(user_id).map(|user| user.role.clone())
     }
 }
@@ -67,7 +79,7 @@ impl Resource for UserState {}
 #[derive(Debug, Clone)]
 pub struct AuthState {
     pub permissions: ImHashMap<String, Vec<String>>, // user_id -> permissions
-    pub roles: ImHashMap<String, String>, // user_id -> role
+    pub roles: ImHashMap<String, String>,            // user_id -> role
     pub last_check_time: SystemTime,
     pub permission_cache: ImHashMap<String, bool>, // permission_key -> allowed
 }
@@ -81,25 +93,38 @@ impl AuthState {
             permission_cache: ImHashMap::new(),
         }
     }
-    
-    pub fn grant_permission(&mut self, user_id: String, permission: String) {
-        let mut user_permissions = self.permissions.get(&user_id).cloned().unwrap_or_default();
+
+    pub fn grant_permission(
+        &mut self,
+        user_id: String,
+        permission: String,
+    ) {
+        let mut user_permissions =
+            self.permissions.get(&user_id).cloned().unwrap_or_default();
         if !user_permissions.contains(&permission) {
             user_permissions.push(permission.clone());
             self.permissions.insert(user_id.clone(), user_permissions);
             println!("   ✅ 用户 {} 获得权限: {}", user_id, permission);
         }
     }
-    
-    pub fn check_permission(&self, user_id: &str, permission: &str) -> bool {
+
+    pub fn check_permission(
+        &self,
+        user_id: &str,
+        permission: &str,
+    ) -> bool {
         if let Some(user_permissions) = self.permissions.get(user_id) {
             user_permissions.contains(&permission.to_string())
         } else {
             false
         }
     }
-    
-    pub fn set_role(&mut self, user_id: String, role: String) {
+
+    pub fn set_role(
+        &mut self,
+        user_id: String,
+        role: String,
+    ) {
         self.roles.insert(user_id.clone(), role.clone());
         println!("   🔐 用户 {} 角色设置为: {}", user_id, role);
     }
@@ -144,8 +169,13 @@ impl AuditState {
             start_time: SystemTime::now(),
         }
     }
-    
-    pub fn add_entry(&mut self, action: String, user_id: Option<String>, result: AuditResult) {
+
+    pub fn add_entry(
+        &mut self,
+        action: String,
+        user_id: Option<String>,
+        result: AuditResult,
+    ) {
         let entry = AuditEntry {
             id: self.log_count + 1,
             timestamp: SystemTime::now(),
@@ -155,21 +185,34 @@ impl AuditState {
             result,
             details: HashMap::new(),
         };
-        
+
         self.log_entries.push(entry);
         self.log_count += 1;
         self.last_action = Some(action);
-        
-        println!("   📝 添加审计记录 #{}: {}", self.log_count, self.last_action.as_ref().unwrap());
+
+        println!(
+            "   📝 添加审计记录 #{}: {}",
+            self.log_count,
+            self.last_action.as_ref().unwrap()
+        );
     }
-    
-    pub fn get_logs_by_user(&self, user_id: &str) -> Vec<&AuditEntry> {
-        self.log_entries.iter()
-            .filter(|entry| entry.user_id.as_ref().map_or(false, |id| id == user_id))
+
+    pub fn get_logs_by_user(
+        &self,
+        user_id: &str,
+    ) -> Vec<&AuditEntry> {
+        self.log_entries
+            .iter()
+            .filter(|entry| {
+                entry.user_id.as_ref().map_or(false, |id| id == user_id)
+            })
             .collect()
     }
-    
-    pub fn get_recent_logs(&self, count: usize) -> &[AuditEntry] {
+
+    pub fn get_recent_logs(
+        &self,
+        count: usize,
+    ) -> &[AuditEntry] {
         let len = self.log_entries.len();
         if len <= count {
             &self.log_entries
@@ -212,8 +255,13 @@ impl CacheState {
             max_entries: 1000,
         }
     }
-    
-    pub fn put(&mut self, key: String, value: String, ttl: Option<u64>) {
+
+    pub fn put(
+        &mut self,
+        key: String,
+        value: String,
+        ttl: Option<u64>,
+    ) {
         let entry = CacheEntry {
             key: key.clone(),
             value,
@@ -222,17 +270,20 @@ impl CacheState {
             access_count: 0,
             ttl,
         };
-        
+
         self.cache_entries.insert(key.clone(), entry);
         println!("   💾 缓存条目已添加: {}", key);
-        
+
         // 如果超过最大条目数，清理最旧的条目
         if self.cache_entries.len() > self.max_entries {
             self.cleanup_old_entries();
         }
     }
-    
-    pub fn get(&mut self, key: &str) -> Option<String> {
+
+    pub fn get(
+        &mut self,
+        key: &str,
+    ) -> Option<String> {
         if let Some(mut entry) = self.cache_entries.get(key).cloned() {
             entry.last_accessed = SystemTime::now();
             entry.access_count += 1;
@@ -246,41 +297,44 @@ impl CacheState {
             None
         }
     }
-    
-    pub fn invalidate(&mut self, key: &str) {
+
+    pub fn invalidate(
+        &mut self,
+        key: &str,
+    ) {
         if self.cache_entries.remove(key).is_some() {
             println!("   🗑️ 缓存条目已失效: {}", key);
         }
     }
-    
+
     pub fn clear_all(&mut self) {
         let count = self.cache_entries.len();
         self.cache_entries.clear();
         self.last_cleanup = SystemTime::now();
         println!("   🧹 已清除所有缓存条目，共 {} 个", count);
     }
-    
+
     fn cleanup_old_entries(&mut self) {
         // 简单的清理策略：移除最少访问的条目
-        let mut entries: Vec<_> = self.cache_entries.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+        let mut entries: Vec<_> = self
+            .cache_entries
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
         entries.sort_by_key(|(_, entry)| entry.access_count);
-        
+
         let to_remove = entries.len() - self.max_entries + 100; // 额外清理100个
         for (key, _) in entries.iter().take(to_remove) {
             self.cache_entries.remove(key);
         }
-        
+
         self.last_cleanup = SystemTime::now();
         println!("   🧹 缓存清理完成，移除了 {} 个条目", to_remove);
     }
-    
+
     pub fn get_hit_ratio(&self) -> f64 {
         let total = self.cache_hits + self.cache_misses;
-        if total == 0 {
-            0.0
-        } else {
-            self.cache_hits as f64 / total as f64
-        }
+        if total == 0 { 0.0 } else { self.cache_hits as f64 / total as f64 }
     }
 }
 
@@ -305,17 +359,26 @@ impl PermissionState {
             check_count: 0,
         }
     }
-    
-    pub fn grant_permission(&mut self, user_id: String, permission: String) {
-        let mut permissions = self.user_permissions.get(&user_id).cloned().unwrap_or_default();
+
+    pub fn grant_permission(
+        &mut self,
+        user_id: String,
+        permission: String,
+    ) {
+        let mut permissions =
+            self.user_permissions.get(&user_id).cloned().unwrap_or_default();
         if !permissions.contains(&permission) {
             permissions.push(permission.clone());
             self.user_permissions.insert(user_id.clone(), permissions);
             println!("   ✅ 用户 {} 获得权限: {}", user_id, permission);
         }
     }
-    
-    pub fn check_permission(&self, user_id: &str, permission: &str) -> bool {
+
+    pub fn check_permission(
+        &self,
+        user_id: &str,
+        permission: &str,
+    ) -> bool {
         if let Some(permissions) = self.user_permissions.get(user_id) {
             permissions.contains(&permission.to_string())
         } else {
@@ -352,8 +415,11 @@ impl CollaborationState {
             last_sync: SystemTime::now(),
         }
     }
-    
-    pub fn add_editor(&mut self, user_id: String) {
+
+    pub fn add_editor(
+        &mut self,
+        user_id: String,
+    ) {
         let session = EditorSession {
             user_id: user_id.clone(),
             last_activity: SystemTime::now(),
@@ -362,8 +428,11 @@ impl CollaborationState {
         self.active_editors.insert(user_id.clone(), session);
         println!("   👥 用户 {} 加入协作编辑", user_id);
     }
-    
-    pub fn remove_editor(&mut self, user_id: &str) {
+
+    pub fn remove_editor(
+        &mut self,
+        user_id: &str,
+    ) {
         self.active_editors.remove(user_id);
         println!("   👋 用户 {} 退出协作编辑", user_id);
     }
@@ -397,8 +466,11 @@ impl VersionState {
             auto_snapshot_enabled: true,
         }
     }
-    
-    pub fn create_snapshot(&mut self, description: String) {
+
+    pub fn create_snapshot(
+        &mut self,
+        description: String,
+    ) {
         let snapshot = VersionSnapshot {
             id: format!("snap_{}", self.snapshots.len() + 1),
             description: description.clone(),
@@ -406,14 +478,14 @@ impl VersionState {
             creator: "system".to_string(),
             hash: format!("hash_{}", rand::random::<u64>()),
         };
-        
+
         self.snapshots.push(snapshot);
         println!("   📸 创建版本快照: {}", description);
     }
-    
+
     pub fn get_latest_snapshot(&self) -> Option<&VersionSnapshot> {
         self.snapshots.last()
     }
 }
 
-impl Resource for VersionState {} 
+impl Resource for VersionState {}

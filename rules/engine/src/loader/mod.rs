@@ -23,7 +23,10 @@ pub type LoaderResponse = LoaderResult<Arc<DecisionContent>>;
 
 /// Trait used for implementing a loader for decisions
 pub trait DecisionLoader {
-    fn load<'a>(&'a self, key: &'a str) -> impl Future<Output = LoaderResponse> + 'a;
+    fn load<'a>(
+        &'a self,
+        key: &'a str,
+    ) -> impl Future<Output = LoaderResponse> + 'a;
 }
 
 #[derive(Error, Debug)]

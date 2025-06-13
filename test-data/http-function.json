@@ -13,7 +13,7 @@
     {
       "type": "functionNode",
       "content": {
-        "source": "import zen from 'zen';\r\nimport moduforge from 'moduforge';\r\n\r\n/** @type {Handler} **/\r\nexport const handler = async (input) => {\r\n  console.log(moduforge);\r\n  const r = await moduforge.getStateInfo('11');\r\n\r\n  return r;\r\n};\r\n"
+        "source": "import zen from 'zen';\r\nimport moduforge from 'moduforge';\r\n\r\n/** @type {Handler} **/\r\nexport const handler = async (input) => {\r\n  console.log(moduforge);\r\n  const r = await moduforge.getDocumentTitle();\r\n\r\n  return r;\r\n};\r\n"
       },
       "id": "66cb12f4-4cdd-4422-850b-4534f959407d",
       "name": "function1",

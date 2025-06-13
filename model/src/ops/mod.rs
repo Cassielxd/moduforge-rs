@@ -1,12 +1,12 @@
 use crate::tree::Tree;
 
 pub mod add;
-pub mod sub;
-pub mod mul;
-pub mod bitor;
 pub mod bitand;
+pub mod bitor;
+pub mod mul;
 pub mod shl;
 pub mod shr;
+pub mod sub;
 
 // 用于处理节点赋值的包装器
 pub struct NodeRef<'a> {

@@ -161,8 +161,7 @@ impl Transaction {
     pub fn get_meta<T: 'static>(
         &self,
         key: &str,
-    ) -> Option<&Arc<T>>
-    {
+    ) -> Option<&Arc<T>> {
         self.meta.get(key)?.downcast_ref::<Arc<T>>()
     }
 }

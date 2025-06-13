@@ -1,5 +1,5 @@
 //! 日期方法模块
-//! 
+//!
 //! 提供各种日期和时间的操作方法，包括算术运算、比较、格式化和属性获取
 
 use crate::functions::defs::{
@@ -10,9 +10,20 @@ use std::rc::Rc;
 use strum_macros::{Display, EnumIter, EnumString, IntoStaticStr};
 
 /// 日期方法枚举
-/// 
+///
 /// 定义了所有可用的日期操作方法
-#[derive(Debug, PartialEq, Eq, Hash, Display, EnumString, EnumIter, IntoStaticStr, Clone, Copy)]
+#[derive(
+    Debug,
+    PartialEq,
+    Eq,
+    Hash,
+    Display,
+    EnumString,
+    EnumIter,
+    IntoStaticStr,
+    Clone,
+    Copy,
+)]
 #[strum(serialize_all = "camelCase")]
 pub enum DateMethod {
     // 算术运算
@@ -85,7 +96,7 @@ pub enum DateMethod {
 }
 
 /// 比较操作类型
-/// 
+///
 /// 用于统一处理各种日期比较操作
 enum CompareOperation {
     IsSame,
@@ -96,7 +107,7 @@ enum CompareOperation {
 }
 
 /// 属性获取操作类型
-/// 
+///
 /// 用于统一处理各种日期属性获取操作
 enum GetterOperation {
     Second,
@@ -121,7 +132,7 @@ enum GetterOperation {
 
 impl From<&DateMethod> for Rc<dyn FunctionDefinition> {
     /// 将日期方法枚举转换为函数定义
-    /// 
+    ///
     /// 为每个日期方法创建相应的函数定义，包括函数签名和实现
     fn from(value: &DateMethod) -> Self {
         use crate::variable::VariableType as VT;
@@ -214,10 +225,18 @@ impl From<&DateMethod> for Rc<dyn FunctionDefinition> {
             }),
             // 日期比较方法
             DateMethod::IsSame => imp::compare_using(CompareOperation::IsSame),
-            DateMethod::IsBefore => imp::compare_using(CompareOperation::IsBefore),
-            DateMethod::IsAfter => imp::compare_using(CompareOperation::IsAfter),
-            DateMethod::IsSameOrBefore => imp::compare_using(CompareOperation::IsSameOrBefore),
-            DateMethod::IsSameOrAfter => imp::compare_using(CompareOperation::IsSameOrAfter),
+            DateMethod::IsBefore => {
+                imp::compare_using(CompareOperation::IsBefore)
+            },
+            DateMethod::IsAfter => {
+                imp::compare_using(CompareOperation::IsAfter)
+            },
+            DateMethod::IsSameOrBefore => {
+                imp::compare_using(CompareOperation::IsSameOrBefore)
+            },
+            DateMethod::IsSameOrAfter => {
+                imp::compare_using(CompareOperation::IsSameOrAfter)
+            },
 
             // 日期属性获取方法
             DateMethod::Second => imp::getter(GetterOperation::Second),
@@ -235,7 +254,9 @@ impl From<&DateMethod> for Rc<dyn FunctionDefinition> {
 
             // 日期状态检查方法
             DateMethod::IsValid => imp::getter(GetterOperation::IsValid),
-            DateMethod::IsYesterday => imp::getter(GetterOperation::IsYesterday),
+            DateMethod::IsYesterday => {
+                imp::getter(GetterOperation::IsYesterday)
+            },
             DateMethod::IsToday => imp::getter(GetterOperation::IsToday),
             DateMethod::IsTomorrow => imp::getter(GetterOperation::IsTomorrow),
             DateMethod::IsLeapYear => imp::getter(GetterOperation::IsLeapYear),
@@ -247,7 +268,8 @@ mod imp {
     use crate::functions::arguments::Arguments;
     use crate::functions::date_method::{CompareOperation, GetterOperation};
     use crate::functions::defs::{
-        CompositeFunction, FunctionDefinition, FunctionSignature, StaticFunction,
+        CompositeFunction, FunctionDefinition, FunctionSignature,
+        StaticFunction,
     };
     use crate::variable::VariableType as VT;
     use crate::vm::date::{Duration, DurationUnit};
@@ -261,13 +283,17 @@ mod imp {
     use std::rc::Rc;
     use std::str::FromStr;
 
-    fn __internal_extract_duration(args: &Arguments, from: usize) -> anyhow::Result<Duration> {
+    fn __internal_extract_duration(
+        args: &Arguments,
+        from: usize,
+    ) -> anyhow::Result<Duration> {
         match args.var(from)? {
             V::String(s) => Ok(Duration::parse(s.as_ref())?),
             V::Number(n) => {
                 let unit = __internal_extract_duration_unit(args, from + 1)?;
-                Ok(Duration::from_unit(*n, unit).context("Invalid duration unit")?)
-            }
+                Ok(Duration::from_unit(*n, unit)
+                    .context("Invalid duration unit")?)
+            },
             _ => Err(anyhow!("无效的时间参数")),
         }
     }
@@ -289,9 +315,7 @@ mod imp {
             return Ok(None);
         };
 
-        Ok(Some(
-            DurationUnit::parse(unit_str).context("无效的持续时间单位")?,
-        ))
+        Ok(Some(DurationUnit::parse(unit_str).context("无效的持续时间单位")?))
     }
 
     pub fn add(args: Arguments) -> anyhow::Result<V> {
@@ -350,13 +374,12 @@ mod imp {
         let date_time = VmDate::new(args.var(1)?.clone(), None);
         let maybe_unit = __internal_extract_duration_unit_opt(&args, 2)?;
 
-        let var = match this
-            .diff(&date_time, maybe_unit)
-            .and_then(Decimal::from_i64)
-        {
-            Some(n) => V::Number(n),
-            None => V::Null,
-        };
+        let var =
+            match this.diff(&date_time, maybe_unit).and_then(Decimal::from_i64)
+            {
+                Some(n) => V::Number(n),
+                None => V::Null,
+            };
 
         Ok(var)
     }
@@ -377,29 +400,42 @@ mod imp {
                     return_type: VT::Date,
                 },
                 FunctionSignature {
-                    parameters: vec![VT::Date, VT::Date, DurationUnit::variable_type()],
+                    parameters: vec![
+                        VT::Date,
+                        VT::Date,
+                        DurationUnit::variable_type(),
+                    ],
                     return_type: VT::Date,
                 },
             ],
-            implementation: Rc::new(move |args: Arguments| -> anyhow::Result<V> {
-                let this = args.dynamic::<VmDate>(0)?;
-                let date_time = VmDate::new(args.var(1)?.clone(), None);
-                let maybe_unit = __internal_extract_duration_unit_opt(&args, 2)?;
+            implementation: Rc::new(
+                move |args: Arguments| -> anyhow::Result<V> {
+                    let this = args.dynamic::<VmDate>(0)?;
+                    let date_time = VmDate::new(args.var(1)?.clone(), None);
+                    let maybe_unit =
+                        __internal_extract_duration_unit_opt(&args, 2)?;
 
-                let check = match op {
-                    CompareOperation::IsSame => this.is_same(&date_time, maybe_unit),
-                    CompareOperation::IsBefore => this.is_before(&date_time, maybe_unit),
-                    CompareOperation::IsAfter => this.is_after(&date_time, maybe_unit),
-                    CompareOperation::IsSameOrBefore => {
-                        this.is_same_or_before(&date_time, maybe_unit)
-                    }
-                    CompareOperation::IsSameOrAfter => {
-                        this.is_same_or_after(&date_time, maybe_unit)
-                    }
-                };
+                    let check = match op {
+                        CompareOperation::IsSame => {
+                            this.is_same(&date_time, maybe_unit)
+                        },
+                        CompareOperation::IsBefore => {
+                            this.is_before(&date_time, maybe_unit)
+                        },
+                        CompareOperation::IsAfter => {
+                            this.is_after(&date_time, maybe_unit)
+                        },
+                        CompareOperation::IsSameOrBefore => {
+                            this.is_same_or_before(&date_time, maybe_unit)
+                        },
+                        CompareOperation::IsSameOrAfter => {
+                            this.is_same_or_after(&date_time, maybe_unit)
+                        },
+                    };
 
-                Ok(V::Bool(check))
-            }),
+                    Ok(V::Bool(check))
+                },
+            ),
         })
     }
 
@@ -427,44 +463,69 @@ mod imp {
                     GetterOperation::OffsetName => VT::String,
                 },
             },
-            implementation: Rc::new(move |args: Arguments| -> anyhow::Result<V> {
-                let this = args.dynamic::<VmDate>(0)?;
-                if let GetterOperation::IsValid = op {
-                    return Ok(V::Bool(this.is_valid()));
-                }
+            implementation: Rc::new(
+                move |args: Arguments| -> anyhow::Result<V> {
+                    let this = args.dynamic::<VmDate>(0)?;
+                    if let GetterOperation::IsValid = op {
+                        return Ok(V::Bool(this.is_valid()));
+                    }
 
-                let Some(dt) = this.0 else {
-                    return Ok(V::Null);
-                };
+                    let Some(dt) = this.0 else {
+                        return Ok(V::Null);
+                    };
 
-                Ok(match op {
-                    GetterOperation::Second => V::Number(dt.second().into()),
-                    GetterOperation::Minute => V::Number(dt.minute().into()),
-                    GetterOperation::Hour => V::Number(dt.hour().into()),
-                    GetterOperation::Day => V::Number(dt.day().into()),
-                    GetterOperation::Weekday => V::Number(dt.weekday().number_from_monday().into()),
-                    GetterOperation::DayOfYear => V::Number(dt.ordinal().into()),
-                    GetterOperation::Week => V::Number(dt.iso_week().week().into()),
-                    GetterOperation::Month => V::Number(dt.month().into()),
-                    GetterOperation::Quarter => V::Number(dt.quarter().into()),
-                    GetterOperation::Year => V::Number(dt.year().into()),
-                    GetterOperation::Timestamp => V::Number(dt.timestamp_millis().into()),
-                    // Boolean
-                    GetterOperation::IsValid => V::Bool(true),
-                    GetterOperation::IsYesterday => {
-                        V::Bool(this.is_same(&VmDate::yesterday(), Some(DurationUnit::Day)))
-                    }
-                    GetterOperation::IsToday => {
-                        V::Bool(this.is_same(&VmDate::now(), Some(DurationUnit::Day)))
-                    }
-                    GetterOperation::IsTomorrow => {
-                        V::Bool(this.is_same(&VmDate::tomorrow(), Some(DurationUnit::Day)))
-                    }
-                    GetterOperation::IsLeapYear => V::Bool(dt.date_naive().leap_year()),
-                    // String
-                    GetterOperation::OffsetName => V::String(Rc::from(dt.timezone().name())),
-                })
-            }),
+                    Ok(match op {
+                        GetterOperation::Second => {
+                            V::Number(dt.second().into())
+                        },
+                        GetterOperation::Minute => {
+                            V::Number(dt.minute().into())
+                        },
+                        GetterOperation::Hour => V::Number(dt.hour().into()),
+                        GetterOperation::Day => V::Number(dt.day().into()),
+                        GetterOperation::Weekday => {
+                            V::Number(dt.weekday().number_from_monday().into())
+                        },
+                        GetterOperation::DayOfYear => {
+                            V::Number(dt.ordinal().into())
+                        },
+                        GetterOperation::Week => {
+                            V::Number(dt.iso_week().week().into())
+                        },
+                        GetterOperation::Month => V::Number(dt.month().into()),
+                        GetterOperation::Quarter => {
+                            V::Number(dt.quarter().into())
+                        },
+                        GetterOperation::Year => V::Number(dt.year().into()),
+                        GetterOperation::Timestamp => {
+                            V::Number(dt.timestamp_millis().into())
+                        },
+                        // Boolean
+                        GetterOperation::IsValid => V::Bool(true),
+                        GetterOperation::IsYesterday => V::Bool(this.is_same(
+                            &VmDate::yesterday(),
+                            Some(DurationUnit::Day),
+                        )),
+                        GetterOperation::IsToday => {
+                            V::Bool(this.is_same(
+                                &VmDate::now(),
+                                Some(DurationUnit::Day),
+                            ))
+                        },
+                        GetterOperation::IsTomorrow => V::Bool(this.is_same(
+                            &VmDate::tomorrow(),
+                            Some(DurationUnit::Day),
+                        )),
+                        GetterOperation::IsLeapYear => {
+                            V::Bool(dt.date_naive().leap_year())
+                        },
+                        // String
+                        GetterOperation::OffsetName => {
+                            V::String(Rc::from(dt.timezone().name()))
+                        },
+                    })
+                },
+            ),
         })
     }
 }

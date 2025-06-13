@@ -22,9 +22,9 @@ mod standard;
 mod unary;
 
 // 公开导出的类型和结构
-pub use ast::Node;                          // AST节点类型
-pub use error::ParserError;                 // 解析错误类型
-pub use parser::Parser;                     // 解析器结构
+pub use ast::Node; // AST节点类型
+pub use error::ParserError; // 解析错误类型
+pub use parser::Parser; // 解析器结构
 pub use result::{NodeMetadata, ParserResult}; // 解析结果和元数据类型
-pub use standard::Standard;                 // 标准解析器
-pub use unary::Unary;                       // 一元解析器
+pub use standard::Standard; // 标准解析器
+pub use unary::Unary; // 一元解析器

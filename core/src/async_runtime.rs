@@ -71,7 +71,6 @@ pub struct PerformanceConfig {
     /// 等待异步任务结果的最大时间
     /// 推荐值：3000-10000ms，取决于任务复杂度
     pub task_receive_timeout_ms: u64,
-
 }
 
 impl Default for PerformanceConfig {
@@ -80,7 +79,7 @@ impl Default for PerformanceConfig {
             enable_monitoring: false,
             middleware_timeout_ms: 500,
             log_threshold_ms: 50,
-            task_receive_timeout_ms: 5000,     // 5秒
+            task_receive_timeout_ms: 5000, // 5秒
         }
     }
 }
@@ -144,7 +143,8 @@ impl AsyncEditor {
         &mut self,
         command: Arc<dyn Command>,
     ) -> EditorResult<()> {
-        self.command_with_meta(command, "".to_string(), serde_json::Value::Null).await
+        self.command_with_meta(command, "".to_string(), serde_json::Value::Null)
+            .await
     }
 
     /// 执行命令并生成相应的事务
@@ -186,7 +186,12 @@ impl AsyncEditor {
         &mut self,
         transaction: Transaction,
     ) -> EditorResult<()> {
-        self.dispatch_flow_with_meta(transaction, "".to_string(), serde_json::Value::Null).await
+        self.dispatch_flow_with_meta(
+            transaction,
+            "".to_string(),
+            serde_json::Value::Null,
+        )
+        .await
     }
     /// 高性能事务处理方法，使用FlowEngine处理事务
     ///
@@ -226,20 +231,23 @@ impl AsyncEditor {
 
         // 等待任务结果（添加超时保护）
         let recv_start = std::time::Instant::now();
-        let task_receive_timeout = Duration::from_millis(self.perf_config.task_receive_timeout_ms);
-        let task_result = match tokio::time::timeout(task_receive_timeout, rx.recv()).await {
-            Ok(Some(result)) => result,
-            Ok(None) => {
-                return Err(error_utils::state_error(
-                    "任务接收通道已关闭".to_string(),
-                ));
-            },
-            Err(_) => {
-                return Err(error_utils::state_error(
-                    format!("任务接收超时（{}ms）", self.perf_config.task_receive_timeout_ms),
-                ));
-            },
-        };
+        let task_receive_timeout =
+            Duration::from_millis(self.perf_config.task_receive_timeout_ms);
+        let task_result =
+            match tokio::time::timeout(task_receive_timeout, rx.recv()).await {
+                Ok(Some(result)) => result,
+                Ok(None) => {
+                    return Err(error_utils::state_error(
+                        "任务接收通道已关闭".to_string(),
+                    ));
+                },
+                Err(_) => {
+                    return Err(error_utils::state_error(format!(
+                        "任务接收超时（{}ms）",
+                        self.perf_config.task_receive_timeout_ms
+                    )));
+                },
+            };
         self.log_performance("接收任务结果", recv_start.elapsed());
 
         // 获取处理结果
@@ -269,7 +277,9 @@ impl AsyncEditor {
 
         // 更新状态并广播事件（状态更新无需超时保护，事件广播需要）
         if let Some(state) = current_state {
-            self.base.update_state_with_meta(state.clone(), description, meta).await?;
+            self.base
+                .update_state_with_meta(state.clone(), description, meta)
+                .await?;
 
             let event_start = std::time::Instant::now();
             self.base
@@ -294,7 +304,8 @@ impl AsyncEditor {
         for middleware in
             &self.base.get_options().get_middleware_stack().middlewares
         {
-            let timeout = Duration::from_millis(self.perf_config.middleware_timeout_ms);
+            let timeout =
+                Duration::from_millis(self.perf_config.middleware_timeout_ms);
             match tokio::time::timeout(
                 timeout,
                 middleware.before_dispatch(transaction),
@@ -372,7 +383,8 @@ impl AsyncEditor {
                 debug!("中间件执行时间较长: {}ms", elapsed.as_millis());
             }
 
-            if let Some(mut transaction) = middleware_result.additional_transaction
+            if let Some(mut transaction) =
+                middleware_result.additional_transaction
             {
                 transaction.commit();
                 // 记录额外事务处理开始时间
@@ -399,21 +411,26 @@ impl AsyncEditor {
                 let (_id, mut rx) = result;
 
                 // 添加任务接收超时保护
-                let task_receive_timeout = Duration::from_millis(self.perf_config.task_receive_timeout_ms);
-                let task_result = match tokio::time::timeout(task_receive_timeout, rx.recv()).await {
-                    Ok(Some(result)) => result,
-                    Ok(None) => {
-                        debug!("附加事务接收通道已关闭");
-                        return Ok(());
-                    },
-                    Err(_) => {
-                        debug!("附加事务接收超时");
-                        return Err(error_utils::state_error(format!(
-                            "附加事务接收超时（{}ms）",
-                            self.perf_config.task_receive_timeout_ms
-                        )));
-                    },
-                };
+                let task_receive_timeout = Duration::from_millis(
+                    self.perf_config.task_receive_timeout_ms,
+                );
+                let task_result =
+                    match tokio::time::timeout(task_receive_timeout, rx.recv())
+                        .await
+                    {
+                        Ok(Some(result)) => result,
+                        Ok(None) => {
+                            debug!("附加事务接收通道已关闭");
+                            return Ok(());
+                        },
+                        Err(_) => {
+                            debug!("附加事务接收超时");
+                            return Err(error_utils::state_error(format!(
+                                "附加事务接收超时（{}ms）",
+                                self.perf_config.task_receive_timeout_ms
+                            )));
+                        },
+                    };
 
                 let Some(ProcessorResult { result: Some(result), .. }) =
                     task_result.output

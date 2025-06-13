@@ -6,7 +6,10 @@ use csv::StringRecord;
 use moduforge_rules_expression::variable::Variable;
 use moduforge_rules_expression::Isolate;
 
-fn bench_unary(b: &mut Bencher, source: &'static str) {
+fn bench_unary(
+    b: &mut Bencher,
+    source: &'static str,
+) {
     let s = serde_json::from_str(r#"{ "$": "ru" }"#).unwrap();
 
     let mut isolate = Isolate::with_environment(s);
@@ -15,7 +18,10 @@ fn bench_unary(b: &mut Bencher, source: &'static str) {
     })
 }
 
-fn bench_standard(b: &mut Bencher, source: &'static str) {
+fn bench_standard(
+    b: &mut Bencher,
+    source: &'static str,
+) {
     let s = serde_json::from_str(r#"{ "$": "ru" }"#).unwrap();
 
     let mut isolate = Isolate::with_environment(s);
@@ -29,7 +35,11 @@ enum BenchmarkKind {
     Standard,
 }
 
-fn bench_csv(b: &mut Bencher, kind: BenchmarkKind, csv_data: &'static str) {
+fn bench_csv(
+    b: &mut Bencher,
+    kind: BenchmarkKind,
+    csv_data: &'static str,
+) {
     let maybe_rows: Result<Vec<StringRecord>, _> = csv::ReaderBuilder::new()
         .delimiter(b';')
         .flexible(true)
@@ -62,7 +72,8 @@ fn bench_csv(b: &mut Bencher, kind: BenchmarkKind, csv_data: &'static str) {
                 environment: None,
             };
             if !input_str.is_empty() {
-                case.environment = Some(serde_json5::from_str(input_str).unwrap());
+                case.environment =
+                    Some(serde_json5::from_str(input_str).unwrap());
             }
 
             return Some(case);
@@ -72,22 +83,22 @@ fn bench_csv(b: &mut Bencher, kind: BenchmarkKind, csv_data: &'static str) {
     let mut isolate = Isolate::new();
 
     b.iter(|| {
-        for TestCase {
-            expression,
-            environment,
-        } in &test_cases
-        {
+        for TestCase { expression, environment } in &test_cases {
             if let Some(env) = environment {
                 isolate.set_environment(env.clone());
             }
 
             match kind {
                 BenchmarkKind::Unary => {
-                    criterion::black_box(isolate.run_unary(expression).unwrap());
-                }
+                    criterion::black_box(
+                        isolate.run_unary(expression).unwrap(),
+                    );
+                },
                 BenchmarkKind::Standard => {
-                    criterion::black_box(isolate.run_standard(expression).unwrap());
-                }
+                    criterion::black_box(
+                        isolate.run_standard(expression).unwrap(),
+                    );
+                },
             };
         }
     });

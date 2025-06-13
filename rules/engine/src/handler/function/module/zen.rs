@@ -18,8 +18,8 @@ pub struct ZenListener<Loader, Adapter> {
     pub adapter: Arc<Adapter>,
 }
 
-impl<Loader: DecisionLoader + 'static, Adapter: CustomNodeAdapter + 'static> RuntimeListener
-    for ZenListener<Loader, Adapter>
+impl<Loader: DecisionLoader + 'static, Adapter: CustomNodeAdapter + 'static>
+    RuntimeListener for ZenListener<Loader, Adapter>
 {
     fn on_event<'js>(
         &self,
@@ -46,30 +46,47 @@ impl<Loader: DecisionLoader + 'static, Adapter: CustomNodeAdapter + 'static> Run
                             let adapter = adapter.clone();
 
                             async move {
-                                let config: Object = ctx.globals().get("config").or_throw(&ctx)?;
+                                let config: Object = ctx
+                                    .globals()
+                                    .get("config")
+                                    .or_throw(&ctx)?;
 
-                                let iteration: u8 = config.get("iteration").or_throw(&ctx)?;
-                                let max_depth: u8 = config.get("maxDepth").or_throw(&ctx)?;
+                                let iteration: u8 =
+                                    config.get("iteration").or_throw(&ctx)?;
+                                let max_depth: u8 =
+                                    config.get("maxDepth").or_throw(&ctx)?;
                                 let trace = opts
                                     .0
-                                    .map(|opt| opt.get::<_, bool>("trace").unwrap_or_default())
+                                    .map(|opt| {
+                                        opt.get::<_, bool>("trace")
+                                            .unwrap_or_default()
+                                    })
                                     .unwrap_or_default();
 
-                                let load_result = loader.load(key.as_str()).await;
-                                let decision_content = load_result.or_throw(&ctx)?;
-                                let mut sub_tree = DecisionGraph::try_new(DecisionGraphConfig {
-                                    content: decision_content,
-                                    max_depth,
-                                    loader,
-                                    adapter,
-                                    iteration: iteration + 1,
-                                    trace,
-                                    validator_cache: None,
-                                })
+                                let load_result =
+                                    loader.load(key.as_str()).await;
+                                let decision_content =
+                                    load_result.or_throw(&ctx)?;
+                                let mut sub_tree = DecisionGraph::try_new(
+                                    DecisionGraphConfig {
+                                        content: decision_content,
+                                        max_depth,
+                                        loader,
+                                        adapter,
+                                        iteration: iteration + 1,
+                                        trace,
+                                        validator_cache: None,
+                                    },
+                                )
                                 .or_throw(&ctx)?;
 
-                                let response = sub_tree.evaluate(context.0).await.or_throw(&ctx)?;
-                                let k = serde_json::to_value(response).or_throw(&ctx)?.into();
+                                let response = sub_tree
+                                    .evaluate(context.0)
+                                    .await
+                                    .or_throw(&ctx)?;
+                                let k = serde_json::to_value(response)
+                                    .or_throw(&ctx)?
+                                    .into();
 
                                 return rquickjs::Result::Ok(JsValue(k));
                             }
@@ -88,7 +105,11 @@ fn evaluate_expression<'js>(
     expression: String,
     context: JsValue,
 ) -> rquickjs::Result<JsValue> {
-    let s = moduforge_rules_expression::evaluate_expression(expression.as_str(), context.0).or_throw(&ctx)?;
+    let s = moduforge_rules_expression::evaluate_expression(
+        expression.as_str(),
+        context.0,
+    )
+    .or_throw(&ctx)?;
 
     Ok(JsValue(s))
 }
@@ -98,8 +119,11 @@ fn evaluate_unary_expression<'js>(
     expression: String,
     context: JsValue,
 ) -> rquickjs::Result<bool> {
-    let s =
-        moduforge_rules_expression::evaluate_unary_expression(expression.as_str(), context.0).or_throw(&ctx)?;
+    let s = moduforge_rules_expression::evaluate_unary_expression(
+        expression.as_str(),
+        context.0,
+    )
+    .or_throw(&ctx)?;
 
     Ok(s)
 }
@@ -111,7 +135,8 @@ fn evaluate<'js>(
     opts: Opt<Object<'js>>,
 ) -> rquickjs::Result<rquickjs::Value<'js>> {
     let s: Function = ctx.globals().get("__evaluate").or_throw(&ctx)?;
-    let result: rquickjs::Value = s.call((key, context, opts)).or_throw(&ctx)?;
+    let result: rquickjs::Value =
+        s.call((key, context, opts)).or_throw(&ctx)?;
     Ok(result)
 }
 
@@ -128,9 +153,13 @@ impl ModuleDef for ZenModule {
         Ok(())
     }
 
-    fn evaluate<'js>(ctx: &Ctx<'js>, exports: &Exports<'js>) -> rquickjs::Result<()> {
+    fn evaluate<'js>(
+        ctx: &Ctx<'js>,
+        exports: &Exports<'js>,
+    ) -> rquickjs::Result<()> {
         export_default(ctx, exports, |default| {
-            default.set("evaluateExpression", Func::from(evaluate_expression))?;
+            default
+                .set("evaluateExpression", Func::from(evaluate_expression))?;
             default.set(
                 "evaluateUnaryExpression",
                 Func::from(evaluate_unary_expression),

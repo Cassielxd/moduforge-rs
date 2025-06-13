@@ -28,11 +28,7 @@ where
         let nodes = value.into();
         let cursor = nodes.iter().peekable();
 
-        Self {
-            cursor,
-            isolate: Isolate::new(),
-            results: Default::default(),
-        }
+        Self { cursor, isolate: Isolate::new(), results: Default::default() }
     }
 }
 
@@ -56,29 +52,39 @@ impl<'source, 'nodes> Interpreter<'source, 'nodes> {
                 let item = self.results.remove(0);
                 match item {
                     InterpreterResult::Variable(val) => Ok(val),
-                    InterpreterResult::String(str) => Ok(Variable::String(Rc::from(str))),
+                    InterpreterResult::String(str) => {
+                        Ok(Variable::String(Rc::from(str)))
+                    },
                 }
-            }
+            },
             _ => {
                 let string_data = self
                     .results
                     .into_iter()
                     .map(|item| match item {
                         InterpreterResult::String(str) => str.to_string(),
-                        InterpreterResult::Variable(value) => var_to_string(value),
+                        InterpreterResult::Variable(value) => {
+                            var_to_string(value)
+                        },
                     })
                     .collect::<String>();
 
                 Ok(Variable::String(Rc::from(string_data.as_str())))
-            }
+            },
         }
     }
 
-    fn text(&mut self, data: &'source str) {
+    fn text(
+        &mut self,
+        data: &'source str,
+    ) {
         self.results.push(InterpreterResult::String(data));
     }
 
-    fn expression(&mut self, data: &'source str) -> Result<(), TemplateRenderError> {
+    fn expression(
+        &mut self,
+        data: &'source str,
+    ) -> Result<(), TemplateRenderError> {
         let result = self.isolate.run_standard(data)?;
         self.results.push(InterpreterResult::Variable(result));
         Ok(())

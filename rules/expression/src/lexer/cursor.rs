@@ -5,8 +5,8 @@ use std::cell::Cell;
 /// 使用Cell提供内部可变性，允许在不可变引用下修改位置
 #[derive(Debug)]
 pub(super) struct Cursor<'a> {
-    chars: &'a [u8],        // 字符串的字节数组引用
-    current: Cell<usize>,   // 当前游标位置（使用Cell提供内部可变性）
+    chars: &'a [u8],      // 字符串的字节数组引用
+    current: Cell<usize>, // 当前游标位置（使用Cell提供内部可变性）
 }
 
 /// 游标项类型别名
@@ -17,10 +17,7 @@ impl<'a> From<&'a str> for Cursor<'a> {
     /// 从字符串创建游标
     /// 初始位置设为0
     fn from(source: &'a str) -> Self {
-        Self {
-            chars: source.as_bytes(),
-            current: Cell::new(0),
-        }
+        Self { chars: source.as_bytes(), current: Cell::new(0) }
     }
 }
 
@@ -33,7 +30,10 @@ impl Cursor<'_> {
 
     /// 条件性向前移动
     /// 只有当下一个字符满足条件函数f时才移动
-    pub fn next_if<F>(&self, f: F) -> Option<CursorItem>
+    pub fn next_if<F>(
+        &self,
+        f: F,
+    ) -> Option<CursorItem>
     where
         F: Fn(char) -> bool,
     {
@@ -47,7 +47,10 @@ impl Cursor<'_> {
 
     /// 检查接下来的字符是否匹配给定字符串
     /// 如果匹配则消费这些字符，否则回退到原位置
-    pub fn next_if_is(&self, s: &str) -> bool {
+    pub fn next_if_is(
+        &self,
+        s: &str,
+    ) -> bool {
         let current = self.current.get();
         let is_valid = s.chars().all(|c| self.next_if(|ca| ca == c).is_some());
         if !is_valid {
@@ -74,13 +77,19 @@ impl Cursor<'_> {
     }
 
     /// 查看向前n个位置的字符但不移动游标
-    pub fn peek_by(&self, n: usize) -> Option<CursorItem> {
+    pub fn peek_by(
+        &self,
+        n: usize,
+    ) -> Option<CursorItem> {
         self.nth(self.current.get() + n)
     }
 
     /// 查看向后n个位置的字符但不移动游标（未使用）
     #[allow(dead_code)]
-    pub fn peek_back_by(&self, n: usize) -> Option<CursorItem> {
+    pub fn peek_back_by(
+        &self,
+        n: usize,
+    ) -> Option<CursorItem> {
         self.nth(self.current.get() - n)
     }
 
@@ -90,13 +99,19 @@ impl Cursor<'_> {
     }
 
     /// 向前移动n个字符
-    pub fn advance_by(&self, n: usize) -> Option<CursorItem> {
+    pub fn advance_by(
+        &self,
+        n: usize,
+    ) -> Option<CursorItem> {
         self.current.set(self.current.get() + n);
         self.current()
     }
 
     /// 向后移动n个字符
-    pub fn back_by(&self, n: usize) -> Option<CursorItem> {
+    pub fn back_by(
+        &self,
+        n: usize,
+    ) -> Option<CursorItem> {
         self.current.set(self.current.get() - n);
         self.current()
     }
@@ -108,7 +123,10 @@ impl Cursor<'_> {
 
     /// 获取指定位置n的字符
     /// 注意：这里的实现有一个off-by-one的问题，实际获取的是n-1位置的字符
-    pub fn nth(&self, n: usize) -> Option<CursorItem> {
+    pub fn nth(
+        &self,
+        n: usize,
+    ) -> Option<CursorItem> {
         let &c = self.chars.get(n - 1)?;
         Some((n - 1, c as char))
     }

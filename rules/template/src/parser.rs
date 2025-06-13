@@ -29,16 +29,14 @@ where
         let tokens = value.into();
         let cursor = tokens.iter().peekable();
 
-        Self {
-            cursor,
-            nodes: Default::default(),
-            state: ParserState::Text,
-        }
+        Self { cursor, nodes: Default::default(), state: ParserState::Text }
     }
 }
 
 impl<'source, 'tokens> Parser<'source, 'tokens> {
-    pub(crate) fn collect(mut self) -> Result<Vec<Node<'source>>, TemplateRenderError> {
+    pub(crate) fn collect(
+        mut self
+    ) -> Result<Vec<Node<'source>>, TemplateRenderError> {
         while let Some(token) = self.cursor.next() {
             match token {
                 Token::Text(text) => self.text(text),
@@ -50,7 +48,10 @@ impl<'source, 'tokens> Parser<'source, 'tokens> {
         Ok(self.nodes)
     }
 
-    fn text(&mut self, data: &'source str) {
+    fn text(
+        &mut self,
+        data: &'source str,
+    ) {
         match self.state {
             ParserState::Text => self.nodes.push(Node::Text(data)),
             ParserState::Expression => self.nodes.push(Node::Expression(data)),

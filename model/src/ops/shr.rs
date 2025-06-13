@@ -1,10 +1,6 @@
 use std::ops::Shr;
 
-use crate::{
-    error::PoolResult,
-    mark::Mark,
-    node::Node,
-};
+use crate::{error::PoolResult, mark::Mark, node::Node};
 
 use super::{MarkRef, NodeRef};
 
@@ -46,26 +42,36 @@ impl<'a> Shr<usize> for NodeRef<'a> {
         positions: usize,
     ) -> Self::Output {
         // 获取当前节点在父节点中的位置
-        if let Some(parent) = self.tree.get_parent_node(&self.key.clone().into()) {
-            let siblings: im::Vector<String> = self.tree.children(&parent.id).unwrap_or_default();
-            
-            if let Some(current_index) = siblings.iter().position(|id| id.clone() == self.key) {
+        if let Some(parent) =
+            self.tree.get_parent_node(&self.key.clone().into())
+        {
+            let siblings: im::Vector<String> =
+                self.tree.children(&parent.id).unwrap_or_default();
+
+            if let Some(current_index) =
+                siblings.iter().position(|id| id.clone() == self.key)
+            {
                 // 计算新位置，不能超过列表长度
                 let max_index = siblings.len().saturating_sub(1);
                 let new_index = (current_index + positions).min(max_index);
-                
+
                 // 如果位置有变化，执行移动
                 if new_index != current_index {
                     //这里只需要修改  content 中的顺序就行，不需要删除和添加
-                    let mut node = self.tree.get_node(&self.key.clone().into()).unwrap().as_ref().clone();
+                    let mut node = self
+                        .tree
+                        .get_node(&self.key.clone().into())
+                        .unwrap()
+                        .as_ref()
+                        .clone();
                     let mut content = node.content.clone();
                     content.swap(current_index, new_index);
                     node.content = content;
                     self.tree.update_node(node)?;
-                 }
+                }
             }
         }
-        
+
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
 }
@@ -98,4 +104,3 @@ impl<'a> Shr<Vec<Mark>> for MarkRef<'a> {
         Ok(MarkRef::new(self.tree, self.key.clone()))
     }
 }
-

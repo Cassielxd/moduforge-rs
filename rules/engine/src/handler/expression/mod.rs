@@ -1,4 +1,6 @@
-use crate::handler::node::{NodeRequest, NodeResponse, NodeResult, PartialTraceError};
+use crate::handler::node::{
+    NodeRequest, NodeResponse, NodeResult, PartialTraceError,
+};
 use crate::model::{DecisionNodeKind, ExpressionNodeContent};
 use ahash::{HashMap, HashMapExt};
 use std::sync::Arc;
@@ -23,13 +25,17 @@ impl ExpressionHandler {
         Self { trace }
     }
 
-    pub async fn handle(&mut self, request: NodeRequest) -> NodeResult {
+    pub async fn handle(
+        &mut self,
+        request: NodeRequest,
+    ) -> NodeResult {
         let content = match &request.node.kind {
             DecisionNodeKind::ExpressionNode { content } => Ok(content),
             _ => Err(anyhow!("Unexpected node type")),
         }?;
 
-        let inner_handler_mutex = Arc::new(Mutex::new(ExpressionHandlerInner::new(self.trace)));
+        let inner_handler_mutex =
+            Arc::new(Mutex::new(ExpressionHandlerInner::new(self.trace)));
 
         content
             .transform_attributes
@@ -37,7 +43,8 @@ impl ExpressionHandler {
                 let inner_handler_mutex = inner_handler_mutex.clone();
 
                 async move {
-                    let mut inner_handler_ref = inner_handler_mutex.lock().await;
+                    let mut inner_handler_ref =
+                        inner_handler_mutex.lock().await;
                     inner_handler_ref.handle(input, content).await
                 }
             })
@@ -52,15 +59,17 @@ struct ExpressionHandlerInner<'a> {
 
 impl<'a> ExpressionHandlerInner<'a> {
     pub fn new(trace: bool) -> Self {
-        Self {
-            isolate: Isolate::new(),
-            trace,
-        }
+        Self { isolate: Isolate::new(), trace }
     }
 
-    async fn handle(&mut self, input: Variable, content: &'a ExpressionNodeContent) -> NodeResult {
+    async fn handle(
+        &mut self,
+        input: Variable,
+        content: &'a ExpressionNodeContent,
+    ) -> NodeResult {
         let result = Variable::empty_object();
-        let mut trace_map = self.trace.then(|| HashMap::<&str, ExpressionTrace>::new());
+        let mut trace_map =
+            self.trace.then(|| HashMap::<&str, ExpressionTrace>::new());
 
         self.isolate.set_environment(input.depth_clone(1));
         for expression in &content.expressions {
@@ -76,14 +85,18 @@ impl<'a> ExpressionHandlerInner<'a> {
                         .as_ref()
                         .map(|s| serde_json::to_value(s).ok())
                         .flatten(),
-                    message: format!(r#"Failed to evaluate expression: "{}""#, &expression.value),
+                    message: format!(
+                        r#"Failed to evaluate expression: "{}""#,
+                        &expression.value
+                    ),
                 })?;
-            
+
             if let Some(tmap) = &mut trace_map {
                 tmap.insert(
                     &expression.key,
                     ExpressionTrace {
-                        result: serde_json::to_string(&value).unwrap_or("Error".to_owned()),
+                        result: serde_json::to_string(&value)
+                            .unwrap_or("Error".to_owned()),
                     },
                 );
             }
@@ -94,7 +107,8 @@ impl<'a> ExpressionHandlerInner<'a> {
                 };
 
                 let key = format!("$.{}", &expression.key);
-                let _ = environment.dot_insert(key.as_str(), value.depth_clone(2));
+                let _ =
+                    environment.dot_insert(key.as_str(), value.depth_clone(2));
             });
 
             result.dot_insert(&expression.key, value);
@@ -102,7 +116,9 @@ impl<'a> ExpressionHandlerInner<'a> {
 
         Ok(NodeResponse {
             output: result,
-            trace_data: trace_map.map(|tm| serde_json::to_value(tm).ok()).flatten(),
+            trace_data: trace_map
+                .map(|tm| serde_json::to_value(tm).ok())
+                .flatten(),
         })
     }
 }

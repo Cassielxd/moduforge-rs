@@ -16,18 +16,17 @@ impl<'arena> UnsafeArena<'arena> {
         let boxed = Box::new(Bump::new());
         let leaked = Box::leak(boxed);
 
-        Self {
-            arena: leaked,
-            _marker: Default::default(),
-        }
+        Self { arena: leaked, _marker: Default::default() }
     }
 
     pub fn get(&self) -> &'arena Bump {
         unsafe { &*self.arena }
     }
 
-    pub fn with_mut<F>(&mut self, callback: F)
-    where
+    pub fn with_mut<F>(
+        &mut self,
+        callback: F,
+    ) where
         F: FnOnce(&mut Bump),
     {
         let reference = unsafe { &mut *self.arena };

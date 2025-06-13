@@ -2,7 +2,10 @@ use criterion::{criterion_group, criterion_main, Bencher, Criterion};
 
 use moduforge_rules_expression::lexer::Lexer;
 
-fn bench_source(b: &mut Bencher, source: &'static str) {
+fn bench_source(
+    b: &mut Bencher,
+    source: &'static str,
+) {
     let mut lexer = Lexer::new();
 
     b.iter(|| {

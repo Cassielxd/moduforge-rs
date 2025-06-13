@@ -14,7 +14,7 @@ use crate::resources::*;
 /// 负责用户认证、会话管理、用户状态维护
 pub fn create_user_management_extension() -> Extension {
     let mut extension = Extension::new();
-    
+
     // 添加用户管理插件
     let user_plugin = Plugin::new(PluginSpec {
         key: ("user_manager".to_string(), "v1".to_string()),
@@ -22,7 +22,7 @@ pub fn create_user_management_extension() -> Extension {
         tr: Some(Arc::new(UserPlugin)),
         priority: 10, // 最高优先级
     });
-    
+
     extension.add_plugin(Arc::new(user_plugin));
     extension
 }
@@ -31,7 +31,7 @@ pub fn create_user_management_extension() -> Extension {
 /// 负责用户权限验证、访问控制、操作授权
 pub fn create_permission_extension() -> Extension {
     let mut extension = Extension::new();
-    
+
     // 添加权限验证插件
     let permission_plugin = Plugin::new(PluginSpec {
         key: ("permission".to_string(), "v1".to_string()),
@@ -39,7 +39,7 @@ pub fn create_permission_extension() -> Extension {
         tr: Some(Arc::new(PermissionPlugin)),
         priority: 20, // 第二优先级
     });
-    
+
     extension.add_plugin(Arc::new(permission_plugin));
     extension
 }
@@ -48,7 +48,7 @@ pub fn create_permission_extension() -> Extension {
 /// 负责多用户协作、冲突检测、实时同步
 pub fn create_collaboration_extension() -> Extension {
     let mut extension = Extension::new();
-    
+
     // 添加协作插件
     let collaboration_plugin = Plugin::new(PluginSpec {
         key: ("collaboration".to_string(), "v1".to_string()),
@@ -56,7 +56,7 @@ pub fn create_collaboration_extension() -> Extension {
         tr: Some(Arc::new(CollaborationPlugin)),
         priority: 30, // 第三优先级
     });
-    
+
     extension.add_plugin(Arc::new(collaboration_plugin));
     extension
 }
@@ -65,7 +65,7 @@ pub fn create_collaboration_extension() -> Extension {
 /// 负责版本管理、历史记录、快照创建
 pub fn create_version_control_extension() -> Extension {
     let mut extension = Extension::new();
-    
+
     // 添加版本控制插件
     let version_plugin = Plugin::new(PluginSpec {
         key: ("version_control".to_string(), "v1".to_string()),
@@ -73,7 +73,7 @@ pub fn create_version_control_extension() -> Extension {
         tr: Some(Arc::new(VersionControlPlugin)),
         priority: 40, // 第四优先级
     });
-    
+
     extension.add_plugin(Arc::new(version_plugin));
     extension
 }
@@ -101,11 +101,11 @@ impl PluginTrait for UserPlugin {
                         new_tr.set_meta("generated_by", "user_plugin");
                         new_tr.set_meta("action", "update_user_session");
                         return Ok(Some(new_tr));
-                    }
+                    },
                     "create_document" => {
                         println!("   📄 用户管理插件: 设置文档所有者");
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 }
             }
         }
@@ -146,18 +146,20 @@ impl StateField for UserStateField {
     ) -> Arc<dyn Resource> {
         if let Some(user_state) = value.downcast_arc::<UserState>() {
             let mut new_state = (**user_state).clone();
-            
+
             if let Some(action) = tr.get_meta::<String>("action") {
                 match action.as_str() {
                     "user_login" => {
-                        if let Some(username) = tr.get_meta::<String>("username") {
+                        if let Some(username) =
+                            tr.get_meta::<String>("username")
+                        {
                             new_state.login_user(username.as_str().to_string());
                         }
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 }
             }
-            
+
             Arc::new(new_state)
         } else {
             value
@@ -188,8 +190,8 @@ impl PluginTrait for PermissionPlugin {
                         new_tr.set_meta("generated_by", "permission_plugin");
                         new_tr.set_meta("action", "permission_checked");
                         return Ok(Some(new_tr));
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 }
             }
         }
@@ -203,9 +205,13 @@ impl PluginTrait for PermissionPlugin {
     ) -> bool {
         // 检查编辑权限
         if let Some(action) = transaction.get_meta::<String>("action") {
-            if matches!(action.as_str(), "edit_paragraph" | "add_heading" | "add_list" | "add_table") {
+            if matches!(
+                action.as_str(),
+                "edit_paragraph" | "add_heading" | "add_list" | "add_table"
+            ) {
                 // 获取用户状态来检查权限
-                if let Some(user_state) = state.get::<UserState>("user_manager") {
+                if let Some(user_state) = state.get::<UserState>("user_manager")
+                {
                     // 简单的权限检查：只有Editor和Writer可以编辑
                     return user_state.logged_in_users.values().any(|user| {
                         matches!(user.role.as_str(), "Editor" | "Writer")
@@ -240,19 +246,20 @@ impl StateField for PermissionStateField {
         _old_state: &State,
         _new_state: &State,
     ) -> Arc<dyn Resource> {
-        if let Some(permission_state) = value.downcast_arc::<PermissionState>() {
+        if let Some(permission_state) = value.downcast_arc::<PermissionState>()
+        {
             let mut new_state = (**permission_state).clone();
-            
+
             if let Some(action) = tr.get_meta::<String>("action") {
                 match action.as_str() {
                     "permission_checked" => {
                         new_state.last_check = std::time::SystemTime::now();
                         new_state.check_count += 1;
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 }
             }
-            
+
             Arc::new(new_state)
         } else {
             value
@@ -283,11 +290,11 @@ impl PluginTrait for CollaborationPlugin {
                         new_tr.set_meta("generated_by", "collaboration_plugin");
                         new_tr.set_meta("action", "collaboration_synced");
                         return Ok(Some(new_tr));
-                    }
+                    },
                     "resolve_conflict" => {
                         println!("   ⚖️ 协作插件: 处理冲突解决");
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 }
             }
         }
@@ -328,20 +335,20 @@ impl StateField for CollaborationStateField {
     ) -> Arc<dyn Resource> {
         if let Some(collab_state) = value.downcast_arc::<CollaborationState>() {
             let mut new_state = (**collab_state).clone();
-            
+
             if let Some(action) = tr.get_meta::<String>("action") {
                 match action.as_str() {
                     "collaboration_synced" => {
                         new_state.sync_count += 1;
                         new_state.last_sync = std::time::SystemTime::now();
-                    }
+                    },
                     "resolve_conflict" => {
                         new_state.conflicts_resolved += 1;
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 }
             }
-            
+
             Arc::new(new_state)
         } else {
             value
@@ -369,11 +376,12 @@ impl PluginTrait for VersionControlPlugin {
                     "create_snapshot" => {
                         println!("   📸 版本控制插件: 创建版本快照");
                         let mut new_tr = Transaction::new(new_state);
-                        new_tr.set_meta("generated_by", "version_control_plugin");
+                        new_tr
+                            .set_meta("generated_by", "version_control_plugin");
                         new_tr.set_meta("action", "snapshot_created");
                         return Ok(Some(new_tr));
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 }
             }
         }
@@ -414,24 +422,26 @@ impl StateField for VersionControlStateField {
     ) -> Arc<dyn Resource> {
         if let Some(version_state) = value.downcast_arc::<VersionState>() {
             let mut new_state = (**version_state).clone();
-            
+
             if let Some(action) = tr.get_meta::<String>("action") {
                 match action.as_str() {
                     "snapshot_created" => {
                         new_state.create_snapshot("Auto snapshot".to_string());
-                    }
+                    },
                     "create_snapshot" => {
-                        if let Some(description) = tr.get_meta::<String>("description") {
+                        if let Some(description) =
+                            tr.get_meta::<String>("description")
+                        {
                             new_state.create_snapshot(description.to_string());
                         }
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 }
             }
-            
+
             Arc::new(new_state)
         } else {
             value
         }
     }
-} 
+}

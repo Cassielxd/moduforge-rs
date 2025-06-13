@@ -1,13 +1,13 @@
 use async_trait::async_trait;
-use std::{sync::Arc, time::{Instant, SystemTime}};
+use std::{
+    sync::Arc,
+    time::{Instant, SystemTime},
+};
 use moduforge_core::{
     middleware::{Middleware, MiddlewareResult},
     error::EditorResult,
 };
-use moduforge_state::{
-    state::State,
-    transaction::Transaction,
-};
+use moduforge_state::{state::State, transaction::Transaction};
 use anyhow;
 
 /// 日志记录中间件
@@ -19,9 +19,7 @@ pub struct LoggingMiddleware {
 
 impl LoggingMiddleware {
     pub fn new() -> Self {
-        Self {
-            name: "LoggingMiddleware".to_string(),
-        }
+        Self { name: "LoggingMiddleware".to_string() }
     }
 }
 
@@ -31,16 +29,19 @@ impl Middleware for LoggingMiddleware {
         &self,
         transaction: &mut Transaction,
     ) -> EditorResult<()> {
-        let action = transaction.get_meta::<String>("action")
+        let action = transaction
+            .get_meta::<String>("action")
             .map(|s| s.as_str())
             .unwrap_or("unknown");
-            
-        println!("🔍 [{}] 事务处理开始 - ID: {}, 动作: {}", 
-                 self.name, transaction.id, action);
-        
+
+        println!(
+            "🔍 [{}] 事务处理开始 - ID: {}, 动作: {}",
+            self.name, transaction.id, action
+        );
+
         // 记录处理开始时间
         transaction.set_meta("middleware_start_time", SystemTime::now());
-        
+
         Ok(())
     }
 
@@ -50,11 +51,13 @@ impl Middleware for LoggingMiddleware {
         transactions: &[Transaction],
     ) -> EditorResult<MiddlewareResult> {
         for transaction in transactions {
-            let action = transaction.get_meta::<String>("action")
+            let action = transaction
+                .get_meta::<String>("action")
                 .map(|s| s.as_str())
                 .unwrap_or("unknown");
-                
-            let start_time = transaction.get_meta::<SystemTime>("middleware_start_time");
+
+            let start_time =
+                transaction.get_meta::<SystemTime>("middleware_start_time");
             let duration_info = if let Some(start_time) = start_time {
                 if let Ok(duration) = start_time.elapsed() {
                     format!(" (耗时: {:?})", duration)
@@ -64,16 +67,22 @@ impl Middleware for LoggingMiddleware {
             } else {
                 String::new()
             };
-            
-            println!("✅ [{}] 事务处理完成 - ID: {}, 动作: {}{}", 
-                     self.name, transaction.id, action, duration_info);
+
+            println!(
+                "✅ [{}] 事务处理完成 - ID: {}, 动作: {}{}",
+                self.name, transaction.id, action, duration_info
+            );
         }
-        
+
         if let Some(state) = state {
-            println!("📊 [{}] 当前状态版本: {}, 插件数量: {}", 
-                     self.name, state.version, state.plugins().len());
+            println!(
+                "📊 [{}] 当前状态版本: {}, 插件数量: {}",
+                self.name,
+                state.version,
+                state.plugins().len()
+            );
         }
-        
+
         Ok(MiddlewareResult::new(Ok(())))
     }
 }
@@ -103,11 +112,18 @@ impl Middleware for MetricsMiddleware {
     ) -> EditorResult<()> {
         // 记录性能监控开始时间
         transaction.set_meta("metrics_start_time", Instant::now());
-        
-        let count = self.transaction_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
-        println!("📈 [{}] 开始性能监控 - 事务 #{}, 步骤数: {}", 
-                 self.name, count, transaction.steps.len());
-        
+
+        let count = self
+            .transaction_count
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+            + 1;
+        println!(
+            "📈 [{}] 开始性能监控 - 事务 #{}, 步骤数: {}",
+            self.name,
+            count,
+            transaction.steps.len()
+        );
+
         Ok(())
     }
 
@@ -117,30 +133,41 @@ impl Middleware for MetricsMiddleware {
         transactions: &[Transaction],
     ) -> EditorResult<MiddlewareResult> {
         for transaction in transactions {
-            if let Some(start_time) = transaction.get_meta::<Instant>("metrics_start_time") {
+            if let Some(start_time) =
+                transaction.get_meta::<Instant>("metrics_start_time")
+            {
                 let duration = start_time.elapsed();
                 let steps_count = transaction.steps.len();
-                
+
                 println!("⚡ [{}] 性能报告:", self.name);
                 println!("   - 处理时间: {:?}", duration);
                 println!("   - 步骤数量: {}", steps_count);
-                
+
                 if let Some(state) = &state {
                     println!("   - 状态版本: {}", state.version);
-                    println!("   - 字段实例数: {}", state.fields_instances.len());
+                    println!(
+                        "   - 字段实例数: {}",
+                        state.fields_instances.len()
+                    );
                 }
-                
+
                 // 性能警告
                 if duration.as_millis() > 100 {
-                    println!("⚠️  [{}] 性能警告: 事务处理时间过长 ({:?})", self.name, duration);
+                    println!(
+                        "⚠️  [{}] 性能警告: 事务处理时间过长 ({:?})",
+                        self.name, duration
+                    );
                 }
-                
+
                 if steps_count > 10 {
-                    println!("⚠️  [{}] 复杂度警告: 事务步骤数量较多 ({})", self.name, steps_count);
+                    println!(
+                        "⚠️  [{}] 复杂度警告: 事务步骤数量较多 ({})",
+                        self.name, steps_count
+                    );
                 }
             }
         }
-        
+
         Ok(MiddlewareResult::new(Ok(())))
     }
 }
@@ -154,28 +181,32 @@ pub struct ValidationMiddleware {
 
 impl ValidationMiddleware {
     pub fn new() -> Self {
-        Self {
-            name: "ValidationMiddleware".to_string(),
-        }
+        Self { name: "ValidationMiddleware".to_string() }
     }
-    
-    fn validate_transaction_basic(&self, transaction: &Transaction) -> Result<(), String> {
+
+    fn validate_transaction_basic(
+        &self,
+        transaction: &Transaction,
+    ) -> Result<(), String> {
         // 只进行基本验证，不检查在execute中设置的元数据
         if transaction.id == 0 {
             return Err("事务ID无效".to_string());
         }
-        
+
         Ok(())
     }
-    
-    fn validate_transaction_post(&self, transaction: &Transaction) -> Result<(), String> {
+
+    fn validate_transaction_post(
+        &self,
+        transaction: &Transaction,
+    ) -> Result<(), String> {
         // 在after_dispatch中进行详细验证（此时元数据已设置）
-        
+
         // 验证必需的元数据
         if transaction.get_meta::<String>("action").is_none() {
             return Err("缺少动作元数据".to_string());
         }
-        
+
         // 验证特定动作的参数
         if let Some(action) = transaction.get_meta::<String>("action") {
             match action.as_str() {
@@ -183,7 +214,7 @@ impl ValidationMiddleware {
                     if transaction.get_meta::<String>("username").is_none() {
                         return Err("用户登录需要username参数".to_string());
                     }
-                }
+                },
                 "document_edit" => {
                     if transaction.get_meta::<String>("user_id").is_none() {
                         return Err("文档编辑需要user_id参数".to_string());
@@ -191,7 +222,7 @@ impl ValidationMiddleware {
                     if transaction.get_meta::<String>("document_id").is_none() {
                         return Err("文档编辑需要document_id参数".to_string());
                     }
-                }
+                },
                 "permission_check" => {
                     if transaction.get_meta::<String>("user_id").is_none() {
                         return Err("权限检查需要user_id参数".to_string());
@@ -199,13 +230,13 @@ impl ValidationMiddleware {
                     if transaction.get_meta::<String>("resource").is_none() {
                         return Err("权限检查需要resource参数".to_string());
                     }
-                }
+                },
                 _ => {
                     // 其他动作的验证
-                }
+                },
             }
         }
-        
+
         Ok(())
     }
 }
@@ -217,19 +248,19 @@ impl Middleware for ValidationMiddleware {
         transaction: &mut Transaction,
     ) -> EditorResult<()> {
         println!("🔒 [{}] 开始事务验证", self.name);
-        
+
         // 执行基本验证
         if let Err(error) = self.validate_transaction_basic(transaction) {
             println!("❌ [{}] 验证失败: {}", self.name, error);
             return Err(anyhow::anyhow!("验证失败: {}", error));
         }
-        
+
         println!("✅ [{}] 事务验证通过", self.name);
-        
+
         // 添加验证标记
         transaction.set_meta("validated", true);
         transaction.set_meta("validation_time", SystemTime::now());
-        
+
         Ok(())
     }
 
@@ -245,27 +276,29 @@ impl Middleware for ValidationMiddleware {
                 // 继续处理而不是失败，只记录警告
             }
         }
-        
+
         if let Some(state) = &state {
             println!("🔍 [{}] 执行状态验证", self.name);
-            
+
             // 验证状态一致性
             if state.version == 0 {
                 println!("⚠️  [{}] 警告: 状态版本为0", self.name);
             }
-            
+
             // 验证插件状态
             let plugin_count = state.plugins().len();
             let field_count = state.fields_instances.len();
-            
+
             if plugin_count != field_count {
-                println!("⚠️  [{}] 警告: 插件数量({})与字段实例数量({})不匹配", 
-                         self.name, plugin_count, field_count);
+                println!(
+                    "⚠️  [{}] 警告: 插件数量({})与字段实例数量({})不匹配",
+                    self.name, plugin_count, field_count
+                );
             }
-            
+
             println!("✅ [{}] 后置验证完成", self.name);
         }
-        
+
         // 检查是否需要生成额外的验证事务
         let validation_needed = transactions.iter().any(|tr| {
             if let Some(action) = tr.get_meta::<String>("action") {
@@ -274,7 +307,7 @@ impl Middleware for ValidationMiddleware {
                 false
             }
         });
-        
+
         if validation_needed {
             if let Some(state) = state {
                 // 生成额外的验证事务
@@ -283,13 +316,19 @@ impl Middleware for ValidationMiddleware {
                 validation_tr.set_meta("action", "post_validation");
                 validation_tr.set_meta("timestamp", SystemTime::now());
                 validation_tr.commit();
-                
-                println!("📋 [{}] 生成后置验证事务: {}", self.name, validation_tr.id);
-                
-                return Ok(MiddlewareResult::with_transactions(Ok(()), Some(validation_tr)));
+
+                println!(
+                    "📋 [{}] 生成后置验证事务: {}",
+                    self.name, validation_tr.id
+                );
+
+                return Ok(MiddlewareResult::with_transactions(
+                    Ok(()),
+                    Some(validation_tr),
+                ));
             }
         }
-        
+
         Ok(MiddlewareResult::new(Ok(())))
     }
-} 
+}
