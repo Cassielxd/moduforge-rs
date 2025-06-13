@@ -21,11 +21,11 @@ tracing = "0.1"
 tracing-subscriber = "0.3"
 chrono = "0.4"
 rand = "0.8"
-moduforge-model = {version = "0.3.8", path = "../model"}
-moduforge-state = {version = "0.3.8", path = "../state"}
-moduforge-transform = {version = "0.3.8", path = "../transform"}
-moduforge-core = {version = "0.3.8", path = "../core"}
-moduforge-macros = {version = "0.3.8", path = "../macros/macro"}
-moduforge-macros-derive = {version = "0.3.8", path = "../macros/derive"}
+moduforge-model = {version = "0.3.9", path = "../model"}
+moduforge-state = {version = "0.3.9", path = "../state"}
+moduforge-transform = {version = "0.3.9", path = "../transform"}
+moduforge-core = {version = "0.3.9", path = "../core"}
+moduforge-macros = {version = "0.3.9", path = "../macros/macro"}
+moduforge-macros-derive = {version = "0.3.9", path = "../macros/derive"}
 rayon = { workspace = true }
 crossbeam = { workspace = true }
