@@ -84,7 +84,27 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionEngine
         self.evaluate_with_opts(key, context, Default::default())
             .await
     }
-
+    pub async fn evaluate_with_state_and_opts<K>(
+        &self,
+        key: K,
+        context: Variable,
+        state: Arc<moduforge_state::State>,
+        options: EvaluationOptions,
+    ) -> Result<DecisionGraphResponse, Box<EvaluationError>>
+    where
+        K: AsRef<str>,
+    {
+        // 设置 thread_local State
+        CustomFunctionRegistry::set_current_state(Some(state));
+        
+        // 执行评估
+        let result = self.evaluate_with_opts(key, context, options).await;
+        
+        // 清理 thread_local State
+        CustomFunctionRegistry::set_current_state(None);
+        
+        result
+    }
     /// 使用 State 评估决策 - 通过 thread_local 设置 State
     pub async fn evaluate_with_state<K>(
         &self,

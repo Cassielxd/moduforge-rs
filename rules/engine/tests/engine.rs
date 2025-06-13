@@ -1,4 +1,9 @@
 use crate::support::{create_fs_loader, load_raw_test_data, load_test_data, test_data_root};
+use moduforge_model::schema::Schema;
+use moduforge_rules_expression::variable::VariableType;
+use moduforge_rules_expression::Isolate;
+use moduforge_state::ops::GlobalResourceManager;
+use moduforge_state::State;
 use serde::Deserialize;
 use serde_json::json;
 use std::fs;
@@ -13,6 +18,91 @@ use moduforge_rules_engine::Variable;
 use moduforge_rules_engine::{DecisionEngine, EvaluationError, EvaluationOptions};
 
 mod support;
+
+
+#[tokio::test]
+async fn engine_custom_function() {
+    println!("=== 自定义函数与State集成演示 ===\n");
+
+    // 创建 State
+    use moduforge_model::schema::{SchemaSpec};
+    use moduforge_model::node_type::NodeSpec;
+    use std::collections::HashMap;
+    
+    let mut nodes = HashMap::new();
+    nodes.insert("doc".to_string(), NodeSpec {
+        content: None,
+        marks: None,
+        group: None,
+        desc: Some("Document root".to_string()),
+        attrs: None,
+    });
+    
+    let schema_spec = SchemaSpec {
+        nodes,
+        marks: HashMap::new(), 
+        top_node: Some("doc".to_string()),
+    };
+    let schema = Arc::new(Schema::compile(schema_spec).unwrap());
+    let resource_manager = Arc::new(GlobalResourceManager::new());
+    let config = moduforge_state::state::Configuration::new(
+        schema, 
+        None, 
+        None, 
+        Some(resource_manager)
+    ).unwrap();
+    let state = Arc::new(State::new(Arc::new(config)).unwrap());
+    println!("注册自定义函数: getStateInfo()");
+    
+    let _ = Isolate::register_custom_function(
+        "getStateInfo".to_string(),
+        vec![VariableType::String], // 无参数
+        VariableType::String,
+        |args, state_opt| {
+            let p1 = args.str(0)?;
+            println!("p1: {:?}", p1);
+            if let Some(state) = state_opt {
+                // 从 State 中获取信息
+                let info = format!("State版本: {}", state.version);
+                Ok(Variable::String(std::rc::Rc::from(info)))
+            } else {
+                Ok(Variable::String(std::rc::Rc::from("未提供State")))
+            }
+        },
+    ).map_err(|e| anyhow::anyhow!(e));
+
+    // 注册另一个自定义函数：getDocumentTitle
+    println!("注册自定义函数: getDocumentTitle()");
+    
+    let _ = Isolate::register_custom_function(
+        "getDocumentTitle".to_string(),
+        vec![], // 无参数
+        VariableType::String,
+        |_args, state_opt| {
+            if let Some(state) = state_opt {
+                // 从 State 获取基本信息
+                let info = format!("State版本: {}", state.version);
+                Ok(Variable::String(std::rc::Rc::from(info)))
+            } else {
+                Ok(Variable::String(std::rc::Rc::from("无法访问文档")))
+            }
+        },
+    ).map_err(|e| anyhow::anyhow!(e));
+
+    let engine = DecisionEngine::default().with_loader(create_fs_loader().into());
+    let result = engine
+        .evaluate_with_state_and_opts("http-function.json", json!({ "input": 12 }).into(), state.clone(),EvaluationOptions {
+            trace: Some(true),
+            max_depth: None,
+        })
+        .await
+        .unwrap();
+    
+    println!("测试结果: {:?}", result);
+    assert!(result.result.to_value().is_object(), "结果应该是一个对象");
+}
+
+
 
 #[tokio::test]
 #[cfg_attr(miri, ignore)]
@@ -265,7 +355,6 @@ async fn engine_graph_tests() {
 }
 
 #[tokio::test]
-#[cfg_attr(miri, ignore)]
 async fn engine_function_v2() {
     let engine = DecisionEngine::default().with_loader(create_fs_loader().into());
 

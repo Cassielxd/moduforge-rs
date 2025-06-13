@@ -10,9 +10,11 @@ fn main() -> anyhow::Result<()> {
     
     Isolate::register_custom_function(
         "getUserCount".to_string(),
-        vec![], // 无参数
+        vec![VariableType::String], // 无参数
         VariableType::Number,
-        |_args, state_opt| {
+        |args, state_opt| {
+            let p1 = args.str(0)?;
+            println!("p1: {:?}", p1);
             if let Some(state) = state_opt {
                 // 如果有State，返回State的版本号作为用户数量的模拟
                 let count = state.version as f64;
@@ -58,7 +60,7 @@ fn main() -> anyhow::Result<()> {
 
     // 测试1: 不传递State运行
     println!("1. 不传递State运行表达式:");
-    let result1 = isolate.run_standard("getUserCount()")?;
+    let result1 = isolate.run_standard("getUserCount('test')")?;
     println!("   getUserCount() = {}", result1);
 
     // 测试2: 数学运算
@@ -73,7 +75,7 @@ fn main() -> anyhow::Result<()> {
 
     // 测试4: 组合使用
     println!("\n4. 组合表达式:");
-    let result4 = isolate.run_standard("addNumbers(getUserCount(), 5)")?;
+    let result4 = isolate.run_standard("addNumbers(getUserCount('test'), 5)")?;
     println!("   addNumbers(getUserCount(), 5) = {}", result4);
 
     // 现在测试带有State的情况（创建一个模拟的State）

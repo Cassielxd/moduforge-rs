@@ -25,14 +25,20 @@
 
 use std::future::Future;
 use std::pin::Pin;
-
+use std::rc::Rc;
+use std::any::Any;
 
 use crate::handler::function::error::{FunctionResult, ResultExt};
 use crate::handler::function::listener::{RuntimeEvent, RuntimeListener};
+use crate::handler::function::module::export_default;
 use crate::handler::function::serde::JsValue;
+use moduforge_rules_expression::functions::custom::CustomFunctionDefinition;
+use moduforge_rules_expression::functions::defs::FunctionDefinition;
 use moduforge_rules_expression::{CustomFunctionRegistry, functions::arguments::Arguments};
+use rquickjs::module::{Declarations, Exports, ModuleDef};
 use rquickjs::prelude::{Async, Func};
 use rquickjs::{CatchResultExt, Ctx};
+
 
 /// 自定义函数监听器
 /// 
@@ -46,11 +52,11 @@ use rquickjs::{CatchResultExt, Ctx};
 /// 3. 从CustomFunctionRegistry获取所有已注册的函数
 /// 4. 将每个函数包装为异步JavaScript函数
 /// 5. 注册到JavaScript的md命名空间中
-pub struct CustomListener {
+pub struct ModuforgeListener {
     // 目前为空结构体，后续可以添加配置或状态字段
 }
 
-impl RuntimeListener for CustomListener {
+impl RuntimeListener for ModuforgeListener {
     /// 处理运行时事件的核心方法
     /// 
     /// # 参数
@@ -121,6 +127,57 @@ impl RuntimeListener for CustomListener {
             }
 
             Ok(()) // 成功完成函数注册
+        })
+    }
+}
+
+
+
+
+pub struct ModuforgeModule;
+
+impl ModuleDef for ModuforgeModule {
+    fn declare<'js>(decl: &Declarations<'js>) -> rquickjs::Result<()> {
+        // 声明所有可用的函数
+        for function_key in CustomFunctionRegistry::list_functions() {
+            decl.declare(function_key.as_str())?;
+        }
+        decl.declare("default")?;
+        Ok(())
+    }
+
+    fn evaluate<'js>(ctx: &Ctx<'js>, exports: &Exports<'js>) -> rquickjs::Result<()> {
+        export_default(ctx, exports, |default| {
+            // 为每个函数创建对应的异步函数
+            for function_key in CustomFunctionRegistry::list_functions() {
+                if let Some(function_definition) = CustomFunctionRegistry::get_definition(&function_key) {
+                    let function_definition = function_definition.clone();
+                    //根据签名的类型动态创建函数
+                    default.set(
+                        &function_key,
+                        Func::from(Async(
+                            move |ctx: Ctx<'js>,args:JsValue| {
+                                let function_definition = function_definition.clone();
+                                async move {
+                                    let response = function_definition
+                                        .call(Arguments(&[args.0]))
+                                        .or_throw(&ctx)?;
+                                    
+                                    let result = serde_json::to_value(response)
+                                        .or_throw(&ctx)?
+                                        .into();
+                                    
+                                    Ok::<JsValue, rquickjs::Error>(JsValue(result))
+                                }
+                            },
+                        )),
+                    )?;
+                     
+                    
+                }
+            }
+
+            Ok(())
         })
     }
 }

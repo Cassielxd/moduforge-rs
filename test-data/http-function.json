@@ -13,12 +13,24 @@
     {
       "type": "functionNode",
       "content": {
-        "source": "import zen from 'zen';\nimport http from 'http';\n\n/** @type {Handler} **/\nexport const handler = async (input) => {\n  const r = await http.get('https://fakestoreapi.com/products/1');\n\n  return r;\n};\n"
+        "source": "import zen from 'zen';\r\nimport moduforge from 'moduforge';\r\n\r\n/** @type {Handler} **/\r\nexport const handler = async (input) => {\r\n  console.log(moduforge);\r\n  const r = await moduforge.getStateInfo('11');\r\n\r\n  return r;\r\n};\r\n"
       },
       "id": "66cb12f4-4cdd-4422-850b-4534f959407d",
       "name": "function1",
       "position": {
         "x": 600,
+        "y": 175
+      }
+    },
+    {
+      "type": "outputNode",
+      "content": {
+        "schema": ""
+      },
+      "id": "6f0cb1d4-7d21-4fda-9de3-1645b4b0394f",
+      "name": "response",
+      "position": {
+        "x": 940,
         "y": 175
       }
     }
@@ -29,6 +41,12 @@
       "sourceId": "2d560c7d-3528-43ed-88d8-28f4d8ef17be",
       "type": "edge",
       "targetId": "66cb12f4-4cdd-4422-850b-4534f959407d"
+    },
+    {
+      "id": "22aee10c-9663-437b-9436-4183a181838b",
+      "sourceId": "66cb12f4-4cdd-4422-850b-4534f959407d",
+      "type": "edge",
+      "targetId": "6f0cb1d4-7d21-4fda-9de3-1645b4b0394f"
     }
   ]
 }

@@ -1,0 +1,55 @@
+{
+  "contentType": "application/vnd.gorules.decision",
+  "nodes": [
+    {
+      "type": "inputNode",
+      "content": {
+        "schema": ""
+      },
+      "id": "b111d67c-7f54-47d9-8abb-75bfc4f41aa9",
+      "name": "request",
+      "position": {
+        "x": 185,
+        "y": 215
+      }
+    },
+    {
+      "type": "outputNode",
+      "content": {
+        "schema": ""
+      },
+      "id": "93f0697b-bba3-4560-b0bf-10f07b827b57",
+      "name": "response",
+      "position": {
+        "x": 975,
+        "y": 230
+      }
+    },
+    {
+      "type": "functionNode",
+      "content": {
+        "source": "import zen from 'zen';\r\n/** @type {Handler} **/\r\nexport const handler = async (input) => {\r\n  console.log(md.getStateInfo());\r\n  return {version:md.getStateInfo()};\r\n};\r\n"
+      },
+      "id": "56a73b2d-2466-4ba1-b705-6e226b6f3f9a",
+      "name": "function1",
+      "position": {
+        "x": 600,
+        "y": 210
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "88c0ad97-fd35-42d7-a5ee-5d9261a6718c",
+      "sourceId": "b111d67c-7f54-47d9-8abb-75bfc4f41aa9",
+      "type": "edge",
+      "targetId": "56a73b2d-2466-4ba1-b705-6e226b6f3f9a"
+    },
+    {
+      "id": "9f50b9be-fa3e-41ac-932d-de4735f104f8",
+      "sourceId": "56a73b2d-2466-4ba1-b705-6e226b6f3f9a",
+      "type": "edge",
+      "targetId": "93f0697b-bba3-4560-b0bf-10f07b827b57"
+    }
+  ]
+}

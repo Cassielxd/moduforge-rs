@@ -5,13 +5,14 @@
 use crate::functions::arguments::Arguments;
 use crate::variable::VariableType;
 use crate::Variable;
+use std::any::Any;
 use std::collections::HashSet;
 use std::rc::Rc;
 
 /// 函数定义特征
 /// 
 /// 所有函数（内置、自定义、已废弃）都必须实现此特征
-pub trait FunctionDefinition {
+pub trait FunctionDefinition:Any {
     /// 返回必需参数的数量
     fn required_parameters(&self) -> usize;
     /// 返回可选参数的数量

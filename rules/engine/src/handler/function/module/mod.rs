@@ -7,6 +7,7 @@ use rquickjs::loader::{Bundle, Loader, ModuleLoader as MDLoader, Resolver};
 use rquickjs::module::{Declared, Exports};
 use rquickjs::{embed, Ctx, Error, Module, Object};
 
+use crate::handler::function::module::custom::ModuforgeModule;
 use crate::handler::function::module::http::HttpModule;
 use crate::handler::function::module::zen::ZenModule;
 
@@ -62,7 +63,7 @@ struct BaseModuleLoader {
 
 impl BaseModuleLoader {
     pub fn new() -> Self {
-        let mut hs = HashSet::from(["zen".to_string(), "http".to_string()]);
+        let mut hs = HashSet::from(["zen".to_string(), "http".to_string(), "moduforge".to_string()]);
 
         JS_BUNDLE.iter().for_each(|(key, _)| {
             hs.insert(key.to_string());
@@ -73,7 +74,8 @@ impl BaseModuleLoader {
             defined_modules: RefCell::new(hs),
             md_loader: MDLoader::default()
                 .with_module("zen", ZenModule)
-                .with_module("http", HttpModule),
+                .with_module("http", HttpModule)
+                .with_module("moduforge", ModuforgeModule),
         }
     }
 

@@ -71,7 +71,6 @@ impl FunctionHandler {
             .register_module(&module_name, content.source.as_str())
             .await
             .map_err(|e| anyhow!(e.to_string()))?;
-
         let response_result = self
             .function
             .call_handler(&module_name, JsValue(request.input.clone()))
