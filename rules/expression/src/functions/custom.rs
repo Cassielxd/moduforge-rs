@@ -218,6 +218,11 @@ impl CustomFunctionRegistry {
         });
     }
 
+    /// 检查当前是否有活跃的State
+    pub fn has_current_state() -> bool {
+        CURRENT_STATE.with(|s| s.borrow().is_some())
+    }
+
     /// 列出所有已注册的函数
     pub fn list_functions() -> Vec<String> {
         Self::INSTANCE.with(|registry| {

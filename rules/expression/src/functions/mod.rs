@@ -9,6 +9,7 @@ pub use crate::functions::internal::InternalFunction;
 pub use crate::functions::method::{MethodKind, MethodRegistry};
 pub use crate::functions::registry::FunctionRegistry;
 pub use crate::functions::custom::CustomFunction;
+pub use crate::functions::state_guard::{StateGuard, with_state_async};
 
 use std::fmt::Display;
 use strum_macros::{Display, EnumIter, EnumString, IntoStaticStr};
@@ -20,7 +21,8 @@ pub mod defs; // 函数定义接口
 mod deprecated; // 已废弃函数
 pub mod internal; // 内置函数
 mod method; // 方法注册表
-pub(crate) mod registry; // 函数注册表 // 自定义函数
+pub(crate) mod registry; // 函数注册表
+pub mod state_guard; // State 守卫模块
 
 /// 函数类型枚举
 ///

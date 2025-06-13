@@ -1,4 +1,4 @@
-use moduforge_rules_expression::{Isolate, Variable};
+use moduforge_rules_expression::{Isolate, Variable, StateGuard};
 use moduforge_rules_expression::variable::VariableType;
 use std::sync::Arc;
 

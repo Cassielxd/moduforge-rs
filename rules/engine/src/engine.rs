@@ -10,7 +10,6 @@ use crate::loader::{
 use crate::model::DecisionContent;
 use crate::EvaluationError;
 use moduforge_rules_expression::variable::Variable;
-use moduforge_rules_expression::functions::custom::CustomFunctionRegistry;
 
 /// 决策引擎结构体，用于生成和评估决策
 #[derive(Debug, Clone)]
@@ -93,6 +92,9 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static>
     {
         self.evaluate_with_opts(key, context, Default::default()).await
     }
+    /// 使用 State 和选项评估决策
+    /// 
+    /// 使用 RAII 模式确保 State 的异常安全管理
     pub async fn evaluate_with_state_and_opts<K>(
         &self,
         key: K,
@@ -103,18 +105,15 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static>
     where
         K: AsRef<str>,
     {
-        // 设置 thread_local State
-        CustomFunctionRegistry::set_current_state(Some(state));
+        // 使用 StateGuard 自动管理 State 生命周期
+        let _guard = moduforge_rules_expression::StateGuard::new(state);
 
-        // 执行评估
-        let result = self.evaluate_with_opts(key, context, options).await;
-
-        // 清理 thread_local State
-        CustomFunctionRegistry::set_current_state(None);
-
-        result
+        // 执行评估，即使发生异常，State 也会被正确清理
+        self.evaluate_with_opts(key, context, options).await
     }
-    /// 使用 State 评估决策 - 通过 thread_local 设置 State
+    /// 使用 State 评估决策
+    /// 
+    /// 使用 RAII 模式确保 State 的异常安全管理
     pub async fn evaluate_with_state<K>(
         &self,
         key: K,
@@ -124,16 +123,11 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static>
     where
         K: AsRef<str>,
     {
-        // 设置 thread_local State
-        CustomFunctionRegistry::set_current_state(Some(state));
+        // 使用 StateGuard 自动管理 State 生命周期
+        let _guard = moduforge_rules_expression::StateGuard::new(state);
 
-        // 执行评估
-        let result = self.evaluate(key, context).await;
-
-        // 清理 thread_local State
-        CustomFunctionRegistry::set_current_state(None);
-
-        result
+        // 执行评估，即使发生异常，State 也会被正确清理
+        self.evaluate(key, context).await
     }
 
     /// 使用 key 评估决策，并使用高级选项

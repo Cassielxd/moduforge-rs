@@ -164,25 +164,18 @@ impl<'a> Isolate<'a> {
     }
 
     /// 运行标准表达式，并传入State供自定义函数使用
+    ///
+    /// 使用 RAII 模式确保 State 的异常安全管理
     pub fn run_standard_with_state(
         &mut self,
         source: &'a str,
         state: Arc<State>,
     ) -> Result<Variable, IsolateError> {
-        // 设置State上下文给自定义函数使用
-        crate::functions::custom::CustomFunctionRegistry::set_current_state(
-            Some(state),
-        );
-
-        // 运行表达式
-        let result = self.run_standard(source);
-
-        // 清理State上下文
-        crate::functions::custom::CustomFunctionRegistry::set_current_state(
-            None,
-        );
-
-        result
+        // 使用 StateGuard 自动管理 State 生命周期
+        let _guard = crate::functions::StateGuard::new(state);
+        
+        // 运行表达式，即使发生异常，State 也会被正确清理
+        self.run_standard(source)
     }
 
     pub fn compile_unary(
@@ -211,25 +204,18 @@ impl<'a> Isolate<'a> {
     }
 
     /// 运行一元表达式，并传入State供自定义函数使用
+    ///
+    /// 使用 RAII 模式确保 State 的异常安全管理
     pub fn run_unary_with_state(
         &mut self,
         source: &'a str,
         state: Arc<State>,
     ) -> Result<bool, IsolateError> {
-        // 设置State上下文给自定义函数使用
-        crate::functions::custom::CustomFunctionRegistry::set_current_state(
-            Some(state),
-        );
-
-        // 运行表达式
-        let result = self.run_unary(source);
-
-        // 清理State上下文
-        crate::functions::custom::CustomFunctionRegistry::set_current_state(
-            None,
-        );
-
-        result
+        // 使用 StateGuard 自动管理 State 生命周期
+        let _guard = crate::functions::StateGuard::new(state);
+        
+        // 运行表达式，即使发生异常，State 也会被正确清理
+        self.run_unary(source)
     }
 
     /// 注册自定义函数（可在表达式中直接调用）
