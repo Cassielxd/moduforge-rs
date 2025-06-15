@@ -1,5 +1,7 @@
 # ModuForge-RS
 
+[Read this in English](./README.en.md)
+
 ModuForge 是一个基于 Rust 的状态管理和数据转换框架，专注于不可变数据结构和事件驱动架构。它提供了无业务绑定的编辑器核心实现，可以通过扩展进行定制和扩展，支持任何业务场景的需求。
 
 ### ModuForge 是如何工作的?
