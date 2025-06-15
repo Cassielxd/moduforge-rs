@@ -29,6 +29,9 @@ impl MiddlewareResult {
 /// 可以用于事务处理的中间件 trait
 #[async_trait::async_trait]
 pub trait Middleware: Send + Sync {
+    /// 返回中间件的名称
+    fn name(&self) -> String;
+
     /// 在事务到达核心分发之前处理事务
     async fn before_dispatch(
         &self,

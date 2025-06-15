@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Instant;
 
 use crate::{
     error::{error_utils, EditorResult},
@@ -7,6 +8,7 @@ use crate::{
     helpers::create_doc,
     history_manager::HistoryManager,
     types::{EditorOptions, HistoryEntryWithMeta},
+    metrics,
 };
 
 use moduforge_model::{node_pool::NodePool, schema::Schema};
@@ -35,6 +37,7 @@ impl Editor {
     /// 创建新的编辑器实例
     /// options: 编辑器配置选项
     pub async fn create(options: EditorOptions) -> EditorResult<Self> {
+        let start_time = Instant::now();
         info!("正在创建新的编辑器实例");
         let extension_manager =
             ExtensionManager::new(&options.get_extensions())?;
@@ -76,6 +79,7 @@ impl Editor {
         };
         runtime.init().await?;
         info!("编辑器实例创建成功");
+        metrics::editor_creation_duration(start_time.elapsed());
         Ok(runtime)
     }
 
@@ -114,6 +118,7 @@ impl Editor {
         &mut self,
         event: Event,
     ) -> EditorResult<()> {
+        metrics::event_emitted(event.name());
         self.event_bus.broadcast(event).await?;
         Ok(())
     }
@@ -123,6 +128,7 @@ impl Editor {
     ) -> EditorResult<()> {
         debug!("执行前置中间件链");
         for middleware in &self.options.get_middleware_stack().middlewares {
+            let start_time = Instant::now();
             let timeout =
                 std::time::Duration::from_millis(DEFAULT_MIDDLEWARE_TIMEOUT_MS);
             match tokio::time::timeout(
@@ -133,6 +139,7 @@ impl Editor {
             {
                 Ok(Ok(())) => {
                     // 中间件执行成功
+                    metrics::middleware_execution_duration(start_time.elapsed(), "before", middleware.name().as_str());
                     continue;
                 },
                 Ok(Err(e)) => {
@@ -159,6 +166,7 @@ impl Editor {
     ) -> EditorResult<()> {
         debug!("执行后置中间件链");
         for middleware in &self.options.get_middleware_stack().middlewares {
+            let start_time = Instant::now();
             let timeout =
                 std::time::Duration::from_millis(DEFAULT_MIDDLEWARE_TIMEOUT_MS);
             let middleware_result = match tokio::time::timeout(
@@ -167,7 +175,10 @@ impl Editor {
             )
             .await
             {
-                Ok(Ok(result)) => result,
+                Ok(Ok(result)) => {
+                    metrics::middleware_execution_duration(start_time.elapsed(), "after", middleware.name().as_str());
+                    result
+                },
                 Ok(Err(e)) => {
                     return Err(error_utils::middleware_error(format!(
                         "后置中间件执行失败: {}",
@@ -204,6 +215,7 @@ impl Editor {
         command: Arc<dyn Command>,
     ) -> EditorResult<()> {
         debug!("正在执行命令: {}", command.name());
+        metrics::command_executed(command.name().as_str());
         let mut tr = self.get_tr();
         command.execute(&mut tr).await?;
         tr.commit();
@@ -217,6 +229,7 @@ impl Editor {
         meta: serde_json::Value,
     ) -> EditorResult<()> {
         debug!("正在执行命令: {}", command.name());
+        metrics::command_executed(command.name().as_str());
         let mut tr = self.get_tr();
         command.execute(&mut tr).await?;
         tr.commit();
@@ -248,6 +261,7 @@ impl Editor {
         description: String,
         meta: serde_json::Value,
     ) -> EditorResult<()> {
+        metrics::transaction_dispatched();
         let old_id = self.get_state().version;
         // 保存当前事务的副本，用于中间件处理
         let mut current_transaction = transaction;
@@ -388,11 +402,13 @@ impl Editor {
     pub fn undo(&mut self) {
         self.history_manager.jump(-1);
         self.state = self.history_manager.get_present().state;
+        metrics::history_operation("undo");
     }
 
     pub fn redo(&mut self) {
         self.history_manager.jump(1);
         self.state = self.history_manager.get_present().state;
+        metrics::history_operation("redo");
     }
 
     pub fn jump(
@@ -401,6 +417,7 @@ impl Editor {
     ) {
         self.history_manager.jump(n);
         self.state = self.history_manager.get_present().state;
+        metrics::history_operation("jump");
     }
 }
 impl Drop for Editor {

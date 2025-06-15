@@ -98,7 +98,17 @@ async fn engine_custom_function() {
         .await
         .unwrap();
     
-    println!("测试结果: {:?}", result);
+    println!("测试结果: {:?}", result.performance);
+    for i in 0.. 10{
+        let result = engine
+        .evaluate_with_state_and_opts("http-function.json", json!({ "input": 12 }).into(), state.clone(),EvaluationOptions {
+            trace: Some(true),
+            max_depth: None,
+        })
+        .await
+        .unwrap();
+        println!("测试结果: {:?}", result.performance);
+    }
     assert!(result.result.to_value().is_object(), "结果应该是一个对象");
 }
 

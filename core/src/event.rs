@@ -17,6 +17,18 @@ pub enum Event {
     Destroy,                                         // 销毁事件
     Stop,                                            // 停止后需要重启
 }
+
+impl Event {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Event::Create(_) => "Create",
+            Event::TrApply(_, _, _) => "TrApply",
+            Event::Destroy => "Destroy",
+            Event::Stop => "Stop",
+        }
+    }
+}
+
 /// 事件总线
 #[derive(Clone)]
 pub struct EventBus<T: Send + 'static> {

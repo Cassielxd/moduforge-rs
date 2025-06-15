@@ -25,6 +25,9 @@ impl LoggingMiddleware {
 
 #[async_trait]
 impl Middleware for LoggingMiddleware {
+    fn name(&self) -> String {
+        "LoggingMiddleware".to_string()
+    }
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,
@@ -106,6 +109,9 @@ impl MetricsMiddleware {
 
 #[async_trait]
 impl Middleware for MetricsMiddleware {
+    fn name(&self) -> String {
+        "MetricsMiddleware".to_string()
+    }
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,
@@ -243,6 +249,9 @@ impl ValidationMiddleware {
 
 #[async_trait]
 impl Middleware for ValidationMiddleware {
+    fn name(&self) -> String {
+        "ValidationMiddleware".to_string()
+    }
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,

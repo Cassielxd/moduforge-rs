@@ -6,11 +6,22 @@ use std::{
     marker::PhantomData,
 };
 
+use crate::metrics;
+
 /// 任务处理的结果状态
 #[derive(Debug, Clone, PartialEq)]
 pub enum TaskStatus {
     Completed,
     Failed(String),
+}
+
+impl From<&TaskStatus> for &'static str {
+    fn from(status: &TaskStatus) -> Self {
+        match status {
+            TaskStatus::Completed => "completed",
+            TaskStatus::Failed(_) => "failed",
+        }
+    }
 }
 
 /// 任务处理器的错误类型
@@ -100,33 +111,41 @@ where
         &self,
         task: T,
     ) -> TaskResult<T, O> {
+        metrics::task_submitted();
         let start_time = Instant::now();
         let mut current_retry = 0;
 
         loop {
             match self.processor.process(task.clone()) {
                 Ok(output) => {
-                    return TaskResult {
+                    let result = TaskResult {
                         status: TaskStatus::Completed,
                         task: Some(task),
                         output: Some(output),
                         error: None,
                         processing_time: start_time.elapsed(),
                     };
+                    metrics::task_processing_duration(result.processing_time);
+                    metrics::task_processed((&result.status).into());
+                    return result;
                 },
                 Err(e) => {
                     if current_retry < self.max_retries {
                         current_retry += 1;
+                        metrics::task_retried();
                         thread::sleep(self.retry_delay);
                         continue;
                     }
-                    return TaskResult {
+                    let result = TaskResult {
                         status: TaskStatus::Failed(e.to_string()),
                         task: Some(task),
                         output: None,
                         error: Some(e.to_string()),
                         processing_time: start_time.elapsed(),
                     };
+                    metrics::task_processing_duration(result.processing_time);
+                    metrics::task_processed((&result.status).into());
+                    return result;
                 },
             }
         }
@@ -138,33 +157,41 @@ where
         max_retries: u32,
         retry_delay: Duration,
     ) -> TaskResult<T, O> {
+        metrics::task_submitted();
         let start_time = Instant::now();
         let mut current_retry = 0;
 
         loop {
             match self.processor.process(task.clone()) {
                 Ok(output) => {
-                    return TaskResult {
+                    let result = TaskResult {
                         status: TaskStatus::Completed,
                         task: Some(task),
                         output: Some(output),
                         error: None,
                         processing_time: start_time.elapsed(),
                     };
+                    metrics::task_processing_duration(result.processing_time);
+                    metrics::task_processed((&result.status).into());
+                    return result;
                 },
                 Err(e) => {
                     if current_retry < max_retries {
                         current_retry += 1;
+                        metrics::task_retried();
                         thread::sleep(retry_delay);
                         continue;
                     }
-                    return TaskResult {
+                    let result = TaskResult {
                         status: TaskStatus::Failed(e.to_string()),
                         task: Some(task),
                         output: None,
                         error: Some(e.to_string()),
                         processing_time: start_time.elapsed(),
                     };
+                    metrics::task_processing_duration(result.processing_time);
+                    metrics::task_processed((&result.status).into());
+                    return result;
                 },
             }
         }

@@ -29,3 +29,5 @@ moduforge-macros = {version = "0.3.9", path = "../macros/macro"}
 moduforge-macros-derive = {version = "0.3.9", path = "../macros/derive"}
 rayon = { workspace = true }
 crossbeam = { workspace = true }
+metrics = "0.22.0"
+metrics-exporter-prometheus = "0.13.1"

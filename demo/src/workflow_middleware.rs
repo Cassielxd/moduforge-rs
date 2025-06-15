@@ -21,6 +21,9 @@ impl AuthenticationMiddleware {
 
 #[async_trait]
 impl Middleware for AuthenticationMiddleware {
+    fn name(&self) -> String {
+        "AuthenticationMiddleware".to_string()
+    }
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,
@@ -103,6 +106,9 @@ impl PermissionMiddleware {
 
 #[async_trait]
 impl Middleware for PermissionMiddleware {
+    fn name(&self) -> String {
+        "PermissionMiddleware".to_string()
+    }
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,
@@ -181,6 +187,9 @@ impl CollaborationMiddleware {
 
 #[async_trait]
 impl Middleware for CollaborationMiddleware {
+    fn name(&self) -> String {
+        "CollaborationMiddleware".to_string()
+    }
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,
@@ -272,6 +281,9 @@ impl VersionControlMiddleware {
 
 #[async_trait]
 impl Middleware for VersionControlMiddleware {
+    fn name(&self) -> String {
+        "VersionControlMiddleware".to_string()
+    }
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,
@@ -349,6 +361,9 @@ impl AuditLogMiddleware {
 
 #[async_trait]
 impl Middleware for AuditLogMiddleware {
+    fn name(&self) -> String {
+        "AuditLogMiddleware".to_string()
+    }
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,

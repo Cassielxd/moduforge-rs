@@ -13,6 +13,7 @@ use moduforge_state::{
 use async_trait::async_trait;
 use std::sync::Arc;
 use anyhow::Result;
+use metrics_exporter_prometheus::PrometheusBuilder;
 
 // 使用已定义的模块
 #[allow(unused_imports)]
@@ -59,6 +60,11 @@ impl Command for SimpleCommand {
 /// 运行完整的 ModuForge-RS 演示
 /// 展示插件机制、资源管理、中间件和多插件协作流程
 pub async fn run_simple_demo() -> Result<()> {
+    // 安装 Prometheus 导出器，它会在 http://127.0.0.1:9000 上提供指标
+    PrometheusBuilder::new()
+        .install()
+        .expect("failed to install Prometheus exporter");
+
     println!("🚀 ModuForge-RS 完整演示");
     println!("🎯 展示插件机制、资源管理、中间件、多插件协作");
     println!("{}", "=".repeat(60));
@@ -320,6 +326,14 @@ pub async fn run_simple_demo() -> Result<()> {
     for plugin in state.plugins() {
         println!("   • {} (优先级: {})", plugin.key, plugin.spec.priority);
     }
+
+    // 指标已在 http://127.0.0.1:9000 上提供
+    println!("\n📈 指标已通过 Prometheus 端点提供。");
+    println!("   请在浏览器中访问: http://127.0.0.1:9000");
+    println!("   按 Ctrl+C 结束演示。");
+
+    // 保持程序运行以允许抓取指标
+    tokio::signal::ctrl_c().await?;
 
     println!("\n📐 节点系统详情:");
     println!("   • 文档根节点: document (顶级容器)");

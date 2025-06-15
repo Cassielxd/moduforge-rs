@@ -9,7 +9,7 @@ use tokio::sync::{mpsc, oneshot};
 use async_trait::async_trait;
 use tokio::select;
 
-use crate::EditorResult;
+use crate::{metrics, EditorResult};
 
 /// 任务处理的结果状态
 /// - Pending: 任务等待处理
@@ -26,6 +26,19 @@ pub enum TaskStatus {
     Failed(String),
     Timeout,
     Cancelled,
+}
+
+impl From<&TaskStatus> for &'static str {
+    fn from(status: &TaskStatus) -> Self {
+        match status {
+            TaskStatus::Pending => "pending",
+            TaskStatus::Processing => "processing",
+            TaskStatus::Completed => "completed",
+            TaskStatus::Failed(_) => "failed",
+            TaskStatus::Timeout => "timeout",
+            TaskStatus::Cancelled => "cancelled",
+        }
+    }
 }
 
 /// 任务处理器的错误类型
@@ -104,7 +117,6 @@ impl Default for ProcessorConfig {
 /// - failed_tasks: 失败任务数
 /// - timeout_tasks: 超时任务数
 /// - cancelled_tasks: 取消任务数
-/// - average_processing_time: 平均处理时间
 /// - current_queue_size: 当前队列大小
 /// - current_processing_tasks: 当前处理任务数
 #[derive(Debug, Default, Clone)]
@@ -114,7 +126,6 @@ pub struct ProcessorStats {
     pub failed_tasks: u64,
     pub timeout_tasks: u64,
     pub cancelled_tasks: u64,
-    pub average_processing_time: Duration,
     pub current_queue_size: usize,
     pub current_processing_tasks: usize,
 }
@@ -214,6 +225,9 @@ impl<T: Clone + Send + Sync + 'static, O: Clone + Send + Sync + 'static>
         stats.total_tasks += 1;
         stats.current_queue_size += 1;
 
+        metrics::task_submitted();
+        metrics::set_queue_size(stats.current_queue_size);
+
         Ok((current_id, result_rx))
     }
 
@@ -227,6 +241,8 @@ impl<T: Clone + Send + Sync + 'static, O: Clone + Send + Sync + 'static>
                     self.stats.lock().await;
                 stats.current_queue_size -= 1;
                 stats.current_processing_tasks += 1;
+                metrics::set_queue_size(stats.current_queue_size);
+                metrics::increment_processing_tasks();
                 return Some((
                     queued.task,
                     queued.task_id,
@@ -248,20 +264,25 @@ impl<T: Clone + Send + Sync + 'static, O: Clone + Send + Sync + 'static>
         result: &TaskResult<T, O>,
     ) {
         let mut stats = self.stats.lock().await;
+        stats.current_processing_tasks -= 1;
+        metrics::decrement_processing_tasks();
+
+        let status_str: &'static str = (&result.status).into();
+        metrics::task_processed(status_str);
+
+        if let Some(duration) = result.processing_time {
+            metrics::task_processing_duration(duration);
+        }
+
         match result.status {
             TaskStatus::Completed => {
                 stats.completed_tasks += 1;
-                if let Some(processing_time) = result.processing_time {
-                    stats.average_processing_time =
-                        (stats.average_processing_time + processing_time) / 2;
-                }
-            },
+            }
             TaskStatus::Failed(_) => stats.failed_tasks += 1,
             TaskStatus::Timeout => stats.timeout_tasks += 1,
             TaskStatus::Cancelled => stats.cancelled_tasks += 1,
-            _ => {},
+            _ => {}
         }
-        stats.current_processing_tasks -= 1;
     }
 }
 

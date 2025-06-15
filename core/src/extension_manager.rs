@@ -1,10 +1,12 @@
 use std::sync::Arc;
+use std::time::Instant;
 
 use moduforge_model::schema::Schema;
 use moduforge_state::{ops::GlobalResourceManager, plugin::Plugin};
 
 use crate::{
     helpers::get_schema_by_resolved_extensions::get_schema_by_resolved_extensions,
+    metrics,
     types::Extensions, EditorResult,
 };
 /// 扩展管理器
@@ -17,12 +19,17 @@ pub struct ExtensionManager {
 }
 impl ExtensionManager {
     pub fn new(extensions: &Vec<Extensions>) -> EditorResult<Self> {
+        let start_time = Instant::now();
         let schema = Arc::new(get_schema_by_resolved_extensions(extensions)?);
         let mut plugins = vec![];
         let mut op_fns = vec![];
+        let mut extension_count = 0;
+        let mut plugin_count = 0;
         for extension in extensions {
             if let Extensions::E(extension) = extension {
+                extension_count += 1;
                 for plugin in extension.get_plugins() {
+                    plugin_count += 1;
                     plugins.push(plugin.clone());
                 }
                 for op_fn in extension.get_op_fns() {
@@ -30,6 +37,10 @@ impl ExtensionManager {
                 }
             }
         }
+
+        metrics::extensions_loaded(extension_count);
+        metrics::plugins_loaded(plugin_count);
+        metrics::extension_manager_creation_duration(start_time.elapsed());
 
         Ok(ExtensionManager { schema, plugins, op_fns })
     }
