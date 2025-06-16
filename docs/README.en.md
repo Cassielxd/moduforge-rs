@@ -1,6 +1,6 @@
 # ModuForge-RS
 
-[Read this in Chinese](./README.md)
+[Read this in Chinese](./index.md)
 
 ModuForge is a Rust-based state management and data transformation framework focusing on immutable data structures and event-driven architecture. It provides a business-agnostic editor core implementation that can be customized and extended to support the needs of any business scenario.
 
@@ -400,7 +400,7 @@ This project includes several detailed analysis and design documents covering ar
 
 ### 🎋 Business Model Mapping
 
-#### [Precise Mapping of the Node Model to Construction Budgets](./docs/node-budget-mapping.md)
+#### [Precise Mapping of the Node Model to Construction Budgets](./node-budget-mapping.md)
 **Details how to precisely map ModuForge's Node model to the construction budget business.**
 
 - **Core Content**:
@@ -418,7 +418,7 @@ This project includes several detailed analysis and design documents covering ar
 
 ### 🚀 Architecture Use Cases
 
-#### [Analysis of Business Scenarios for the Architecture](./docs/architecture_use_cases.md)
+#### [Analysis of Business Scenarios for the Architecture](./architecture_use_cases.md)
 **In-depth analysis of the applicability of the ModuForge architecture in different business scenarios.**
 
 - **Business Scenario Categories**:
@@ -436,7 +436,7 @@ This project includes several detailed analysis and design documents covering ar
 
 ### 🔗 Business Dependency Design
 
-#### [Pluggable Architecture Design for A-depends-on-B Business Dependencies](./docs/business_dependency_design.md)
+#### [Pluggable Architecture Design for A-depends-on-B Business Dependencies](./business_dependency_design.md)
 **A traditional business dependency manager solution.**
 
 - **Design Features**:
@@ -450,7 +450,7 @@ This project includes several detailed analysis and design documents covering ar
   - `BusinessDependency`: Describes dependency relationships
   - Complete implementation examples for Business A and Business B plugins
 
-#### [Decoupling Business Dependencies with Transaction Meta](./docs/meta_based_dependency_design.md)
+#### [Decoupling Business Dependencies with Transaction Meta](./meta_based_dependency_design.md)
 **A recommended lightweight business dependency solution.**
 
 - **Design Advantages**:
@@ -467,7 +467,7 @@ This project includes several detailed analysis and design documents covering ar
 
 ### 📈 Architecture Analysis
 
-#### [Analysis of Architectural Limitations](./docs/architecture_limitations_analysis.md)
+#### [Analysis of Architectural Limitations](./architecture_limitations_analysis.md)
 **An objective analysis of the strengths and limitations of the ModuForge architecture.**
 
 - **Analysis Dimensions**:
@@ -476,7 +476,7 @@ This project includes several detailed analysis and design documents covering ar
   - Complexity (development difficulty, learning curve, maintenance cost)
   - Applicability boundaries (suitable and unsuitable business scenarios)
 
-#### [Simplified and Enhanced History Management](./docs/simple_enhanced_history.md)
+#### [Simplified and Enhanced History Management](./simple_enhanced_history.md)
 **Design and implementation of history management and undo/redo functionality.**
 
 - **Core Features**:
