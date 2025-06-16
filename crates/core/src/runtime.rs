@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use crate::{
-    error::{error_utils, EditorResult},
+    error::{error_utils, ForgeResult},
     event::{Event, EventBus},
     extension_manager::ExtensionManager,
     helpers::create_doc,
@@ -24,19 +24,19 @@ const DEFAULT_MIDDLEWARE_TIMEOUT_MS: u64 = 500;
 
 /// Editor 结构体代表编辑器的核心功能实现
 /// 负责管理文档状态、事件处理、插件系统和存储等核心功能
-pub struct Editor {
+pub struct ForgeRuntime{
     event_bus: EventBus<Event>,
     state: Arc<State>,
     extension_manager: ExtensionManager,
     history_manager: HistoryManager<HistoryEntryWithMeta>,
     options: EditorOptions,
 }
-unsafe impl Send for Editor {}
-unsafe impl Sync for Editor {}
-impl Editor {
+unsafe impl Send for ForgeRuntime {}
+unsafe impl Sync for ForgeRuntime {}
+impl ForgeRuntime {
     /// 创建新的编辑器实例
     /// options: 编辑器配置选项
-    pub async fn create(options: EditorOptions) -> EditorResult<Self> {
+    pub async fn create(options: EditorOptions) -> ForgeResult<Self> {
         let start_time = Instant::now();
         info!("正在创建新的编辑器实例");
         let extension_manager =
@@ -63,7 +63,7 @@ impl Editor {
         let state: Arc<State> = Arc::new(state);
         debug!("已创建编辑器状态");
 
-        let mut runtime = Editor {
+        let mut runtime = ForgeRuntime {
             event_bus,
             state: state.clone(),
             extension_manager,
@@ -84,7 +84,7 @@ impl Editor {
     }
 
     /// 初始化编辑器，设置事件处理器并启动事件循环
-    async fn init(&mut self) -> EditorResult<()> {
+    async fn init(&mut self) -> ForgeResult<()> {
         debug!("正在初始化编辑器");
         self.event_bus.add_event_handlers(self.options.get_event_handlers())?;
         self.event_bus.start_event_loop();
@@ -104,7 +104,7 @@ impl Editor {
     }
 
     /// 销毁编辑器实例
-    pub async fn destroy(&mut self) -> EditorResult<()> {
+    pub async fn destroy(&mut self) -> ForgeResult<()> {
         debug!("正在销毁编辑器实例");
         // 广播销毁事件
         self.event_bus.broadcast(Event::Destroy).await?;
@@ -117,7 +117,7 @@ impl Editor {
     pub async fn emit_event(
         &mut self,
         event: Event,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         metrics::event_emitted(event.name());
         self.event_bus.broadcast(event).await?;
         Ok(())
@@ -125,7 +125,7 @@ impl Editor {
     pub async fn run_before_middleware(
         &mut self,
         transaction: &mut Transaction,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         debug!("执行前置中间件链");
         for middleware in &self.options.get_middleware_stack().middlewares {
             let start_time = Instant::now();
@@ -163,7 +163,7 @@ impl Editor {
         &mut self,
         state: &mut Option<Arc<State>>,
         transactions: &mut Vec<Transaction>,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         debug!("执行后置中间件链");
         for middleware in &self.options.get_middleware_stack().middlewares {
             let start_time = Instant::now();
@@ -213,7 +213,7 @@ impl Editor {
     pub async fn command(
         &mut self,
         command: Arc<dyn Command>,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         debug!("正在执行命令: {}", command.name());
         metrics::command_executed(command.name().as_str());
         let mut tr = self.get_tr();
@@ -227,7 +227,7 @@ impl Editor {
         command: Arc<dyn Command>,
         description: String,
         meta: serde_json::Value,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         debug!("正在执行命令: {}", command.name());
         metrics::command_executed(command.name().as_str());
         let mut tr = self.get_tr();
@@ -246,7 +246,7 @@ impl Editor {
     pub async fn dispatch(
         &mut self,
         transaction: Transaction,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         self.dispatch_with_meta(
             transaction,
             "".to_string(),
@@ -260,7 +260,7 @@ impl Editor {
         transaction: Transaction,
         description: String,
         meta: serde_json::Value,
-    ) -> EditorResult<()> {
+        ) -> ForgeResult<()> {
         metrics::transaction_dispatched();
         let old_id = self.get_state().version;
         // 保存当前事务的副本，用于中间件处理
@@ -301,7 +301,7 @@ impl Editor {
     pub async fn update_state(
         &mut self,
         state: Arc<State>,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         self.update_state_with_meta(
             state,
             "".to_string(),
@@ -315,7 +315,7 @@ impl Editor {
         state: Arc<State>,
         description: String,
         meta: serde_json::Value,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         self.state = state.clone();
         self.history_manager.insert(HistoryEntryWithMeta::new(
             state,
@@ -325,7 +325,7 @@ impl Editor {
         Ok(())
     }
 
-    pub async fn register_plugin(&mut self) -> EditorResult<()> {
+    pub async fn register_plugin(&mut self) -> ForgeResult<()> {
         info!("正在注册新插件");
         let state = self
             .get_state()
@@ -347,7 +347,7 @@ impl Editor {
     pub async fn unregister_plugin(
         &mut self,
         plugin_key: String,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         info!("正在注销插件: {}", plugin_key);
         let ps = self
             .get_state()
@@ -420,7 +420,7 @@ impl Editor {
         metrics::history_operation("jump");
     }
 }
-impl Drop for Editor {
+impl Drop for ForgeRuntime {
     fn drop(&mut self) {
         self.event_bus.destroy();
     }

@@ -71,7 +71,7 @@ ModuForge Runtime 提供了两种运行时实现，以满足不同的使用场�
 
 ## 核心组件
 
-### Editor
+### Runtime
 编辑器核心实现，负责：
 - 文档状态管理
 - 事件处理
@@ -110,8 +110,8 @@ ModuForge Runtime 提供了两种运行时实现，以满足不同的使用场�
 ### 同步运行时示例
 ```rust
 use moduforge_runtime::{
-    Editor,
-    EditorOptions,
+    Runtime,
+    RuntimeOptions,
     EditorResult,
 };
 

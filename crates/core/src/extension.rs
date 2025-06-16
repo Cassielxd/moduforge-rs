@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use moduforge_state::{ops::GlobalResourceManager, plugin::Plugin};
 
-use crate::{types::GlobalAttributeItem, EditorResult};
+use crate::{types::GlobalAttributeItem, ForgeResult};
 pub type OpFn =
-    Vec<Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()> + Send + Sync>>;
+    Vec<Arc<dyn Fn(&GlobalResourceManager) -> ForgeResult<()> + Send + Sync>>;
 ///扩展实现
 /// 组装全局属性和插件
 #[derive(Clone, Default)]
@@ -28,7 +28,7 @@ impl Extension {
     pub fn add_op_fn(
         &mut self,
         op_fn: Arc<
-            dyn Fn(&GlobalResourceManager) -> EditorResult<()> + Send + Sync,
+            dyn Fn(&GlobalResourceManager) -> ForgeResult<()> + Send + Sync,
         >,
     ) -> &mut Self {
         self.op_fn.get_or_insert(vec![]).push(op_fn);
@@ -37,7 +37,7 @@ impl Extension {
     pub fn get_op_fns(
         &self
     ) -> Vec<
-        Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()> + Send + Sync>,
+        Arc<dyn Fn(&GlobalResourceManager) -> ForgeResult<()> + Send + Sync>,
     > {
         self.op_fn.clone().unwrap_or(vec![])
     }

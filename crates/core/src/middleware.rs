@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::error::EditorResult;
+use crate::error::ForgeResult;
 use moduforge_state::{transaction::Transaction, state::State};
 
 /// 可以用于事务处理的中间件 trait
@@ -13,7 +13,7 @@ pub trait Middleware: Send + Sync {
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,
-    ) -> EditorResult<()>;
+    ) -> ForgeResult<()>;
 
     /// 在核心分发之后处理结果
     /// 返回一个可能包含需要额外处理的事务的 MiddlewareResult
@@ -21,7 +21,7 @@ pub trait Middleware: Send + Sync {
         &self,
         state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<Option<Transaction>>;
+    ) -> ForgeResult<Option<Transaction>>;
 }
 
 /// 用于事务处理的中间件类型别名

@@ -41,13 +41,13 @@ use std::{
     time::Duration,
 };
 
-use crate::runtime::Editor;
+use crate::runtime::ForgeRuntime;
 use crate::{
     error_utils,
     event::Event,
     flow::{FlowEngine, ProcessorResult},
     types::EditorOptions,
-    EditorResult,
+    ForgeResult,
 };
 use moduforge_state::{
     debug,
@@ -86,33 +86,33 @@ impl Default for PerformanceConfig {
 
 /// Editor 结构体代表编辑器的核心功能实现
 /// 负责管理文档状态、事件处理、插件系统和存储等核心功能
-pub struct AsyncEditor {
-    base: Editor,
+pub struct ForgeAsyncRuntime {
+    base: ForgeRuntime,
     flow_engine: FlowEngine,
     perf_config: PerformanceConfig,
 }
-unsafe impl Send for AsyncEditor {}
-unsafe impl Sync for AsyncEditor {}
+unsafe impl Send for ForgeAsyncRuntime {}
+unsafe impl Sync for ForgeAsyncRuntime {}
 
-impl Deref for AsyncEditor {
-    type Target = Editor;
+impl Deref for ForgeAsyncRuntime {
+    type Target = ForgeRuntime;
 
     fn deref(&self) -> &Self::Target {
         &self.base
     }
 }
 
-impl DerefMut for AsyncEditor {
+impl DerefMut for ForgeAsyncRuntime {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
     }
 }
-impl AsyncEditor {
+impl ForgeAsyncRuntime {
     /// 创建新的编辑器实例
     /// options: 编辑器配置选项
-    pub async fn create(options: EditorOptions) -> EditorResult<Self> {
-        let base = Editor::create(options).await?;
-        Ok(AsyncEditor {
+    pub async fn create(options: EditorOptions) -> ForgeResult<Self> {
+        let base = ForgeRuntime::create(options).await?;
+        Ok(ForgeAsyncRuntime {
             base,
             flow_engine: FlowEngine::new()?,
             perf_config: PerformanceConfig::default(),
@@ -142,7 +142,7 @@ impl AsyncEditor {
     pub async fn command(
         &mut self,
         command: Arc<dyn Command>,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         self.command_with_meta(command, "".to_string(), serde_json::Value::Null)
             .await
     }
@@ -162,7 +162,7 @@ impl AsyncEditor {
         command: Arc<dyn Command>,
         description: String,
         meta: serde_json::Value,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         let cmd_name = command.name();
         debug!("正在执行命令: {}", cmd_name);
 
@@ -185,7 +185,7 @@ impl AsyncEditor {
     pub async fn dispatch_flow(
         &mut self,
         transaction: Transaction,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         self.dispatch_flow_with_meta(
             transaction,
             "".to_string(),
@@ -211,7 +211,7 @@ impl AsyncEditor {
         transaction: Transaction,
         description: String,
         meta: serde_json::Value,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         let start_time = std::time::Instant::now();
         let mut current_transaction = transaction;
         let old_id = self.get_state().version;
@@ -299,7 +299,7 @@ impl AsyncEditor {
     pub async fn run_before_middleware(
         &mut self,
         transaction: &mut Transaction,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         debug!("执行前置中间件链");
         for middleware in
             &self.base.get_options().get_middleware_stack().middlewares
@@ -337,7 +337,7 @@ impl AsyncEditor {
         &mut self,
         state: &mut Option<Arc<State>>,
         transactions: &mut Vec<Transaction>,
-    ) -> EditorResult<()> {
+        ) -> ForgeResult<()> {
         debug!("执行后置中间件链");
         for middleware in
             &self.base.get_options().get_middleware_stack().middlewares

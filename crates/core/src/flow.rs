@@ -9,7 +9,7 @@ use crate::{
         AsyncProcessor, ProcessorConfig, ProcessorError, TaskProcessor,
         TaskResult,
     },
-    EditorResult,
+    ForgeResult,
 };
 use async_trait::async_trait;
 
@@ -61,7 +61,7 @@ pub struct FlowEngine {
 }
 
 impl FlowEngine {
-    pub fn new() -> EditorResult<Self> {
+    pub fn new() -> ForgeResult<Self> {
         let config = ProcessorConfig::default();
         let mut processor = AsyncProcessor::new(config, TransactionProcessor);
         processor.start();
@@ -72,7 +72,7 @@ impl FlowEngine {
     pub async fn submit_transaction(
         &self,
         params: TaskParams,
-    ) -> EditorResult<(
+    ) -> ForgeResult<(
         u64,
         tokio::sync::mpsc::Receiver<TaskResult<TaskParams, ProcessorResult>>,
     )> {
@@ -82,7 +82,7 @@ impl FlowEngine {
     pub async fn submit_transactions(
         &self,
         paramss: Vec<TaskParams>,
-    ) -> EditorResult<
+    ) -> ForgeResult<
         Vec<(
             u64,
             tokio::sync::mpsc::Receiver<

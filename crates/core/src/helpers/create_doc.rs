@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use moduforge_state::StateConfig;
 
-use crate::{types::Content, EditorResult};
+use crate::{types::Content, ForgeResult};
 
 /// 创建文档
 pub async fn create_doc(
     content: &Content,
     config: &mut StateConfig,
-) -> EditorResult<()> {
+) -> ForgeResult<()> {
     match content {
         Content::NodePool(node_pool) => {
             config.doc = Some(Arc::new(node_pool.clone()));

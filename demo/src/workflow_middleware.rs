@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use std::{sync::Arc, time::SystemTime};
 use moduforge_core::{
     middleware::{Middleware},
-    error::EditorResult,
+    error::ForgeResult,
 };
 use moduforge_state::{state::State, transaction::Transaction};
 
@@ -27,7 +27,7 @@ impl Middleware for AuthenticationMiddleware {
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         if let Some(action) = transaction.get_meta::<String>("action") {
             match action.as_str() {
                 "user_login" => {
@@ -70,7 +70,7 @@ impl Middleware for AuthenticationMiddleware {
         &self,
         _state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<Option<Transaction>> {
+    ) -> ForgeResult<Option<Transaction>> {
         for transaction in transactions {
             if let Some(action) = transaction.get_meta::<String>("action") {
                 if action.as_str() == "user_login" {
@@ -112,7 +112,7 @@ impl Middleware for PermissionMiddleware {
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         if let Some(action) = transaction.get_meta::<String>("action") {
             match action.as_str() {
                 "add_heading" | "add_paragraph" | "add_list" | "add_table"
@@ -156,7 +156,7 @@ impl Middleware for PermissionMiddleware {
         &self,
         _state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<Option<Transaction>> {
+    ) -> ForgeResult<Option<Transaction>> {
         // 记录权限检查结果
         for transaction in transactions {
             if transaction
@@ -193,7 +193,7 @@ impl Middleware for CollaborationMiddleware {
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         if let Some(action) = transaction.get_meta::<String>("action") {
             match action.as_str() {
                 "add_paragraph" | "add_heading" | "add_list"
@@ -229,7 +229,7 @@ impl Middleware for CollaborationMiddleware {
         &self,
         state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<Option<Transaction>> {
+    ) -> ForgeResult<Option<Transaction>> {
         let mut needs_sync = false;
 
         for transaction in transactions {
@@ -284,7 +284,7 @@ impl Middleware for VersionControlMiddleware {
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         if let Some(action) = transaction.get_meta::<String>("action") {
             match action.as_str() {
                 "create_snapshot" => {
@@ -307,7 +307,7 @@ impl Middleware for VersionControlMiddleware {
         &self,
         state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<Option<Transaction>> {
+    ) -> ForgeResult<Option<Transaction>> {
         let mut needs_snapshot = false;
 
         for transaction in transactions {
@@ -361,7 +361,7 @@ impl Middleware for AuditLogMiddleware {
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         if let Some(action) = transaction.get_meta::<String>("action") {
             let user = transaction
                 .get_meta::<String>("username")
@@ -384,7 +384,7 @@ impl Middleware for AuditLogMiddleware {
         &self,
         _state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<Option<Transaction>> {
+            ) -> ForgeResult<Option<Transaction>> {
         let mut operation_count = 0;
 
         for transaction in transactions {

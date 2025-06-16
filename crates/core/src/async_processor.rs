@@ -9,7 +9,7 @@ use tokio::sync::{mpsc, oneshot};
 use async_trait::async_trait;
 use tokio::select;
 
-use crate::{metrics, EditorResult};
+use crate::{metrics, ForgeResult};
 
 /// 任务处理的结果状态
 /// - Pending: 任务等待处理
@@ -202,7 +202,7 @@ impl<T: Clone + Send + Sync + 'static, O: Clone + Send + Sync + 'static>
         &self,
         task: T,
         priority: u32,
-    ) -> EditorResult<(u64, mpsc::Receiver<TaskResult<T, O>>)> {
+    ) -> ForgeResult<(u64, mpsc::Receiver<TaskResult<T, O>>)> {
         let mut task_id = self.next_task_id.lock().await;
         *task_id += 1;
         let current_id = *task_id;
@@ -345,7 +345,7 @@ where
         &self,
         task: T,
         priority: u32,
-    ) -> EditorResult<(u64, mpsc::Receiver<TaskResult<T, O>>)> {
+    ) -> ForgeResult<(u64, mpsc::Receiver<TaskResult<T, O>>)> {
         self.task_queue.enqueue_task(task, priority).await
     }
 

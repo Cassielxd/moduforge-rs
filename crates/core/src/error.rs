@@ -1,6 +1,6 @@
 use anyhow::{Result};
 /// 错误结果类型别名
-pub type EditorResult<T> = Result<T>;
+pub type ForgeResult<T> = Result<T>;
 
 /// 错误处理工具函数
 pub mod error_utils {
@@ -10,7 +10,7 @@ pub mod error_utils {
     pub fn map_error<T, E: std::error::Error>(
         result: Result<T, E>,
         context: &str,
-    ) -> EditorResult<T> {
+    ) -> ForgeResult<T> {
         result.map_err(|e| {
             anyhow::anyhow!(format!("未知的错误 {}: {}", context, e))
         })

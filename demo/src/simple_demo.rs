@@ -1,5 +1,5 @@
 use moduforge_core::{
-    async_runtime::AsyncEditor,
+    async_runtime::ForgeAsyncRuntime,
     types::{EditorOptionsBuilder, Extensions},
     node::Node,
     extension::Extension,
@@ -182,7 +182,7 @@ pub async fn run_simple_demo() -> Result<()> {
         .history_limit(50)
         .build();
 
-    let mut editor = AsyncEditor::create(options)
+    let mut editor = ForgeAsyncRuntime::create(options)
         .await
         .map_err(|e| anyhow::anyhow!("创建编辑器失败: {}", e))?;
 

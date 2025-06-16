@@ -5,7 +5,7 @@ use std::{
 };
 use moduforge_core::{
     middleware::{Middleware},
-    error::EditorResult,
+    error::ForgeResult,
 };
 use moduforge_state::{state::State, transaction::Transaction};
 use anyhow;
@@ -31,7 +31,7 @@ impl Middleware for LoggingMiddleware {
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         let action = transaction
             .get_meta::<String>("action")
             .map(|s| s.as_str())
@@ -52,7 +52,7 @@ impl Middleware for LoggingMiddleware {
         &self,
         state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<Option<Transaction>> {
+    ) -> ForgeResult<Option<Transaction>> {
         for transaction in transactions {
             let action = transaction
                 .get_meta::<String>("action")
@@ -115,7 +115,7 @@ impl Middleware for MetricsMiddleware {
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         // 记录性能监控开始时间
         transaction.set_meta("metrics_start_time", Instant::now());
 
@@ -137,7 +137,7 @@ impl Middleware for MetricsMiddleware {
         &self,
         state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<Option<Transaction>> {
+    ) -> ForgeResult<Option<Transaction>> {
         for transaction in transactions {
             if let Some(start_time) =
                 transaction.get_meta::<Instant>("metrics_start_time")
@@ -255,7 +255,7 @@ impl Middleware for ValidationMiddleware {
     async fn before_dispatch(
         &self,
         transaction: &mut Transaction,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         println!("🔒 [{}] 开始事务验证", self.name);
 
         // 执行基本验证
@@ -277,7 +277,7 @@ impl Middleware for ValidationMiddleware {
         &self,
         state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<Option<Transaction>> {
+        ) -> ForgeResult<Option<Transaction>> {
         // 后置验证 - 检查事务和状态
         for transaction in transactions {
             if let Err(error) = self.validate_transaction_post(transaction) {

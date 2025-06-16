@@ -4,7 +4,7 @@ use moduforge_model::schema::{AttributeSpec, Schema, SchemaSpec};
 
 use crate::{
     types::{Extensions, GlobalAttributeItem},
-    EditorResult,
+    ForgeResult,
 };
 
 /// 根据已解析的扩展列表生成完整的 Schema
@@ -23,7 +23,7 @@ use crate::{
 /// 5. 编译生成最终的 Schema
 pub fn get_schema_by_resolved_extensions(
     extensions: &Vec<Extensions>
-) -> EditorResult<Schema> {
+) -> ForgeResult<Schema> {
     // 收集所有扩展中定义的全局属性
     let mut extension_attributes = vec![];
     for extension in extensions {

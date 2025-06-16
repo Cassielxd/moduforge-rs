@@ -7,18 +7,18 @@ use moduforge_state::{ops::GlobalResourceManager, plugin::Plugin};
 use crate::{
     helpers::get_schema_by_resolved_extensions::get_schema_by_resolved_extensions,
     metrics,
-    types::Extensions, EditorResult,
+    types::Extensions, ForgeResult,
 };
 /// 扩展管理器
 pub struct ExtensionManager {
     plugins: Vec<Arc<Plugin>>,
     schema: Arc<Schema>,
     op_fns: Vec<
-        Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()> + Send + Sync>,
+        Arc<dyn Fn(&GlobalResourceManager) -> ForgeResult<()> + Send + Sync>,
     >,
 }
 impl ExtensionManager {
-    pub fn new(extensions: &Vec<Extensions>) -> EditorResult<Self> {
+    pub fn new(extensions: &Vec<Extensions>) -> ForgeResult<Self> {
         let start_time = Instant::now();
         let schema = Arc::new(get_schema_by_resolved_extensions(extensions)?);
         let mut plugins = vec![];
@@ -47,7 +47,7 @@ impl ExtensionManager {
     pub fn get_op_fns(
         &self
     ) -> &Vec<
-        Arc<dyn Fn(&GlobalResourceManager) -> EditorResult<()> + Send + Sync>,
+        Arc<dyn Fn(&GlobalResourceManager) -> ForgeResult<()> + Send + Sync>,
     > {
         &self.op_fns
     }

@@ -7,7 +7,7 @@ use async_channel::{Receiver, Sender};
 use moduforge_state::{debug, state::State, Transaction};
 use tokio::{signal};
 
-use crate::error::{EditorResult, error_utils};
+use crate::error::{ForgeResult, error_utils};
 
 // 事件类型定义
 #[derive(Clone)]
@@ -48,7 +48,7 @@ impl<T: Send + 'static> EventBus<T> {
     pub fn add_event_handler(
         &self,
         event_handler: Arc<dyn EventHandler<T>>,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         let mut write = self.event_handlers.write().unwrap();
         write.push(event_handler);
         Ok(())
@@ -56,7 +56,7 @@ impl<T: Send + 'static> EventBus<T> {
     pub fn add_event_handlers(
         &self,
         event_handlers: Vec<Arc<dyn EventHandler<T>>>,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         let mut write = self.event_handlers.write().unwrap();
         write.extend(event_handlers);
         Ok(())
@@ -131,7 +131,7 @@ impl<T: Send + 'static> EventBus<T> {
     pub async fn broadcast(
         &self,
         event: T,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         self.tx.send(event).await.map_err(|e| {
             error_utils::event_error(format!("广播事件失败: {}", e))
         })
@@ -139,7 +139,7 @@ impl<T: Send + 'static> EventBus<T> {
     pub fn broadcast_blocking(
         &self,
         event: T,
-    ) -> EditorResult<()> {
+    ) -> ForgeResult<()> {
         self.tx.send_blocking(event).map_err(|e| {
             error_utils::event_error(format!("广播事件失败: {}", e))
         })
@@ -152,5 +152,5 @@ pub trait EventHandler<T>: Send + Sync + Debug {
     async fn handle(
         &self,
         event: &T,
-    ) -> EditorResult<()>;
+    ) -> ForgeResult<()>;
 }
