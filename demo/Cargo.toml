@@ -21,12 +21,12 @@ tracing = "0.1"
 tracing-subscriber = "0.3"
 chrono = "0.4"
 rand = "0.8"
-moduforge-model = {version = "0.3.9", path = "../packages/model"}
-moduforge-state = {version = "0.3.9", path = "../packages/state"}
-moduforge-transform = {version = "0.3.9", path = "../packages/transform"}
-moduforge-core = {version = "0.3.9", path = "../packages/core"}
-moduforge-macros = {version = "0.3.9", path = "../packages/macro"}
-moduforge-macros-derive = {version = "0.3.9", path = "../packages/derive"}
+moduforge-model = {version = "0.3.9", path = "../crates/model"}
+moduforge-state = {version = "0.3.9", path = "../crates/state"}
+moduforge-transform = {version = "0.3.9", path = "../crates/transform"}
+moduforge-core = {version = "0.3.9", path = "../crates/core"}
+moduforge-macros = {version = "0.3.9", path = "../crates/macro"}
+moduforge-macros-derive = {version = "0.3.9", path = "../crates/derive"}
 rayon = { workspace = true }
 crossbeam = { workspace = true }
 metrics = "0.22.0"
