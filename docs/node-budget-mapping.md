@@ -302,9 +302,9 @@ pub fn create_project_structure() -> Node {
 // ModuForge 的事务操作映射到预算业务
 use moduforge_state::transaction::Transaction;
 
-impl BudgetEditor {
+impl BudgetRuntime {
     // 更新工程量
-    pub async fn update_quantity(&mut self, item_id: &str, quantity: f64) -> EditorResult<()> {
+    pub async fn update_quantity(&mut self, item_id: &str, quantity: f64) -> RuntimeResult<()> {
         let mut tr = self.get_tr();
         
         // 使用 ModuForge 的属性更新机制
@@ -315,7 +315,7 @@ impl BudgetEditor {
     }
     
     // 应用定额
-    pub async fn apply_quota(&mut self, item_id: &str, quota_code: &str) -> EditorResult<()> {
+    pub async fn apply_quota(&mut self, item_id: &str, quota_code: &str) -> RuntimeResult<()> {
         let mut tr = self.get_tr();
         
         // 更新定额代码属性
@@ -342,7 +342,7 @@ impl BudgetEditor {
 
 ```rust
 // 利用 ModuForge 的查询能力
-impl BudgetEditor {
+impl BudgetRuntime {
     // 查询所有清单项目
     pub fn get_all_budget_items(&self) -> Vec<Arc<Node>> {
         self.doc()

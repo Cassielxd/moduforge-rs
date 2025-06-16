@@ -263,19 +263,19 @@ pub fn create_my_plugin_extension() -> Extension {
 
 ```rust
 use moduforge_core::{
-    EditorResult,
-    runtime::Editor,
-    types::{EditorOptionsBuilder, Extensions},
+    RuntimeResult,
+    runtime::Runtime,
+    types::{RuntimeOptionsBuilder, Extensions},
 };
 
-async fn create_editor_with_my_plugin() -> EditorResult<Editor> {
-    let options = EditorOptionsBuilder::new()
+async fn create_runtime_with_my_plugin() -> RuntimeResult<Runtime> {
+    let options = RuntimeOptionsBuilder::new()
         .add_extension(Extensions::E(create_my_plugin_extension()))
         .history_limit(100)
         .build();
         
-    let editor = Editor::create(options).await?;
-    Ok(editor)
+    let runtime = Runtime::create(options).await?;
+    Ok(runtime)
 }
 
 // 使用示例
@@ -285,25 +285,25 @@ async fn main() -> anyhow::Result<()> {
     moduforge_state::init_logging("info", None)?;
     
     // 创建编辑器
-    let mut editor = create_editor_with_my_plugin().await?;
+    let mut runtime = create_runtime_with_my_plugin().await?;
     
     // 触发插件行为的事务
-    let mut tr = editor.get_tr();
+    let mut tr = runtime.get_tr();
     tr.set_meta("action", "document_created");
     tr.set_meta("document_title", "测试文档");
-    editor.dispatch(tr).await?;
+    runtime.dispatch(tr).await?;
     
     // 手动触发计数器增加
-    let mut tr2 = editor.get_tr();
+    let mut tr2 = runtime.get_tr();
     tr2.set_meta("action", "increment_counter");
-    editor.dispatch(tr2).await?;
+    runtime.dispatch(tr2).await?;
     
     // 设置插件配置
-    let mut tr3 = editor.get_tr();
+    let mut tr3 = runtime.get_tr();
     tr3.set_meta("action", "set_plugin_setting");
     tr3.set_meta("setting_key", "theme");
     tr3.set_meta("setting_value", "dark");
-    editor.dispatch(tr3).await?;
+    runtime.dispatch(tr3).await?;
     
     println!("✅ 插件演示完成");
     Ok(())
@@ -354,7 +354,7 @@ impl ResourceSharingPlugin {
     // 向全局资源管理器添加共享资源
     pub fn setup_shared_resources(
         resource_manager: &moduforge_state::ops::GlobalResourceManager
-    ) -> moduforge_core::EditorResult<()> {
+    ) -> moduforge_core::RuntimeResult<()> {
         // 添加共享缓存
         let shared_cache = MySharedCache::new();
         resource_manager.resource_table.add(shared_cache);
@@ -388,19 +388,19 @@ pub fn create_resource_sharing_extension() -> Extension {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use moduforge_core::{runtime::Editor, types::EditorOptionsBuilder};
+    use moduforge_core::{runtime::Runtime, types::RuntimeOptionsBuilder};
     
     #[tokio::test]
     async fn test_plugin_counter() {
-        let mut editor = create_editor_with_my_plugin().await.unwrap();
+        let mut runtime = create_runtime_with_my_plugin().await.unwrap();
         
         // 触发计数器增加
-        let mut tr = editor.get_tr();
+        let mut tr = runtime.get_tr();
         tr.set_meta("action", "increment_counter");
-        editor.dispatch(tr).await.unwrap();
+        runtime.dispatch(tr).await.unwrap();
         
         // 验证状态
-        let state = editor.get_state();
+        let state = runtime.get_state();
         let plugin_state = state.get_field("my_plugin.v1")
             .unwrap()
             .downcast_arc::<MyPluginState>()
@@ -411,17 +411,17 @@ mod tests {
     
     #[tokio::test]
     async fn test_plugin_settings() {
-        let mut editor = create_editor_with_my_plugin().await.unwrap();
+        let mut runtime = create_runtime_with_my_plugin().await.unwrap();
         
         // 设置配置
-        let mut tr = editor.get_tr();
+        let mut tr = runtime.get_tr();
         tr.set_meta("action", "set_plugin_setting");
         tr.set_meta("setting_key", "test_key");
         tr.set_meta("setting_value", "test_value");
-        editor.dispatch(tr).await.unwrap();
+        runtime.dispatch(tr).await.unwrap();
         
         // 验证设置
-        let state = editor.get_state();
+        let state = runtime.get_state();
         let plugin_state = state.get_field("my_plugin.v1")
             .unwrap()
             .downcast_arc::<MyPluginState>()

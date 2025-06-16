@@ -14,7 +14,7 @@ ModuForge is a Rust-based state management and data transformation framework foc
 
   - **transform:** Implements transactions, similar to database transactions, ensuring atomicity and data consistency. The smallest unit of operation can be extended.
 
-  - **core:** Combines `model`, `state`, and `transform` to further implement the core editor functionality, adding and collecting extensions.
+  - **core:** Combines `model`, `state`, and `transform` to further implement the core runtime functionality, adding and collecting extensions.
 
   - **rules:** The rule engine system, including expression parsing, backend execution, core engine, and a template system.
 
@@ -123,23 +123,23 @@ moduforge-rs/
 
 #### State Management
 
-`State` is the core state management component of the editor, responsible for maintaining the editor's overall state. It includes the following key features:
+`State` is the core state management component of the runtime, responsible for maintaining the runtime's overall state. It includes the following key features:
 
-- **Configuration Management**: Manages editor configuration through the `Configuration` struct, including plugin lists, document structure definitions, etc.
+- **Configuration Management**: Manages runtime configuration through the `Configuration` struct, including plugin lists, document structure definitions, etc.
 - **Plugin State**: Manages the state data of all plugins through `fields_instances`.
 - **Document Management**: Manages the document's node pool through `node_pool`.
 - **Versioning**: Tracks state changes through the `version` field.
 - **Resource Management**: Manages global resources through `resource_manager`.
 
 `State` provides the following main functions:
-- Creating and initializing new editor states
+- Creating and initializing new runtime states
 - Managing plugin states
 - Handling transactions and state updates
 - Reconfiguring the state to adapt to new requirements
 
 #### GlobalResourceManager
 
-`GlobalResourceManager` is the editor's runtime global resource manager, responsible for managing all registered resources and states. It includes the following key features:
+`GlobalResourceManager` is the runtime's runtime global resource manager, responsible for managing all registered resources and states. It includes the following key features:
 
 - **Resource Table Management**: Manages all registered resources through `ResourceTable`.
 - **Gotham State Management**: Manages state specific to the Gotham framework through `GothamState`.
@@ -222,11 +222,11 @@ With `GlobalResourceManager`, different plugins can safely share and access glob
 Although `State` and `GlobalResourceManager` both involve state management, they have distinct responsibilities and use cases:
 
 1. **Scope of Management**
-   - `State` manages the overall state of the editor, including document content, plugin states, configurations, etc.
+   - `State` manages the overall state of the runtime, including document content, plugin states, configurations, etc.
    - `GlobalResourceManager` focuses on managing runtime resources and globally shared state.
 
 2. **Lifecycle**
-   - The lifecycle of `State` is tied to an editor instance; it is created and destroyed with the editor.
+   - The lifecycle of `State` is tied to a runtime instance; it is created and destroyed with the runtime.
    - The lifecycle of `GlobalResourceManager` is more flexible and can be shared across different `State` instances.
 
 3. **Access Method**
@@ -234,7 +234,7 @@ Although `State` and `GlobalResourceManager` both involve state management, they
    - `GlobalResourceManager` provides direct resource access interfaces, suitable for fast reads and writes of shared resources.
 
 4. **Use Case**
-   - `State` is used to manage the core state of the editor, such as document content and plugin configurations.
+   - `State` is used to manage the core state of the runtime, such as document content and plugin configurations.
    - `GlobalResourceManager` is used to manage resources shared across plugins, such as caches and configurations.
 
 5. **Thread Safety**
@@ -259,9 +259,9 @@ Although `State` and `GlobalResourceManager` both involve state management, they
 
 ### ModuForge Framework Design Philosophy
 
-- **Extensibility:** ModuForge is designed to be highly extensible, allowing developers to customize the editor's functionality and behavior. This includes a plugin system that simplifies adding new features, making any functionality extendable (e.g., history, undo, redo).
+- **Extensibility:** ModuForge is designed to be highly extensible, allowing developers to customize the runtime's functionality and behavior. This includes a plugin system that simplifies adding new features, making any functionality extendable (e.g., history, undo, redo).
 
-- **Modularity:** The entire framework is broken down into independent modules, each responsible for a specific aspect of the editor, such as the model, state management, command execution, etc. This design allows developers to selectively include modules as needed.
+- **Modularity:** The entire framework is broken down into independent modules, each responsible for a specific aspect of the runtime, such as the model, state management, command execution, etc. This design allows developers to selectively include modules as needed.
 
 - **Immutable Data:** Uses `im-rs` to ensure the immutability of data structures, providing safe concurrent access and efficient structural sharing.
 
@@ -269,11 +269,11 @@ Although `State` and `GlobalResourceManager` both involve state management, they
 
 - **Command Pattern:** Uses the command pattern to handle editing operations. Each operation is encapsulated as a command object, which facilitates undo/redo operations and helps implement complex editing logic.
 
-- **State Management:** The editor's state is centrally managed. All modifications to the document trigger state changes, helping to maintain data consistency and predictability.
+- **State Management:** The runtime's state is centrally managed. All modifications to the document trigger state changes, helping to maintain data consistency and predictability.
 
-## Suitability Analysis for Large Tree-like Editors
+## Suitability Analysis for Large Tree-like Runtimes
 
-The ModuForge framework is particularly well-suited for developing large tree-like editors. Here is a detailed analysis:
+The ModuForge framework is particularly well-suited for developing large tree-like runtimes. Here is a detailed analysis:
 
 ### 1. Tree Structure Support
 
@@ -376,19 +376,19 @@ The framework provides rich statistical functions:
 
 ### Conclusion
 
-The ModuForge framework is very well-suited for developing large tree-like editors, especially in the following scenarios:
+The ModuForge framework is very well-suited for developing large tree-like runtimes, especially in the following scenarios:
 
-1. Editors that need to handle large amounts of tree-structured data
+1. Runtimes that need to handle large amounts of tree-structured data
 2. Applications requiring complex editing operations
 3. Systems that need real-time statistics and updates
 4. Applications requiring high performance and concurrency support
-5. Editors that need to be highly customizable
+5. Runtimes that need to be highly customizable
 
-The framework's design fully considers performance, extensibility, and ease of use, making it capable of supporting the development needs of large tree-like editors.
+The framework's design fully considers performance, extensibility, and ease of use, making it capable of supporting the development needs of large tree-like runtimes.
 
 ## About ModuForge
 
-ModuForge is a general-purpose editor framework derived from current pricing software. Therefore, it is not tied to any specific pricing business; it is simply a large, general-purpose editor framework.
+ModuForge is a general-purpose runtime framework derived from current pricing software. Therefore, it is not tied to any specific pricing business; it is simply a large, general-purpose runtime framework.
 
 ## License
 
@@ -424,7 +424,7 @@ This project includes several detailed analysis and design documents covering ar
 - **Business Scenario Categories**:
   - **Business Process Orchestration**: Workflow engines, data processing pipelines (ETL)
   - **Computation Orchestration**: Pricing engine systems, risk control decision engines  
-  - **Content Management**: Collaborative editors, content publishing systems
+  - **Content Management**: Collaborative runtimes, content publishing systems
   - **Rule Engines**: Business rule engines, A/B testing frameworks
   - **Intelligent Computing**: Recommendation systems, machine learning pipelines
 

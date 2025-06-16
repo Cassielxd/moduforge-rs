@@ -45,7 +45,7 @@ async-trait = "0.1"
 
 ```rust
 // main.rs 或 lib.rs
-use moduforge_core::{EditorResult, runtime::Editor, types::EditorOptionsBuilder};
+use moduforge_core::{RuntimeResult, runtime::Runtime, types::RuntimeOptionsBuilder};
 use moduforge_state::init_logging;
 
 #[tokio::main]
@@ -54,10 +54,10 @@ async fn main() -> anyhow::Result<()> {
     init_logging("info", None)?;
     
     // 创建编辑器
-    let options = EditorOptionsBuilder::new()
+    let options = RuntimeOptionsBuilder::new()
         .history_limit(100)
         .build();
-    let editor = Editor::create(options).await?;
+    let runtime = Runtime::create(options).await?;
     
     println!("ModuForge-RS 集成成功!");
     Ok(())
@@ -69,24 +69,24 @@ async fn main() -> anyhow::Result<()> {
 ### 场景1：文本编辑器项目
 
 ```rust
-use moduforge_core::{EditorResult, runtime::Editor, types::EditorOptionsBuilder};
+use moduforge_core::{RuntimeResult, runtime::Runtime, types::RuntimeOptionsBuilder};
 use moduforge_transform::attr_step::AttrStep;
 use serde_json::json;
 use std::sync::Arc;
 
-pub struct TextEditor {
-    editor: Editor,
+pub struct TextRuntime {
+    runtime: Runtime,
 }
 
-impl TextEditor {
-    pub async fn new() -> EditorResult<Self> {
-        let options = EditorOptionsBuilder::new().build();
-        let editor = Editor::create(options).await?;
-        Ok(Self { editor })
+impl TextRuntime {
+    pub async fn new() -> RuntimeResult<Self> {
+        let options = RuntimeOptionsBuilder::new().build();
+        let runtime = Runtime::create(options).await?;
+        Ok(Self { runtime })
     }
     
-    pub async fn insert_text(&mut self, node_id: &str, text: &str) -> EditorResult<()> {
-        let mut transaction = self.editor.get_tr();
+    pub async fn insert_text(&mut self, node_id: &str, text: &str) -> RuntimeResult<()> {
+        let mut transaction = self.runtime.get_tr();
         
         let mut attrs = im::HashMap::new();
         attrs.insert("content".to_string(), json!(text));
@@ -96,7 +96,7 @@ impl TextEditor {
             attrs
         )))?;
         
-        self.editor.dispatch(transaction).await
+        self.runtime.dispatch(transaction).await
     }
 }
 ```
@@ -137,24 +137,24 @@ async fn document_plugin_init(
 use moduforge_state::{State, StateConfig};
 use moduforge_core::event::{Event, EventSystem};
 
-pub struct CollaborativeEditor {
-    state: State,
+pub struct CollaborativeRuntime {
+    runtime: Runtime,
     event_system: EventSystem,
 }
 
-impl CollaborativeEditor {
-    pub async fn new() -> EditorResult<Self> {
+impl CollaborativeRuntime {
+    pub async fn new() -> RuntimeResult<Self> {
         let config = StateConfig::default();
-        let state = State::new(config).await?;
+        let runtime = Runtime::new(config).await?;
         let event_system = EventSystem::new();
         
-        Ok(Self { state, event_system })
+        Ok(Self { runtime, event_system })
     }
     
-    pub async fn handle_remote_change(&mut self, change: RemoteChange) -> EditorResult<()> {
+    pub async fn handle_remote_change(&mut self, change: RemoteChange) -> RuntimeResult<()> {
         // 处理远程协作变更
         let transaction = change.to_transaction();
-        self.state.apply_transaction(transaction).await
+        self.runtime.apply_transaction(transaction).await
     }
 }
 ```
@@ -253,7 +253,7 @@ use moduforge_core::middleware::Middleware;
 pub struct LoggingMiddleware;
 
 impl Middleware for LoggingMiddleware {
-    async fn process(&self, context: &mut Context) -> EditorResult<()> {
+    async fn process(&self, context: &mut Context) -> RuntimeResult<()> {
         println!("处理请求: {:?}", context);
         Ok(())
     }
