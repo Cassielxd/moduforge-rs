@@ -384,7 +384,7 @@ impl AsyncEditor {
             }
 
             if let Some(mut transaction) =
-                middleware_result.additional_transaction
+                middleware_result
             {
                 transaction.commit();
                 // 记录额外事务处理开始时间

@@ -4,7 +4,7 @@ use std::{
     time::{Instant, SystemTime},
 };
 use moduforge_core::{
-    middleware::{Middleware, MiddlewareResult},
+    middleware::{Middleware},
     error::EditorResult,
 };
 use moduforge_state::{state::State, transaction::Transaction};
@@ -52,7 +52,7 @@ impl Middleware for LoggingMiddleware {
         &self,
         state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<MiddlewareResult> {
+    ) -> EditorResult<Option<Transaction>> {
         for transaction in transactions {
             let action = transaction
                 .get_meta::<String>("action")
@@ -86,7 +86,7 @@ impl Middleware for LoggingMiddleware {
             );
         }
 
-        Ok(MiddlewareResult::new(Ok(())))
+        Ok(None)
     }
 }
 
@@ -137,7 +137,7 @@ impl Middleware for MetricsMiddleware {
         &self,
         state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<MiddlewareResult> {
+    ) -> EditorResult<Option<Transaction>> {
         for transaction in transactions {
             if let Some(start_time) =
                 transaction.get_meta::<Instant>("metrics_start_time")
@@ -174,7 +174,7 @@ impl Middleware for MetricsMiddleware {
             }
         }
 
-        Ok(MiddlewareResult::new(Ok(())))
+        Ok(None)
     }
 }
 
@@ -277,7 +277,7 @@ impl Middleware for ValidationMiddleware {
         &self,
         state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<MiddlewareResult> {
+    ) -> EditorResult<Option<Transaction>> {
         // 后置验证 - 检查事务和状态
         for transaction in transactions {
             if let Err(error) = self.validate_transaction_post(transaction) {
@@ -331,13 +331,10 @@ impl Middleware for ValidationMiddleware {
                     self.name, validation_tr.id
                 );
 
-                return Ok(MiddlewareResult::with_transactions(
-                    Ok(()),
-                    Some(validation_tr),
-                ));
+                return Ok(Some(validation_tr));
             }
         }
 
-        Ok(MiddlewareResult::new(Ok(())))
+        Ok(None)
     }
 }

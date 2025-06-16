@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use std::{sync::Arc, time::SystemTime};
 use moduforge_core::{
-    middleware::{Middleware, MiddlewareResult},
+    middleware::{Middleware},
     error::EditorResult,
 };
 use moduforge_state::{state::State, transaction::Transaction};
@@ -70,7 +70,7 @@ impl Middleware for AuthenticationMiddleware {
         &self,
         _state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<MiddlewareResult> {
+    ) -> EditorResult<Option<Transaction>> {
         for transaction in transactions {
             if let Some(action) = transaction.get_meta::<String>("action") {
                 if action.as_str() == "user_login" {
@@ -79,7 +79,7 @@ impl Middleware for AuthenticationMiddleware {
             }
         }
 
-        Ok(MiddlewareResult::new(Ok(())))
+        Ok(None)
     }
 }
 
@@ -156,7 +156,7 @@ impl Middleware for PermissionMiddleware {
         &self,
         _state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<MiddlewareResult> {
+    ) -> EditorResult<Option<Transaction>> {
         // 记录权限检查结果
         for transaction in transactions {
             if transaction
@@ -168,7 +168,7 @@ impl Middleware for PermissionMiddleware {
             }
         }
 
-        Ok(MiddlewareResult::new(Ok(())))
+        Ok(None)
     }
 }
 
@@ -229,7 +229,7 @@ impl Middleware for CollaborationMiddleware {
         &self,
         state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<MiddlewareResult> {
+    ) -> EditorResult<Option<Transaction>> {
         let mut needs_sync = false;
 
         for transaction in transactions {
@@ -255,14 +255,11 @@ impl Middleware for CollaborationMiddleware {
                 sync_tr.set_meta("sync_time", SystemTime::now());
                 sync_tr.commit();
 
-                return Ok(MiddlewareResult::with_transactions(
-                    Ok(()),
-                    Some(sync_tr),
-                ));
+                return Ok(Some(sync_tr));
             }
         }
 
-        Ok(MiddlewareResult::new(Ok(())))
+        Ok(None)
     }
 }
 
@@ -310,7 +307,7 @@ impl Middleware for VersionControlMiddleware {
         &self,
         state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<MiddlewareResult> {
+    ) -> EditorResult<Option<Transaction>> {
         let mut needs_snapshot = false;
 
         for transaction in transactions {
@@ -335,14 +332,11 @@ impl Middleware for VersionControlMiddleware {
                 snapshot_tr.set_meta("description", "自动快照 - 重要操作");
                 snapshot_tr.commit();
 
-                return Ok(MiddlewareResult::with_transactions(
-                    Ok(()),
-                    Some(snapshot_tr),
-                ));
+                return Ok(Some(snapshot_tr));
             }
         }
 
-        Ok(MiddlewareResult::new(Ok(())))
+        Ok(None)
     }
 }
 
@@ -390,7 +384,7 @@ impl Middleware for AuditLogMiddleware {
         &self,
         _state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<MiddlewareResult> {
+    ) -> EditorResult<Option<Transaction>> {
         let mut operation_count = 0;
 
         for transaction in transactions {
@@ -420,6 +414,6 @@ impl Middleware for AuditLogMiddleware {
             );
         }
 
-        Ok(MiddlewareResult::new(Ok(())))
+        Ok(None)
     }
 }

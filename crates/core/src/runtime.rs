@@ -194,7 +194,7 @@ impl Editor {
             };
 
             if let Some(mut transaction) =
-                middleware_result.additional_transaction
+                middleware_result
             {
                 transaction.commit();
                 let TransactionResult { state: new_state, transactions: trs } =

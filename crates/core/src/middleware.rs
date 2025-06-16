@@ -3,29 +3,6 @@ use std::sync::Arc;
 use crate::error::EditorResult;
 use moduforge_state::{transaction::Transaction, state::State};
 
-/// 表示中间件处理结果的结构体
-pub struct MiddlewareResult {
-    /// 原始处理结果
-    pub result: EditorResult<()>,
-    /// 需要额外处理的事务列表
-    pub additional_transaction: Option<Transaction>,
-}
-
-impl MiddlewareResult {
-    /// 创建一个只包含结果的处理结果
-    pub fn new(result: EditorResult<()>) -> Self {
-        Self { result, additional_transaction: None }
-    }
-
-    /// 创建一个包含结果和额外事务的处理结果
-    pub fn with_transactions(
-        result: EditorResult<()>,
-        transaction: Option<Transaction>,
-    ) -> Self {
-        Self { result, additional_transaction: transaction }
-    }
-}
-
 /// 可以用于事务处理的中间件 trait
 #[async_trait::async_trait]
 pub trait Middleware: Send + Sync {
@@ -44,7 +21,7 @@ pub trait Middleware: Send + Sync {
         &self,
         state: Option<Arc<State>>,
         transactions: &[Transaction],
-    ) -> EditorResult<MiddlewareResult>;
+    ) -> EditorResult<Option<Transaction>>;
 }
 
 /// 用于事务处理的中间件类型别名
