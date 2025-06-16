@@ -46,14 +46,14 @@ pub enum Content {
 }
 
 #[derive(Clone, Default)]
-pub struct EditorOptions {
+pub struct RuntimeOptions {
     content: Content,
     extensions: Vec<Extensions>,
     history_limit: Option<usize>,
     event_handlers: Vec<Arc<dyn EventHandler<Event>>>,
     middleware_stack: MiddlewareStack,
 }
-impl EditorOptions {
+impl RuntimeOptions {
     pub fn get_middleware_stack(&self) -> MiddlewareStack {
         self.middleware_stack.clone()
     }
@@ -189,8 +189,8 @@ impl EditorOptionsBuilder {
         self
     }
 
-    pub fn build(self) -> EditorOptions {
-        EditorOptions {
+    pub fn build(self) -> RuntimeOptions {
+        RuntimeOptions {
             content: self.content,
             extensions: self.extensions,
             history_limit: self.history_limit,

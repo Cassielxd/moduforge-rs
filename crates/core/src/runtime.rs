@@ -7,7 +7,7 @@ use crate::{
     extension_manager::ExtensionManager,
     helpers::create_doc,
     history_manager::HistoryManager,
-    types::{EditorOptions, HistoryEntryWithMeta},
+    types::{RuntimeOptions, HistoryEntryWithMeta},
     metrics,
 };
 
@@ -29,14 +29,14 @@ pub struct ForgeRuntime{
     state: Arc<State>,
     extension_manager: ExtensionManager,
     history_manager: HistoryManager<HistoryEntryWithMeta>,
-    options: EditorOptions,
+    options: RuntimeOptions,
 }
 unsafe impl Send for ForgeRuntime {}
 unsafe impl Sync for ForgeRuntime {}
 impl ForgeRuntime {
     /// 创建新的编辑器实例
     /// options: 编辑器配置选项
-    pub async fn create(options: EditorOptions) -> ForgeResult<Self> {
+    pub async fn create(options: RuntimeOptions) -> ForgeResult<Self> {
         let start_time = Instant::now();
         info!("正在创建新的编辑器实例");
         let extension_manager =
@@ -378,7 +378,7 @@ impl ForgeRuntime {
         self.state.doc()
     }
 
-    pub fn get_options(&self) -> &EditorOptions {
+    pub fn get_options(&self) -> &RuntimeOptions {
         &self.options
     }
 

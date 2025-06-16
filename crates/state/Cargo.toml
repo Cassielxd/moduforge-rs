@@ -29,7 +29,7 @@ anyhow = { workspace = true }
 
 
 # 模型
-moduforge-model = {version = "0.4.0", path = "../model"}
+moduforge-model = {version = "0.4.1", path = "../model"}
 
 # 事务
-moduforge-transform = {version = "0.4.0", path = "../transform"}
+moduforge-transform = {version = "0.4.1", path = "../transform"}

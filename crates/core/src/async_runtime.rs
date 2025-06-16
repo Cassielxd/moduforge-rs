@@ -46,7 +46,7 @@ use crate::{
     error_utils,
     event::Event,
     flow::{FlowEngine, ProcessorResult},
-    types::EditorOptions,
+    types::RuntimeOptions,
     ForgeResult,
 };
 use moduforge_state::{
@@ -110,7 +110,7 @@ impl DerefMut for ForgeAsyncRuntime {
 impl ForgeAsyncRuntime {
     /// 创建新的编辑器实例
     /// options: 编辑器配置选项
-    pub async fn create(options: EditorOptions) -> ForgeResult<Self> {
+    pub async fn create(options: RuntimeOptions) -> ForgeResult<Self> {
         let base = ForgeRuntime::create(options).await?;
         Ok(ForgeAsyncRuntime {
             base,
