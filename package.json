@@ -1,7 +1,7 @@
 {
   "name": "moduforge-rs",
   "version": "1.0.0",
-  "description": "[Read this in English](./README.en.md)",
+  "description": "moduforge docs for rust",
   "main": "index.js",
   "directories": {
     "doc": "docs"
