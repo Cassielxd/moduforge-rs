@@ -1,13 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-   "model",
-   "transform",
-   "state",
-   "core",
-   "macros/*",
-   "rules/*",
-   "demo"
+   "packages/*",
+   "demo",
+   "devtool-rules"
    ]
 exclude = [
    "demo"
