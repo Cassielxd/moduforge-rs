@@ -18,7 +18,7 @@ for %%c in (%CRATES%) do (
     cd ..\..
     echo Successfully published: %%c
     :: Wait 5 seconds for crates.io to update
-    timeout /t 5 /nobreak > nul
+    timeout /t 10 /nobreak > nul
 )
 
 echo All crates have been published!
