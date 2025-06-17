@@ -36,9 +36,8 @@ impl Extension {
     }
     pub fn get_op_fns(
         &self
-    ) -> Vec<
-        Arc<dyn Fn(&GlobalResourceManager) -> ForgeResult<()> + Send + Sync>,
-    > {
+    ) -> Vec<Arc<dyn Fn(&GlobalResourceManager) -> ForgeResult<()> + Send + Sync>>
+    {
         self.op_fn.clone().unwrap_or(vec![])
     }
     pub fn add_global_attribute(

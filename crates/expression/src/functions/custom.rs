@@ -52,7 +52,13 @@ impl TryFrom<&str> for CustomFunction {
 }
 
 /// 自定义函数的内部执行器类型 (类型擦除)
-type ErasedExecutor = Box<dyn Fn(&Arguments, Option<&Arc<dyn Any + Send + Sync>>) -> AnyhowResult<Variable> + 'static>;
+type ErasedExecutor = Box<
+    dyn Fn(
+            &Arguments,
+            Option<&Arc<dyn Any + Send + Sync>>,
+        ) -> AnyhowResult<Variable>
+        + 'static,
+>;
 
 /// 自定义函数定义
 pub struct CustomFunctionDefinition {
@@ -267,19 +273,23 @@ impl<S: Send + Sync + 'static> CustomFunctionHelper<S> {
         name: String,
         params: Vec<VariableType>,
         return_type: VariableType,
-        executor: Box<dyn Fn(&Arguments, Option<&S>) -> AnyhowResult<Variable> + 'static>,
+        executor: Box<
+            dyn Fn(&Arguments, Option<&S>) -> AnyhowResult<Variable> + 'static,
+        >,
     ) -> Result<(), String> {
-        let signature = FunctionSignature {
-            parameters: params,
-            return_type,
-        };
+        let signature = FunctionSignature { parameters: params, return_type };
 
-        let wrapped_executor: ErasedExecutor = Box::new(move |args, state_any| {
-            let typed_state = state_any.and_then(|s| s.downcast_ref::<S>());
-            executor(args, typed_state)
-        });
+        let wrapped_executor: ErasedExecutor =
+            Box::new(move |args, state_any| {
+                let typed_state = state_any.and_then(|s| s.downcast_ref::<S>());
+                executor(args, typed_state)
+            });
 
-        CustomFunctionRegistry::register_function_erased(name, signature, wrapped_executor)
+        CustomFunctionRegistry::register_function_erased(
+            name,
+            signature,
+            wrapped_executor,
+        )
     }
 }
 

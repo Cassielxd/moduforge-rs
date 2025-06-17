@@ -2,7 +2,7 @@
 //!
 //! 提供 RAII 模式的 State 管理，确保异常安全
 
-        use std::sync::Arc;
+use std::sync::Arc;
 use super::custom::CustomFunctionRegistry;
 use std::marker::PhantomData;
 
@@ -82,7 +82,7 @@ impl<S> Drop for StateGuard<S> {
 /// use moduforge_rules_expression::with_state;
 ///
 /// let state = Arc::new(State::default());
-/// 
+///
 /// with_state!(state => {
 ///     // 在这个块内，State 是活跃的
 /// });
@@ -90,12 +90,10 @@ impl<S> Drop for StateGuard<S> {
 /// ```
 #[macro_export]
 macro_rules! with_state {
-    ($state:expr => $block:block) => {
-        {
-            let _guard = $crate::functions::StateGuard::new($state);
-            $block
-        }
-    };
+    ($state:expr => $block:block) => {{
+        let _guard = $crate::functions::StateGuard::new($state);
+        $block
+    }};
 }
 
 /// 异步版本的 State 守卫便利函数
@@ -112,7 +110,7 @@ macro_rules! with_state {
 /// use moduforge_rules_expression::functions::with_state_async;
 ///
 /// let state = Arc::new(State::default());
-/// 
+///
 /// let result = with_state_async(state, async {
 ///     // aync block
 /// }).await;
@@ -147,7 +145,7 @@ mod tests {
             // 创建一个模拟的 State
             let state = Arc::new(DummyState);
             let _guard = StateGuard::new(state);
-            
+
             // 在这个作用域内应该有活跃的 State
             assert!(StateGuard::<DummyState>::has_active_state());
         }
@@ -163,7 +161,7 @@ mod tests {
         let result = std::panic::catch_unwind(|| {
             let state = Arc::new(DummyState);
             let _guard = StateGuard::new(state);
-            
+
             // 模拟 panic
             panic!("测试 panic 安全性");
         });
@@ -184,4 +182,3 @@ mod tests {
         assert!(!StateGuard::<DummyState>::has_active_state());
     }
 }
-

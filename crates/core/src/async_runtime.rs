@@ -41,11 +41,11 @@ use std::{
     time::Duration,
 };
 
-use crate::runtime::ForgeRuntime;
+use crate::{runtime::ForgeRuntime, types::ProcessorResult};
 use crate::{
     error_utils,
     event::Event,
-    flow::{FlowEngine, ProcessorResult},
+    async_flow::{FlowEngine},
     types::RuntimeOptions,
     ForgeResult,
 };
@@ -337,7 +337,7 @@ impl ForgeAsyncRuntime {
         &mut self,
         state: &mut Option<Arc<State>>,
         transactions: &mut Vec<Transaction>,
-        ) -> ForgeResult<()> {
+    ) -> ForgeResult<()> {
         debug!("执行后置中间件链");
         for middleware in
             &self.base.get_options().get_middleware_stack().middlewares
@@ -383,9 +383,7 @@ impl ForgeAsyncRuntime {
                 debug!("中间件执行时间较长: {}ms", elapsed.as_millis());
             }
 
-            if let Some(mut transaction) =
-                middleware_result
-            {
+            if let Some(mut transaction) = middleware_result {
                 transaction.commit();
                 // 记录额外事务处理开始时间
                 let tx_start_time = std::time::Instant::now();

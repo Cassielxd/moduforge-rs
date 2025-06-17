@@ -93,9 +93,9 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static>
         self.evaluate_with_opts(key, context, Default::default()).await
     }
     /// 使用 State 和选项评估决策
-    /// 
+    ///
     /// 使用 RAII 模式确保 State 的异常安全管理
-    pub async fn evaluate_with_state_and_opts<K,S: Send + Sync + 'static>(
+    pub async fn evaluate_with_state_and_opts<K, S: Send + Sync + 'static>(
         &self,
         key: K,
         context: Variable,
@@ -112,9 +112,9 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static>
         self.evaluate_with_opts(key, context, options).await
     }
     /// 使用 State 评估决策
-    /// 
+    ///
     /// 使用 RAII 模式确保 State 的异常安全管理
-    pub async fn evaluate_with_state<K,S: Send + Sync + 'static>(
+    pub async fn evaluate_with_state<K, S: Send + Sync + 'static>(
         &self,
         key: K,
         context: Variable,

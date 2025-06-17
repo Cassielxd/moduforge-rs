@@ -8,13 +8,13 @@ use crate::{
 };
 
 /// 根据已解析的扩展列表生成完整的 Schema
-/// 
+///
 /// # 参数
 /// * `extensions` - 扩展列表，包含节点(N)、标记(M)和扩展(E)三种类型
-/// 
+///
 /// # 返回值
 /// * `EditorResult<Schema>` - 返回编译后的 Schema 或错误
-/// 
+///
 /// # 功能说明
 /// 1. 收集所有扩展中定义的全局属性
 /// 2. 处理节点扩展，构建节点定义
@@ -81,11 +81,11 @@ pub fn get_schema_by_resolved_extensions(
 }
 
 /// 获取指定节点名称的属性定义
-/// 
+///
 /// # 参数
 /// * `name` - 节点名称
 /// * `extension_attributes` - 全局属性列表
-/// 
+///
 /// # 返回值
 /// * `HashMap<String, AttributeSpec>` - 节点对应的属性定义映射
 fn get_attr_dfn(

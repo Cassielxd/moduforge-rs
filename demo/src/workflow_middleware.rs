@@ -101,7 +101,6 @@ impl PermissionMiddleware {
     ) -> bool {
         matches!(role, "Editor" | "Writer")
     }
-
 }
 
 #[async_trait]
@@ -384,7 +383,7 @@ impl Middleware for AuditLogMiddleware {
         &self,
         _state: Option<Arc<State>>,
         transactions: &[Transaction],
-            ) -> ForgeResult<Option<Transaction>> {
+    ) -> ForgeResult<Option<Transaction>> {
         let mut operation_count = 0;
 
         for transaction in transactions {

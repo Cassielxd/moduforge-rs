@@ -277,11 +277,11 @@ impl<T: Clone + Send + Sync + 'static, O: Clone + Send + Sync + 'static>
         match result.status {
             TaskStatus::Completed => {
                 stats.completed_tasks += 1;
-            }
+            },
             TaskStatus::Failed(_) => stats.failed_tasks += 1,
             TaskStatus::Timeout => stats.timeout_tasks += 1,
             TaskStatus::Cancelled => stats.cancelled_tasks += 1,
-            _ => {}
+            _ => {},
         }
     }
 }

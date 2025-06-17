@@ -1,5 +1,9 @@
-use crate::support::{create_fs_loader, load_raw_test_data, load_test_data, test_data_root};
-use moduforge_rules_expression::functions::custom::{CustomFunctionHelper, CustomFunctionRegistry};
+use crate::support::{
+    create_fs_loader, load_raw_test_data, load_test_data, test_data_root,
+};
+use moduforge_rules_expression::functions::custom::{
+    CustomFunctionHelper, CustomFunctionRegistry,
+};
 use moduforge_rules_expression::variable::VariableType;
 use serde::Deserialize;
 use serde_json::json;
@@ -11,12 +15,13 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 use tokio::runtime::Builder;
 use moduforge_rules_engine::loader::{LoaderError, MemoryLoader};
-use moduforge_rules_engine::model::{DecisionContent, DecisionNode, DecisionNodeKind, FunctionNodeContent};
+use moduforge_rules_engine::model::{
+    DecisionContent, DecisionNode, DecisionNodeKind, FunctionNodeContent,
+};
 use moduforge_rules_engine::Variable;
 use moduforge_rules_engine::{DecisionEngine, EvaluationError, EvaluationOptions};
 
 mod support;
-
 
 #[tokio::test]
 async fn engine_custom_function() {
@@ -27,9 +32,7 @@ async fn engine_custom_function() {
 
     impl MyTestState {
         fn new() -> Self {
-            Self {
-                counter: AtomicU32::new(0),
-            }
+            Self { counter: AtomicU32::new(0) }
         }
 
         fn get_info(&self) -> String {
@@ -39,36 +42,36 @@ async fn engine_custom_function() {
     }
 
     let helper = CustomFunctionHelper::<MyTestState>::new();
-    helper.register_function(
-        "getStateInfo".to_string(),
-        vec![],
-        VariableType::String,
-        Box::new(|_args, state_opt| {
-            if let Some(state) = state_opt {
-                Ok(Variable::String(state.get_info().into()))
-            } else {
-                Ok(Variable::String("No state provided".into()))
-            }
-        }),
-    ).unwrap();
+    helper
+        .register_function(
+            "getStateInfo".to_string(),
+            vec![],
+            VariableType::String,
+            Box::new(|_args, state_opt| {
+                if let Some(state) = state_opt {
+                    Ok(Variable::String(state.get_info().into()))
+                } else {
+                    Ok(Variable::String("No state provided".into()))
+                }
+            }),
+        )
+        .unwrap();
 
     let state = Arc::new(MyTestState::new());
-    let engine = DecisionEngine::default().with_loader(create_fs_loader().into());
+    let engine =
+        DecisionEngine::default().with_loader(create_fs_loader().into());
     let result = engine
         .evaluate_with_state_and_opts(
-            "http-function.json", 
-            json!({ "input": 12 }).into(), 
+            "http-function.json",
+            json!({ "input": 12 }).into(),
             state.clone(),
-            EvaluationOptions {
-                trace: Some(true),
-                max_depth: None,
-            }
+            EvaluationOptions { trace: Some(true), max_depth: None },
         )
         .await
         .unwrap();
 
     assert!(result.result.to_value().is_object(), "结果应该是一个对象");
-    
+
     // Loop to test caching/reuse
     for _ in 0..10 {
         engine
@@ -76,10 +79,7 @@ async fn engine_custom_function() {
                 "http-function.json",
                 json!({ "input": 12 }).into(),
                 state.clone(),
-                EvaluationOptions {
-                    trace: Some(true),
-                    max_depth: None,
-                },
+                EvaluationOptions { trace: Some(true), max_depth: None },
             )
             .await
             .unwrap();
@@ -87,8 +87,6 @@ async fn engine_custom_function() {
 
     CustomFunctionRegistry::clear();
 }
-
-
 
 #[tokio::test]
 #[cfg_attr(miri, ignore)]
@@ -98,12 +96,9 @@ async fn engine_memory_loader() {
     memory_loader.add("function", load_test_data("function.json"));
 
     let engine = DecisionEngine::default().with_loader(memory_loader.clone());
-    let table = engine
-        .evaluate("table", json!({ "input": 12 }).into())
-        .await;
-    let function = engine
-        .evaluate("function", json!({ "input": 12 }).into())
-        .await;
+    let table = engine.evaluate("table", json!({ "input": 12 }).into()).await;
+    let function =
+        engine.evaluate("function", json!({ "input": 12 }).into()).await;
 
     memory_loader.remove("function");
     let not_found = engine.evaluate("function", json!({}).into()).await;
@@ -116,13 +111,12 @@ async fn engine_memory_loader() {
 #[tokio::test]
 
 async fn engine_filesystem_loader() {
-    let engine = DecisionEngine::default().with_loader(create_fs_loader().into());
-    let table = engine
-        .evaluate("table.json", json!({ "input": 12 }).into())
-        .await;
-    let function = engine
-        .evaluate("function.json", json!({ "input": 12 }).into())
-        .await;
+    let engine =
+        DecisionEngine::default().with_loader(create_fs_loader().into());
+    let table =
+        engine.evaluate("table.json", json!({ "input": 12 }).into()).await;
+    let function =
+        engine.evaluate("function.json", json!({ "input": 12 }).into()).await;
     let not_found = engine.evaluate("invalid_file", json!({}).into()).await;
 
     assert_eq!(table.unwrap().result, json!({"output": 10}).into());
@@ -141,12 +135,9 @@ async fn engine_closure_loader() {
         }
     });
 
-    let table = engine
-        .evaluate("table", json!({ "input": 12 }).into())
-        .await;
-    let function = engine
-        .evaluate("function", json!({ "input": 12 }).into())
-        .await;
+    let table = engine.evaluate("table", json!({ "input": 12 }).into()).await;
+    let function =
+        engine.evaluate("function", json!({ "input": 12 }).into()).await;
     let not_found = engine.evaluate("invalid_file", json!({}).into()).await;
 
     assert_eq!(table.unwrap().result, json!({"output": 10}).into());
@@ -167,7 +158,8 @@ fn engine_noop_loader() {
 #[test]
 fn engine_get_decision() {
     let rt = Builder::new_current_thread().build().unwrap();
-    let engine = DecisionEngine::default().with_loader(create_fs_loader().into());
+    let engine =
+        DecisionEngine::default().with_loader(create_fs_loader().into());
 
     assert!(rt.block_on(engine.get_decision("table.json")).is_ok());
     assert!(rt.block_on(engine.get_decision("any.json")).is_err());
@@ -182,26 +174,25 @@ fn engine_create_decision() {
 #[tokio::test]
 #[cfg_attr(miri, ignore)]
 async fn engine_errors() {
-    let engine = DecisionEngine::default().with_loader(create_fs_loader().into());
+    let engine =
+        DecisionEngine::default().with_loader(create_fs_loader().into());
 
-    let infinite_fn = engine
-        .evaluate("infinite-function.json", json!({}).into())
-        .await;
+    let infinite_fn =
+        engine.evaluate("infinite-function.json", json!({}).into()).await;
     match infinite_fn.unwrap_err().deref() {
         EvaluationError::NodeError(e) => {
             assert_eq!(e.node_id, "e0fd96d0-44dc-4f0e-b825-06e56b442d78");
             assert!(e.source.to_string().contains("interrupted"));
-        }
+        },
         _ => assert!(false, "Wrong error type"),
     }
 
-    let recursive = engine
-        .evaluate("recursive-table1.json", json!({}).into())
-        .await;
+    let recursive =
+        engine.evaluate("recursive-table1.json", json!({}).into()).await;
     match recursive.unwrap_err().deref() {
         EvaluationError::NodeError(e) => {
             assert_eq!(e.source.to_string(), "Depth limit exceeded")
-        }
+        },
         _ => assert!(false, "Depth limit not exceeded"),
     }
 }
@@ -209,16 +200,15 @@ async fn engine_errors() {
 #[test]
 fn engine_with_trace() {
     let rt = Builder::new_current_thread().build().unwrap();
-    let engine = DecisionEngine::default().with_loader(create_fs_loader().into());
+    let engine =
+        DecisionEngine::default().with_loader(create_fs_loader().into());
 
-    let table_r = rt.block_on(engine.evaluate("table.json", json!({ "input": 12 }).into()));
+    let table_r = rt
+        .block_on(engine.evaluate("table.json", json!({ "input": 12 }).into()));
     let table_opt_r = rt.block_on(engine.evaluate_with_opts(
         "table.json",
         json!({ "input": 12 }).into(),
-        EvaluationOptions {
-            trace: Some(true),
-            max_depth: None,
-        },
+        EvaluationOptions { trace: Some(true), max_depth: None },
     ));
 
     let table = table_r.unwrap();
@@ -237,7 +227,8 @@ async fn engine_function_imports() {
     let function_content = load_test_data("function.json");
 
     let imports_js_path = Path::new("js").join("imports.js");
-    let mut replace_buffer = load_raw_test_data(imports_js_path.to_str().unwrap());
+    let mut replace_buffer =
+        load_raw_test_data(imports_js_path.to_str().unwrap());
     let mut replace_data = String::new();
     replace_buffer.read_to_string(&mut replace_data).unwrap();
 
@@ -247,7 +238,9 @@ async fn engine_function_imports() {
         .map(|node| match &node.kind {
             DecisionNodeKind::FunctionNode { .. } => {
                 let new_kind = DecisionNodeKind::FunctionNode {
-                    content: FunctionNodeContent::Version1(replace_data.clone()),
+                    content: FunctionNodeContent::Version1(
+                        replace_data.clone(),
+                    ),
                 };
 
                 Arc::new(DecisionNode {
@@ -255,16 +248,15 @@ async fn engine_function_imports() {
                     name: node.name.clone(),
                     kind: new_kind,
                 })
-            }
+            },
             _ => node,
         })
         .collect::<Vec<_>>();
 
-    let function_content = DecisionContent {
-        edges: function_content.edges,
-        nodes: new_nodes,
-    };
-    let decision = DecisionEngine::default().create_decision(function_content.into());
+    let function_content =
+        DecisionContent { edges: function_content.edges, nodes: new_nodes };
+    let decision =
+        DecisionEngine::default().create_decision(function_content.into());
     let response = decision.evaluate(json!({}).into()).await.unwrap();
 
     #[derive(Deserialize, Debug)]
@@ -276,7 +268,9 @@ async fn engine_function_imports() {
         moment_valid: bool,
     }
 
-    let result = serde_json::from_value::<GraphResult>(response.result.to_value()).unwrap();
+    let result =
+        serde_json::from_value::<GraphResult>(response.result.to_value())
+            .unwrap();
 
     assert!(result.bigjs_tests.iter().all(|v| *v));
     assert!(result.bigjs_valid);
@@ -286,7 +280,8 @@ async fn engine_function_imports() {
 
 #[tokio::test]
 async fn engine_switch_node() {
-    let engine = DecisionEngine::default().with_loader(create_fs_loader().into());
+    let engine =
+        DecisionEngine::default().with_loader(create_fs_loader().into());
 
     let switch_node_r = engine
         .evaluate("switch-node.json", json!({ "color": "yellow" }).into())
@@ -323,11 +318,15 @@ async fn engine_graph_tests() {
             panic!("Failed to read DirEntry {maybe_file:?}");
         };
 
-        let file_name = file.file_name().to_str().map(|s| s.to_string()).unwrap();
-        let file_contents = fs::read_to_string(file.path()).expect("valid file data");
-        let test_data: TestData = serde_json::from_str(&file_contents).expect("Valid JSON");
+        let file_name =
+            file.file_name().to_str().map(|s| s.to_string()).unwrap();
+        let file_contents =
+            fs::read_to_string(file.path()).expect("valid file data");
+        let test_data: TestData =
+            serde_json::from_str(&file_contents).expect("Valid JSON");
 
-        let decision = engine.create_decision(test_data.decision_content.into());
+        let decision =
+            engine.create_decision(test_data.decision_content.into());
         for test_case in test_data.tests {
             let input = test_case.input.clone();
             let result = decision.evaluate(input.clone()).await.unwrap().result;
@@ -342,17 +341,15 @@ async fn engine_graph_tests() {
 
 #[tokio::test]
 async fn engine_function_v2() {
-    let engine = DecisionEngine::default().with_loader(create_fs_loader().into());
+    let engine =
+        DecisionEngine::default().with_loader(create_fs_loader().into());
 
     for _ in 0..1_000 {
         let function_opt_r = engine
             .evaluate_with_opts(
                 "function-v2.json",
                 json!({ "input": 12 }).into(),
-                EvaluationOptions {
-                    trace: Some(true),
-                    max_depth: None,
-                },
+                EvaluationOptions { trace: Some(true), max_depth: None },
             )
             .await;
 
@@ -371,7 +368,8 @@ async fn engine_function_v2() {
 
 #[tokio::test]
 async fn test_validation() {
-    let engine = DecisionEngine::default().with_loader(create_fs_loader().into());
+    let engine =
+        DecisionEngine::default().with_loader(create_fs_loader().into());
 
     let context_valid = json!({
         "color": "red",
@@ -393,24 +391,41 @@ async fn test_validation() {
         }
     });
 
-    assert!(engine
-        .evaluate("customer-input-schema.json", context_valid.clone().into())
-        .await
-        .is_ok());
-    assert!(engine
-        .evaluate("customer-input-schema.json", context_invalid.clone().into())
-        .await
-        .is_err());
+    assert!(
+        engine
+            .evaluate(
+                "customer-input-schema.json",
+                context_valid.clone().into()
+            )
+            .await
+            .is_ok()
+    );
+    assert!(
+        engine
+            .evaluate(
+                "customer-input-schema.json",
+                context_invalid.clone().into()
+            )
+            .await
+            .is_err()
+    );
 
-    assert!(engine
-        .evaluate("customer-output-schema.json", context_valid.clone().into())
-        .await
-        .is_ok());
-    assert!(engine
-        .evaluate(
-            "customer-output-schema.json",
-            context_invalid.clone().into()
-        )
-        .await
-        .is_err());
+    assert!(
+        engine
+            .evaluate(
+                "customer-output-schema.json",
+                context_valid.clone().into()
+            )
+            .await
+            .is_ok()
+    );
+    assert!(
+        engine
+            .evaluate(
+                "customer-output-schema.json",
+                context_invalid.clone().into()
+            )
+            .await
+            .is_err()
+    );
 }

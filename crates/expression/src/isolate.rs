@@ -16,7 +16,6 @@ use crate::variable::Variable;
 use crate::vm::{VMError, VM};
 use crate::{Expression, ExpressionKind};
 
-
 type ADefHasher = BuildHasherDefault<AHasher>;
 
 /// Isolate 是一个组件，用于封装一个隔离的环境，用于执行表达式。
@@ -171,7 +170,7 @@ impl<'a> Isolate<'a> {
     ) -> Result<Variable, IsolateError> {
         // 使用 StateGuard 自动管理 State 生命周期
         let _guard = crate::functions::StateGuard::new(state);
-        
+
         // 运行表达式，即使发生异常，State 也会被正确清理
         self.run_standard(source)
     }
@@ -211,7 +210,7 @@ impl<'a> Isolate<'a> {
     ) -> Result<bool, IsolateError> {
         // 使用 StateGuard 自动管理 State 生命周期
         let _guard = crate::functions::StateGuard::new(state);
-        
+
         // 运行表达式，即使发生异常，State 也会被正确清理
         self.run_unary(source)
     }

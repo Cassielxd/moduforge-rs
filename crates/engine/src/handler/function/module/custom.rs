@@ -101,34 +101,33 @@ impl RuntimeListener for ModuforgeListener {
                     match parameters {
                         0 => {
                             md_namespace
-                            .set(
-                                function_key, // 函数名作为md对象的属性名
-                                Func::from(Async(
-                                    move |ctx: Ctx<'js>| {
+                                .set(
+                                    function_key, // 函数名作为md对象的属性名
+                                    Func::from(Async(move |ctx: Ctx<'js>| {
                                         // 克隆函数定义以避免生命周期问题
                                         let function_definition =
                                             function_definition.clone();
-    
+
                                         async move {
                                             // 调用Rust函数，传入JavaScript参数
                                             let response = function_definition
                                                 .call(Arguments(&[]))
                                                 .or_throw(&ctx)?;
-    
+
                                             // 将Rust函数的返回值序列化为JSON，再转换为JavaScript值
-                                            let k = serde_json::to_value(response)
-                                                .or_throw(&ctx)?
-                                                .into();
-    
-                                            return rquickjs::Result::Ok(JsValue(
-                                                k,
-                                            ));
+                                            let k =
+                                                serde_json::to_value(response)
+                                                    .or_throw(&ctx)?
+                                                    .into();
+
+                                            return rquickjs::Result::Ok(
+                                                JsValue(k),
+                                            );
                                         }
-                                    },
-                                )),
-                            )
-                            .catch(&ctx)?; // 捕获并处理可能的JavaScript异常
-                        }
+                                    })),
+                                )
+                                .catch(&ctx)?; // 捕获并处理可能的JavaScript异常
+                        },
                         1 => {
                             md_namespace
                             .set(
@@ -138,18 +137,15 @@ impl RuntimeListener for ModuforgeListener {
                                         // 克隆函数定义以避免生命周期问题
                                         let function_definition =
                                             function_definition.clone();
-    
                                         async move {
                                             // 调用Rust函数，传入JavaScript参数
                                             let response = function_definition
                                                 .call(Arguments(&[context.0]))
                                                 .or_throw(&ctx)?;
-    
                                             // 将Rust函数的返回值序列化为JSON，再转换为JavaScript值
                                             let k = serde_json::to_value(response)
                                                 .or_throw(&ctx)?
                                                 .into();
-    
                                             return rquickjs::Result::Ok(JsValue(
                                                 k,
                                             ));
@@ -158,7 +154,7 @@ impl RuntimeListener for ModuforgeListener {
                                 )),
                             )
                             .catch(&ctx)?; // 捕获并处理可能的JavaScript异常
-                        }
+                        },
                         2 => {
                             md_namespace
                             .set(
@@ -168,18 +164,15 @@ impl RuntimeListener for ModuforgeListener {
                                         // 克隆函数定义以避免生命周期问题
                                         let function_definition =
                                             function_definition.clone();
-    
                                         async move {
                                             // 调用Rust函数，传入JavaScript参数
                                             let response = function_definition
                                                 .call(Arguments(&[context.0,context2.0]))
                                                 .or_throw(&ctx)?;
-    
                                             // 将Rust函数的返回值序列化为JSON，再转换为JavaScript值
                                             let k = serde_json::to_value(response)
                                                 .or_throw(&ctx)?
                                                 .into();
-    
                                             return rquickjs::Result::Ok(JsValue(
                                                 k,
                                             ));
@@ -188,7 +181,7 @@ impl RuntimeListener for ModuforgeListener {
                                 )),
                             )
                             .catch(&ctx)?; // 捕获并处理可能的JavaScript异常
-                        }
+                        },
                         3 => {
                             md_namespace
                             .set(
@@ -198,18 +191,15 @@ impl RuntimeListener for ModuforgeListener {
                                         // 克隆函数定义以避免生命周期问题
                                         let function_definition =
                                             function_definition.clone();
-    
                                         async move {
                                             // 调用Rust函数，传入JavaScript参数
                                             let response = function_definition
                                                 .call(Arguments(&[context.0,context2.0,context3.0]))
                                                 .or_throw(&ctx)?;
-    
                                             // 将Rust函数的返回值序列化为JSON，再转换为JavaScript值
                                             let k = serde_json::to_value(response)
                                                 .or_throw(&ctx)?
                                                 .into();
-    
                                             return rquickjs::Result::Ok(JsValue(
                                                 k,
                                             ));
@@ -218,7 +208,7 @@ impl RuntimeListener for ModuforgeListener {
                                 )),
                             )
                             .catch(&ctx)?; // 捕获并处理可能的JavaScript异常
-                        }
+                        },
                         _ => {
                             md_namespace
                             .set(
@@ -228,18 +218,15 @@ impl RuntimeListener for ModuforgeListener {
                                         // 克隆函数定义以避免生命周期问题
                                         let function_definition =
                                             function_definition.clone();
-    
                                         async move {
                                             // 调用Rust函数，传入JavaScript参数
                                             let response = function_definition
                                                 .call(Arguments(&context.iter().map(|arg| arg.0.clone()).collect::<Vec<_>>()))
                                                 .or_throw(&ctx)?;
-    
                                             // 将Rust函数的返回值序列化为JSON，再转换为JavaScript值
                                             let k = serde_json::to_value(response)
                                                 .or_throw(&ctx)?
                                                 .into();
-    
                                             return rquickjs::Result::Ok(JsValue(
                                                 k,
                                             ));
@@ -248,9 +235,8 @@ impl RuntimeListener for ModuforgeListener {
                                 )),
                             )
                             .catch(&ctx)?; // 捕获并处理可能的JavaScript异常
-                        }
+                        },
                     }
-                  
                 }
             }
 
@@ -287,28 +273,26 @@ impl ModuleDef for ModuforgeModule {
                         0 => {
                             default.set(
                                 &function_key,
-                                Func::from(Async(
-                                    move |ctx: Ctx<'js>| {
-                                        let function_definition =
-                                            function_definition.clone();
-                                        async move {
-                                            let response = function_definition
-                                                .call(Arguments(&[]))
-                                                .or_throw(&ctx)?;
+                                Func::from(Async(move |ctx: Ctx<'js>| {
+                                    let function_definition =
+                                        function_definition.clone();
+                                    async move {
+                                        let response = function_definition
+                                            .call(Arguments(&[]))
+                                            .or_throw(&ctx)?;
 
-                                            let result =
-                                                serde_json::to_value(response)
-                                                    .or_throw(&ctx)?
-                                                    .into();
+                                        let result =
+                                            serde_json::to_value(response)
+                                                .or_throw(&ctx)?
+                                                .into();
 
-                                            Ok::<JsValue, rquickjs::Error>(
-                                                JsValue(result),
-                                            )
-                                        }
-                                    },
-                                )),
+                                        Ok::<JsValue, rquickjs::Error>(JsValue(
+                                            result,
+                                        ))
+                                    }
+                                })),
                             )?;
-                        }
+                        },
                         1 => {
                             //只有一个参数
                             default.set(

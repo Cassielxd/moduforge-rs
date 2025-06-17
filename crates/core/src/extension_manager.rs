@@ -6,8 +6,7 @@ use moduforge_state::{ops::GlobalResourceManager, plugin::Plugin};
 
 use crate::{
     helpers::get_schema_by_resolved_extensions::get_schema_by_resolved_extensions,
-    metrics,
-    types::Extensions, ForgeResult,
+    metrics, types::Extensions, ForgeResult,
 };
 /// 扩展管理器
 pub struct ExtensionManager {
@@ -37,7 +36,7 @@ impl ExtensionManager {
                 }
             }
         }
-        
+
         metrics::extensions_loaded(extension_count);
         metrics::plugins_loaded(plugin_count);
         metrics::extension_manager_creation_duration(start_time.elapsed());
@@ -51,7 +50,7 @@ impl ExtensionManager {
     > {
         &self.op_fns
     }
-    
+
     pub fn get_schema(&self) -> Arc<Schema> {
         self.schema.clone()
     }

@@ -98,7 +98,8 @@ where
         state: Arc<S>,
     ) -> Result<DecisionGraphResponse, Box<EvaluationError>> {
         // 使用 StateGuard 自动管理 State 生命周期
-        let _guard = moduforge_rules_expression::functions::StateGuard::new(state);
+        let _guard =
+            moduforge_rules_expression::functions::StateGuard::new(state);
 
         // 执行评估
         let result = self.evaluate(context).await;

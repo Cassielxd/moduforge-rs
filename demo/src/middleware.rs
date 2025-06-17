@@ -277,7 +277,7 @@ impl Middleware for ValidationMiddleware {
         &self,
         state: Option<Arc<State>>,
         transactions: &[Transaction],
-        ) -> ForgeResult<Option<Transaction>> {
+    ) -> ForgeResult<Option<Transaction>> {
         // 后置验证 - 检查事务和状态
         for transaction in transactions {
             if let Err(error) = self.validate_transaction_post(transaction) {

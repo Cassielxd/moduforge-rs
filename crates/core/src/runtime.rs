@@ -7,8 +7,9 @@ use crate::{
     extension_manager::ExtensionManager,
     helpers::create_doc,
     history_manager::HistoryManager,
-    types::{RuntimeOptions, HistoryEntryWithMeta},
     metrics,
+    sync_flow::FlowEngine,
+    types::{HistoryEntryWithMeta, ProcessorResult, RuntimeOptions},
 };
 
 use moduforge_model::{node_pool::NodePool, schema::Schema};
@@ -24,9 +25,10 @@ const DEFAULT_MIDDLEWARE_TIMEOUT_MS: u64 = 500;
 
 /// Editor 结构体代表编辑器的核心功能实现
 /// 负责管理文档状态、事件处理、插件系统和存储等核心功能
-pub struct ForgeRuntime{
+pub struct ForgeRuntime {
     event_bus: EventBus<Event>,
     state: Arc<State>,
+    flow_engine: Arc<FlowEngine>,
     extension_manager: ExtensionManager,
     history_manager: HistoryManager<HistoryEntryWithMeta>,
     options: RuntimeOptions,
@@ -66,6 +68,7 @@ impl ForgeRuntime {
         let mut runtime = ForgeRuntime {
             event_bus,
             state: state.clone(),
+            flow_engine: Arc::new(FlowEngine::new()?),
             extension_manager,
             history_manager: HistoryManager::new(
                 HistoryEntryWithMeta::new(
@@ -139,7 +142,11 @@ impl ForgeRuntime {
             {
                 Ok(Ok(())) => {
                     // 中间件执行成功
-                    metrics::middleware_execution_duration(start_time.elapsed(), "before", middleware.name().as_str());
+                    metrics::middleware_execution_duration(
+                        start_time.elapsed(),
+                        "before",
+                        middleware.name().as_str(),
+                    );
                     continue;
                 },
                 Ok(Err(e)) => {
@@ -176,7 +183,11 @@ impl ForgeRuntime {
             .await
             {
                 Ok(Ok(result)) => {
-                    metrics::middleware_execution_duration(start_time.elapsed(), "after", middleware.name().as_str());
+                    metrics::middleware_execution_duration(
+                        start_time.elapsed(),
+                        "after",
+                        middleware.name().as_str(),
+                    );
                     result
                 },
                 Ok(Err(e)) => {
@@ -193,9 +204,7 @@ impl ForgeRuntime {
                 },
             };
 
-            if let Some(mut transaction) =
-                middleware_result
-            {
+            if let Some(mut transaction) = middleware_result {
                 transaction.commit();
                 let TransactionResult { state: new_state, transactions: trs } =
                     self.state.apply(transaction).await.map_err(|e| {
@@ -260,7 +269,7 @@ impl ForgeRuntime {
         transaction: Transaction,
         description: String,
         meta: serde_json::Value,
-        ) -> ForgeResult<()> {
+    ) -> ForgeResult<()> {
         metrics::transaction_dispatched();
         let old_id = self.get_state().version;
         // 保存当前事务的副本，用于中间件处理
@@ -268,18 +277,24 @@ impl ForgeRuntime {
         self.run_before_middleware(&mut current_transaction).await?;
 
         // 应用事务到编辑器状态，获取新的状态和产生的事务列表
-        let TransactionResult { state, mut transactions } =
-            self.state.apply(current_transaction).await?;
-
+        let task_result = self
+            .flow_engine
+            .submit((self.state.clone(), current_transaction.clone()))
+            .await;
+        let Some(ProcessorResult { result: Some(result), .. }) =
+            task_result.output
+        else {
+            return Err(error_utils::state_error(
+                "任务处理结果无效".to_string(),
+            ));
+        };
         // 使用 Option 来避免不必要的克隆
         let mut state_update = None;
-
+        let mut transactions = Vec::new();
+        transactions.extend(result.transactions);
         // 检查最后一个事务是否改变了文档
-        if let Some(tr) = transactions.last() {
-            if tr.doc_changed() {
-                // 如果文档发生变化，更新当前状态并广播事务应用事件
-                state_update = Some(Arc::new(state));
-            }
+        if let Some(_) = transactions.last() {
+            state_update = Some(Arc::new(result.state));
         }
         // 执行后置中间件链，允许中间件在事务应用后执行额外操作
         self.run_after_middleware(&mut state_update, &mut transactions).await?;

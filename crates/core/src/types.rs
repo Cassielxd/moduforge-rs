@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc, time::SystemTime};
 use async_trait::async_trait;
-use moduforge_state::{State, StateConfig};
+use moduforge_state::{state::TransactionResult, State, StateConfig, Transaction};
 
 use crate::{
     event::{Event, EventHandler},
@@ -224,3 +224,22 @@ impl HistoryEntryWithMeta {
         Self { state, description, timestamp: SystemTime::now(), meta }
     }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TransactionStatus {
+    Pending,
+    Processing,
+    Completed,
+    Failed(String),
+    Rolled,
+    NotFound,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProcessorResult {
+    pub status: TransactionStatus,
+    pub error: Option<String>,
+    pub result: Option<TransactionResult>,
+}
+
+pub type TaskParams = (Arc<State>, Transaction);

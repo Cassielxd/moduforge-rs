@@ -1,37 +1,17 @@
 use std::{sync::Arc};
 
-use moduforge_state::{
-    state::{State, TransactionResult},
-    transaction::Transaction,
-};
 use crate::{
     async_processor::{
         AsyncProcessor, ProcessorConfig, ProcessorError, TaskProcessor,
         TaskResult,
     },
+    types::{ProcessorResult, TaskParams, TransactionStatus},
     ForgeResult,
 };
 use async_trait::async_trait;
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum TransactionStatus {
-    Pending,
-    Processing,
-    Completed,
-    Failed(String),
-    Rolled,
-    NotFound,
-}
-
-#[derive(Debug, Clone)]
-pub struct ProcessorResult {
-    pub status: TransactionStatus,
-    pub error: Option<String>,
-    pub result: Option<TransactionResult>,
-}
 /// 事务处理器
 pub struct TransactionProcessor;
-pub type TaskParams = (Arc<State>, Transaction);
 
 #[async_trait]
 impl TaskProcessor<TaskParams, ProcessorResult> for TransactionProcessor {
