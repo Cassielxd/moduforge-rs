@@ -16,8 +16,6 @@ use crate::variable::Variable;
 use crate::vm::{VMError, VM};
 use crate::{Expression, ExpressionKind};
 
-// 导入扩展机制
-use moduforge_state::State;
 
 type ADefHasher = BuildHasherDefault<AHasher>;
 
@@ -166,10 +164,10 @@ impl<'a> Isolate<'a> {
     /// 运行标准表达式，并传入State供自定义函数使用
     ///
     /// 使用 RAII 模式确保 State 的异常安全管理
-    pub fn run_standard_with_state(
+    pub fn run_standard_with_state<S: Send + Sync + 'static>(
         &mut self,
         source: &'a str,
-        state: Arc<State>,
+        state: Arc<S>,
     ) -> Result<Variable, IsolateError> {
         // 使用 StateGuard 自动管理 State 生命周期
         let _guard = crate::functions::StateGuard::new(state);
@@ -206,52 +204,16 @@ impl<'a> Isolate<'a> {
     /// 运行一元表达式，并传入State供自定义函数使用
     ///
     /// 使用 RAII 模式确保 State 的异常安全管理
-    pub fn run_unary_with_state(
+    pub fn run_unary_with_state<S: Send + Sync + 'static>(
         &mut self,
         source: &'a str,
-        state: Arc<State>,
+        state: Arc<S>,
     ) -> Result<bool, IsolateError> {
         // 使用 StateGuard 自动管理 State 生命周期
         let _guard = crate::functions::StateGuard::new(state);
         
         // 运行表达式，即使发生异常，State 也会被正确清理
         self.run_unary(source)
-    }
-
-    /// 注册自定义函数（可在表达式中直接调用）
-    pub fn register_custom_function<F>(
-        name: String,
-        params: Vec<crate::variable::VariableType>,
-        return_type: crate::variable::VariableType,
-        executor: F,
-    ) -> Result<(), String>
-    where
-        F: Fn(
-                &crate::functions::arguments::Arguments,
-                Option<&Arc<moduforge_state::State>>,
-            ) -> Result<Variable, anyhow::Error>
-            + 'static,
-    {
-        let signature = crate::functions::defs::FunctionSignature {
-            parameters: params,
-            return_type,
-        };
-
-        crate::functions::custom::CustomFunctionRegistry::register_function(
-            name,
-            signature,
-            Box::new(executor),
-        )
-    }
-
-    /// 列出所有已注册的自定义函数
-    pub fn list_custom_functions() -> Vec<String> {
-        crate::functions::custom::CustomFunctionRegistry::list_functions()
-    }
-
-    /// 清空所有自定义函数
-    pub fn clear_custom_functions() {
-        crate::functions::custom::CustomFunctionRegistry::clear()
     }
 }
 

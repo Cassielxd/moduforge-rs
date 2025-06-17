@@ -7,13 +7,14 @@ use crate::functions::defs::{
 };
 use crate::functions::arguments::Arguments;
 use crate::variable::{Variable, VariableType};
-use moduforge_state::State;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::collections::HashMap;
 use std::cell::RefCell;
 use std::fmt::Display;
 use anyhow::Result as AnyhowResult;
+use std::any::Any;
+use std::marker::PhantomData;
 
 /// 自定义函数标识符
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
@@ -50,10 +51,8 @@ impl TryFrom<&str> for CustomFunction {
     }
 }
 
-/// 自定义函数的执行器类型
-pub type CustomFunctionExecutor = Box<
-    dyn Fn(&Arguments, Option<&Arc<State>>) -> AnyhowResult<Variable> + 'static,
->;
+/// 自定义函数的内部执行器类型 (类型擦除)
+type ErasedExecutor = Box<dyn Fn(&Arguments, Option<&Arc<dyn Any + Send + Sync>>) -> AnyhowResult<Variable> + 'static>;
 
 /// 自定义函数定义
 pub struct CustomFunctionDefinition {
@@ -62,14 +61,14 @@ pub struct CustomFunctionDefinition {
     /// 函数签名
     pub signature: FunctionSignature,
     /// 执行器
-    pub executor: CustomFunctionExecutor,
+    pub executor: ErasedExecutor,
 }
 
 impl CustomFunctionDefinition {
     pub fn new(
         name: String,
         signature: FunctionSignature,
-        executor: CustomFunctionExecutor,
+        executor: ErasedExecutor,
     ) -> Self {
         Self { name, signature, executor }
     }
@@ -155,7 +154,7 @@ impl FunctionDefinition for CustomFunctionDefinition {
 
 thread_local! {
     /// 当前State上下文（用于自定义函数访问）
-    static CURRENT_STATE: RefCell<Option<Arc<State>>> = RefCell::new(None);
+    static CURRENT_STATE: RefCell<Option<Arc<dyn Any + Send + Sync>>> = RefCell::new(None);
 }
 
 /// 自定义函数注册表
@@ -172,11 +171,11 @@ impl CustomFunctionRegistry {
         Self { functions: HashMap::new() }
     }
 
-    /// 注册自定义函数
-    pub fn register_function(
+    /// 注册自定义函数 (内部使用)
+    fn register_function_erased(
         name: String,
         signature: FunctionSignature,
-        executor: CustomFunctionExecutor,
+        executor: ErasedExecutor,
     ) -> Result<(), String> {
         Self::INSTANCE.with(|registry| {
             let mut reg = registry.borrow_mut();
@@ -212,15 +211,22 @@ impl CustomFunctionRegistry {
     }
 
     /// 设置当前State上下文
-    pub fn set_current_state(state: Option<Arc<State>>) {
+    pub fn set_current_state<S: Send + Sync + 'static>(state: Option<Arc<S>>) {
         CURRENT_STATE.with(|s| {
-            *s.borrow_mut() = state;
+            *s.borrow_mut() = state.map(|st| st as Arc<dyn Any + Send + Sync>);
         });
     }
 
     /// 检查当前是否有活跃的State
     pub fn has_current_state() -> bool {
         CURRENT_STATE.with(|s| s.borrow().is_some())
+    }
+
+    /// 清理当前State上下文
+    pub fn clear_current_state() {
+        CURRENT_STATE.with(|s| {
+            *s.borrow_mut() = None;
+        });
     }
 
     /// 列出所有已注册的函数
@@ -235,6 +241,51 @@ impl CustomFunctionRegistry {
         Self::INSTANCE.with(|registry| {
             registry.borrow_mut().functions.clear();
         });
+    }
+}
+
+/// 用于注册特定状态类型 `S` 的函数的辅助结构。
+pub struct CustomFunctionHelper<S> {
+    _marker: PhantomData<S>,
+}
+
+impl<S: Send + Sync + 'static> CustomFunctionHelper<S> {
+    /// 创建一个新的辅助实例。
+    pub fn new() -> Self {
+        Self { _marker: PhantomData }
+    }
+
+    /// 注册一个自定义函数。
+    ///
+    /// # Parameters
+    /// - `name`: 函数名。
+    /// - `params`: 函数参数类型列表。
+    /// - `return_type`: 函数返回类型。
+    /// - `executor`: 函数的实现，它接收参数和一个可选的 `Arc<S>` 状态引用。
+    pub fn register_function(
+        &self,
+        name: String,
+        params: Vec<VariableType>,
+        return_type: VariableType,
+        executor: Box<dyn Fn(&Arguments, Option<&S>) -> AnyhowResult<Variable> + 'static>,
+    ) -> Result<(), String> {
+        let signature = FunctionSignature {
+            parameters: params,
+            return_type,
+        };
+
+        let wrapped_executor: ErasedExecutor = Box::new(move |args, state_any| {
+            let typed_state = state_any.and_then(|s| s.downcast_ref::<S>());
+            executor(args, typed_state)
+        });
+
+        CustomFunctionRegistry::register_function_erased(name, signature, wrapped_executor)
+    }
+}
+
+impl<S: Send + Sync + 'static> Default for CustomFunctionHelper<S> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

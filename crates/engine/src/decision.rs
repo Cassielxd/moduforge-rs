@@ -9,7 +9,6 @@ use crate::util::validator_cache::ValidatorCache;
 use crate::{DecisionGraphValidationError, EvaluationError};
 use std::sync::Arc;
 use moduforge_rules_expression::variable::Variable;
-use moduforge_rules_expression::CustomFunctionRegistry;
 
 /// Represents a JDM decision which can be evaluated
 #[derive(Debug, Clone)]
@@ -93,20 +92,16 @@ where
     }
 
     /// 使用 State 评估决策 - 通过 thread_local 设置 State
-    pub async fn evaluate_with_state(
+    pub async fn evaluate_with_state<S: Send + Sync + 'static>(
         &self,
         context: Variable,
-        state: Arc<moduforge_state::State>,
+        state: Arc<S>,
     ) -> Result<DecisionGraphResponse, Box<EvaluationError>> {
-        // 设置 thread_local State
-        CustomFunctionRegistry::set_current_state(Some(state));
+        // 使用 StateGuard 自动管理 State 生命周期
+        let _guard = moduforge_rules_expression::functions::StateGuard::new(state);
 
         // 执行评估
         let result = self.evaluate(context).await;
-
-        // 清理 thread_local State
-        CustomFunctionRegistry::set_current_state(None);
-
         result
     }
 

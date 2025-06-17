@@ -95,11 +95,11 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static>
     /// 使用 State 和选项评估决策
     /// 
     /// 使用 RAII 模式确保 State 的异常安全管理
-    pub async fn evaluate_with_state_and_opts<K>(
+    pub async fn evaluate_with_state_and_opts<K,S: Send + Sync + 'static>(
         &self,
         key: K,
         context: Variable,
-        state: Arc<moduforge_state::State>,
+        state: Arc<S>,
         options: EvaluationOptions,
     ) -> Result<DecisionGraphResponse, Box<EvaluationError>>
     where
@@ -114,11 +114,11 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static>
     /// 使用 State 评估决策
     /// 
     /// 使用 RAII 模式确保 State 的异常安全管理
-    pub async fn evaluate_with_state<K>(
+    pub async fn evaluate_with_state<K,S: Send + Sync + 'static>(
         &self,
         key: K,
         context: Variable,
-        state: Arc<moduforge_state::State>,
+        state: Arc<S>,
     ) -> Result<DecisionGraphResponse, Box<EvaluationError>>
     where
         K: AsRef<str>,
