@@ -3,10 +3,8 @@ setlocal enabledelayedexpansion
 
 echo Starting to publish all crates...
 
-:: Define publish order
 set "CRATES=model transform state core macro derive expression template engine"
 
-:: Publish each crate
 for %%c in (%CRATES%) do (
     echo Publishing: %%c
     cd crates\%%c

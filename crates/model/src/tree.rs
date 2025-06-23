@@ -279,7 +279,14 @@ impl Tree {
         // 收集所有子节点的ID并添加到当前节点的content中
         let zenliang: Vector<String> =
             nodes.iter().map(|n| n.0.id.clone()).collect();
-        new_parent.content.extend(zenliang);
+        // 需要判断 new_parent.content 中是否已经存在 zenliang 中的节点
+        let mut new_content = im::Vector::new();
+        for id in zenliang {
+            if !new_parent.content.contains(&id) {
+                new_content.push_back(id);
+            }
+        }
+        new_parent.content.extend(new_content);
 
         // 更新当前节点
         self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
@@ -298,7 +305,13 @@ impl Tree {
                 // 收集孙节点的ID并添加到子节点的content中
                 let grand_children_ids: Vector<String> =
                     grand_children.iter().map(|n| n.0.id.clone()).collect();
-                child_node.content.extend(grand_children_ids);
+                let mut new_content = im::Vector::new();
+                for id in grand_children_ids {
+                    if !child_node.content.contains(&id) {
+                        new_content.push_back(id);
+                    }
+                }
+                child_node.content.extend(new_content);
 
                 // 将当前节点存储到对应的分片中
                 let shard_index = self.get_shard_index(&current_node_id);
