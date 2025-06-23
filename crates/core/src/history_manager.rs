@@ -1,14 +1,14 @@
 /// 历史记录结构体
 pub struct History<T: Clone> {
-    past: Vec<T>,
-    present: T,
-    future: Vec<T>,
-    latest_unfiltered: T,
+   pub  past: Vec<T>,
+    pub present: T,
+    pub future: Vec<T>,
+    pub latest_unfiltered: T,
 }
 
 impl<T: Clone> History<T> {
     /// 创建新的历史记录
-    fn new(
+    pub fn new(
         past: Vec<T>,
         present: T,
         future: Vec<T>,

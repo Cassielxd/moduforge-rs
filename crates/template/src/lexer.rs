@@ -9,7 +9,7 @@ pub(crate) enum Token<'source> {
 }
 
 pub(crate) struct Lexer<'source> {
-    cursor: Peekable<Enumerate<Chars<'source>>>,
+    cursor: Peekable<std::str::CharIndices<'source>>,
     source: &'source str,
     tokens: Vec<Token<'source>>,
     text_start: Option<usize>,
@@ -24,7 +24,7 @@ where
 
         Self {
             source,
-            cursor: source.chars().enumerate().peekable(),
+            cursor: source.char_indices().peekable(),
             tokens: Default::default(),
             text_start: None,
         }
@@ -60,7 +60,9 @@ impl<'source> Lexer<'source> {
         index: usize,
     ) {
         if let Some(start) = self.text_start {
-            self.tokens.push(Token::Text(&self.source[start..index]));
+            if start < index {
+                self.tokens.push(Token::Text(&self.source[start..index]));
+            }
             self.text_start = None;
         }
     }

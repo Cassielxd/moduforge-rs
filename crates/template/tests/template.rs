@@ -94,3 +94,12 @@ fn test_interpolation() {
         );
     }
 }
+#[test]
+fn test_interpolation1() {
+    let result = render("插入 {{name}} 子节点", json!({
+        "name": "test"
+    }).into()).unwrap();
+    println!("{:?}", result);
+
+
+}

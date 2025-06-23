@@ -495,7 +495,14 @@ impl Tree {
             .get(id)
             .ok_or(error_helpers::node_not_found(id.clone()))?;
         let mut new_node = node.as_ref().clone();
-        new_node.marks.extend(marks.clone());
+        //如果存在相同类型的mark，则覆盖
+        for mark in marks {
+            if new_node.marks.iter().any(|m| m.r#type == mark.r#type) {
+                new_node.marks = new_node.marks.iter().filter(|m| m.r#type != mark.r#type).cloned().collect();
+            } else {
+                new_node.marks.push_back(mark.clone());
+            }
+        }
         self.nodes[shard_index] =
             self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
         Ok(())

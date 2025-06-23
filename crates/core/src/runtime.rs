@@ -73,7 +73,7 @@ impl ForgeRuntime {
             history_manager: HistoryManager::new(
                 HistoryEntryWithMeta::new(
                     state.clone(),
-                    "init".to_string(),
+                    "创建工程项目".to_string(),
                     serde_json::Value::Null,
                 ),
                 options.get_history_limit(),
@@ -433,6 +433,9 @@ impl ForgeRuntime {
         self.history_manager.jump(n);
         self.state = self.history_manager.get_present().state;
         metrics::history_operation("jump");
+    }
+    pub fn get_history_manager(&self) -> &HistoryManager<HistoryEntryWithMeta> {
+        &self.history_manager
     }
 }
 impl Drop for ForgeRuntime {
