@@ -48,7 +48,7 @@ impl Step for AddMarkStep {
         match dart.get_node(&self.id) {
             Some(_) => Some(Arc::new(RemoveMarkStep::new(
                 self.id.clone(),
-                self.marks.clone(),
+                self.marks.clone().iter().map(|m| m.r#type.clone()).collect(),
             ))),
             None => None,
         }
@@ -58,14 +58,14 @@ impl Step for AddMarkStep {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RemoveMarkStep {
     id: NodeId,
-    marks: Vec<Mark>,
+    mark_types: Vec<String>,
 }
 impl RemoveMarkStep {
     pub fn new(
         id: NodeId,
-        marks: Vec<Mark>,
+        mark_types: Vec<String>,
     ) -> Self {
-        RemoveMarkStep { id, marks }
+        RemoveMarkStep { id, mark_types }
     }
 }
 impl Step for RemoveMarkStep {
@@ -78,7 +78,7 @@ impl Step for RemoveMarkStep {
         schema: Arc<Schema>,
     ) -> TransformResult<StepResult> {
         let _ = schema;
-        let result = dart.mark(&self.id) - self.marks.clone();
+        let result = dart.mark(&self.id) - self.mark_types.clone();
         match result {
             Ok(_) => Ok(StepResult::ok()),
             Err(e) => Err(transform_error(e.to_string())),
@@ -93,9 +93,9 @@ impl Step for RemoveMarkStep {
         dart: &Arc<Tree>,
     ) -> Option<Arc<dyn Step>> {
         match dart.get_node(&self.id) {
-            Some(_) => Some(Arc::new(AddMarkStep::new(
+            Some(node) => Some(Arc::new(AddMarkStep::new(
                 self.id.clone(),
-                self.marks.clone(),
+                node.marks.clone().iter().map(|m| m.clone()).collect(),
             ))),
             None => None,
         }

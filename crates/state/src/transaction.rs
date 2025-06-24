@@ -135,9 +135,9 @@ impl Transaction {
     pub fn remove_mark(
         &mut self,
         id: NodeId,
-        marks: Vec<Mark>,
+        mark_types: Vec<String>,
     ) -> TransformResult<()> {
-        self.step(Arc::new(RemoveMarkStep::new(id, marks)))?;
+        self.step(Arc::new(RemoveMarkStep::new(id, mark_types)))?;
         Ok(())
     }
     /// 设置元数据

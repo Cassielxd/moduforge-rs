@@ -9,6 +9,7 @@ use parking_lot::RwLock;
 use lru::LruCache;
 use std::fmt::{self, Debug};
 use crate::error::PoolResult;
+use crate::mark_type;
 use crate::node_type::NodeEnum;
 use crate::{
     error::error_helpers,
@@ -471,7 +472,7 @@ impl Tree {
     pub fn remove_mark(
         &mut self,
         id: &NodeId,
-        mark: Mark,
+        mark_types: &[String],
     ) -> PoolResult<()> {
         let shard_index = self.get_shard_index(id);
         let node = self.nodes[shard_index]
@@ -479,7 +480,7 @@ impl Tree {
             .ok_or(error_helpers::node_not_found(id.clone()))?;
         let mut new_node = node.as_ref().clone();
         new_node.marks =
-            new_node.marks.iter().filter(|&m| !m.eq(&mark)).cloned().collect();
+            new_node.marks.iter().filter(|&m| !mark_types.contains(&m.r#type)).cloned().collect();
         self.nodes[shard_index] =
             self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
         Ok(())
@@ -874,10 +875,10 @@ mod tests {
         let mark = Mark { r#type: "test".to_string(), attrs: Attrs::default() };
         tree.add_mark(&root.id, &vec![mark.clone()]).unwrap();
         dbg!(&tree);
-        tree.remove_mark(&root.id, mark.clone()).unwrap();
+        tree.remove_mark(&root.id, &[mark.r#type.clone()]).unwrap();
         dbg!(&tree);
         let node = tree.get_node(&root.id).unwrap();
-        assert!(!node.marks.contains(&mark));
+        assert!(!node.marks.iter().any(|m| m.r#type == mark.r#type));
     }
 
     #[test]

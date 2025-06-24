@@ -53,7 +53,7 @@ impl<'a> Sub<Mark> for MarkRef<'a> {
         self,
         mark: Mark,
     ) -> Self::Output {
-        self.tree.remove_mark(&self.key.clone().into(), mark)?;
+        self.tree.remove_mark(&self.key.clone().into(), &[mark.r#type.clone()])?;
         Ok(MarkRef::new(self.tree, self.key.clone()))
     }
 }
@@ -68,6 +68,16 @@ impl<'a> Sub<String> for MarkRef<'a> {
         Ok(MarkRef::new(self.tree, self.key.clone()))
     }
 }
+impl<'a> Sub<Vec<String>> for MarkRef<'a> {
+    type Output = PoolResult<MarkRef<'a>>;
+    fn sub(
+        self,
+        mark_names: Vec<String>,
+    ) -> Self::Output {
+        self.tree.remove_mark(&self.key.clone().into(), &mark_names)?;
+        Ok(MarkRef::new(self.tree, self.key.clone()))
+    }
+}
 
 /// 为 MarkRef 实现自定义的 - 运算符，用于删除多个标记
 /// 当使用 - 运算符时，会从当前标记列表中移除指定的多个标记
@@ -78,9 +88,7 @@ impl<'a> Sub<Vec<Mark>> for MarkRef<'a> {
         self,
         marks: Vec<Mark>,
     ) -> Self::Output {
-        for mark in marks {
-            self.tree.remove_mark(&self.key.clone().into(), mark)?;
-        }
+        self.tree.remove_mark(&self.key.clone().into(), &marks.iter().map(|m| m.r#type.clone()).collect::<Vec<String>>())?;
         Ok(MarkRef::new(self.tree, self.key.clone()))
     }
 }

@@ -75,19 +75,8 @@ impl<'a> BitAnd<String> for MarkRef<'a> {
     ) -> Self::Output {
         let noderef = self.tree.get_node(&self.key.clone().into());
         match noderef {
-            Some(node) => {
-                let marks = node.marks.clone();
-                let mut marks_to_remove = Vec::new();
-                for mark in marks {
-                    if mark.r#type.to_string() != mark_name {
-                        marks_to_remove.push(mark);
-                    }
-                }
-
-                // 移除不匹配的标记
-                for mark in marks_to_remove {
-                    self.tree.remove_mark(&self.key.clone().into(), mark)?;
-                }
+            Some(_) => {
+                self.tree.remove_mark(&self.key.clone().into(), &[mark_name])?;
                 Ok(MarkRef::new(self.tree, self.key.clone()))
             },
             None => Err(error_helpers::node_not_found(self.key.clone().into())),
@@ -105,19 +94,8 @@ impl<'a> BitAnd<Vec<String>> for MarkRef<'a> {
     ) -> Self::Output {
         let noderef = self.tree.get_node(&self.key.clone().into());
         match noderef {
-            Some(node) => {
-                let marks = node.marks.clone();
-                let mut marks_to_remove = Vec::new();
-                for mark in marks {
-                    if !mark_names.contains(&mark.r#type.to_string()) {
-                        marks_to_remove.push(mark);
-                    }
-                }
-
-                // 移除不匹配的标记
-                for mark in marks_to_remove {
-                    self.tree.remove_mark(&self.key.clone().into(), mark)?;
-                }
+            Some(_) => {
+                self.tree.remove_mark(&self.key.clone().into(), &mark_names)?;
                 Ok(MarkRef::new(self.tree, self.key.clone()))
             },
             None => Err(error_helpers::node_not_found(self.key.clone().into())),
