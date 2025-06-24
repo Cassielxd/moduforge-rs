@@ -27,8 +27,8 @@ tokio = { workspace = true, features = ["sync", "time"] }
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 rquickjs = { version = "0.9", features = ["macro", "loader", "rust-alloc", "futures", "either", "properties"] }
 jsonschema = "0.29"
-moduforge-rules-expression = { path = "../expression", version = "0.4.2" }
-moduforge-rules-template = { path = "../template", version = "0.4.2" }
+moduforge-rules-expression = { path = "../expression", version = "0.4.3" }
+moduforge-rules-template = { path = "../template", version = "0.4.3" }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

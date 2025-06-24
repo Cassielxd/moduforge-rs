@@ -9,7 +9,6 @@ use parking_lot::RwLock;
 use lru::LruCache;
 use std::fmt::{self, Debug};
 use crate::error::PoolResult;
-use crate::mark_type;
 use crate::node_type::NodeEnum;
 use crate::{
     error::error_helpers,

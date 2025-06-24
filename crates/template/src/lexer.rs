@@ -1,5 +1,4 @@
-use std::iter::{Enumerate, Peekable};
-use std::str::Chars;
+use std::iter::{Peekable};
 
 #[derive(Debug, PartialOrd, PartialEq)]
 pub(crate) enum Token<'source> {
