@@ -10,7 +10,7 @@ homepage = {workspace=true}
 repository = {workspace=true}
 
 [lib]
-lib="src/lib.rs"
+path="src/lib.rs"
 
 [dependencies]
 im= {workspace=true}

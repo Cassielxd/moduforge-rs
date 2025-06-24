@@ -7,7 +7,7 @@ publish = false
 
 
 [lib]
-lib="src/lib.rs"
+path="src/lib.rs"
 
 
 [dependencies]
