@@ -15,9 +15,9 @@ edition = "2024"
 authors = ["String <348040933@qq.com>"]
 license = "MIT"
 
-documentation = "https://gitee.com/stringlxd/moduforge-rs"
-homepage = "https://gitee.com/stringlxd/moduforge-rs"
-repository = "https://gitee.com/stringlxd/moduforge-rs"
+documentation = "https://github.com/Cassielxd/moduforge-rs"
+homepage = "https://github.com/Cassielxd/moduforge-rs"
+repository = "https://github.com/Cassielxd/moduforge-rs"
 
 [workspace.dependencies]
 tokio = { version = "1.0", features = ["full"] }
