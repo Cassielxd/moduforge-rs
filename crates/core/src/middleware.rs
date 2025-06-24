@@ -12,16 +12,20 @@ pub trait Middleware: Send + Sync {
     /// 在事务到达核心分发之前处理事务
     async fn before_dispatch(
         &self,
-        transaction: &mut Transaction,
-    ) -> ForgeResult<()>;
+        _transaction: &mut Transaction,
+    ) -> ForgeResult<()> {
+        Ok(())
+    }
 
     /// 在核心分发之后处理结果
     /// 返回一个可能包含需要额外处理的事务的 MiddlewareResult
     async fn after_dispatch(
         &self,
-        state: Option<Arc<State>>,
-        transactions: &[Transaction],
-    ) -> ForgeResult<Option<Transaction>>;
+        _state: Option<Arc<State>>,
+        _transactions: &[Transaction],
+    ) -> ForgeResult<Option<Transaction>> {
+        Ok(None)
+    }
 }
 
 /// 用于事务处理的中间件类型别名
