@@ -12,8 +12,8 @@ use moduforge_core::{middleware::MiddlewareStack, node::Node, runtime::ForgeRunt
 use moduforge_macros::node;
 use moduforge_model::{node_type::NodeEnum};
 
-#[tokio::main]
-async fn main() -> Result<()> {
+#[tokio::test]
+async fn test_collaboration() -> Result<()> {
     // 初始化日志
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
