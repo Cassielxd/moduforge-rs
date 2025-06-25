@@ -10,7 +10,7 @@ homepage = {workspace=true}
 repository = {workspace=true}
 
 [dependencies]
-moduforge-rules-expression = { path = "../expression", version = "0.4.3" }
+moduforge-rules-expression = { path = "../expression", version = "0.4.4" }
 thiserror = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

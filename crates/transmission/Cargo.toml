@@ -26,11 +26,11 @@ dashmap = { workspace=true }
 chrono = { version = "0.4", features = ["serde"] }
 im = "15.1"
 
-moduforge-model = {version = "0.4.3", path = "../model"}
-moduforge-state = {version = "0.4.3", path = "../state"}
-moduforge-transform = {version = "0.4.3", path = "../transform"}
-moduforge-core = {version = "0.4.3", path = "../core"}
-moduforge-macros = {version = "0.4.3", path = "../macro"}
+moduforge-model = {version = "0.4.4", path = "../model"}
+moduforge-state = {version = "0.4.4", path = "../state"}
+moduforge-transform = {version = "0.4.4", path = "../transform"}
+moduforge-core = {version = "0.4.4", path = "../core"}
+moduforge-macros = {version = "0.4.4", path = "../macro"}
 async-trait =  { workspace=true }
 lazy_static =  { workspace=true }
 once_cell =  { workspace=true }

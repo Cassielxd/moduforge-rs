@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 
 echo Starting to publish all crates...
 
-set "CRATES=model transform state core macro derive expression template engine"
+set "CRATES=model transform state core macro derive expression template engine collaboration"
 
 for %%c in (%CRATES%) do (
     echo Publishing: %%c
