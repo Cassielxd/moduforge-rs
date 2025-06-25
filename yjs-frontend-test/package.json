@@ -1,0 +1,27 @@
+{
+  "name": "yjs-frontend-test",
+  "version": "1.0.0",
+  "description": "ModuForge Yjs 前端测试客户端",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "yjs",
+    "moduforge",
+    "websocket",
+    "collaboration"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@vitejs/plugin-vue": "^5.1.4",
+    "vite": "^5.4.10",
+    "vue": "^3.5.17",
+    "y-websocket": "^3.0.0",
+    "yjs": "^13.6.27"
+  }
+}

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ModuForge Yjs 测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+        .status {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #dc3545;
+        }
+        .status-dot.connected {
+            background: #28a745;
+        }
+        .control-panel {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background: #f0f0f0;
+        }
+        button.primary {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        button.primary:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .data-section {
+            margin-bottom: 24px;
+        }
+        .data-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #333;
+        }
+        .data-content {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .log-content {
+            max-height: 200px;
+            font-size: 12px;
+        }
+        input[type="text"] {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+        }
+        .input-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 ModuForge Yjs 同步测试</h1>
+            <p>测试 Rust 后端与前端 Yjs 的实时同步功能</p>
+        </div>
+
+        <div class="status">
+            <div class="status-item">
+                <div id="ws-status" class="status-dot"></div>
+                <span>WebSocket</span>
+            </div>
+            <div class="status-item">
+                <div id="yjs-status" class="status-dot"></div>
+                <span>Yjs 同步</span>
+            </div>
+            <div class="status-item">
+                <span>客户端数: <strong id="client-count">0</strong></span>
+            </div>
+            <div class="status-item">
+                <span>版本: <strong id="version">0</strong></span>
+            </div>
+            <div class="status-item">
+                <span>节点: <strong id="node-count">0</strong></span>
+            </div>
+            <div class="status-item">
+                <span>属性: <strong id="attr-count">0</strong></span>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <div class="input-group">
+                <input type="text" id="room-input" placeholder="房间ID" value="demo-room">
+                <button id="connect-btn" class="primary">连接房间</button>
+                <button id="disconnect-btn" disabled>断开连接</button>
+            </div>
+            <button id="add-node-btn" disabled>添加节点</button>
+            <button id="update-attr-btn" disabled>更新属性</button>
+            <button id="clear-data-btn">清空数据</button>
+            <button id="request-sync-btn" disabled>请求重新同步</button>
+            <button id="test-update-btn">测试本地更新</button>
+        </div>
+
+        <div class="data-section">
+            <div class="data-title">📄 当前数据快照</div>
+            <div id="snapshot-data" class="data-content">暂无数据</div>
+        </div>
+
+        <div class="data-section">
+            <div class="data-title">📝 增量更新 (Patches)</div>
+            <div id="patches-data" class="data-content">暂无更新</div>
+        </div>
+
+        <div class="data-section">
+            <div class="data-title">📋 事件日志</div>
+            <div id="log-data" class="data-content log-content">等待连接...</div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html> 

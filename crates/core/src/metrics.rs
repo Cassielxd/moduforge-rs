@@ -1,4 +1,4 @@
-use metrics::{counter, gauge, histogram, Unit};
+use metrics::{counter, gauge, histogram};
 
 /// 已提交任务总数
 pub const TASKS_SUBMITTED_TOTAL: &str = "core.tasks.submitted.total";

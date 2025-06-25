@@ -248,8 +248,8 @@ impl TokenStream {
                     tokens.push(current_token.clone());
                     current_token.clear(); // 清空当前令牌
                 }
-            } else if !c.is_alphanumeric() {
-                // 如果当前字符是非字母数字字符，且当前令牌不为空，则将当前令牌添加到令牌列表中
+            } else if !c.is_alphanumeric() && c != '_' {
+                // 如果当前字符是非字母数字字符（不包括下划线），且当前令牌不为空，则将当前令牌添加到令牌列表中
                 if !current_token.is_empty() {
                     tokens.push(current_token.clone());
                     current_token.clear(); // 清空当前令牌
@@ -257,7 +257,7 @@ impl TokenStream {
                 // 将非字母数字字符作为单独的令牌添加到列表中
                 tokens.push(c.to_string());
             } else {
-                // 如果当前字符是字母数字字符，则将其添加到当前令牌中
+                // 如果当前字符是字母数字字符或下划线，则将其添加到当前令牌中
                 current_token.push(c);
             }
         }
@@ -398,7 +398,7 @@ fn parse_expr_atom(stream: &mut TokenStream) -> Expr {
         }
         expr
     } else if let Some(next) = stream.next() {
-        if next.chars().all(|c| c.is_alphanumeric()) {
+        if next.chars().all(|c| c.is_alphanumeric() || c == '_') {
             let exprs: Vec<Expr> = resolve_name(stream, next)
                 .into_iter()
                 .map(|type_| Expr::Name { value: type_ })

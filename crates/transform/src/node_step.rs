@@ -14,8 +14,8 @@ use serde::{Deserialize, Serialize};
 /// 添加节点的步骤
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AddNodeStep {
-    parent_id: NodeId,
-    nodes: Vec<NodeEnum>,
+    pub parent_id: NodeId,
+    pub nodes: Vec<NodeEnum>,
 }
 impl AddNodeStep {
     pub fn new(
