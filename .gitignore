@@ -20,3 +20,5 @@ node_modules/
 dist-js
 dist
 /docs/.vitepress/cache
+/static
+/*.yaml

@@ -41,7 +41,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2"
 time = { version = "0.3", features = ["formatting"] }
 
-uuid="1"
+uuid={ version = "1.0", features = ["v4"] }
 futures="0.3"
 
 rayon = "1.8"
