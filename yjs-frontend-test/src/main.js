@@ -94,37 +94,23 @@ class AppState {
             // 获取更新前的状态
             const beforeState = {
                 nodes: tempDoc.getMap('nodes').toJSON(),
-                attributes: tempDoc.getMap('attributes').toJSON(),
             }
             
             // 应用更新
             Y.applyUpdate(tempDoc, updateBytes);
             
+            // --- 调试日志 ---
+            console.log('🕵️‍♂️ [Debug] tempDoc after update:', tempDoc);
+            console.log('🕵️‍♂️ [Debug] tempDoc top-level keys:', Array.from(tempDoc.share.keys()));
+            // --- 调试日志结束 ---
+
             // 获取更新后的状态
             const afterState = {
                 nodes: tempDoc.getMap('nodes').toJSON(),
-                attributes: tempDoc.getMap('attributes').toJSON(),
-                add_node: null, // 我们将在这里存放解析出的特定数据
-            }
-
-            // 专门检查由 add_node_step 创建的数据
-            const addNodeMap = tempDoc.getMap('add_node');
-            if (addNodeMap && addNodeMap.size > 0) {
-                const addNodeData = addNodeMap.toJSON();
-                console.log("addNodeData", addNodeData);
-                // 后端将 'child' 字段存储为JSON字符串，所以我们需要在这里解析它
-                if (addNodeData.child && typeof addNodeData.child === 'string') {
-                    try {
-                        addNodeData.child = JSON.parse(addNodeData.child);
-                    } catch (e) {
-                        console.error("解析 add_node 'child' 数据失败:", e);
-                    }
-                }
-                afterState.add_node = addNodeData;
             }
             
             // 分析通用变化
-            const changes = this.detectChanges(beforeState.nodes, beforeState.attributes, afterState.nodes, afterState.attributes);
+            const changes = this.detectChanges(beforeState.nodes, afterState.nodes);
             
             return {
                 success: true,
@@ -145,7 +131,7 @@ class AppState {
     }
     
     // 检测变化
-    detectChanges(beforeNodes, beforeAttrs, afterNodes, afterAttrs) {
+    detectChanges(beforeNodes, afterNodes) {
         const changes = [];
         
         // 检测节点变化
@@ -160,26 +146,30 @@ class AppState {
             });
         }
         
-        // 检测属性变化
-        const beforeKeys = Object.keys(beforeAttrs);
-        const afterKeys = Object.keys(afterAttrs);
-        
-        if (beforeKeys.length !== afterKeys.length) {
-            changes.push({
-                type: 'attributes_count_changed',
-                from: beforeKeys.length,
-                to: afterKeys.length
-            });
-        }
-        
-        // 检测具体属性变化
-        afterKeys.forEach(key => {
-            if (beforeAttrs[key] !== afterAttrs[key]) {
+        // 检测具体节点变化
+        afterNodeKeys.forEach(key => {
+            if (!beforeNodes[key]) {
                 changes.push({
-                    type: 'attribute_changed',
+                    type: 'node_added',
                     key: key,
-                    from: beforeAttrs[key],
-                    to: afterAttrs[key]
+                    data: afterNodes[key]
+                });
+            } else if (JSON.stringify(beforeNodes[key]) !== JSON.stringify(afterNodes[key])) {
+                changes.push({
+                    type: 'node_updated',
+                    key: key,
+                    from: beforeNodes[key],
+                    to: afterNodes[key]
+                });
+            }
+        });
+        
+        // 检测删除的节点
+        beforeNodeKeys.forEach(key => {
+            if (!afterNodes[key]) {
+                changes.push({
+                    type: 'node_deleted',
+                    key: key
                 });
             }
         });
@@ -451,7 +441,6 @@ class AppState {
     clearData() {
         // 清空 Yjs 文档会触发 'update' 事件，自动同步到服务器
         this.ydoc.getMap('nodes').clear();
-        this.ydoc.getMap('attributes').clear();
         
         // 清空本地日志
         this.localUpdates = [];
@@ -545,7 +534,7 @@ class AppState {
     }
 
     // 格式化显示数据
-    formatDataForDisplay(nodes, attributes) {
+    formatDataForDisplay(nodes) {
         let text = `更新时间: ${new Date().toLocaleString()}\n\n`;
         text += `--- Document State ---\n`;
         // 使用更具可读性的方式来展示整个文档状态
@@ -597,12 +586,11 @@ class AppState {
         try {
             // 获取当前 Yjs 文档的最新状态
             const nodes = this.ydoc.getMap('nodes').toJSON() // 直接获取整个nodes map
-            const attributes = this.ydoc.getMap('attributes').toJSON()
             
             // 格式化显示数据快照
             const snapshotElement = document.getElementById('snapshot-data')
             if (snapshotElement) {
-                snapshotElement.textContent = this.formatDataForDisplay(nodes, attributes)
+                snapshotElement.textContent = this.formatDataForDisplay(nodes)
             }
 
             // 格式化显示增量更新
@@ -612,7 +600,7 @@ class AppState {
             }
             
             // 更新统计信息
-            this.updateStatsDisplay(Object.keys(nodes).length, Object.keys(attributes).length)
+            this.updateStatsDisplay(Object.keys(nodes).length)
             
         } catch (error) {
             console.error('❌ updateDataDisplay 出错:', error)
@@ -621,18 +609,14 @@ class AppState {
     }
     
     // 更新统计信息显示
-    updateStatsDisplay(nodeCount, attrCount) {
+    updateStatsDisplay(nodeCount) {
         // 如果页面有统计显示元素，更新它们
         const statsElements = {
             nodes: document.getElementById('node-count'),
-            attrs: document.getElementById('attr-count')
         }
         
         if (statsElements.nodes) {
             statsElements.nodes.textContent = nodeCount
-        }
-        if (statsElements.attrs) {
-            statsElements.attrs.textContent = attrCount
         }
     }
 
