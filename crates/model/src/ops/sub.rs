@@ -53,7 +53,8 @@ impl<'a> Sub<Mark> for MarkRef<'a> {
         self,
         mark: Mark,
     ) -> Self::Output {
-        self.tree.remove_mark(&self.key.clone().into(), &[mark.r#type.clone()])?;
+        self.tree
+            .remove_mark(&self.key.clone().into(), &[mark.r#type.clone()])?;
         Ok(MarkRef::new(self.tree, self.key.clone()))
     }
 }
@@ -88,7 +89,10 @@ impl<'a> Sub<Vec<Mark>> for MarkRef<'a> {
         self,
         marks: Vec<Mark>,
     ) -> Self::Output {
-        self.tree.remove_mark(&self.key.clone().into(), &marks.iter().map(|m| m.r#type.clone()).collect::<Vec<String>>())?;
+        self.tree.remove_mark(
+            &self.key.clone().into(),
+            &marks.iter().map(|m| m.r#type.clone()).collect::<Vec<String>>(),
+        )?;
         Ok(MarkRef::new(self.tree, self.key.clone()))
     }
 }

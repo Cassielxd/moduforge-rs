@@ -478,8 +478,12 @@ impl Tree {
             .get(id)
             .ok_or(error_helpers::node_not_found(id.clone()))?;
         let mut new_node = node.as_ref().clone();
-        new_node.marks =
-            new_node.marks.iter().filter(|&m| !mark_types.contains(&m.r#type)).cloned().collect();
+        new_node.marks = new_node
+            .marks
+            .iter()
+            .filter(|&m| !mark_types.contains(&m.r#type))
+            .cloned()
+            .collect();
         self.nodes[shard_index] =
             self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
         Ok(())
@@ -496,8 +500,14 @@ impl Tree {
             .ok_or(error_helpers::node_not_found(id.clone()))?;
         let mut new_node = node.as_ref().clone();
         //如果存在相同类型的mark，则覆盖
-        let mark_types = marks.iter().map(|m| m.r#type.clone()).collect::<Vec<String>>();
-        new_node.marks = new_node.marks.iter().filter(|m| !mark_types.contains(&m.r#type)).cloned().collect();
+        let mark_types =
+            marks.iter().map(|m| m.r#type.clone()).collect::<Vec<String>>();
+        new_node.marks = new_node
+            .marks
+            .iter()
+            .filter(|m| !mark_types.contains(&m.r#type))
+            .cloned()
+            .collect();
         new_node.marks.extend(marks.iter().map(|m| m.clone()));
         self.nodes[shard_index] =
             self.nodes[shard_index].update(id.clone(), Arc::new(new_node));

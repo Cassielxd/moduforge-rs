@@ -1,10 +1,10 @@
-pub mod yrs_manager;
-pub mod ws_server;
+pub mod error;
 pub mod mapping;
+pub mod middleware;
 pub mod sync_service;
 pub mod types;
-pub mod error;
-pub mod middleware;
+pub mod ws_server;
+pub mod yrs_manager;
 
 pub use yrs_manager::YrsManager;
 pub use ws_server::WebSocketServer;

@@ -10,8 +10,8 @@ use super::{
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AddMarkStep {
-    id: NodeId,
-    marks: Vec<Mark>,
+    pub id: NodeId,
+    pub marks: Vec<Mark>,
 }
 impl AddMarkStep {
     pub fn new(
@@ -57,8 +57,8 @@ impl Step for AddMarkStep {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RemoveMarkStep {
-    id: NodeId,
-    mark_types: Vec<String>,
+    pub id: NodeId,
+    pub mark_types: Vec<String>,
 }
 impl RemoveMarkStep {
     pub fn new(

@@ -1,6 +1,6 @@
 /// 历史记录结构体
 pub struct History<T: Clone> {
-   pub  past: Vec<T>,
+    pub past: Vec<T>,
     pub present: T,
     pub future: Vec<T>,
     pub latest_unfiltered: T,

@@ -12,8 +12,8 @@ use serde_json::{Value};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AttrStep {
-    id: NodeId,
-    values: ImHashMap<String, Value>,
+    pub id: NodeId,
+    pub values: ImHashMap<String, Value>,
 }
 
 impl AttrStep {

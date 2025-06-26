@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use moduforge_model::{mark_type::MarkSpec, schema::AttributeSpec};
 use serde_json::Value;
 
-#[derive(Clone, PartialEq, Debug, Eq,Default)]
+#[derive(Clone, PartialEq, Debug, Eq, Default)]
 pub struct Mark {
     pub name: String,
     pub r#type: MarkSpec,

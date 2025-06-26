@@ -67,7 +67,7 @@ impl MarkType {
     // 其他方法...
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Serialize,Default)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Default)]
 pub struct MarkSpec {
     pub attrs: Option<HashMap<String, AttributeSpec>>,
     pub excludes: Option<String>,

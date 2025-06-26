@@ -24,6 +24,14 @@ impl AddNodeStep {
     ) -> Self {
         AddNodeStep { parent_id, nodes }
     }
+    // 递归收集单个节点枚举的所有子节点 id
+    pub fn collect_node_ids(node_enum: &NodeEnum) -> Vec<NodeId> {
+        let mut ids: Vec<String> = vec![node_enum.0.id.clone()];
+        for child in &node_enum.1 {
+            ids.extend(Self::collect_node_ids(child));
+        }
+        ids
+    }
 }
 impl Step for AddNodeStep {
     fn name(&self) -> String {
@@ -49,19 +57,10 @@ impl Step for AddNodeStep {
         &self,
         _: &Arc<Tree>,
     ) -> Option<Arc<dyn Step>> {
-        // 递归收集单个节点枚举的所有子节点 id
-        fn collect_node_ids(node_enum: &NodeEnum) -> Vec<NodeId> {
-            let mut ids: Vec<String> = vec![node_enum.0.id.clone()];
-            for child in &node_enum.1 {
-                ids.extend(collect_node_ids(child));
-            }
-            ids
-        }
-
         // 收集所有节点的 id（包括顶级节点和所有子节点）
         let mut all_node_ids = Vec::new();
         for node_enum in &self.nodes {
-            all_node_ids.extend(collect_node_ids(node_enum));
+            all_node_ids.extend(Self::collect_node_ids(node_enum));
         }
 
         if !all_node_ids.is_empty() {
@@ -76,8 +75,8 @@ impl Step for AddNodeStep {
 /// 删除节点的步骤
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RemoveNodeStep {
-    parent_id: NodeId,
-    node_ids: Vec<NodeId>,
+    pub parent_id: NodeId,
+    pub node_ids: Vec<NodeId>,
 }
 impl RemoveNodeStep {
     pub fn new(

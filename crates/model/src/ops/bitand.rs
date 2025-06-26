@@ -76,7 +76,8 @@ impl<'a> BitAnd<String> for MarkRef<'a> {
         let noderef = self.tree.get_node(&self.key.clone().into());
         match noderef {
             Some(_) => {
-                self.tree.remove_mark(&self.key.clone().into(), &[mark_name])?;
+                self.tree
+                    .remove_mark(&self.key.clone().into(), &[mark_name])?;
                 Ok(MarkRef::new(self.tree, self.key.clone()))
             },
             None => Err(error_helpers::node_not_found(self.key.clone().into())),
