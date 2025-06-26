@@ -1,13 +1,13 @@
 use moduforge_transform::{node_step::AddNodeStep, step::Step};
-use moduforge_model::tree::Tree;
-use std::collections::HashMap;
+use moduforge_model::{node_pool::NodePool, tree::Tree};
+use std::{collections::HashMap, sync::Arc};
 use crate::{StepResult, NodeData, MarkData, RoomSnapshot};
 use yrs::{Map, Transact, MapPrelim, ArrayPrelim, Array, TransactionMut, WriteTxn};
 
 /// Step转换器trait - 用于将Step直接应用到Yrs文档
 pub trait StepConverter {
     /// 直接将Step应用到Yrs文档事务
-    fn apply_to_yrs_txn(&self, step: &dyn Step, txn: &mut yrs::TransactionMut, client_id: &str) -> Result<StepResult, Box<dyn std::error::Error>>;
+    fn apply_to_yrs_txn(&self,doc:Arc<NodePool>, step: &dyn Step, txn: &mut yrs::TransactionMut, client_id: &str) -> Result<StepResult, Box<dyn std::error::Error>>;
     
     /// 获取转换器名称
     fn name(&self) -> &'static str;
@@ -25,7 +25,7 @@ pub trait StepConverter {
 pub struct DefaultStepConverter;
 
 impl StepConverter for DefaultStepConverter {
-    fn apply_to_yrs_txn(&self, step: &dyn Step, _txn: &mut yrs::TransactionMut, client_id: &str) -> Result<StepResult, Box<dyn std::error::Error>> {
+    fn apply_to_yrs_txn(&self,doc:Arc<NodePool>, step: &dyn Step, _txn: &mut yrs::TransactionMut, client_id: &str) -> Result<StepResult, Box<dyn std::error::Error>> {
        
         
         Ok(StepResult {
@@ -53,7 +53,7 @@ impl StepConverter for DefaultStepConverter {
 pub struct NodeStepConverter;
 
 impl StepConverter for NodeStepConverter {
-    fn apply_to_yrs_txn(&self, step: &dyn Step, txn: &mut yrs::TransactionMut, client_id: &str) -> Result<StepResult, Box<dyn std::error::Error>> {
+    fn apply_to_yrs_txn(&self,doc:Arc<NodePool>, step: &dyn Step, txn: &mut yrs::TransactionMut, client_id: &str) -> Result<StepResult, Box<dyn std::error::Error>> {
         if let Some(add_step) = step.downcast_ref::<AddNodeStep>() {
             let nodes_map = txn.get_or_insert_map("nodes");
 
@@ -121,7 +121,7 @@ impl StepConverter for NodeStepConverter {
 pub struct AttrStepConverter;
 
 impl StepConverter for AttrStepConverter {
-    fn apply_to_yrs_txn(&self, step: &dyn Step, _txn: &mut yrs::TransactionMut, client_id: &str) -> Result<StepResult, Box<dyn std::error::Error>> {
+    fn apply_to_yrs_txn(&self,doc:Arc<NodePool>, step: &dyn Step, _txn: &mut yrs::TransactionMut, client_id: &str) -> Result<StepResult, Box<dyn std::error::Error>> {
         let step_name = step.name();
         
         if step_name.contains("Attr") {
@@ -155,7 +155,7 @@ impl StepConverter for AttrStepConverter {
 pub struct MarkStepConverter;
 
 impl StepConverter for MarkStepConverter {
-    fn apply_to_yrs_txn(&self, _step: &dyn Step, _txn: &mut yrs::TransactionMut, _client_id: &str) -> Result<StepResult, Box<dyn std::error::Error>> {
+    fn apply_to_yrs_txn(&self,doc:Arc<NodePool>, step: &dyn Step, _txn: &mut yrs::TransactionMut, client_id: &str) -> Result<StepResult, Box<dyn std::error::Error>> {
 
         Err("不支持的标记操作".into())
     }

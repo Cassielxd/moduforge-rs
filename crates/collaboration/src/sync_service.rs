@@ -75,7 +75,12 @@ impl SyncService {
                     tracing::debug!("  - 操作 {}/{}: {}", j + 1, transaction.steps.len(), type_name);
                     
                     if let Some(converter) = registry.find_converter(step.as_ref()) {
-                        if let Err(e) = converter.apply_to_yrs_txn(step.as_ref(), &mut txn, &client_id) {
+                       
+                        let doc_state = doc.transact().encode_state_as_update_v1(&Default::default());
+                        let update_decoded = yrs::Update::decode_v1(&doc_state)
+                            .map_err(|e| TransmissionError::YrsError(format!("Failed to decode online doc update: {}", e)))?;
+                        txn.apply_update(update_decoded)?;
+                        if let Err(e) = converter.apply_to_yrs_txn(transaction.doc(),step.as_ref(), &mut txn, &client_id) {
                             tracing::error!("应用Step到Yrs事务失败: {}", e);
                         }
                     } else {
