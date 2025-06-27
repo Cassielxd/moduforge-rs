@@ -107,6 +107,176 @@ impl Tree {
         (added, deleted, modified)
     }
 
+    /// 基于异步通道的差异计算 - 并行处理新增、删除、修改
+    /// 使用 tokio 通道实现真正的并行处理
+    pub async fn difference_async(&self, other: &Tree) -> (im::HashMap<NodeId, ArcPtr<Node>>, im::HashMap<NodeId, ArcPtr<Node>>, im::HashMap<NodeId, (ArcPtr<Node>, ArcPtr<Node>)>) {
+        use tokio::sync::mpsc;
+        use std::collections::HashMap;
+        use std::sync::Arc;
+
+        // 1. 合并所有分片并包装在 Arc 中
+        let mut new_nodes = HashMap::new();
+        let mut old_nodes = HashMap::new();
+        
+        for shard in &self.nodes {
+            new_nodes.extend(shard.iter().map(|(k, v)| (k.clone(), v.clone())));
+        }
+        for shard in &other.nodes {
+            old_nodes.extend(shard.iter().map(|(k, v)| (k.clone(), v.clone())));
+        }
+
+        // 使用 Arc 包装，避免克隆整个 HashMap
+        let new_nodes = Arc::new(new_nodes);
+        let old_nodes = Arc::new(old_nodes);
+
+        // 2. 创建通道用于并行处理
+        let (added_tx, mut added_rx) = mpsc::channel::<im::HashMap<NodeId, ArcPtr<Node>>>(1);
+        let (deleted_tx, mut deleted_rx) = mpsc::channel::<im::HashMap<NodeId, ArcPtr<Node>>>(1);
+        let (modified_tx, mut modified_rx) = mpsc::channel::<im::HashMap<NodeId, (ArcPtr<Node>, ArcPtr<Node>)>>(1);
+
+        // 3. 启动三个异步任务并行处理，收集完结果后批量发送
+        // 只克隆 Arc，不克隆 HashMap 内容
+        let new_nodes_clone = Arc::clone(&new_nodes);
+        let old_nodes_clone = Arc::clone(&old_nodes);
+        
+        // 任务1：处理新增节点，收集完一次性发送
+        let added_task = tokio::spawn(async move {
+            let mut added = im::HashMap::new();
+            for (node_id, new_node_arc) in new_nodes_clone.iter() {
+                if !old_nodes_clone.contains_key(node_id) {
+                    added.insert(node_id.clone(), new_node_arc.clone());
+                }
+            }
+            let _ = added_tx.send(added).await;
+        });
+
+        // 任务2：处理删除节点，收集完一次性发送
+        let old_nodes_clone2 = Arc::clone(&old_nodes);
+        let new_nodes_clone2 = Arc::clone(&new_nodes);
+        let _ = tokio::spawn(async move {
+            let mut deleted = im::HashMap::new();
+            for (node_id, old_node_arc) in old_nodes_clone2.iter() {
+                if !new_nodes_clone2.contains_key(node_id) {
+                    deleted.insert(node_id.clone(), old_node_arc.clone());
+                }
+            }
+            let _ = deleted_tx.send(deleted).await;
+        });
+
+        // 任务3：处理修改节点，收集完一次性发送
+        let _ = tokio::spawn(async move {
+            let mut modified = im::HashMap::new();
+            for (node_id, new_node_arc) in new_nodes.iter() {
+                if let Some(old_node_arc) = old_nodes.get(node_id) {
+                    if new_node_arc.0.as_ref() != old_node_arc.0.as_ref() {
+                        modified.insert(node_id.clone(), (old_node_arc.clone(), new_node_arc.clone()));
+                    }
+                }
+            }
+            let _ = modified_tx.send(modified).await;
+        });
+
+        // 4. 等待所有任务完成并接收结果
+        let (added, deleted, modified) = tokio::join!(
+            async { added_rx.recv().await.unwrap() },
+            async { deleted_rx.recv().await.unwrap() },
+            async { modified_rx.recv().await.unwrap() }
+        );
+
+        (added, deleted, modified)
+    }
+
+    /// 基于分片并行处理的差异计算
+    /// 每个分片独立处理，然后合并结果
+    pub async fn difference_sharded(&self, other: &Tree) -> (im::HashMap<NodeId, ArcPtr<Node>>, im::HashMap<NodeId, ArcPtr<Node>>, im::HashMap<NodeId, (ArcPtr<Node>, ArcPtr<Node>)>) {
+        use tokio::sync::mpsc;
+
+        // 1. 创建结果收集通道
+        let (added_tx, mut added_rx) = mpsc::channel(1000);
+        let (deleted_tx, mut deleted_rx) = mpsc::channel(1000);
+        let (modified_tx, mut modified_rx) = mpsc::channel(1000);
+
+        // 2. 为每个分片创建处理任务
+        let mut tasks = Vec::new();
+        let num_shards = self.nodes.len().max(other.nodes.len());
+
+        for i in 0..num_shards {
+            let new_shard = self.nodes.get(i).cloned().unwrap_or_else(im::HashMap::new);
+            let old_shard = other.nodes.get(i).cloned().unwrap_or_else(im::HashMap::new);
+            
+            let added_tx = added_tx.clone();
+            let deleted_tx = deleted_tx.clone();
+            let modified_tx = modified_tx.clone();
+
+            let task = tokio::spawn(async move {
+                let mut added = im::HashMap::new();
+                let mut deleted = im::HashMap::new();
+                let mut modified = im::HashMap::new();
+
+                // 处理新增节点
+                for (node_id, new_node_arc) in new_shard.iter() {
+                    if !old_shard.contains_key(node_id) {
+                        added.insert(node_id.clone(), new_node_arc.clone());
+                    }
+                }
+
+                // 处理删除节点
+                for (node_id, old_node_arc) in old_shard.iter() {
+                    if !new_shard.contains_key(node_id) {
+                        deleted.insert(node_id.clone(), old_node_arc.clone());
+                    }
+                }
+
+                // 处理修改节点
+                for (node_id, new_node_arc) in new_shard.iter() {
+                    if let Some(old_node_arc) = old_shard.get(node_id) {
+                        if new_node_arc.0.as_ref() != old_node_arc.0.as_ref() {
+                            modified.insert(node_id.clone(), (old_node_arc.clone(), new_node_arc.clone()));
+                        }
+                    }
+                }
+
+                // 发送结果
+                if !added.is_empty() {
+                    let _ = added_tx.send(added).await;
+                }
+                if !deleted.is_empty() {
+                    let _ = deleted_tx.send(deleted).await;
+                }
+                if !modified.is_empty() {
+                    let _ = modified_tx.send(modified).await;
+                }
+            });
+
+            tasks.push(task);
+        }
+
+        // 3. 等待所有分片处理完成
+        for task in tasks {
+            let _ = task.await;
+        }
+
+        // 4. 收集所有结果
+        drop(added_tx);
+        drop(deleted_tx);
+        drop(modified_tx);
+
+        let mut final_added = im::HashMap::new();
+        let mut final_deleted = im::HashMap::new();
+        let mut final_modified = im::HashMap::new();
+
+        while let Some(added) = added_rx.recv().await {
+            final_added.extend(added);
+        }
+        while let Some(deleted) = deleted_rx.recv().await {
+            final_deleted.extend(deleted);
+        }
+        while let Some(modified) = modified_rx.recv().await {
+            final_modified.extend(modified);
+        }
+
+        (final_added, final_deleted, final_modified)
+    }
 
     #[inline]
     pub fn get_shard_index(
