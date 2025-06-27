@@ -28,7 +28,7 @@ impl RoomNotFoundError {
     }
 }
 
-/// A wrapper around YrsManager to handle dynamic room creation and broadcast group management.
+/// YrsManager 的包装器，用于处理动态房间创建和广播组管理
 #[derive(Clone)]
 pub struct CollaborationServer {
     yrs_manager: Arc<YrsManager>,
@@ -107,10 +107,10 @@ impl CollaborationServer {
     /// 初始化房间，可选择性地使用现有的 Tree 数据进行同步
     /// 这是关键的初始化时机：在客户端连接前确保房间已经准备好
     pub async fn init_room_with_data(&self, room_id: &str, tree: &Tree) -> crate::Result<()> {
-        tracing::info!("Initializing room '{}' with data", room_id);
+        tracing::info!("🔄 初始化房间: '{}' 使用数据", room_id);
         
         self.sync_service.init_room_with_tree(room_id, tree).await?;
-            tracing::info!("Room '{}' initialized with existing tree data", room_id);
+        tracing::info!("🔄 房间 '{}' 初始化完成", room_id);
         
         Ok(())
     }
@@ -289,9 +289,9 @@ impl CollaborationServer {
         Ok(())
     }
 
-    /// Starts the WebSocket server.
+    /// 启动 WebSocket 服务器
     pub async fn start(self) {
-        let server = self.clone(); // Clone self to move into the filter
+        let server = self.clone(); // 克隆 self 以移动到过滤器
         
         // WebSocket 路由（带错误处理）
         let ws_route = warp::path("collaboration")
@@ -383,21 +383,36 @@ impl CollaborationServer {
         }))
     }
 
-    /// Handle individual peer connection (based on official example).
+    /// 处理单个客户端连接（基于官方示例）
     async fn peer(ws: WebSocket, bcast: Arc<BroadcastGroup>, room_id: String) {
         let (sink, stream) = ws.split();
         let sink = Arc::new(Mutex::new(WarpSink::from(sink)));
         let stream = WarpStream::from(stream);
-        let sub = bcast.subscribe(sink, stream);
         
-        tracing::info!("Client connected to room: {}", room_id);
+        // 增加客户端连接的详细日志
+        let client_addr = "unknown"; // 如果需要可以从 WebSocket 获取真实地址
+        tracing::info!("🔗 新客户端连接到房间: {} (地址: {})", room_id, client_addr);
+        
+        let sub = bcast.subscribe(sink, stream);
         
         match sub.completed().await {
             Ok(_) => {
-                tracing::info!("Client disconnected from room: {} - broadcasting finished successfully", room_id);
+                tracing::info!("✅ 客户端正常断开连接 - 房间: {} (地址: {})", room_id, client_addr);
             },
             Err(e) => {
-                tracing::error!("Client disconnected from room: {} - broadcasting finished abruptly: {}", room_id, e);
+                // 根据错误类型提供更详细的错误信息
+                let error_msg = format!("{}", e);
+                
+                if error_msg.contains("failed to deserialize message") {
+                    tracing::warn!("⚠️ 客户端发送了无效数据包 - 房间: {}, 错误: {}", room_id, error_msg);
+                    tracing::debug!("💡 这通常是由网络中断或客户端异常关闭导致的，属于正常现象");
+                } else if error_msg.contains("unexpected end of buffer") {
+                    tracing::warn!("⚠️ 数据包不完整 - 房间: {}, 可能是网络传输中断", room_id);
+                } else if error_msg.contains("connection closed") || error_msg.contains("broken pipe") {
+                    tracing::info!("🔌 客户端连接意外断开 - 房间: {} ({})", room_id, error_msg);
+                } else {
+                    tracing::error!("❌ 客户端连接异常 - 房间: {}, 错误: {}", room_id, error_msg);
+                }
             },
         }
     }

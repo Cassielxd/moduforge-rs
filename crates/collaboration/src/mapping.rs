@@ -18,29 +18,29 @@ use yrs::{
     Array, ArrayPrelim, Map, MapPrelim, TransactionMut, WriteTxn,
 };
 
-/// Trait for converting a `Step` into a Yrs transaction.
-/// This trait is dyn-safe.
+/// 将 `Step` 转换为 Yrs 事务的 Trait
+/// 这个 Trait 是动态安全的
 pub trait StepConverter: Send + Sync {
-    /// Applies the step to a Yrs document transaction.
+    /// 将步骤应用到 Yrs 文档事务中
     fn apply_to_yrs_txn(
         &self,
         step: &dyn Step,
         txn: &mut TransactionMut,
     ) -> Result<StepResult, Box<dyn std::error::Error>>;
 
-    /// Returns the name of the converter.
+    /// 返回转换器的名称
     fn name(&self) -> &'static str;
 
-    /// Checks if this converter supports the given step type.
+    /// 检查此转换器是否支持给定的步骤类型
     fn supports(&self, step: &dyn Step) -> bool;
 
-    /// Gets a description of the step's operation.
+    /// 获取步骤的操作描述
     fn get_description(&self, step: &dyn Step) -> String {
         format!("Executing operation: {} ({})", step.name(), self.name())
     }
 }
 
-/// Default Step converter for unsupported steps.
+/// 默认的步骤转换器，用于不支持的步骤
 pub struct DefaultStepConverter;
 
 impl StepConverter for DefaultStepConverter {
@@ -52,7 +52,7 @@ impl StepConverter for DefaultStepConverter {
         Ok(StepResult {
             step_id: uuid::Uuid::new_v4().to_string(),
             step_name: step.name().to_string(),
-            description: format!("Default handler processed unknown step: {}", step.name()),
+            description: format!("默认处理程序处理未知步骤: {}", step.name()),
             timestamp: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
@@ -70,7 +70,7 @@ impl StepConverter for DefaultStepConverter {
     }
 }
 
-// --- Helper methods for converters ---
+// --- 转换器的辅助方法 ---
 
 fn json_value_to_yrs_any(value: &JsonValue) -> yrs::Any {
     match value {
@@ -100,6 +100,7 @@ fn json_value_to_yrs_any(value: &JsonValue) -> yrs::Any {
     }
 }
 
+/// 将标记添加到 Yrs 数组中
 fn add_mark_to_array(
     marks_array: &ArrayRef,
     txn: &mut TransactionMut,
@@ -117,6 +118,7 @@ fn add_mark_to_array(
     marks_array.push_back(txn, mark_map);
 }
 
+/// 获取或创建节点数据映射
 fn get_or_create_node_data_map(
     nodes_map: &MapRef,
     txn: &mut TransactionMut,
@@ -129,6 +131,7 @@ fn get_or_create_node_data_map(
     }
 }
 
+/// 获取或创建节点属性映射
 fn get_or_create_node_attrs_map(
     node_data_map: &MapRef,
     txn: &mut TransactionMut,
@@ -140,6 +143,7 @@ fn get_or_create_node_attrs_map(
     }
 }
 
+/// 获取或创建标记数组
 fn get_or_create_marks_array(
     node_data_map: &MapRef,
     txn: &mut TransactionMut,
@@ -152,24 +156,25 @@ fn get_or_create_marks_array(
 }
 
 
-/// Converter for node-related steps.
+/// 节点相关步骤的转换器
 pub struct NodeStepConverter;
 
 impl NodeStepConverter {
     fn insert_node_data(&self, txn: &mut TransactionMut, nodes_map: &MapRef, node: &Node) {
         let node_data_map = get_or_create_node_data_map(nodes_map, txn, &node.id);
+        // 插入节点类型
         node_data_map.insert(txn, "type", node.r#type.clone());
-
+        // 插入节点属性
         let attrs_map = node_data_map.insert(txn, "attrs", MapPrelim::<yrs::Any>::new());
         for (key, value) in node.attrs.iter() {
             attrs_map.insert(txn, key.clone(), json_value_to_yrs_any(value));
         }
-
+        // 插入节点内容
         let content_array = node_data_map.insert(txn, "content", ArrayPrelim::from(Vec::<yrs::Any>::new()));
         for child_id in &node.content {
             content_array.push_back(txn, yrs::Any::String(child_id.clone().into()));
         }
-
+        // 插入节点标记
         let marks_array = node_data_map.insert(txn, "marks", ArrayPrelim::from(Vec::<yrs::Any>::new()));
         for mark in &node.marks {
             add_mark_to_array(&marks_array, txn, mark);
@@ -196,7 +201,7 @@ impl StepConverter for NodeStepConverter {
             return Ok(StepResult {
                 step_id: uuid::Uuid::new_v4().to_string(),
                 step_name: step.name().to_string(),
-                description: format!("Added {} nodes", all_nodes.len()),
+                description: format!("添加 {} 个节点", all_nodes.len()),
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
@@ -221,7 +226,7 @@ impl StepConverter for NodeStepConverter {
             });
         }
 
-        Err("Unsupported node operation".into())
+        Err("不支持的节点操作".into())
     }
 
     fn name(&self) -> &'static str {
@@ -233,7 +238,7 @@ impl StepConverter for NodeStepConverter {
     }
 }
 
-/// Converter for attribute-related steps.
+/// 属性相关步骤的转换器
 pub struct AttrStepConverter;
 
 impl StepConverter for AttrStepConverter {
@@ -246,8 +251,9 @@ impl StepConverter for AttrStepConverter {
         if let Some(attr_step) = step.downcast_ref::<AttrStep>() {
             let nodes_map = txn.get_or_insert_map("nodes");
             let node_data_map = get_or_create_node_data_map(&nodes_map, txn, &attr_step.id);
+            // 获取或创建节点属性映射
             let attrs_map = get_or_create_node_attrs_map(&node_data_map, txn);
-
+            // 更新节点属性
             for (key, value) in attr_step.values.iter() {
                 attrs_map.insert(txn, key.clone(), json_value_to_yrs_any(value));
             }
@@ -256,7 +262,7 @@ impl StepConverter for AttrStepConverter {
                 step_id: uuid::Uuid::new_v4().to_string(),
                 step_name: step.name().to_string(),
                 description: format!(
-                    "Updated {} attributes for node {}",
+                    "更新 {} 个属性 for node {}",
                     attr_step.values.len(),
                     attr_step.id
                 ),
@@ -267,7 +273,7 @@ impl StepConverter for AttrStepConverter {
                 client_id,
             })
         } else {
-            Err("Unsupported attribute operation".into())
+            Err("不支持的属性操作".into())
         }
     }
 
@@ -280,11 +286,11 @@ impl StepConverter for AttrStepConverter {
     }
 }
 
-/// Converter for mark-related steps.
+/// 标记相关步骤的转换器
 pub struct MarkStepConverter;
 
 impl MarkStepConverter {
-    /// Removes a mark from a Yrs array by its type.
+    /// 从 Yrs 数组中删除标记
     fn remove_mark_from_array(
         &self,
         marks_array: &ArrayRef,
@@ -323,10 +329,12 @@ impl StepConverter for MarkStepConverter {
 
         if let Some(add_mark_step) = step.downcast_ref::<AddMarkStep>() {
             let nodes_map = txn.get_or_insert_map("nodes");
+            // 获取或创建节点数据映射
             let node_data_map =
                 get_or_create_node_data_map(&nodes_map, txn, &add_mark_step.id);
+            // 获取或创建标记数组
             let marks_array = get_or_create_marks_array(&node_data_map, txn);
-            
+            // 添加标记
             for mark in &add_mark_step.marks {
                  add_mark_to_array(&marks_array, txn, mark);
             }
@@ -334,7 +342,7 @@ impl StepConverter for MarkStepConverter {
             return Ok(StepResult {
                 step_id: uuid::Uuid::new_v4().to_string(),
                 step_name: step.name().to_string(),
-                description: format!("Added {} marks to node {}", add_mark_step.marks.len(), add_mark_step.id),
+                description: format!("添加 {} 个标记 to node {}", add_mark_step.marks.len(), add_mark_step.id),
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
@@ -346,7 +354,7 @@ impl StepConverter for MarkStepConverter {
             let node_data_map =
                 get_or_create_node_data_map(&nodes_map, txn, &remove_mark_step.id);
             let marks_array = get_or_create_marks_array(&node_data_map, txn);
-            
+            // 删除标记
             for mark_type in &remove_mark_step.mark_types {
                 self.remove_mark_from_array(&marks_array, txn, mark_type);
             }
@@ -363,7 +371,7 @@ impl StepConverter for MarkStepConverter {
             });
         }
 
-        Err("Unsupported mark operation".into())
+        Err("不支持的标记操作".into())
     }
 
     fn name(&self) -> &'static str {
@@ -375,7 +383,7 @@ impl StepConverter for MarkStepConverter {
     }
 }
 
-/// Registry for all step converters.
+/// 所有步骤转换器的注册表
 pub struct StepConverterRegistry {
     converters: Vec<Box<dyn StepConverter>>,
 }
@@ -387,7 +395,7 @@ impl Default for StepConverterRegistry {
 }
 
 impl StepConverterRegistry {
-    /// Creates a new registry with all default converters.
+    /// 创建一个新的注册表，包含所有默认的转换器
     pub fn new() -> Self {
         let mut registry = Self {
             converters: Vec::new(),
@@ -401,13 +409,13 @@ impl StepConverterRegistry {
         registry
     }
 
-    /// Registers a new converter.
+    /// 注册一个新的转换器
     pub fn register(&mut self, converter: Box<dyn StepConverter>) {
-        tracing::info!("Registering Step converter: {}", converter.name());
+        tracing::info!("🔄 注册步骤转换器: {}", converter.name());
         self.converters.push(converter);
     }
 
-    /// Finds a converter that supports the given step.
+    /// 查找支持给定步骤的转换器
     pub fn find_converter(&self, step: &dyn Step) -> Option<&(dyn StepConverter)> {
         for converter in &self.converters {
             if converter.supports(step) {
@@ -418,7 +426,7 @@ impl StepConverterRegistry {
     }
 }
 
-/// Global mapper for handling conversions.
+/// 全局映射器，用于处理转换
 #[derive(Debug)]
 pub struct Mapper;
 
@@ -430,10 +438,10 @@ impl Mapper {
         REGISTRY.get_or_init(StepConverterRegistry::new)
     }
 
-    /// Converts a ModuForge `Tree` into a `RoomSnapshot`.
+    /// 将 ModuForge `Tree` 转换为 `RoomSnapshot`
     pub fn tree_to_snapshot(tree: &Tree, room_id: String) -> RoomSnapshot {
         let mut nodes = HashMap::new();
-
+            
         fn collect_nodes(tree: &Tree, node_id: &str, nodes: &mut HashMap<String, NodeData>) {
             if let Some(node) = tree.get_node(&node_id.to_string()) {
                 let node_data = NodeData {

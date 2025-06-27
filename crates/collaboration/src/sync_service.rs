@@ -50,16 +50,16 @@ impl SyncService {
         }
     }
 
-    /// Initializes a room, ensuring a Yrs document exists for it.
+    /// 初始化房间，确保 Yrs 文档存在
     pub fn init_room(&self, room_id: &str) {
-        tracing::info!("Initializing room {}", room_id);
+        tracing::info!("🔄 初始化房间: {}", room_id);
         self.yrs_manager.get_or_create_awareness(room_id);
     }
 
     /// 使用现有的 Tree 初始化房间，同步所有节点数据到 Yrs 文档
     /// 这是在房间首次创建或需要重新同步时调用的关键方法
     pub async fn init_room_with_tree(&self, room_id: &str, tree: &Tree) -> Result<()> {
-        tracing::info!("Initializing room {} with existing tree data", room_id);
+        tracing::info!("🔄 初始化房间: {} 使用现有的树数据", room_id);
         
         // 获取或创建 awareness
         let awareness_ref = self.yrs_manager.get_or_create_awareness(room_id);
@@ -85,7 +85,7 @@ impl SyncService {
     /// 将 Tree 中的所有节点同步到 Yrs 事务中
     fn sync_tree_to_yrs(&self, tree: &Tree, txn: &mut yrs::TransactionMut) -> Result<()> {
         use moduforge_transform::{step::Step, node_step::AddNodeStep};
-        use moduforge_model::node_type::NodeEnum;
+
         
         let registry = Mapper::global_registry();
         
@@ -100,11 +100,11 @@ impl SyncService {
             // 使用现有的转换器应用步骤
             if let Some(converter) = registry.find_converter(&add_step as &dyn Step) {
                 if let Err(e) = converter.apply_to_yrs_txn(&add_step as &dyn Step, txn) {
-                    tracing::error!("Failed to sync tree nodes to Yrs: {}", e);
+                    tracing::error!("🔄 同步树节点到 Yrs 失败: {}", e);
                     return Err(crate::error::TransmissionError::SyncError(format!("Failed to sync tree: {}", e)));
                 }
             } else {
-                tracing::error!("No converter found for AddNodeStep during tree sync");
+                tracing::error!("🔄 同步树节点到 Yrs 失败: 没有找到 AddNodeStep 的转换器");
                 return Err(crate::error::TransmissionError::SyncError("No converter found for AddNodeStep".to_string()));
             }
         }
@@ -112,7 +112,7 @@ impl SyncService {
         Ok(())
     }
 
-    /// Handles multiple business logic transactions and applies them to the Yrs document in batch.
+    /// 处理多个业务逻辑事务并批量应用到 Yrs 文档
     pub async fn handle_transaction_applied(&self, transactions: &[Transaction], room_id: &str) -> Result<()> {
         // 使用异步锁获取房间信息
         if let Some(awareness_ref) = self.yrs_manager.get_awareness_ref(room_id) {
@@ -128,18 +128,18 @@ impl SyncService {
                 for step in steps {
                     if let Some(converter) = registry.find_converter(step.as_ref()) {
                         if let Err(e) = converter.apply_to_yrs_txn(step.as_ref(), &mut txn) {
-                            tracing::error!("Failed to apply step to Yrs transaction: {}", e);
+                            tracing::error!("🔄 应用步骤到 Yrs 事务失败: {}", e);
                         }
                     } else {
                         let type_name = std::any::type_name_of_val(step.as_ref());
-                        tracing::warn!("No converter found for step: {}", type_name);
+                        tracing::warn!("🔄 应用步骤到 Yrs 事务失败: 没有找到步骤的转换器: {}", type_name);
                     }
                 }
             }
 
             // 统一提交所有更改
             txn.commit();
-            tracing::debug!("Applied {} transactions to room {}", transactions.len(), room_id);
+            tracing::debug!("🔄 应用 {} 个事务到房间: {}", transactions.len(), room_id);
         }
 
         Ok(())
@@ -147,7 +147,7 @@ impl SyncService {
 
     /// 获取房间的完整快照（用于新客户端初始化）
     pub fn get_room_snapshot(&self, room_id: &str, tree: &Tree) -> RoomSnapshot {
-        tracing::debug!("Getting snapshot for room {}", room_id);
+        tracing::debug!("🔄 获取房间快照: {}", room_id);
         Mapper::tree_to_snapshot(tree, room_id.to_string())
     }
 
@@ -220,13 +220,13 @@ impl SyncService {
     /// 2. 可选保存数据
     /// 3. 清理资源
     pub async fn offline_room(&self, room_id: &str, save_data: bool) -> Result<Option<RoomSnapshot>> {
-        tracing::info!("Starting offline process for room: {}", room_id);
+        tracing::info!("🔄 开始下线房间: {}", room_id);
 
         let mut final_snapshot = None;
 
         // 1. 检查房间是否存在
         if !self.yrs_manager.room_exists(room_id) {
-            tracing::warn!("Attempted to offline non-existent room: {}", room_id);
+            tracing::warn!("🔄 尝试下线不存在的房间: {}", room_id);
             return Ok(None);
         }
 
@@ -240,7 +240,7 @@ impl SyncService {
                 // 从 Yrs 文档重建 Tree 快照
                 if let Some(nodes_map) = txn.get_map("nodes") {
                     let node_count = nodes_map.len(&txn);
-                    tracing::info!("Saving {} nodes from room: {}", node_count, room_id);
+                    tracing::info!("🔄 保存 {} 个节点 from room: {}", node_count, room_id);
                     
                     // 创建简化的快照（实际项目中可能需要完整的 Tree 重建）
                     final_snapshot = Some(RoomSnapshot {
@@ -255,9 +255,9 @@ impl SyncService {
 
         // 3. 从 YrsManager 中移除房间（这会自动断开客户端）
         if let Some(_awareness_ref) = self.yrs_manager.remove_room(room_id).await {
-            tracing::info!("Room '{}' successfully offlined", room_id);
+            tracing::info!("🔄 房间 '{}' 成功下线", room_id);
         } else {
-            tracing::error!("Failed to remove room '{}' from YrsManager", room_id);
+            tracing::error!("🔄 从 YrsManager 中移除房间 '{}' 失败", room_id);
             return Err(crate::error::TransmissionError::SyncError(
                 format!("Failed to offline room: {}", room_id)
             ));
@@ -283,7 +283,7 @@ impl SyncService {
 
     /// 批量下线房间
     pub async fn offline_rooms(&self, room_ids: &[String], save_data: bool) -> Result<Vec<(String, Option<RoomSnapshot>)>> {
-        tracing::info!("Batch offlining {} rooms", room_ids.len());
+        tracing::info!("🔄 批量下线 {} 个房间", room_ids.len());
         
         let mut results = Vec::new();
         
@@ -293,13 +293,13 @@ impl SyncService {
                     results.push((room_id.clone(), snapshot));
                 }
                 Err(e) => {
-                    tracing::error!("Failed to offline room '{}': {}", room_id, e);
+                    tracing::error!("🔄 下线房间 '{}' 失败: {}", room_id, e);
                     results.push((room_id.clone(), None));
                 }
             }
         }
         
-        tracing::info!("Batch offline completed: {}/{} rooms successfully offlined", 
+        tracing::info!("🔄 批量下线完成: {}/{} 个房间成功下线", 
                       results.iter().filter(|(_, snapshot)| snapshot.is_some()).count(),
                       room_ids.len());
         
@@ -325,13 +325,7 @@ impl SyncService {
         stats
     }
 
-    /// Removes a room and its associated Yrs document.
-    pub fn remove_room(&self, room_id: &str) {
-        tracing::info!("Removing room: {}", room_id);
-        // The new YrsManager doesn't have remove_doc.
-        // This functionality can be re-added to YrsManager if needed.
-        // For now, we just log the action.
-    }
+   
 
     /// 获取 YrsManager 的引用（用于高级操作）
     pub fn yrs_manager(&self) -> &Arc<YrsManager> {

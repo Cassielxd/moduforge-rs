@@ -53,6 +53,7 @@ class App {
     document.getElementById('set-cursor-btn')!.onclick = () => this.setCursor();
     document.getElementById('simulate-typing-btn')!.onclick = () => this.simulateTyping();
     document.getElementById('move-cursor-btn')!.onclick = () => this.moveCursor();
+    document.getElementById('show-data-diff-btn')!.onclick = () => this.showDataDifference();
     
     // 添加手动重试按钮
     const retryBtn = document.getElementById('retry-btn');
@@ -82,6 +83,35 @@ class App {
     });
 
     this.updateConnectionUI(ConnectionStatus.Disconnected);
+    
+    // 监听网络状态变化
+    this.setupNetworkMonitoring();
+  }
+
+  private setupNetworkMonitoring(): void {
+    // 监听网络状态变化
+    window.addEventListener('online', () => {
+      this.log('🌐 网络已恢复');
+      if (this.client && this.client.getStatus() === ConnectionStatus.Failed) {
+        this.log('🔄 网络恢复后尝试重连');
+        setTimeout(() => {
+          this.client?.retry();
+        }, 1000);
+      }
+    });
+
+    window.addEventListener('offline', () => {
+      this.log('📵 网络已断开');
+      if (this.client) {
+        this.errorHandler.showNotification(this.errorHandler['createNotification']({
+          type: 'warning',
+          title: '网络断开',
+          message: '检测到网络连接中断，将在网络恢复后自动重连',
+          closable: true,
+          duration: 5000,
+        }));
+      }
+    });
   }
 
   logDetailedChanges(event: Y.YMapEvent<any>): void {
@@ -529,6 +559,59 @@ class App {
     }
   }
 
+  showDataDifference(): void {
+    if (!this.client || this.client.getStatus() !== ConnectionStatus.Connected) {
+      this.log('❌ 请先连接到房间');
+      return;
+    }
+
+    // 添加一些测试数据到 Doc
+    this.addNode();
+    this.setCursor();
+    this.simulateTyping();
+
+    // 显示对比信息
+    setTimeout(() => {
+      const docData = this.ydoc.getMap('nodes').toJSON();
+      const awarenessData: any = {};
+      
+      this.awareness.getStates().forEach((state, clientId) => {
+        if (state) {
+          awarenessData[clientId] = state;
+        }
+      });
+
+      const comparison = {
+        "🗄️ Yjs Doc 数据 (持久化)": {
+          "说明": "这些数据会被保存到服务器，刷新页面仍然存在",
+          "数据": docData,
+          "特点": ["持久化", "版本控制", "CRDT 同步", "可撤销/重做"]
+        },
+        "👥 Awareness 数据 (临时)": {
+          "说明": "这些数据仅在用户在线时存在，用户离线立即消失",
+          "数据": awarenessData,
+          "特点": ["临时存储", "实时同步", "用户状态", "光标位置"]
+        },
+        "🔄 总结": {
+          "Doc 节点数": Object.keys(docData).length,
+          "在线用户数": Object.keys(awarenessData).length,
+          "关键区别": "Doc 数据永久保存，Awareness 数据临时存在"
+        }
+      };
+
+      console.log("📊 数据存储对比:", comparison);
+      this.log("📊 数据存储对比已输出到控制台，打开开发者工具查看详细信息");
+      
+      // 也可以在页面上显示
+      alert(`📊 数据存储对比：
+      
+📄 Yjs Doc (持久化): ${Object.keys(docData).length} 个节点
+🖱️ Awareness (临时): ${Object.keys(awarenessData).length} 个用户在线
+
+详细信息请查看浏览器控制台。`);
+    }, 500);
+  }
+
   updateConnectionUI(status: ConnectionStatus): void {
     const isConnected = status === ConnectionStatus.Connected;
     const isConnecting = status === ConnectionStatus.Connecting || status === ConnectionStatus.Reconnecting;
@@ -545,6 +628,7 @@ class App {
     (document.getElementById('set-cursor-btn') as HTMLButtonElement).disabled = !isConnected;
     (document.getElementById('simulate-typing-btn') as HTMLButtonElement).disabled = !isConnected;
     (document.getElementById('move-cursor-btn') as HTMLButtonElement).disabled = !isConnected;
+    (document.getElementById('show-data-diff-btn') as HTMLButtonElement).disabled = !isConnected;
     
     // 显示/隐藏重试按钮
     const retryBtn = document.getElementById('retry-btn') as HTMLButtonElement;

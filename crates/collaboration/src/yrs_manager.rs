@@ -16,10 +16,10 @@ impl YrsManager {
         Self::default()
     }
 
-    /// Retrieves or creates an Awareness reference for a given room.
+    /// 获取或创建房间的 Awareness 引用
     ///
-    /// If an awareness object for the room doesn't exist, it creates a new Yrs `Doc`,
-    /// wraps it in an `Awareness` object, and stores it for future use.
+    /// 如果房间的 awareness 对象不存在，则创建一个新的 Yrs `Doc`，
+    /// 将其包装在 `Awareness` 对象中，并存储供未来使用。
     pub fn get_or_create_awareness(&self, room_id: &str) -> AwarenessRef {
         if let Some(awareness_ref) = self.awareness_refs.get(room_id) {
             return awareness_ref.clone();
@@ -33,7 +33,7 @@ impl YrsManager {
         awareness_ref
     }
 
-    /// Retrieves the awareness reference for a given room, if it exists.
+    /// 获取给定房间的 awareness 引用，如果存在的话
     pub fn get_awareness_ref(&self, room_id: &str) -> Option<AwarenessRef> {
         self.awareness_refs.get(room_id).map(|r| r.value().clone())
     }
@@ -56,13 +56,13 @@ impl YrsManager {
     /// 移除房间并清理相关资源
     /// 这是房间下线的核心方法
     pub async fn remove_room(&self, room_id: &str) -> Option<AwarenessRef> {
-        tracing::info!("Removing room '{}' from YrsManager", room_id);
+        tracing::info!("🔄 移除房间: '{}'", room_id);
         
         if let Some((_, awareness_ref)) = self.awareness_refs.remove(room_id) {
-            tracing::info!("Room '{}' successfully removed from YrsManager", room_id);
+            tracing::info!("🔄 房间 '{}' 成功 removed", room_id);
             Some(awareness_ref)
         } else {
-            tracing::warn!("Attempted to remove non-existent room: '{}'", room_id);
+            tracing::warn!("🔄 尝试移除不存在的房间: '{}'", room_id);
             None
         }
     }
@@ -70,21 +70,21 @@ impl YrsManager {
     /// 强制清理房间资源（即使有客户端连接）
     /// 用于紧急情况下的房间清理
     pub async fn force_cleanup_room(&self, room_id: &str) -> bool {
-        tracing::warn!("Force cleaning up room: '{}'", room_id);
+        tracing::warn!("🔄 强制清理房间: '{}'", room_id);
         
         if let Some((_, awareness_ref)) = self.awareness_refs.remove(room_id) {
             // 尝试获取写锁并清理
             if let Ok(mut awareness) = awareness_ref.try_write() {
                 // 清理 awareness 中的客户端状态
                 awareness.clean_local_state();
-                tracing::info!("Room '{}' force cleanup completed", room_id);
+                tracing::info!("房间 '{}' 强制清理完成", room_id);
                 true
             } else {
-                tracing::error!("Failed to acquire write lock for room '{}' during force cleanup", room_id);
+                tracing::error!("🔄 获取写锁失败");
                 false
             }
         } else {
-            tracing::warn!("Room '{}' not found during force cleanup", room_id);
+            tracing::warn!("🔄 房间 '{}' 不存在", room_id);
             false
         }
     }
@@ -99,13 +99,13 @@ impl YrsManager {
             }
         }
         
-        tracing::info!("Batch removed {} out of {} rooms", removed_rooms.len(), room_ids.len());
+        tracing::info!("🔄 批量移除 {} 个房间 out of {} rooms", removed_rooms.len(), room_ids.len());
         removed_rooms
     }
 
     /// 清理所有房间（服务器关闭时使用）
     pub async fn shutdown_all_rooms(&self) {
-        tracing::info!("Shutting down all {} rooms", self.awareness_refs.len());
+        tracing::info!("🔄 关闭所有 {} 个房间", self.awareness_refs.len());
         
         let all_rooms: Vec<String> = self.awareness_refs.iter()
             .map(|entry| entry.key().clone())
@@ -115,6 +115,6 @@ impl YrsManager {
             self.remove_room(&room_id).await;
         }
         
-        tracing::info!("All rooms have been shut down");
+        tracing::info!("🔄 所有房间已关闭");
     }
 }

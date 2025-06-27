@@ -275,20 +275,21 @@
             <button id="set-cursor-btn" disabled>设置光标位置</button>
             <button id="simulate-typing-btn" disabled>模拟输入状态</button>
             <button id="move-cursor-btn" disabled>移动光标</button>
+            <button id="show-data-diff-btn" disabled>对比数据存储</button>
         </div>
 
         <div class="data-section">
-            <div class="data-title">📄 当前数据快照</div>
+            <div class="data-title">📄 当前数据快照 (Yjs Doc - 持久化)</div>
             <div id="snapshot-data" class="data-content">暂无数据</div>
         </div>
 
         <div class="data-section">
-            <div class="data-title">📝 增量更新 (Patches)</div>
+            <div class="data-title">📝 增量更新 (Yjs Doc Patches - 持久化)</div>
             <div id="patches-data" class="data-content">暂无更新</div>
         </div>
 
         <div class="data-section">
-            <div class="data-title">🖱️ 光标状态 (实时同步)</div>
+            <div class="data-title">🖱️ 光标状态 (Awareness - 临时数据)</div>
             <div id="cursors-data" class="data-content">暂无光标信息</div>
         </div>
 
@@ -307,6 +308,12 @@
                     <li>右上角会显示详细的错误信息和建议</li>
                     <li>可以通过控制台 <code>window.app</code> 访问应用实例</li>
                     <li><strong>光标测试：</strong>打开多个浏览器标签页连接同一房间，使用光标功能按钮测试实时同步</li>
+                </ul>
+                <p><strong>数据存储说明：</strong></p>
+                <ul style="margin: 8px 0; padding-left: 20px;">
+                    <li><strong>Yjs Doc</strong> - 文档内容（节点、属性等），会持久化保存</li>
+                    <li><strong>Awareness</strong> - 用户状态（光标、在线状态等），临时数据，用户离线即消失</li>
+                    <li>光标位置、输入状态、用户信息都存储在 Awareness 中，不会影响文档内容</li>
                 </ul>
                 <p><strong>错误码说明：</strong></p>
                 <ul style="margin: 8px 0; padding-left: 20px;">

@@ -166,6 +166,8 @@ export class CollaborationClient {
     try {
       this.provider = new WebsocketProvider(this.url, this.room, this.doc, {
         awareness: this.awareness,
+        // 配置连接参数以提高稳定性
+        maxBackoffTime: 30000, // 最大重连延迟 30 秒
       });
 
       this.setupProviderListeners();

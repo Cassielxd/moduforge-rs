@@ -2,31 +2,31 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum TransmissionError {
-    #[error("Yrs operation error: {0}")]
+    #[error("Yrs 操作 错误: {0}")]
     YrsError(String),
 
-    #[error("Yrs update/encoding error: {0}")]
+    #[error("Yrs 编码/解码 错误: {0}")]
     YrsCodecError(#[from] yrs::encoding::read::Error),
 
-    #[error("WebSocket error: {0}")]
+    #[error("WebSocket 错误: {0}")]
     WebSocketError(String),
 
-    #[error("Serialization error: {0}")]
+    #[error("序列化 错误: {0}")]
     SerializationError(#[from] serde_json::Error),
 
-    #[error("IO error: {0}")]
+    #[error("IO 错误: {0}")]
     IoError(#[from] std::io::Error),
 
-    #[error("Room not found: {0}")]
+    #[error("房间 不存在: {0}")]
     RoomNotFound(String),
 
-    #[error("Client not found: {0}")]
+    #[error("客户端 不存在: {0}")]
     ClientNotFound(String),
 
-    #[error("Sync error: {0}")]
+    #[error("同步 错误: {0}")]
     SyncError(String),
 
-    #[error("Other error: {0}")]
+    #[error("其他 错误: {0}")]
     Other(#[from] anyhow::Error),
 }
 
