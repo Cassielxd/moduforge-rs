@@ -19,11 +19,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "yjs": "^13.6.27"
+    "yjs": "^13.6.14"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "vite": "^5.0.0",
-    "vite-plugin-dts": "^3.6.4"
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11",
+    "vite-plugin-dts": "^3.6.4",
+    "y-websocket": "^2.0.3"
   }
 } 

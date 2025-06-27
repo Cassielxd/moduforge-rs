@@ -1,13 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Clone)]
-pub struct ClientInfo {
-    pub id: String,
-    pub room_id: String,
-    pub connected_at: std::time::SystemTime,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoomSnapshot {
     pub room_id: String,

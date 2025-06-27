@@ -1,4 +1,4 @@
 export { CollaborationClient } from './client';
-export type { CollaborationClientOptions, ClientMessage, ServerMessage } from './types';
-export { ConnectionStatus } from './types'; 
-export { parseYjsUpdate } from './utils';
+export * from './types';
+export { CollaborationErrorHandler } from './error-handler';
+export type { ErrorDisplayOptions, NotificationOptions } from './error-handler'; 

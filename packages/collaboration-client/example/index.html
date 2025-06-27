@@ -36,15 +36,44 @@
             align-items: center;
             gap: 8px;
         }
-        .status-dot {
+        .status-indicator {
             width: 8px;
             height: 8px;
             border-radius: 50%;
             background: #dc3545;
+            transition: all 0.3s ease;
         }
-        .status-dot.connected {
+        .status-indicator.connected {
             background: #28a745;
+            box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.3);
         }
+        .status-indicator.connecting {
+            background: #ffc107;
+            animation: pulse 1.5s infinite;
+        }
+        .status-indicator.reconnecting {
+            background: #fd7e14;
+            animation: pulse 1s infinite;
+        }
+        .status-indicator.failed {
+            background: #dc3545;
+            animation: shake 0.5s ease-in-out;
+        }
+        .status-indicator.disconnected {
+            background: #6c757d;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-2px); }
+            75% { transform: translateX(2px); }
+        }
+        
         .control-panel {
             display: flex;
             gap: 12px;
@@ -69,6 +98,22 @@
         }
         button.primary:hover {
             background: #0056b3;
+        }
+        button.danger {
+            background: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+        button.danger:hover {
+            background: #c82333;
+        }
+        button.warning {
+            background: #ffc107;
+            color: #212529;
+            border-color: #ffc107;
+        }
+        button.warning:hover {
+            background: #e0a800;
         }
         button:disabled {
             opacity: 0.6;
@@ -109,22 +154,91 @@
             align-items: center;
             margin-bottom: 16px;
         }
+        
+        /* 错误提醒样式补充 */
+        .error-banner {
+            display: none;
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .error-banner.show {
+            display: block;
+        }
+        .success-banner {
+            display: none;
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .success-banner.show {
+            display: block;
+        }
+        
+        /* 连接状态提示 */
+        .connection-info {
+            background: #e2e3e5;
+            border: 1px solid #d6d8db;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #383d41;
+        }
+        .connection-info.error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .connection-info.success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .connection-info.warning {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🚀 ModuForge Yjs 同步测试</h1>
-            <p>测试 Rust 后端与前端 Yjs 的实时同步功能</p>
+            <p>测试 Rust 后端与前端 Yjs 的实时同步功能 - 包含完整错误处理</p>
+        </div>
+
+        <!-- 错误/成功提醒横幅 -->
+        <div id="error-banner" class="error-banner">
+            <strong>错误：</strong>
+            <span id="error-message">连接失败</span>
+        </div>
+        <div id="success-banner" class="success-banner">
+            <strong>成功：</strong>
+            <span id="success-message">连接成功</span>
+        </div>
+
+        <!-- 连接状态信息 -->
+        <div id="connection-info" class="connection-info">
+            💡 请输入房间ID并点击"连接房间"开始协作
         </div>
 
         <div class="status">
             <div class="status-item">
-                <div id="ws-status" class="status-dot"></div>
+                <div id="ws-status" class="status-indicator disconnected"></div>
                 <span>WebSocket</span>
             </div>
             <div class="status-item">
-                <div id="yjs-status" class="status-dot"></div>
+                <div id="yjs-status" class="status-indicator disconnected"></div>
                 <span>Yjs 同步</span>
             </div>
             <div class="status-item">
@@ -146,12 +260,21 @@
                 <input type="text" id="room-input" placeholder="房间ID" value="demo-room">
                 <button id="connect-btn" class="primary">连接房间</button>
                 <button id="disconnect-btn" disabled>断开连接</button>
+                <button id="retry-btn" class="warning" style="display: none;">重试连接</button>
             </div>
             <button id="add-node-btn" disabled>添加节点</button>
             <button id="update-attr-btn" disabled>更新属性</button>
             <button id="clear-data-btn">清空数据</button>
             <button id="request-sync-btn" disabled>请求重新同步</button>
             <button id="test-update-btn">测试本地更新</button>
+        </div>
+        
+        <!-- 光标功能控制面板 -->
+        <div class="control-panel" style="border-top: 1px solid #eee; padding-top: 16px; margin-top: 16px;">
+            <div style="font-weight: 600; margin-bottom: 12px; color: #333;">🖱️ 光标同步功能</div>
+            <button id="set-cursor-btn" disabled>设置光标位置</button>
+            <button id="simulate-typing-btn" disabled>模拟输入状态</button>
+            <button id="move-cursor-btn" disabled>移动光标</button>
         </div>
 
         <div class="data-section">
@@ -165,8 +288,34 @@
         </div>
 
         <div class="data-section">
+            <div class="data-title">🖱️ 光标状态 (实时同步)</div>
+            <div id="cursors-data" class="data-content">暂无光标信息</div>
+        </div>
+
+        <div class="data-section">
             <div class="data-title">📋 事件日志</div>
-            <div id="log-data" class="data-content log-content">等待连接...</div>
+            <div id="log-output" class="data-content log-content">等待连接...</div>
+        </div>
+
+        <div class="data-section">
+            <div class="data-title">🔧 调试信息</div>
+            <div style="font-size: 12px; color: #666; line-height: 1.5;">
+                <p><strong>使用说明：</strong></p>
+                <ul style="margin: 8px 0; padding-left: 20px;">
+                    <li>房间必须在服务器端预先创建才能连接</li>
+                    <li>如果连接失败，系统会自动重试</li>
+                    <li>右上角会显示详细的错误信息和建议</li>
+                    <li>可以通过控制台 <code>window.app</code> 访问应用实例</li>
+                    <li><strong>光标测试：</strong>打开多个浏览器标签页连接同一房间，使用光标功能按钮测试实时同步</li>
+                </ul>
+                <p><strong>错误码说明：</strong></p>
+                <ul style="margin: 8px 0; padding-left: 20px;">
+                    <li><code>4000</code> - 房间不存在</li>
+                    <li><code>4001</code> - 房间已满</li>
+                    <li><code>4003</code> - 访问被拒绝</li>
+                    <li><code>1006</code> - 网络连接异常</li>
+                </ul>
+            </div>
         </div>
     </div>
 

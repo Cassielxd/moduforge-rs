@@ -1,541 +1,516 @@
-use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::net::{TcpListener, TcpStream};
-use tokio_tungstenite::{accept_async, tungstenite::Message};
-use futures_util::{StreamExt, SinkExt};
-use dashmap::DashMap;
-use uuid::Uuid;
-use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
+use crate::{YrsManager, SyncService};
+use crate::sync_service::{RoomInfo, RoomStatus};
+use warp::ws::{WebSocket, Ws};
+use warp::{Filter, Rejection, Reply};
+use yrs_warp::broadcast::BroadcastGroup;
+use yrs_warp::ws::{WarpSink, WarpStream};
 use tokio::sync::Mutex;
-use crate::{Result, TransmissionError, YrsManager, ClientInfo, SyncService};
-use anyhow;
-use yrs::updates::decoder::Decode;
-use moduforge_core::runtime::ForgeRuntime;
-use yrs::Transact;
-use yrs::ReadTxn;
+use futures_util::StreamExt;
+use moduforge_model::tree::Tree;
+use serde_json::json;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum WsMessage {
-    /// 客户端加入房间
-    JoinRoom { room_id: String },
-    /// 客户端离开房间
-    LeaveRoom { room_id: String },
-    /// Yrs update 数据 (二进制)
-    YrsUpdate { room_id: String, update: Vec<u8> },
-    /// 客户端请求同步
-    YrsSyncRequest { room_id: String, state_vector: Vec<u8> },
-    /// JSON格式的状态同步消息
-    StateSync {
-        room_id: String,
-        operation: String,
-        data: serde_json::Value,
-        timestamp: u64,
-    },
-    /// 心跳
-    Ping,
-    /// 心跳响应
-    Pong,
-    /// 错误消息
-    Error { message: String },
-    /// 服务器通知消息
-    Notification { message: String },
+/// 自定义错误类型用于房间不存在的情况
+#[derive(Debug)]
+pub struct RoomNotFoundError {
+    room_id: String,
 }
 
-/// 内部广播消息
-#[derive(Debug, Clone)]
-pub enum BroadcastMessage {
-    /// 向房间广播文本消息
-    ToRoom {
-        room_id: String,
-        message: Arc<String>,
-        exclude_client: Option<String>,
-    },
-    /// 向房间广播二进制消息
-    ToRoomBinary {
-        room_id: String,
-        data: Arc<Vec<u8>>,
-        exclude_client: Option<String>,
-    },
-    /// 向特定客户端发送消息
-    ToClient { client_id: String, message: Arc<String> },
-    /// 向特定客户端发送二进制消息
-    ToClientBinary { client_id: String, data: Arc<Vec<u8>> },
-}
+impl warp::reject::Reject for RoomNotFoundError {}
 
-/// A message to be sent to a single client's websocket.
-/// Using Arc to avoid cloning the underlying data for every client in a broadcast.
-#[derive(Debug, Clone)]
-pub enum OutgoingMessage {
-    Text(Arc<String>),
-    Binary(Arc<Vec<u8>>),
-    // We can add other types like Close, etc. if needed
-}
-
-impl From<OutgoingMessage> for Message {
-    fn from(msg: OutgoingMessage) -> Self {
-        match msg {
-            OutgoingMessage::Text(text) => Message::Text((*text).clone()),
-            OutgoingMessage::Binary(data) => Message::Binary((*data).clone()),
-        }
+impl RoomNotFoundError {
+    pub fn new(room_id: String) -> Self {
+        Self { room_id }
+    }
+    
+    pub fn room_id(&self) -> &str {
+        &self.room_id
     }
 }
 
-/// 客户端连接信息（扩展版）
-#[derive(Debug, Clone)]
-pub struct ClientConnection {
-    pub info: ClientInfo,
-    pub sender: mpsc::UnboundedSender<OutgoingMessage>,
-}
-
-pub struct WebSocketServer {
+/// A wrapper around YrsManager to handle dynamic room creation and broadcast group management.
+#[derive(Clone)]
+pub struct CollaborationServer {
     yrs_manager: Arc<YrsManager>,
-    /// 客户端连接信息和发送通道
-    clients: Arc<DashMap<String, ClientConnection>>,
-    /// 房间到客户端的映射
-    room_clients: Arc<DashMap<String, Vec<String>>>,
-    /// 广播消息通道
-    broadcast_tx: mpsc::UnboundedSender<BroadcastMessage>,
-    broadcast_rx:
-        Arc<tokio::sync::Mutex<mpsc::UnboundedReceiver<BroadcastMessage>>>,
+    sync_service: Arc<SyncService>,
+    port: u16,
 }
 
-impl WebSocketServer {
-    pub fn new(yrs_manager: Arc<YrsManager>) -> Self {
-        let (broadcast_tx, broadcast_rx) = mpsc::unbounded_channel();
-
-        Self {
-            yrs_manager,
-            clients: Arc::new(DashMap::new()),
-            room_clients: Arc::new(DashMap::new()),
-            broadcast_tx,
-            broadcast_rx: Arc::new(tokio::sync::Mutex::new(broadcast_rx)),
+impl CollaborationServer {
+    pub fn new(yrs_manager: Arc<YrsManager>, port: u16) -> Self {
+        let sync_service = Arc::new(SyncService::new(yrs_manager.clone()));
+        Self { 
+            yrs_manager, 
+            sync_service,
+            port 
         }
     }
 
-    /// 启动 WebSocket 服务器
-    pub async fn start(
-        self: Arc<Self>,
-        addr: SocketAddr,
-        sync_service: Arc<SyncService>,
-        runtime: Arc<tokio::sync::Mutex<moduforge_core::runtime::ForgeRuntime>>,
-    ) -> Result<()> {
-        tokio::spawn(async move {
-            
-        let listener = TcpListener::bind(addr).await.unwrap();
-        tracing::info!("WebSocket 服务器启动在: {}", addr);
+    /// 使用现有的 SyncService 创建服务器
+    pub fn with_sync_service(yrs_manager: Arc<YrsManager>, sync_service: Arc<SyncService>, port: u16) -> Self {
+        Self { 
+            yrs_manager, 
+            sync_service,
+            port 
+        }
+    }
 
-        // 启动广播处理任务
-        self.clone().start_broadcast_handler().await;
-
-        while let Ok((stream, addr)) = listener.accept().await {
-            let server = self.clone();
-            let sync_service = sync_service.clone();
-            let runtime = runtime.clone();
-
-            tokio::spawn(async move {
-                if let Err(e) = server
-                    .handle_connection(stream, addr, sync_service, runtime)
-                    .await
-                {
-                    tracing::error!("处理连接失败: {}", e);
-                }
+    /// 自定义错误处理器
+    pub async  fn handle_rejection(err: Rejection) -> Result<impl Reply, std::convert::Infallible> {
+        if let Some(room_error) = err.find::<RoomNotFoundError>() {
+            let error_response = json!({
+                "error": "ROOM_NOT_FOUND",
+                "message": format!("房间 '{}' 不存在", room_error.room_id()),
+                "room_id": room_error.room_id(),
+                "code": 404
             });
+            
+            let reply = warp::reply::with_status(
+                warp::reply::json(&error_response),
+                warp::http::StatusCode::NOT_FOUND,
+            );
+            
+            return Ok(reply.into_response());
         }
+        
+        // 处理其他错误
+        if err.is_not_found() {
+            let error_response = json!({
+                "error": "NOT_FOUND",
+                "message": "请求的资源不存在",
+                "code": 404
+            });
+            
+            let reply = warp::reply::with_status(
+                warp::reply::json(&error_response),
+                warp::http::StatusCode::NOT_FOUND,
+            );
+            
+            return Ok(reply.into_response());
+        }
+        
+        // 默认错误处理
+        let error_response = json!({
+            "error": "INTERNAL_SERVER_ERROR",
+            "message": "服务器内部错误",
+            "code": 500
         });
+        
+        let reply = warp::reply::with_status(
+            warp::reply::json(&error_response),
+            warp::http::StatusCode::INTERNAL_SERVER_ERROR,
+        );
+        
+        Ok(reply.into_response())
+    }
+
+    /// 初始化房间，可选择性地使用现有的 Tree 数据进行同步
+    /// 这是关键的初始化时机：在客户端连接前确保房间已经准备好
+    pub async fn init_room_with_data(&self, room_id: &str, tree: &Tree) -> crate::Result<()> {
+        tracing::info!("Initializing room '{}' with data", room_id);
+        
+        self.sync_service.init_room_with_tree(room_id, tree).await?;
+            tracing::info!("Room '{}' initialized with existing tree data", room_id);
+        
+        Ok(())
+    }
+
+    /// 房间下线 - 优雅关闭房间
+    /// 1. 通知所有客户端房间即将关闭
+    /// 2. 等待客户端完成当前操作
+    /// 3. 保存数据（可选）
+    /// 4. 清理资源
+    pub async fn offline_room(&self, room_id: &str, save_data: bool) -> crate::Result<bool> {
+        tracing::info!("🔄 开始下线房间: {}", room_id);
+
+        // 1. 检查房间状态
+        let room_status = self.sync_service.get_room_status(room_id).await;
+        match room_status {
+            RoomStatus::NotExists => {
+                tracing::warn!("❌ 尝试下线不存在的房间: {}", room_id);
+                return Ok(false);
+            }
+            RoomStatus::Offline => {
+                tracing::info!("ℹ️ 房间 {} 已经下线", room_id);
+                return Ok(true);
+            }
+            _ => {}
+        }
+
+        // 2. 获取房间信息
+        if let Some(room_info) = self.sync_service.get_room_info(room_id).await {
+            tracing::info!("📊 房间信息 - 节点数: {}, 客户端数: {}", 
+                          room_info.node_count, room_info.client_count);
+        }
+
+        // 3. 执行下线操作
+        match self.sync_service.offline_room(room_id, save_data).await {
+            Ok(snapshot) => {
+                if let Some(_snapshot) = snapshot {
+                    tracing::info!("💾 房间 {} 数据已保存", room_id);
+                }
+                tracing::info!("✅ 房间 {} 成功下线", room_id);
+                Ok(true)
+            }
+            Err(e) => {
+                tracing::error!("❌ 房间 {} 下线失败: {}", room_id, e);
+                Err(e)
+            }
+        }
+    }
+
+    /// 强制房间下线 - 紧急情况使用
+    pub async fn force_offline_room(&self, room_id: &str) -> crate::Result<bool> {
+        tracing::warn!("⚠️ 强制下线房间: {}", room_id);
+        
+        match self.sync_service.force_offline_room(room_id).await {
+            Ok(success) => {
+                if success {
+                    tracing::info!("✅ 房间 {} 强制下线成功", room_id);
+                } else {
+                    tracing::error!("❌ 房间 {} 强制下线失败", room_id);
+                }
+                Ok(success)
+            }
+            Err(e) => {
+                tracing::error!("❌ 强制下线房间 {} 时发生错误: {}", room_id, e);
+                Err(e)
+            }
+        }
+    }
+
+    /// 批量下线房间
+    pub async fn offline_rooms(&self, room_ids: &[String], save_data: bool) -> crate::Result<Vec<(String, bool)>> {
+        tracing::info!("🔄 批量下线 {} 个房间", room_ids.len());
+        
+        let mut results = Vec::new();
+        
+        for room_id in room_ids {
+            match self.offline_room(room_id, save_data).await {
+                Ok(success) => results.push((room_id.clone(), success)),
+                Err(e) => {
+                    tracing::error!("❌ 下线房间 {} 失败: {}", room_id, e);
+                    results.push((room_id.clone(), false));
+                }
+            }
+        }
+        
+        let successful_count = results.iter().filter(|(_, success)| *success).count();
+        tracing::info!("📊 批量下线完成: {}/{} 个房间成功下线", successful_count, room_ids.len());
+        
+        Ok(results)
+    }
+
+    /// 获取所有活跃房间列表
+    pub fn get_active_rooms(&self) -> Vec<String> {
+        self.sync_service.get_active_rooms()
+    }
+
+    /// 获取房间统计信息
+    pub async fn get_rooms_stats(&self) -> Vec<RoomInfo> {
+        self.sync_service.get_rooms_stats().await
+    }
+
+    /// 根据条件下线房间
+    /// 例如：下线空闲时间超过指定时间的房间、下线没有客户端的房间等
+    pub async fn offline_rooms_by_condition<F>(&self, condition: F, save_data: bool) -> crate::Result<Vec<String>>
+    where
+        F: Fn(&RoomInfo) -> bool,
+    {
+        let room_stats = self.get_rooms_stats().await;
+        let rooms_to_offline: Vec<String> = room_stats
+            .into_iter()
+            .filter(|info| condition(info))
+            .map(|info| info.room_id)
+            .collect();
+
+        if rooms_to_offline.is_empty() {
+            tracing::info!("🔍 没有房间满足下线条件");
+            return Ok(vec![]);
+        }
+
+        tracing::info!("🎯 找到 {} 个房间满足下线条件", rooms_to_offline.len());
+        
+        let results = self.offline_rooms(&rooms_to_offline, save_data).await?;
+        let successful_rooms: Vec<String> = results
+            .into_iter()
+            .filter_map(|(room_id, success)| if success { Some(room_id) } else { None })
+            .collect();
+
+        Ok(successful_rooms)
+    }
+
+    /// 下线空房间（没有客户端连接的房间）
+    pub async fn offline_empty_rooms(&self, save_data: bool) -> crate::Result<Vec<String>> {
+        tracing::info!("🔍 搜索并下线空房间");
+        
+        self.offline_rooms_by_condition(
+            |room_info| room_info.client_count == 0,
+            save_data,
+        ).await
+    }
+
+    /// 下线长时间未活动的房间
+    pub async fn offline_inactive_rooms(&self, inactive_duration: std::time::Duration, save_data: bool) -> crate::Result<Vec<String>> {
+        let now = std::time::SystemTime::now();
+        tracing::info!("🔍 搜索并下线超过 {:?} 未活动的房间", inactive_duration);
+        
+        self.offline_rooms_by_condition(
+            |room_info| {
+                now.duration_since(room_info.last_activity)
+                    .unwrap_or_default() > inactive_duration
+            },
+            save_data,
+        ).await
+    }
+
+    /// 服务器完全关闭 - 下线所有房间
+    pub async fn shutdown(&self, save_all_data: bool) -> crate::Result<()> {
+        tracing::info!("🔴 开始服务器关闭流程");
+        
+        let all_rooms = self.get_active_rooms();
+        if all_rooms.is_empty() {
+            tracing::info!("ℹ️ 没有活跃房间需要关闭");
+            return Ok(());
+        }
+
+        tracing::info!("📊 准备关闭 {} 个房间", all_rooms.len());
+        
+        // 批量下线所有房间
+        let results = self.offline_rooms(&all_rooms, save_all_data).await?;
+        let successful_count = results.iter().filter(|(_, success)| *success).count();
+        
+        tracing::info!("✅ 服务器关闭完成: {}/{} 个房间成功下线", successful_count, all_rooms.len());
+        
+        if successful_count != all_rooms.len() {
+            tracing::warn!("⚠️ 部分房间下线失败，可能需要手动清理");
+        }
 
         Ok(())
     }
 
-    /// 启动广播消息处理器
-    async fn start_broadcast_handler(self: Arc<Self>) {
-        let clients = self.clients.clone();
-        let room_clients = self.room_clients.clone();
-        let broadcast_rx = self.broadcast_rx.clone();
+    /// Starts the WebSocket server.
+    pub async fn start(self) {
+        let server = self.clone(); // Clone self to move into the filter
+        
+        // WebSocket 路由（带错误处理）
+        let ws_route = warp::path("collaboration")
+            .and(warp::path::param::<String>()) // Expect a room_id in the path, e.g., /collaboration/my-room-name
+            .and(warp::ws())
+            .and(warp::any().map(move || server.clone()))
+            .and_then(Self::ws_handler);
 
-        tokio::spawn(async move {
-            let mut rx = broadcast_rx.lock().await;
+        // HTTP 房间检查路由
+        let server_for_http = self.clone();
+        let room_check_route = warp::path("collaboration")
+            .and(warp::path("room-check"))
+            .and(warp::path::param::<String>()) // room_id
+            .and(warp::get())
+            .and(warp::any().map(move || server_for_http.clone()))
+            .and_then(Self::room_check_handler);
 
-            while let Some(broadcast_msg) = rx.recv().await {
-                Self::handle_broadcast_message(
-                    broadcast_msg,
-                    &clients,
-                    &room_clients,
-                )
-                .await;
-            }
-        });
+        // 健康检查路由
+        let server_for_health = self.clone();
+        let health_route = warp::path("health")
+            .and(warp::get())
+            .and(warp::any().map(move || server_for_health.clone()))
+            .and_then(Self::health_check_handler);
+
+        // 房间状态路由
+        let server_for_status = self.clone();
+        let room_status_route = warp::path("collaboration")
+            .and(warp::path("rooms"))
+            .and(warp::path::param::<String>()) // room_id
+            .and(warp::path("status"))
+            .and(warp::get())
+            .and(warp::any().map(move || server_for_status.clone()))
+            .and_then(Self::room_status_handler);
+
+        // 合并所有路由并添加全局错误处理
+        let routes = ws_route
+            .or(room_check_route)
+            .or(health_route)
+            .or(room_status_route)
+            .recover(Self::handle_rejection) // 移到这里，对所有路由应用错误处理
+            .with(warp::cors()
+                .allow_any_origin()
+                .allow_headers(vec!["content-type"])
+                .allow_methods(vec!["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"])
+            );
+
+        let addr = ([0, 0, 0, 0], self.port);
+        tracing::info!("🌐 协作服务器启动于 http://{}:{}", addr.0.iter().map(|&o| o.to_string()).collect::<Vec<_>>().join("."), addr.1);
+        tracing::info!("📡 WebSocket: ws://{}:{}/collaboration/{{room_id}}", addr.0.iter().map(|&o| o.to_string()).collect::<Vec<_>>().join("."), addr.1);
+        tracing::info!("🔍 房间检查: http://{}:{}/collaboration/room-check/{{room_id}}", addr.0.iter().map(|&o| o.to_string()).collect::<Vec<_>>().join("."), addr.1);
+        tracing::info!("💚 健康检查: http://{}:{}/health", addr.0.iter().map(|&o| o.to_string()).collect::<Vec<_>>().join("."), addr.1);
+        tracing::info!("📊 房间状态: http://{}:{}/collaboration/rooms/{{room_id}}/status", addr.0.iter().map(|&o| o.to_string()).collect::<Vec<_>>().join("."), addr.1);
+        
+        warp::serve(routes).run(addr).await;
     }
 
-    /// 处理广播消息
-    async fn handle_broadcast_message(
-        message: BroadcastMessage,
-        clients: &DashMap<String, ClientConnection>,
-        room_clients: &DashMap<String, Vec<String>>,
-    ) {
-        match message {
-            BroadcastMessage::ToRoom { room_id, message, exclude_client } => {
-                let outgoing_msg = OutgoingMessage::Text(message);
-                if let Some(client_list) = room_clients.get(&room_id) {
-                    for client_id in client_list.iter() {
-                        if let Some(ref exclude) = exclude_client {
-                            if client_id == exclude {
-                                continue;
-                            }
-                        }
-
-                        if let Some(client) = clients.get(client_id) {
-                            let _ = client.sender.send(outgoing_msg.clone());
-                        }
-                    }
-                }
-            },
-            BroadcastMessage::ToRoomBinary {
-                room_id,
-                data,
-                exclude_client,
-            } => {
-                let outgoing_msg = OutgoingMessage::Binary(data);
-                if let Some(client_list) = room_clients.get(&room_id) {
-                    for client_id in client_list.iter() {
-                        if let Some(ref exclude) = exclude_client {
-                            if client_id == exclude {
-                                continue;
-                            }
-                        }
-
-                        if let Some(client) = clients.get(client_id) {
-                            let _ = client.sender.send(outgoing_msg.clone());
-                        }
-                    }
-                }
-            },
-            BroadcastMessage::ToClient { client_id, message } => {
-                if let Some(client) = clients.get(&client_id) {
-                    let _ = client.sender.send(OutgoingMessage::Text(message));
-                }
-            },
-            BroadcastMessage::ToClientBinary { client_id, data } => {
-                if let Some(client) = clients.get(&client_id) {
-                    let _ = client.sender.send(OutgoingMessage::Binary(data));
-                }
-            },
+    /// WebSocket connection handler with room initialization.
+    async fn ws_handler(
+        room_id: String,
+        ws: Ws,
+        server: CollaborationServer,
+    ) -> Result<impl Reply, Rejection> {
+        let yrs_manager = server.yrs_manager.clone();
+        
+        // 🔍 关键检查：房间必须已存在，不自动创建
+        if !yrs_manager.room_exists(&room_id) {
+            tracing::warn!("❌ 客户端尝试连接不存在的房间: {}", room_id);
+            
+            // 返回自定义的房间不存在错误
+            return Err(warp::reject::custom(RoomNotFoundError::new(room_id)));
         }
-    }
 
-    async fn handle_connection(
-        self: Arc<Self>,
-        stream: TcpStream,
-        addr: SocketAddr,
-        sync_service: Arc<SyncService>,
-        runtime: Arc<tokio::sync::Mutex<moduforge_core::runtime::ForgeRuntime>>,
-    ) -> Result<()> {
-        let ws_stream = accept_async(stream).await.map_err(|e| {
-            TransmissionError::Other(anyhow::anyhow!("WebSocket升级失败: {}", e))
-        })?;
-
-        let client_id = Uuid::new_v4().to_string();
-        let (tx, mut rx) = mpsc::unbounded_channel::<OutgoingMessage>();
-
-        let client_info = ClientInfo {
-            id: client_id.clone(),
-            room_id: String::new(),
-            connected_at: std::time::SystemTime::now(),
+        // 获取已存在的 awareness（不创建新的）
+        let awareness_ref = match yrs_manager.get_awareness_ref(&room_id) {
+            Some(awareness) => awareness,
+            None => {
+                // 理论上不应该到达这里，因为上面已经检查过房间存在
+                tracing::error!("🚨 房间 {} 存在但无法获取 awareness", room_id);
+                return Err(warp::reject::custom(RoomNotFoundError::new(room_id)));
+            }
         };
+        
+        Ok(ws.on_upgrade(move |socket| async move {
+            tracing::info!("✅ 客户端成功连接到现有房间: {}", room_id);
+            
+            // The buffer capacity can be adjusted as needed. 128 is a reasonable default.
+            let bcast = Arc::new(BroadcastGroup::new(awareness_ref, 128).await);
+            Self::peer(socket, bcast, room_id.clone()).await;
+        }))
+    }
 
-        let client_connection = ClientConnection {
-            info: client_info,
-            sender: tx,
-        };
+    /// Handle individual peer connection (based on official example).
+    async fn peer(ws: WebSocket, bcast: Arc<BroadcastGroup>, room_id: String) {
+        let (sink, stream) = ws.split();
+        let sink = Arc::new(Mutex::new(WarpSink::from(sink)));
+        let stream = WarpStream::from(stream);
+        let sub = bcast.subscribe(sink, stream);
+        
+        tracing::info!("Client connected to room: {}", room_id);
+        
+        match sub.completed().await {
+            Ok(_) => {
+                tracing::info!("Client disconnected from room: {} - broadcasting finished successfully", room_id);
+            },
+            Err(e) => {
+                tracing::error!("Client disconnected from room: {} - broadcasting finished abruptly: {}", room_id, e);
+            },
+        }
+    }
 
-        self.clients.insert(client_id.clone(), client_connection);
+    /// 获取 SyncService 的引用，用于外部操作
+    pub fn sync_service(&self) -> &Arc<SyncService> {
+        &self.sync_service
+    }
 
-        let (mut ws_sender, mut ws_receiver) = ws_stream.split();
+    /// HTTP 房间检查处理器
+    async fn room_check_handler(
+        room_id: String,
+        server: CollaborationServer,
+    ) -> Result<impl Reply, Rejection> {
+        tracing::debug!("🔍 检查房间是否存在: {}", room_id);
 
-        // 处理接收到的消息
-        let server = self.clone();
-        let sync_service_clone = sync_service.clone();
-        let runtime_clone = runtime.clone();
-        let client_id_clone = client_id.clone();
+        let exists = server.yrs_manager.room_exists(&room_id);
+        
+        if exists {
+            let room_info = server.sync_service.get_room_info(&room_id).await;
+            
+            let response = json!({
+                "exists": true,
+                "room_id": room_id,
+                "status": "available",
+                "info": room_info
+            });
+            
+            tracing::debug!("✅ 房间 {} 存在", room_id);
+            Ok(warp::reply::with_status(
+                warp::reply::json(&response),
+                warp::http::StatusCode::OK,
+            ))
+        } else {
+            let response = json!({
+                "exists": false,
+                "room_id": room_id,
+                "status": "not_found",
+                "message": format!("房间 '{}' 不存在", room_id)
+            });
+            
+            tracing::debug!("❌ 房间 {} 不存在", room_id);
+            Ok(warp::reply::with_status(
+                warp::reply::json(&response),
+                warp::http::StatusCode::NOT_FOUND,
+            ))
+        }
+    }
 
-        let receive_task = tokio::spawn(async move {
-            while let Some(msg) = ws_receiver.next().await {
-                match msg {
-                    Ok(Message::Text(text)) => {
-                        if let Ok(ws_message) = serde_json::from_str::<WsMessage>(&text) {
-                            if let Err(e) = server
-                                .handle_message(&client_id_clone, ws_message, &sync_service_clone, &runtime_clone)
-                                .await
-                            {
-                                tracing::error!("处理消息失败: {}", e);
-                            }
-                        }
-                    },
-                    Ok(Message::Binary(data)) => {
-                        // 处理二进制消息（Yrs updates）
-                        tracing::debug!("收到二进制消息，长度: {}", data.len());
-                    },
-                    Ok(Message::Close(_)) => {
-                        tracing::info!("客户端 {} 主动断开连接", client_id_clone);
-                        break;
-                    },
-                    Err(e) => {
-                        tracing::error!("WebSocket错误: {}", e);
-                        break;
-                    },
-                    _ => {}
-                }
+    /// 健康检查处理器
+    async fn health_check_handler(
+        server: CollaborationServer,
+    ) -> Result<impl Reply, Rejection> {
+        let room_stats = server.sync_service.get_rooms_stats().await;
+        let active_rooms = server.sync_service.get_active_rooms();
+        
+        let response = json!({
+            "status": "healthy",
+            "timestamp": std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+            "service": "ModuForge Collaboration Server",
+            "version": env!("CARGO_PKG_VERSION"),
+            "statistics": {
+                "active_rooms": active_rooms.len(),
+                "total_rooms": room_stats.len(),
+                "rooms": active_rooms
             }
         });
 
-        // 处理发送的消息
-        let send_task = tokio::spawn(async move {
-            while let Some(msg) = rx.recv().await {
-                if let Err(e) = ws_sender.send(msg.into()).await {
-                    tracing::error!("发送消息失败: {}", e);
-                    break;
-                }
-            }
-        });
-
-        // 等待任一任务完成
-        tokio::select! {
-            _ = receive_task => {
-                tracing::info!("接收任务完成");
-            }
-            _ = send_task => {
-                tracing::info!("发送任务完成");
-            }
-        }
-
-        // 清理客户端连接
-        self.cleanup_client(&client_id).await;
-
-        Ok(())
+        Ok(warp::reply::with_status(
+            warp::reply::json(&response),
+            warp::http::StatusCode::OK,
+        ))
     }
 
-    async fn handle_message(
-        &self,
-        client_id: &str,
-        message: WsMessage,
-        sync_service: &Arc<SyncService>,
-        runtime: &Arc<tokio::sync::Mutex<moduforge_core::runtime::ForgeRuntime>>,
-    ) -> Result<()> {
-        match message {
-            WsMessage::JoinRoom { room_id } => {
-                if let Some(mut client) = self.clients.get_mut(client_id) {
-                    client.info.room_id = room_id.clone();
-                }
-                self.room_clients
-                    .entry(room_id.clone())
-                    .or_default()
-                    .push(client_id.to_string());
-                let _doc = self.yrs_manager.get_or_create_doc(&room_id);
-                tracing::info!("客户端 {} 加入房间 {}", client_id, room_id);
-                Ok(())
-            },
-            WsMessage::LeaveRoom { room_id } => {
-                if let Some(mut client_list) =
-                    self.room_clients.get_mut(&room_id)
-                {
-                    client_list.retain(|id| id != client_id);
-                }
-                if let Some(mut client) = self.clients.get_mut(client_id) {
-                    client.info.room_id = String::new();
-                }
-                tracing::info!("客户端 {} 离开房间 {}", client_id, room_id);
-                Ok(())
-            },
-            WsMessage::YrsUpdate { room_id, update } => {
-                let doc =
-                    self.yrs_manager.get_doc(&room_id).ok_or_else(|| {
-                        TransmissionError::RoomNotFound(room_id.clone())
-                    })?;
-                if let Err(e) = apply_update_to_doc(&doc, &update) {
-                    tracing::error!("应用更新失败: {}", e);
-                } else {
-                    self.broadcast_tx
-                        .send(BroadcastMessage::ToRoomBinary {
-                            room_id,
-                            data: Arc::new(update),
-                            exclude_client: Some(client_id.to_string()),
-                        })
-                        .map_err(|e| {
-                            TransmissionError::Other(anyhow::anyhow!(
-                                e.to_string()
-                            ))
-                        })?;
-                }
-                Ok(())
-            },
-            WsMessage::YrsSyncRequest { room_id, state_vector } => {
-                tracing::debug!(
-                    "收到来自 {} 的同步请求，房间: {}",
-                    client_id,
-                    room_id
-                );
+    /// 房间状态处理器
+    async fn room_status_handler(
+        room_id: String,
+        server: CollaborationServer,
+    ) -> Result<impl Reply, Rejection> {
+        tracing::debug!("📊 获取房间状态: {}", room_id);
 
-                let tree = runtime.lock().await.doc().get_inner().clone();
-                let diff_update = sync_service
-                    .handle_sync_request(&room_id, &tree, &state_vector)
-                    .await?;
+        if let Some(room_info) = server.sync_service.get_room_info(&room_id).await {
+            let response = json!({
+                "room_id": room_id,
+                "status": room_info.status,
+                "node_count": room_info.node_count,
+                "client_count": room_info.client_count,
+                "last_activity": room_info.last_activity
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs(),
+                "available": true
+            });
 
-                if !diff_update.is_empty() {
-                    self.broadcast_tx
-                        .send(BroadcastMessage::ToClientBinary {
-                            client_id: client_id.to_string(),
-                            data: Arc::new(diff_update),
-                        })
-                        .map_err(|e| {
-                            TransmissionError::Other(anyhow::anyhow!(
-                                e.to_string()
-                            ))
-                        })?;
-                }
+            Ok(warp::reply::with_status(
+                warp::reply::json(&response),
+                warp::http::StatusCode::OK,
+            ))
+        } else {
+            let response = json!({
+                "room_id": room_id,
+                "status": "not_found",
+                "available": false,
+                "message": format!("房间 '{}' 不存在", room_id)
+            });
 
-                Ok(())
-            },
-            WsMessage::Ping => {
-                let pong = WsMessage::Pong;
-                let json = serde_json::to_string(&pong)?;
-                self.broadcast_tx
-                    .send(BroadcastMessage::ToClient {
-                        client_id: client_id.to_string(),
-                        message: Arc::new(json),
-                    })
-                    .map_err(|e| {
-                        TransmissionError::Other(anyhow::anyhow!(e.to_string()))
-                    })?;
-                Ok(())
-            },
-            _ => Ok(()),
+            Ok(warp::reply::with_status(
+                warp::reply::json(&response),
+                warp::http::StatusCode::NOT_FOUND,
+            ))
         }
     }
-
-    async fn cleanup_client(
-        &self,
-        client_id: &str,
-    ) {
-        if let Some((_, client)) = self.clients.remove(client_id) {
-            tracing::info!("客户端断开连接: {}", client_id);
-            let room_id = client.info.room_id;
-
-            if !room_id.is_empty() {
-                let should_remove_doc = if let Some(mut room) =
-                    self.room_clients.get_mut(&room_id)
-                {
-                    room.retain(|id| id != client_id);
-                    room.is_empty()
-                } else {
-                    false
-                };
-
-                if should_remove_doc {
-                    if self.room_clients.remove(&room_id).is_some() {
-                        self.yrs_manager.remove_doc(&room_id);
-                        tracing::info!("房间 {} 已空，移除Yrs Doc", room_id);
-                    }
-                }
-            }
-        }
-    }
-
-    /// 获取在线客户端数量
-    pub fn client_count(&self) -> usize {
-        self.clients.len()
-    }
-
-    /// 获取房间数量
-    pub fn room_count(&self) -> usize {
-        self.room_clients.len()
-    }
-
-    /// 🚀 主动推送消息到房间
-    pub fn broadcast_to_room(
-        &self,
-        room_id: &str,
-        message: String,
-        exclude_client: Option<String>,
-    ) -> Result<()> {
-        self.broadcast_tx
-            .send(BroadcastMessage::ToRoom {
-                room_id: room_id.to_string(),
-                message: Arc::new(message),
-                exclude_client,
-            })
-            .map_err(|e| {
-                TransmissionError::Other(anyhow::anyhow!(e.to_string()))
-            })
-    }
-
-    /// 🚀 主动推送二进制数据到房间
-    pub fn broadcast_binary_to_room(
-        &self,
-        room_id: &str,
-        data: Vec<u8>,
-        exclude_client: Option<String>,
-    ) -> Result<()> {
-        self.broadcast_tx
-            .send(BroadcastMessage::ToRoomBinary {
-                room_id: room_id.to_string(),
-                data: Arc::new(data),
-                exclude_client,
-            })
-            .map_err(|e| {
-                TransmissionError::Other(anyhow::anyhow!(e.to_string()))
-            })
-    }
-
-    /// 🚀 主动推送消息到特定客户端
-    pub fn send_to_client(
-        &self,
-        client_id: &str,
-        message: String,
-    ) -> Result<()> {
-        self.broadcast_tx
-            .send(BroadcastMessage::ToClient {
-                client_id: client_id.to_string(),
-                message: Arc::new(message),
-            })
-            .map_err(|e| {
-                TransmissionError::Other(anyhow::anyhow!(e.to_string()))
-            })
-    }
-
-    /// 🚀 主动推送二进制数据到特定客户端
-    pub fn send_binary_to_client(
-        &self,
-        client_id: &str,
-        data: Vec<u8>,
-    ) -> Result<()> {
-        self.broadcast_tx
-            .send(BroadcastMessage::ToClientBinary {
-                client_id: client_id.to_string(),
-                data: Arc::new(data),
-            })
-            .map_err(|e| {
-                TransmissionError::Other(anyhow::anyhow!(e.to_string()))
-            })
-    }
-}
-
-// Helper functions extracted for clarity
-fn apply_update_to_doc(
-    doc: &Arc<yrs::Doc>,
-    update: &[u8],
-) -> crate::Result<()> {
-    let u = yrs::Update::decode_v1(update)?;
-    let mut txn = doc.transact_mut();
-    txn.apply_update(u)?;
-    Ok(())
-}
-
-#[allow(dead_code)]
-fn get_diff_update_from_doc(
-    doc: &Arc<yrs::Doc>,
-    sv: &[u8],
-) -> std::result::Result<Vec<u8>, yrs::encoding::read::Error> {
-    let state_vector = yrs::StateVector::decode_v1(sv)?;
-    let txn = doc.transact();
-    Ok(txn.encode_diff_v1(&state_vector))
 }

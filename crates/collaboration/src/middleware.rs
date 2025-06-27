@@ -20,7 +20,7 @@ impl Middleware for YrsMiddleware {
     }
     async fn after_dispatch(
         &self,
-        state: Option<Arc<State>>,
+        _state: Option<Arc<State>>,
         transactions: &[Transaction],
     ) -> ForgeResult<Option<Transaction>> {
         tracing::info!(
@@ -29,29 +29,16 @@ impl Middleware for YrsMiddleware {
             self.room_id
         );
 
-        let state = match state {
-            Some(s) => s,
-            None => {
-                error!(
-                    "YrsMiddleware after_dispatch called without state, cannot sync."
-                );
-                return Ok(None);
-            },
-        };
 
-        // 使用新的批量二进制格式同步
+
+        // 同步每个事务
         if let Err(e) = self
-            .sync_service
-            .handle_transaction_applied(
-                &self.room_id,
-                transactions,
-                &state,
-                None,
-            )
-            .await
-        {
-            error!("YRS同步失败: {}", e);
-        }
+                .sync_service
+                .handle_transaction_applied(transactions, &self.room_id)
+                .await
+            {
+                error!("YRS同步失败: {}", e);
+            }
 
         Ok(None)
     }
