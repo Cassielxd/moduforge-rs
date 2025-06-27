@@ -1,4 +1,4 @@
-use std::{ops::Index, sync::Arc, num::NonZeroUsize};
+use std::{ops::Index, num::NonZeroUsize};
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 use im::Vector;
@@ -19,8 +19,6 @@ use crate::{
     types::NodeId,
 };
 
-// 添加rayon依赖用于并行处理
-use rayon::prelude::*;
 
 // 全局LRU缓存用于存储NodeId到分片索引的映射
 static SHARD_INDEX_CACHE: Lazy<RwLock<LruCache<String, usize>>> =
