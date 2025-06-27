@@ -8,6 +8,7 @@ use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use lru::LruCache;
 use std::fmt::{self, Debug};
+use crate::arc_ptr::ArcPtr;
 use crate::error::PoolResult;
 use crate::node_type::NodeEnum;
 use crate::{
@@ -18,6 +19,9 @@ use crate::{
     types::NodeId,
 };
 
+// 添加rayon依赖用于并行处理
+use rayon::prelude::*;
+
 // 全局LRU缓存用于存储NodeId到分片索引的映射
 static SHARD_INDEX_CACHE: Lazy<RwLock<LruCache<String, usize>>> =
     Lazy::new(|| RwLock::new(LruCache::new(NonZeroUsize::new(10000).unwrap())));
@@ -25,7 +29,7 @@ static SHARD_INDEX_CACHE: Lazy<RwLock<LruCache<String, usize>>> =
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tree {
     pub root_id: NodeId,
-    pub nodes: Vector<im::HashMap<NodeId, Arc<Node>>>, // 分片存储节点数据
+    pub nodes: Vector<im::HashMap<NodeId, ArcPtr<Node>>>, // 分片存储节点数据
     pub parent_map: im::HashMap<NodeId, NodeId>,
     #[serde(skip)]
     num_shards: usize, // 缓存分片数量，避免重复计算
@@ -51,6 +55,61 @@ impl Debug for Tree {
 }
 
 impl Tree {
+    /// 计算两个树的差异
+    /// 返回三个 HashMap:
+    /// 1. 新增的节点
+    /// 2. 删除的节点
+    /// 3. 修改的节点
+    pub fn difference(&self, other: &Tree) -> (im::HashMap<NodeId, ArcPtr<Node>>, im::HashMap<NodeId, ArcPtr<Node>>, im::HashMap<NodeId, (ArcPtr<Node>, ArcPtr<Node>)>) {
+        // 假设 `self` 是新状态 (new_tree), `other` 是旧状态 (old_tree)
+
+        // 1. 合并所有分片成一个完整的 HashMap
+        let mut new_nodes: im::HashMap<NodeId, ArcPtr<Node>> = im::HashMap::new();
+        let mut old_nodes: im::HashMap<NodeId, ArcPtr<Node>> = im::HashMap::new();
+        
+        // 合并新树的所有分片
+        for shard in &self.nodes {
+            new_nodes.extend(shard.iter().map(|(k, v)| (k.clone(), v.clone())));
+        }
+        
+        // 合并旧树的所有分片
+        for shard in &other.nodes {
+            old_nodes.extend(shard.iter().map(|(k, v)| (k.clone(), v.clone())));
+        }
+
+        // 2. 创建用于收集增、删、改结果的 HashMap
+        let mut added: im::HashMap<NodeId, ArcPtr<Node>> = im::HashMap::new();
+        let mut deleted: im::HashMap<NodeId, ArcPtr<Node>> = im::HashMap::new();
+        let mut modified: im::HashMap<NodeId, (ArcPtr<Node>, ArcPtr<Node>)> = im::HashMap::new();
+
+        // 3. 找出"新增"的节点 (存在于新 map，不存在于旧 map)
+        for (node_id, new_node_arc) in new_nodes.iter() {
+            if !old_nodes.contains_key(node_id) {
+                added.insert(node_id.clone(), new_node_arc.clone());
+            }
+        }
+
+        // 4. 找出"删除"的节点 (存在于旧 map，不存在于新 map)
+        for (node_id, old_node_arc) in old_nodes.iter() {
+            if !new_nodes.contains_key(node_id) {
+                deleted.insert(node_id.clone(), old_node_arc.clone());
+            }
+        }
+
+        // 5. 找出"修改"的节点
+        for (node_id, new_node_arc) in new_nodes.iter() {
+            if let Some(old_node_arc) = old_nodes.get(node_id) {
+                // 核心逻辑：如果 Arc 指针不同，则节点被修改
+                if new_node_arc.0.as_ref() != old_node_arc.0.as_ref() {
+                    modified.insert(node_id.clone(), (old_node_arc.clone(), new_node_arc.clone()));
+                }
+            }
+        }
+        
+        (added, deleted, modified)
+    }
+
+
     #[inline]
     pub fn get_shard_index(
         &self,
@@ -139,7 +198,7 @@ impl Tree {
     pub fn get_node(
         &self,
         id: &NodeId,
-    ) -> Option<Arc<Node>> {
+    ) -> Option<ArcPtr<Node>> {
         let shard_index = self.get_shard_index(id);
         self.nodes[shard_index].get(id).cloned()
     }
@@ -147,7 +206,7 @@ impl Tree {
     pub fn get_parent_node(
         &self,
         id: &NodeId,
-    ) -> Option<Arc<Node>> {
+    ) -> Option<ArcPtr<Node>> {
         self.parent_map.get(id).and_then(|parent_id| {
             let shard_index = self.get_shard_index(parent_id);
             self.nodes[shard_index].get(parent_id).cloned()
@@ -169,12 +228,12 @@ impl Tree {
         root_id.hash(&mut hasher);
         let shard_index = (hasher.finish() as usize) % num_shards;
         shards[shard_index] =
-            shards[shard_index].update(root_id.clone(), Arc::new(root_node));
+            shards[shard_index].update(root_id.clone(), ArcPtr::new(root_node));
 
         fn process_children(
             children: Vec<NodeEnum>,
             parent_id: &NodeId,
-            shards: &mut Vector<im::HashMap<NodeId, Arc<Node>>>,
+            shards: &mut Vector<im::HashMap<NodeId, ArcPtr<Node>>>,
             parent_map: &mut im::HashMap<NodeId, NodeId>,
             num_shards: usize,
         ) {
@@ -185,7 +244,7 @@ impl Tree {
                 node_id.hash(&mut hasher);
                 let shard_index = (hasher.finish() as usize) % num_shards;
                 shards[shard_index] =
-                    shards[shard_index].update(node_id.clone(), Arc::new(node));
+                    shards[shard_index].update(node_id.clone(), ArcPtr::new(node));
                 parent_map.insert(node_id.clone(), parent_id.clone());
 
                 // Recursively process grand children
@@ -223,7 +282,7 @@ impl Tree {
         root_id.hash(&mut hasher);
         let shard_index = (hasher.finish() as usize) % num_shards;
         nodes[shard_index] =
-            nodes[shard_index].update(root_id.clone(), Arc::new(root));
+            nodes[shard_index].update(root_id.clone(), ArcPtr::new(root));
         Self { root_id, nodes, parent_map: im::HashMap::new(), num_shards }
     }
 
@@ -237,11 +296,11 @@ impl Tree {
             .get(id)
             .ok_or(error_helpers::node_not_found(id.clone()))?;
         let old_values = node.attrs.clone();
-        let mut new_node = node.as_ref().clone();
+        let mut new_node = node.0.as_ref().clone();
         let new_attrs = old_values.update(new_values);
         new_node.attrs = new_attrs.clone();
         self.nodes[shard_index] =
-            self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
+            self.nodes[shard_index].update(id.clone(), ArcPtr::new(new_node));
         Ok(())
     }
     pub fn update_node(
@@ -250,7 +309,7 @@ impl Tree {
     ) -> PoolResult<()> {
         let shard_index = self.get_shard_index(&node.id);
         self.nodes[shard_index] =
-            self.nodes[shard_index].update(node.id.clone(), Arc::new(node));
+            self.nodes[shard_index].update(node.id.clone(), ArcPtr::new(node));
         Ok(())
     }
 
@@ -274,7 +333,7 @@ impl Tree {
         let parent_node = self.nodes[parent_shard_index]
             .get(parent_id)
             .ok_or(error_helpers::parent_not_found(parent_id.clone()))?;
-        let mut new_parent = parent_node.as_ref().clone();
+        let mut new_parent = parent_node.0.as_ref().clone();
 
         // 收集所有子节点的ID并添加到当前节点的content中
         let zenliang: Vector<String> =
@@ -290,7 +349,7 @@ impl Tree {
 
         // 更新当前节点
         self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
-            .update(parent_id.clone(), Arc::new(new_parent));
+            .update(parent_id.clone(), ArcPtr::new(new_parent));
 
         // 使用队列进行广度优先遍历，处理所有子节点
         let mut node_queue = Vec::new();
@@ -316,7 +375,7 @@ impl Tree {
                 // 将当前节点存储到对应的分片中
                 let shard_index = self.get_shard_index(&current_node_id);
                 self.nodes[shard_index] = self.nodes[shard_index]
-                    .update(current_node_id.clone(), Arc::new(child_node));
+                    .update(current_node_id.clone(), ArcPtr::new(child_node));
 
                 // 更新父子关系映射
                 self.parent_map
@@ -340,10 +399,10 @@ impl Tree {
         let parent = self.nodes[parent_shard_index]
             .get(parent_id)
             .ok_or(error_helpers::parent_not_found(parent_id.clone()))?;
-        let mut new_parent = parent.as_ref().clone();
+        let mut new_parent = parent.0.as_ref().clone();
         new_parent.content.insert(index, node.id.clone());
         self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
-            .update(parent_id.clone(), Arc::new(new_parent));
+            .update(parent_id.clone(), ArcPtr::new(new_parent));
         self.parent_map.insert(node.id.clone(), parent_id.clone());
         Ok(())
     }
@@ -356,10 +415,10 @@ impl Tree {
         let parent = self.nodes[parent_shard_index]
             .get(parent_id)
             .ok_or(error_helpers::parent_not_found(parent_id.clone()))?;
-        let mut new_parent = parent.as_ref().clone();
+        let mut new_parent = parent.0.as_ref().clone();
         new_parent.content.push_back(nodes[0].id.clone());
         self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
-            .update(parent_id.clone(), Arc::new(new_parent));
+            .update(parent_id.clone(), ArcPtr::new(new_parent));
         self.parent_map.insert(nodes[0].id.clone(), parent_id.clone());
         for node in nodes {
             let shard_index = self.get_shard_index(&node.id);
@@ -367,7 +426,7 @@ impl Tree {
                 self.parent_map.insert(child_id.clone(), node.id.clone());
             }
             self.nodes[shard_index] = self.nodes[shard_index]
-                .update(node.id.clone(), Arc::new(node.clone()));
+                .update(node.id.clone(), ArcPtr::new(node.clone()));
         }
         Ok(())
     }
@@ -401,7 +460,7 @@ impl Tree {
     pub fn children_node(
         &self,
         parent_id: &NodeId,
-    ) -> Option<im::Vector<Arc<Node>>> {
+    ) -> Option<im::Vector<ArcPtr<Node>>> {
         self.children(parent_id)
             .map(|ids| ids.iter().filter_map(|id| self.get_node(id)).collect())
     }
@@ -417,7 +476,7 @@ impl Tree {
                 if let Some(child_node) = self.get_node(child_id) {
                     // 检查子节点是否满足过滤条件
                     if let Some(filter_fn) = filter {
-                        if !filter_fn(child_node.as_ref()) {
+                        if !filter_fn(child_node.0.as_ref()) {
                             continue; // 跳过不满足条件的子节点
                         }
                     }
@@ -429,7 +488,7 @@ impl Tree {
                     }
                 }
             }
-            Some(NodeEnum(node.as_ref().clone(), child_enums))
+            Some(NodeEnum(node.0.as_ref().clone(), child_enums))
         } else {
             None
         }
@@ -450,7 +509,7 @@ impl Tree {
         let node = self.nodes[shard_index]
             .get(id)
             .ok_or(error_helpers::node_not_found(id.clone()))?;
-        let mut new_node = node.as_ref().clone();
+        let mut new_node = node.0.as_ref().clone();
         new_node.marks = new_node
             .marks
             .iter()
@@ -458,7 +517,7 @@ impl Tree {
             .cloned()
             .collect();
         self.nodes[shard_index] =
-            self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
+            self.nodes[shard_index].update(id.clone(), ArcPtr::new(new_node));
         Ok(())
     }
     pub fn get_marks(
@@ -477,7 +536,7 @@ impl Tree {
         let node = self.nodes[shard_index]
             .get(id)
             .ok_or(error_helpers::node_not_found(id.clone()))?;
-        let mut new_node = node.as_ref().clone();
+        let mut new_node = node.0.as_ref().clone();
         new_node.marks = new_node
             .marks
             .iter()
@@ -485,7 +544,7 @@ impl Tree {
             .cloned()
             .collect();
         self.nodes[shard_index] =
-            self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
+            self.nodes[shard_index].update(id.clone(), ArcPtr::new(new_node));
         Ok(())
     }
 
@@ -498,7 +557,7 @@ impl Tree {
         let node = self.nodes[shard_index]
             .get(id)
             .ok_or(error_helpers::node_not_found(id.clone()))?;
-        let mut new_node = node.as_ref().clone();
+        let mut new_node = node.0.as_ref().clone();
         //如果存在相同类型的mark，则覆盖
         let mark_types =
             marks.iter().map(|m| m.r#type.clone()).collect::<Vec<String>>();
@@ -510,7 +569,7 @@ impl Tree {
             .collect();
         new_node.marks.extend(marks.iter().map(|m| m.clone()));
         self.nodes[shard_index] =
-            self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
+            self.nodes[shard_index].update(id.clone(), ArcPtr::new(new_node));
         Ok(())
     }
 
@@ -539,14 +598,14 @@ impl Tree {
                 source_parent_id.clone(),
             ));
         }
-        let mut new_source_parent = source_parent.as_ref().clone();
+        let mut new_source_parent = source_parent.0.as_ref().clone();
         new_source_parent.content = new_source_parent
             .content
             .iter()
             .filter(|&id| id != node_id)
             .cloned()
             .collect();
-        let mut new_target_parent = target_parent.as_ref().clone();
+        let mut new_target_parent = target_parent.0.as_ref().clone();
         if let Some(pos) = position {
             // 确保position不超过当前content的长度
             let insert_pos = pos.min(new_target_parent.content.len());
@@ -576,9 +635,9 @@ impl Tree {
             new_target_parent.content.push_back(node_id.clone());
         }
         self.nodes[source_shard_index] = self.nodes[source_shard_index]
-            .update(source_parent_id.clone(), Arc::new(new_source_parent));
+            .update(source_parent_id.clone(), ArcPtr::new(new_source_parent));
         self.nodes[target_shard_index] = self.nodes[target_shard_index]
-            .update(target_parent_id.clone(), Arc::new(new_target_parent));
+            .update(target_parent_id.clone(), ArcPtr::new(new_target_parent));
         self.parent_map.insert(node_id.clone(), target_parent_id.clone());
         Ok(())
     }
@@ -606,16 +665,16 @@ impl Tree {
         let nodes_to_remove: std::collections::HashSet<_> =
             nodes.iter().collect();
         let filtered_children: im::Vector<NodeId> = parent
-            .as_ref()
+            .0.as_ref()
             .content
             .iter()
             .filter(|&id| !nodes_to_remove.contains(id))
             .cloned()
             .collect();
-        let mut parent_node = parent.as_ref().clone();
+        let mut parent_node = parent.0.as_ref().clone();
         parent_node.content = filtered_children;
         self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
-            .update(parent_id.clone(), Arc::new(parent_node));
+            .update(parent_id.clone(), ArcPtr::new(parent_node));
         let mut remove_nodes = Vec::new();
         for node_id in nodes {
             self.remove_subtree(&node_id, &mut remove_nodes)?;
@@ -643,7 +702,7 @@ impl Tree {
             if let Some(parent_node) =
                 self.nodes[parent_shard_index].get(&parent_id)
             {
-                let mut new_parent = parent_node.as_ref().clone();
+                let mut new_parent = parent_node.0.as_ref().clone();
                 new_parent.content = new_parent
                     .content
                     .iter()
@@ -651,7 +710,7 @@ impl Tree {
                     .cloned()
                     .collect();
                 self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
-                    .update(parent_id.clone(), Arc::new(new_parent));
+                    .update(parent_id.clone(), ArcPtr::new(new_parent));
             }
         }
 
@@ -673,10 +732,10 @@ impl Tree {
         let parent = self.nodes[shard_index]
             .get(parent_id)
             .ok_or(error_helpers::parent_not_found(parent_id.clone()))?;
-        let mut new_parent = parent.as_ref().clone();
+        let mut new_parent = parent.0.as_ref().clone();
         let remove_node_id = new_parent.content.remove(index);
         self.nodes[shard_index] = self.nodes[shard_index]
-            .update(parent_id.clone(), Arc::new(new_parent));
+            .update(parent_id.clone(), ArcPtr::new(new_parent));
         let mut remove_nodes = Vec::new();
         self.remove_subtree(&remove_node_id, &mut remove_nodes)?;
         for node in remove_nodes {
@@ -707,14 +766,14 @@ impl Tree {
         }
         self.parent_map.remove(node_id);
         if let Some(remove_node) = self.nodes[shard_index].remove(node_id) {
-            remove_nodes.push(remove_node.as_ref().clone());
+            remove_nodes.push(remove_node.0.as_ref().clone());
         }
         Ok(())
     }
 }
 
 impl Index<&NodeId> for Tree {
-    type Output = Arc<Node>;
+    type Output = ArcPtr<Node>;
     fn index(
         &self,
         index: &NodeId,
@@ -725,7 +784,7 @@ impl Index<&NodeId> for Tree {
 }
 
 impl Index<&str> for Tree {
-    type Output = Arc<Node>;
+    type Output = ArcPtr<Node>;
     fn index(
         &self,
         index: &str,

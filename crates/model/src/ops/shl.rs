@@ -61,7 +61,7 @@ impl<'a> Shl<usize> for NodeRef<'a> {
                         .tree
                         .get_node(&self.key.clone().into())
                         .unwrap()
-                        .as_ref()
+                        .0.as_ref()
                         .clone();
                     let mut content = node.content.clone();
                     content.swap(current_index, new_index);
