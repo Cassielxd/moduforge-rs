@@ -17,7 +17,7 @@ npm install
 npm run dev
 ```
 
-访问 http://localhost:3000 查看文档网站。
+访问 `http://localhost:3000` 查看文档网站（仅在本地开发环境可用）。
 
 ### 构建生产版本
 

@@ -87,7 +87,7 @@ impl PluginSpec {
     ) -> bool {
         match &self.tr {
             Some(filter) => filter.filter_transaction(tr, state).await,
-            None => false,
+            None => true,
         }
     }
     /// 执行事务追加

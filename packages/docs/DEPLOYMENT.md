@@ -38,9 +38,11 @@ npm run preview
 
 ## 🌐 访问地址
 
-- **开发环境**: http://localhost:3000
-- **中文版**: http://localhost:3000/
-- **英文版**: http://localhost:3000/en/
+- **开发环境**: `http://localhost:3000` (仅在本地开发时可用)
+- **中文版**: `http://localhost:3000/` (本地开发环境)
+- **英文版**: `http://localhost:3000/en/` (本地开发环境)
+
+> **注意**: 上述链接仅在本地运行 `npm run dev` 时可用。生产环境的访问地址将根据你的部署方式而定。
 
 ## 📁 项目结构
 

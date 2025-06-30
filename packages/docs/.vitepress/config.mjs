@@ -9,6 +9,18 @@ export default defineConfig({
   outDir: 'dist',
   cleanUrls: true,
   
+  // 🔧 修复死链接问题 - 忽略开发环境链接
+  ignoreDeadLinks: [
+    // 忽略本地开发环境链接
+    /^http:\/\/localhost/,
+    /^http:\/\/127\.0\.0\.1/,
+    // 明确指定要忽略的链接
+    'http://localhost:3000',
+    'http://localhost:3000/',
+    'http://localhost:3000/index',
+    'http://localhost:3000/en/index',
+  ],
+  
   // 多语言配置
   locales: {
     root: {

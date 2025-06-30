@@ -58,8 +58,7 @@ impl ResourceTable {
         rid: ResourceId,
         resource: Arc<dyn Resource>,
     ) {
-        let removed_resource = self.index.insert(rid, resource);
-        assert!(removed_resource.is_none());
+        self.index.insert(rid, resource);
     }
 
     // 检查指定ID的资源是否存在
@@ -89,17 +88,6 @@ impl ResourceTable {
         rid: ResourceId,
     ) -> Option<Arc<dyn Resource>> {
         self.index.get(&rid).map(|rc| rc.value().clone())
-    }
-
-    // 替换指定ID的资源
-    pub fn replace<T: Resource>(
-        &self,
-        rid: ResourceId,
-        resource: T,
-    ) {
-        let result =
-            self.index.insert(rid, Arc::new(resource) as Arc<dyn Resource>);
-        assert!(result.is_some());
     }
 
     // 从资源表中移除并返回指定ID的特定类型资源
