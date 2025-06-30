@@ -1,0 +1,19 @@
+{
+  "name": "@moduforge/docs",
+  "version": "1.0.0",
+  "description": "ModuForge-RS 框架文档站点",
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview",
+    "serve": "vitepress serve"
+  },
+  "devDependencies": {
+    "vitepress": "^1.0.0",
+    "@types/node": "^20.0.0"
+  },
+  "keywords": ["moduforge", "rust", "framework", "documentation"],
+  "author": "ModuForge Team",
+  "license": "MIT"
+}

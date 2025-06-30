@@ -12,10 +12,14 @@
 ```toml
 [dependencies]
 # ModuForge-RS 核心组件
-moduforge-core = { version = "0.3.8", path = "../moduforge-rs/core" }    # 或从 crates.io
-moduforge-model = { version = "0.3.8", path = "../moduforge-rs/model" }
-moduforge-state = { version = "0.3.8", path = "../moduforge-rs/state" }
-moduforge-transform = { version = "0.3.8", path = "../moduforge-rs/transform" }
+moduforge-core = "0.4.4"
+moduforge-model = "0.4.4"
+moduforge-state = "0.4.4"
+moduforge-transform = "0.4.4"
+moduforge-rules-engine = "0.4.4"
+moduforge-rules-expression = "0.4.4"
+moduforge-collaboration = "0.4.4"
+moduforge-template = "0.4.4"
 
 # ModuForge-RS 依赖的核心库
 tokio = { version = "1.0", features = ["full"] }
@@ -25,30 +29,33 @@ anyhow = "1"
 thiserror = "2.0.12"
 async-trait = "0.1"
 tracing = "0.1"
-uuid = "1"
+uuid = { version = "1.0", features = ["v4"] }
 ```
 
 ## 核心架构模式
 
-### 1. 编辑器初始化模式
-使用 ModuForge-RS 的高层 Editor API：
+### 1. 运行时初始化模式
+使用 ModuForge-RS 的异步运行时：
 
 ```rust
-use moduforge_core::{EditorResult, runtime::Editor, types::{EditorOptions, EditorOptionsBuilder}};
-use moduforge_state::init_logging;
+use moduforge_core::{ForgeResult, async_runtime::AsyncRuntime, types::RuntimeOptions};
+use moduforge_state::{init_logging, StateConfig};
+use moduforge_core::middleware::MiddlewareStack;
 
-// 初始化编辑器
-async fn initialize_editor() -> EditorResult<Editor> {
+// 初始化异步运行时
+async fn initialize_runtime() -> ForgeResult<AsyncRuntime> {
     // 配置日志系统
     init_logging("info", Some("logs/app.log"))?;
     
-    // 创建编辑器配置
-    let options = EditorOptionsBuilder::new()
-        .history_limit(100)
-        .build();
+    // 创建运行时配置
+    let mut options = RuntimeOptions::default();
+    options.set_middleware_stack(MiddlewareStack::new());
     
-    // 创建编辑器实例
-    Editor::create(options).await
+    // 创建状态配置
+    let state_config = StateConfig::default();
+    
+    // 创建异步运行时实例
+    AsyncRuntime::new(options, state_config).await
 }
 ```
 
@@ -56,7 +63,7 @@ async fn initialize_editor() -> EditorResult<Editor> {
 通过 Extension 系统创建插件：
 
 ```rust
-use moduforge_core::{extension::Extension, types::Extensions};
+use moduforge_core::extension::Extension;
 use moduforge_state::{
     plugin::{Plugin, PluginSpec, PluginTrait, StateField},
     resource::Resource,
@@ -74,11 +81,7 @@ pub struct MyPluginState {
     pub count: u64,
 }
 
-impl Resource for MyPluginState {
-    fn name(&self) -> std::borrow::Cow<str> {
-        "MyPluginState".into()
-    }
-}
+impl Resource for MyPluginState {}
 
 impl MyPluginState {
     pub fn new() -> Self {
@@ -111,8 +114,8 @@ impl StateField for MyStateField {
         _old_state: &State,
         _new_state: &State,
     ) -> Arc<dyn Resource> {
-        if let Some(state) = value.downcast_arc::<MyPluginState>() {
-            let mut new_state = (**state).clone();
+        if let Ok(state) = value.clone().downcast::<MyPluginState>() {
+            let mut new_state = (*state).clone();
             
             // 根据事务元数据更新状态
             if let Some(action) = tr.get_meta::<String>("action") {
@@ -149,13 +152,13 @@ impl PluginTrait for MyPlugin {
         &self,
         transactions: &[Transaction],
         _old_state: &State,
-        new_state: &State,
+        _new_state: &State,
     ) -> StateResult<Option<Transaction>> {
         // 检查事务并生成附加事务
         for tr in transactions {
             if let Some(action) = tr.get_meta::<String>("action") {
                 if action.as_str() == "my_action" {
-                    let mut new_tr = Transaction::new(new_state);
+                    let mut new_tr = Transaction::new();
                     new_tr.set_meta("generated_by", "my_plugin");
                     new_tr.set_meta("action", "increment");
                     return Ok(Some(new_tr));
@@ -194,155 +197,206 @@ pub fn create_my_extension() -> Extension {
     extension
 }
 
-// 5. 在编辑器中使用扩展
-async fn create_editor_with_plugin() -> EditorResult<Editor> {
-    let options = EditorOptionsBuilder::new()
-        .add_extension(Extensions::E(create_my_extension()))
-        .history_limit(100)
-        .build();
-        
-    Editor::create(options).await
+// 5. 在运行时中使用扩展
+async fn create_runtime_with_plugin() -> ForgeResult<AsyncRuntime> {
+    let mut options = RuntimeOptions::default();
+    
+    // 添加扩展到运行时选项
+    options.add_extension(moduforge_core::types::Extensions::E(create_my_extension()));
+    
+    let state_config = StateConfig::default();
+    AsyncRuntime::new(options, state_config).await
 }
 
-### 3. 事务处理模式
-使用 Editor 的事务系统进行状态变更：
+### 3. 节点和文档操作模式
 
 ```rust
-use moduforge_core::{runtime::Editor, EditorResult};
+use moduforge_model::{
+    node::Node as ModelNode,
+    node_type::{NodeSpec, NodeEnum},
+    attrs::Attrs,
+    types::NodeId,
+    tree::Tree,
+    node_pool::NodePool,
+};
 use moduforge_transform::{
     node_step::{AddNodeStep, RemoveNodeStep},
     attr_step::AttrStep,
-    mark_step::{AddMarkStep, RemoveMarkStep}
 };
-use moduforge_state::transaction::{Transaction, Command};
 use std::sync::Arc;
 
-// 创建和应用事务
-async fn apply_document_changes(editor: &mut Editor) -> EditorResult<()> {
-    let mut transaction = editor.get_tr();
+// 创建文档节点
+fn create_document_nodes() -> NodePool {
+    // 创建根节点
+    let root_node = ModelNode::new(
+        "root",
+        "document".to_string(),
+        Attrs::default(),
+        vec![],
+        vec![]
+    );
     
-    // 添加具体的变更步骤
-    transaction.step(Arc::new(AddNodeStep::new(parent_id, nodes)))?;
-    transaction.step(Arc::new(AttrStep::new(node_id, attributes)))?;
+    // 创建段落节点
+    let paragraph_node = ModelNode::new(
+        "para_1",
+        "paragraph".to_string(),
+        Attrs::default(),
+        vec![],
+        vec![]
+    );
     
-    // 通过编辑器应用事务
-    editor.dispatch(transaction).await?;
-    Ok(())
+    // 构建节点枚举
+    let node_enum = NodeEnum(root_node, vec![
+        NodeEnum(paragraph_node, vec![])
+    ]);
+    
+    // 创建树和节点池
+    let tree = Tree::from(node_enum);
+    NodePool::new(Arc::new(tree))
+}
+
+// 操作文档
+async fn manipulate_document(runtime: &mut AsyncRuntime) -> ForgeResult<()> {
+    let mut transaction = Transaction::new();
+    
+    // 添加新节点
+    let new_node = ModelNode::new(
+        "new_para",
+        "paragraph".to_string(),
+        Attrs::default(),
+        vec![],
+        vec![]
+    );
+    
+    let add_step = AddNodeStep::new(new_node, Some(NodeId::from("root")));
+    transaction.add_step(Box::new(add_step));
+    
+    // 设置事务元数据
+    transaction.set_meta("action", "add_paragraph");
+    transaction.set_meta("user_id", "user_123");
+    
+    // 执行事务
+    runtime.apply_transaction(transaction).await
 }
 ```
 
-### 4. 节点和文档模型
-使用 ModuForge-RS 的节点系统：
+### 4. 中间件开发模式
 
 ```rust
-use moduforge_model::{
-    node::Node,
-    node_type::NodeType,
-    mark::Mark,
-    attrs::Attrs,
-    schema::Schema
-};
-
-// 创建节点
-fn create_document_node() -> Node {
-    Node::new(
-        NodeType::new("paragraph", Attrs::new()),
-        /* content */
-    )
-}
-```
-
-## 代码风格指南
-
-### Rust 约定
-- 遵循 ModuForge-RS 的代码风格
-- 使用 `im::HashMap` 和 `im::Vector` 进行不可变集合操作
-- 使用 `Result<T, E>` 进行错误处理，优先使用 `EditorResult<T>`
-- 实现 `Debug`, `Clone`, `PartialEq` 派生宏
-- 使用 `async/await` 处理异步操作
-
-### 错误处理模式
-```rust
-use moduforge_core::{EditorResult, error_utils};
-use anyhow::Result;
-
-// 使用 EditorResult 处理框架相关错误
-fn framework_operation() -> EditorResult<String> {
-    // 框架操作
-    Ok("success".to_string())
-}
-
-// 使用 anyhow::Result 处理应用级错误
-fn application_operation() -> Result<String> {
-    // 应用逻辑
-    Ok("success".to_string())
-}
-```
-
-### 异步编程模式
-```rust
-use moduforge_core::async_runtime::AsyncRuntime;
-use tokio::sync::{Arc, Mutex};
-
-// 异步任务处理
-async fn process_editor_task(runtime: &AsyncRuntime) -> EditorResult<()> {
-    runtime.spawn(async {
-        // 后台任务逻辑
-    }).await?;
-    Ok(())
-}
-```
-
-## 常用导入模式
-```rust
-// 核心功能
-use moduforge_core::{
-    EditorResult,
-    runtime::Editor,
-    types::{EditorOptions, EditorOptionsBuilder, Extensions},
-    event::{Event, EventBus},
-    extension::Extension,
-    middleware::Middleware,
-};
-
-// 状态管理
-use moduforge_state::{
-    transaction::{Transaction, Command},
-    init_logging,
-    resource::Resource,
-};
-
-// 数据模型
-use moduforge_model::{
-    node::Node,
-    mark::Mark,
-    attrs::Attrs,
-    schema::Schema,
-    node_type::{NodeType, NodeEnum},
-    mark_type::MarkType,
-    node_pool::NodePool,
-};
-
-// 数据转换
-use moduforge_transform::{
-    step::{Step, StepResult},
-    transform::Transform,
-    node_step::{AddNodeStep, RemoveNodeStep, MoveNodeStep},
-    mark_step::{AddMarkStep, RemoveMarkStep},
-    attr_step::AttrStep,
-};
-
-// 不可变数据结构
-use im::{HashMap as ImHashMap, Vector as ImVector};
-
-// 异步和并发
-use tokio::{sync::{Arc, Mutex, RwLock}, spawn};
+use moduforge_core::middleware::{Middleware, MiddlewareStack};
 use async_trait::async_trait;
 
-// 序列化和错误处理
-use serde::{Serialize, Deserialize};
-use anyhow::{Result, anyhow};
-use thiserror::Error;
+#[derive(Debug)]
+struct LoggingMiddleware {
+    name: String,
+}
+
+impl LoggingMiddleware {
+    pub fn new() -> Self {
+        Self { name: "LoggingMiddleware".to_string() }
+    }
+}
+
+#[async_trait]
+impl Middleware for LoggingMiddleware {
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    async fn before_dispatch(
+        &self,
+        transaction: &mut Transaction,
+    ) -> ForgeResult<()> {
+        println!("🔍 [{}] 事务处理开始 - ID: {}", self.name, transaction.id);
+        Ok(())
+    }
+
+    async fn after_dispatch(
+        &self,
+        state: Option<Arc<State>>,
+        transactions: &[Transaction],
+    ) -> ForgeResult<Option<Transaction>> {
+        println!("✅ [{}] 事务处理完成", self.name);
+        Ok(None)
+    }
+}
+
+// 使用中间件
+fn setup_middleware() -> MiddlewareStack {
+    let mut middleware_stack = MiddlewareStack::new();
+    middleware_stack.add(LoggingMiddleware::new());
+    middleware_stack
+}
+```
+
+### 5. 事件处理模式
+
+```rust
+use moduforge_core::event::{Event, EventHandler, EventBus};
+
+#[derive(Debug)]
+struct StateChangeHandler;
+
+#[async_trait]
+impl EventHandler<Event> for StateChangeHandler {
+    async fn handle(&self, event: &Event) -> ForgeResult<()> {
+        match event {
+            Event::Create(state) => {
+                println!("🎉 状态创建: 版本 {}", state.version);
+            }
+            Event::TrApply(tr_id, transactions, state) => {
+                println!("📝 事务应用: ID {}, 版本 {}", tr_id, state.version);
+            }
+            Event::Destroy => {
+                println!("🗑️ 状态销毁");
+            }
+            Event::Stop => {
+                println!("⏹️ 状态停止");
+            }
+        }
+        Ok(())
+    }
+}
+
+// 设置事件处理
+fn setup_event_handling() -> EventBus<Event> {
+    let event_bus = EventBus::<Event>::new();
+    event_bus.add_event_handler(Arc::new(StateChangeHandler)).unwrap();
+    event_bus.start_event_loop();
+    event_bus
+}
+```
+
+## 代码风格和最佳实践
+
+### 错误处理
+- 使用 `ForgeResult<T>` 作为返回类型
+- 使用 `?` 操作符进行错误传播
+- 提供有意义的错误消息
+
+### 异步编程
+- 所有 I/O 操作使用 `async/await`
+- 使用 `Arc<T>` 进行共享所有权
+- 避免在异步上下文中阻塞
+
+### 内存管理
+- 优先使用不可变数据结构 (`im::HashMap`, `im::Vector`)
+- 使用 `Arc` 而非 `Rc` 在多线程环境中
+- 避免不必要的克隆操作
+
+### 测试
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[tokio::test]
+    async fn test_plugin_integration() {
+        let runtime = initialize_runtime().await.unwrap();
+        // 测试逻辑
+        assert!(runtime.is_healthy());
+    }
+}
 ```
 
 ## 项目结构建议

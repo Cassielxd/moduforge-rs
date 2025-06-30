@@ -13,10 +13,14 @@ ModuForge-RS 是基于 Rust 的状态管理和数据转换框架，采用：
 ### 依赖配置
 ```toml
 [dependencies]
-moduforge-core = "0.3.8"
-moduforge-model = "0.3.8"
-moduforge-state = "0.3.8"
-moduforge-transform = "0.3.8"
+moduforge-core = "0.4.4"
+moduforge-model = "0.4.4"
+moduforge-state = "0.4.4"
+moduforge-transform = "0.4.4"
+moduforge-rules-engine = "0.4.4"
+moduforge-rules-expression = "0.4.4"
+moduforge-collaboration = "0.4.4"
+moduforge-template = "0.4.4"
 
 # 必需的支持库
 tokio = { version = "1.0", features = ["full"] }
@@ -29,14 +33,15 @@ async-trait = "0.1"
 ### 基本使用模式
 ```rust
 // 导入核心模块
-use moduforge_core::{EditorResult, runtime::Editor, types::EditorOptionsBuilder};
-use moduforge_state::init_logging;
+use moduforge_core::{ForgeResult, async_runtime::AsyncRuntime, types::RuntimeOptions};
+use moduforge_state::{init_logging, StateConfig};
 
 // 初始化
-async fn setup() -> EditorResult<Editor> {
+async fn setup() -> ForgeResult<AsyncRuntime> {
     init_logging("info", None)?;
-    let options = EditorOptionsBuilder::new().build();
-    Editor::create(options).await
+    let options = RuntimeOptions::default();
+    let state_config = StateConfig::default();
+    AsyncRuntime::new(options, state_config).await
 }
 ```
 
@@ -45,15 +50,15 @@ async fn setup() -> EditorResult<Editor> {
 ### 数据结构
 - 使用 `im::HashMap`, `im::Vector` 代替标准集合
 - 优先 `Arc<T>` 进行异步共享
-- 使用 `EditorResult<T>` 处理框架错误
+- 使用 `ForgeResult<T>` 处理框架错误
 
 ### 错误处理
 ```rust
-use moduforge_core::EditorResult;
+use moduforge_core::ForgeResult;
 use anyhow::Result;
 
-// 框架操作用 EditorResult
-fn framework_op() -> EditorResult<()> { Ok(()) }
+// 框架操作用 ForgeResult
+fn framework_op() -> ForgeResult<()> { Ok(()) }
 
 // 业务逻辑用 anyhow::Result  
 fn business_op() -> Result<()> { Ok(()) }
@@ -61,7 +66,7 @@ fn business_op() -> Result<()> { Ok(()) }
 
 ### 插件开发
 ```rust
-use moduforge_core::{extension::Extension, types::Extensions};
+use moduforge_core::extension::Extension;
 use moduforge_state::{
     plugin::{Plugin, PluginSpec, PluginTrait, StateField},
     resource::Resource
@@ -70,7 +75,7 @@ use moduforge_state::{
 // 创建插件状态
 #[derive(Debug, Clone)]
 struct MyState { count: u64 }
-impl Resource for MyState { /* 实现 */ }
+impl Resource for MyState {}
 
 // 创建插件
 let plugin = Plugin::new(PluginSpec {
@@ -87,10 +92,10 @@ extension.add_plugin(Arc::new(plugin));
 
 ## 常用导入
 ```rust
-// 核心编辑器和扩展
+// 核心运行时和扩展
 use moduforge_core::{
-    EditorResult, runtime::Editor, 
-    types::{EditorOptionsBuilder, Extensions},
+    ForgeResult, async_runtime::AsyncRuntime, 
+    types::{RuntimeOptions, Extensions},
     extension::Extension
 };
 
@@ -129,12 +134,14 @@ use async_trait::async_trait;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use moduforge_core::{runtime::Editor, types::EditorOptionsBuilder};
+    use moduforge_core::{async_runtime::AsyncRuntime, types::RuntimeOptions};
+    use moduforge_state::StateConfig;
 
     #[tokio::test]
     async fn test_integration() {
-        let options = EditorOptionsBuilder::new().build();
-        let editor = Editor::create(options).await.unwrap();
+        let options = RuntimeOptions::default();
+        let state_config = StateConfig::default();
+        let runtime = AsyncRuntime::new(options, state_config).await.unwrap();
         // 测试逻辑
     }
 }
@@ -146,4 +153,4 @@ mod tests {
 2. 建议事件驱动解决方案
 3. 遵循插件架构模式
 4. 优先类型安全和异步最佳实践
-5. 使用适当的错误处理 (`EditorResult` vs `anyhow::Result`) 
+5. 使用适当的错误处理 (`ForgeResult` vs `anyhow::Result`) 

@@ -1,6 +1,51 @@
-# ModuForge-RS
+---
+layout: home
 
-[Read this in English](./README.en.md)
+hero:
+  name: "ModuForge-RS"
+  text: "基于 Rust 的状态管理框架"
+  tagline: "不可变数据结构和事件驱动架构，支持任何业务场景"
+  image:
+    src: /logo.svg
+    alt: ModuForge-RS
+  actions:
+    - theme: brand
+      text: 快速开始
+      link: /setup-external-project
+    - theme: alt
+      text: 插件开发指南
+      link: /plugin-development-guide
+    - theme: alt
+      text: 查看 GitHub
+      link: https://github.com/Cassielxd/moduforge-rs
+
+features:
+  - icon: 🚀
+    title: 事件驱动架构
+    details: 基于不可变数据结构和完善的事件系统，提供可靠的状态管理。
+  
+  - icon: 🔧
+    title: 插件系统
+    details: 高度模块化架构，支持动态插件加载和生命周期管理。
+  
+  - icon: ⚡
+    title: 异步处理
+    details: 高性能异步运行时，支持中间件和并发事务处理。
+  
+  - icon: 🎯
+    title: 业务无关
+    details: 无业务逻辑绑定，通过扩展机制适配任何应用场景。
+  
+  - icon: 📊
+    title: 规则引擎
+    details: 强大的规则引擎，支持表达式解析、决策树和模板系统。
+  
+  - icon: 🔄
+    title: 实时协作
+    details: 内置协作功能，支持 WebSocket 和冲突解决机制。
+---
+
+## 快速开始
 
 ModuForge 是一个基于 Rust 的状态管理和数据转换框架，专注于不可变数据结构和事件驱动架构。它提供了无业务绑定的编辑器核心实现，可以通过扩展进行定制和扩展，支持任何业务场景的需求。
 
