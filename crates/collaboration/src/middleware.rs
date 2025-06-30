@@ -29,16 +29,14 @@ impl Middleware for YrsMiddleware {
             self.room_id
         );
 
-
-
         // 同步每个事务
         if let Err(e) = self
-                .sync_service
-                .handle_transaction_applied(transactions, &self.room_id)
-                .await
-            {
-                error!("YRS同步失败: {}", e);
-            }
+            .sync_service
+            .handle_transaction_applied(transactions, &self.room_id)
+            .await
+        {
+            error!("YRS同步失败: {}", e);
+        }
 
         Ok(None)
     }

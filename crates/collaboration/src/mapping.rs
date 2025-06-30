@@ -10,11 +10,7 @@ use std::{any::TypeId, collections::HashMap};
 use crate::{NodeData, MarkData, RoomSnapshot, StepResult};
 use serde_json::Value as JsonValue;
 use yrs::{
-    types::{
-        array::ArrayRef,
-        map::MapRef,
-        Value,
-    },
+    types::{array::ArrayRef, map::MapRef, Value},
     Array, ArrayPrelim, Map, MapPrelim, TransactionMut, WriteTxn,
 };
 
@@ -32,10 +28,16 @@ pub trait StepConverter: Send + Sync {
     fn name(&self) -> &'static str;
 
     /// 检查此转换器是否支持给定的步骤类型
-    fn supports(&self, step: &dyn Step) -> bool;
+    fn supports(
+        &self,
+        step: &dyn Step,
+    ) -> bool;
 
     /// 获取步骤的操作描述
-    fn get_description(&self, step: &dyn Step) -> String {
+    fn get_description(
+        &self,
+        step: &dyn Step,
+    ) -> String {
         format!("Executing operation: {} ({})", step.name(), self.name())
     }
 }
@@ -57,7 +59,11 @@ impl StepConverter for DefaultStepConverter {
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
                 .as_millis() as u64,
-            client_id: txn.origin().as_ref().map(|s| s.to_string()).unwrap_or_default(),
+            client_id: txn
+                .origin()
+                .as_ref()
+                .map(|s| s.to_string())
+                .unwrap_or_default(),
         })
     }
 
@@ -65,7 +71,10 @@ impl StepConverter for DefaultStepConverter {
         "DefaultStepConverter"
     }
 
-    fn supports(&self, _step: &dyn Step) -> bool {
+    fn supports(
+        &self,
+        _step: &dyn Step,
+    ) -> bool {
         true // Default converter supports all types as a fallback.
     }
 }
@@ -84,19 +93,20 @@ fn json_value_to_yrs_any(value: &JsonValue) -> yrs::Any {
             } else {
                 yrs::Any::Null
             }
-        }
+        },
         JsonValue::String(s) => yrs::Any::String(s.clone().into()),
         JsonValue::Array(arr) => {
-            let yrs_array: Vec<yrs::Any> = arr.iter().map(json_value_to_yrs_any).collect();
+            let yrs_array: Vec<yrs::Any> =
+                arr.iter().map(json_value_to_yrs_any).collect();
             yrs::Any::Array(yrs_array.into())
-        }
+        },
         JsonValue::Object(obj) => {
             let yrs_map: std::collections::HashMap<String, yrs::Any> = obj
                 .iter()
                 .map(|(k, v)| (k.clone(), json_value_to_yrs_any(v)))
                 .collect();
             yrs::Any::Map(yrs_map.into())
-        }
+        },
     }
 }
 
@@ -109,7 +119,9 @@ fn add_mark_to_array(
     let mark_map = MapPrelim::<yrs::Any>::from([
         ("type".to_string(), yrs::Any::String(mark.r#type.clone().into())),
         ("attrs".to_string(), {
-            let attrs_map: std::collections::HashMap<String, yrs::Any> = mark.attrs.iter()
+            let attrs_map: std::collections::HashMap<String, yrs::Any> = mark
+                .attrs
+                .iter()
                 .map(|(k, v)| (k.clone(), json_value_to_yrs_any(v)))
                 .collect();
             yrs::Any::Map(attrs_map.into())
@@ -139,7 +151,7 @@ fn get_or_create_node_attrs_map(
     if let Some(Value::YMap(map)) = node_data_map.get(txn, "attrs") {
         map
     } else {
-            node_data_map.insert(txn, "attrs", MapPrelim::<yrs::Any>::new())
+        node_data_map.insert(txn, "attrs", MapPrelim::<yrs::Any>::new())
     }
 }
 
@@ -151,31 +163,50 @@ fn get_or_create_marks_array(
     if let Some(Value::YArray(array)) = node_data_map.get(txn, "marks") {
         array
     } else {
-        node_data_map.insert(txn, "marks", ArrayPrelim::from(Vec::<yrs::Any>::new()))
+        node_data_map.insert(
+            txn,
+            "marks",
+            ArrayPrelim::from(Vec::<yrs::Any>::new()),
+        )
     }
 }
-
 
 /// 节点相关步骤的转换器
 pub struct NodeStepConverter;
 
 impl NodeStepConverter {
-    fn insert_node_data(&self, txn: &mut TransactionMut, nodes_map: &MapRef, node: &Node) {
-        let node_data_map = get_or_create_node_data_map(nodes_map, txn, &node.id);
+    fn insert_node_data(
+        &self,
+        txn: &mut TransactionMut,
+        nodes_map: &MapRef,
+        node: &Node,
+    ) {
+        let node_data_map =
+            get_or_create_node_data_map(nodes_map, txn, &node.id);
         // 插入节点类型
         node_data_map.insert(txn, "type", node.r#type.clone());
         // 插入节点属性
-        let attrs_map = node_data_map.insert(txn, "attrs", MapPrelim::<yrs::Any>::new());
+        let attrs_map =
+            node_data_map.insert(txn, "attrs", MapPrelim::<yrs::Any>::new());
         for (key, value) in node.attrs.iter() {
             attrs_map.insert(txn, key.clone(), json_value_to_yrs_any(value));
         }
         // 插入节点内容
-        let content_array = node_data_map.insert(txn, "content", ArrayPrelim::from(Vec::<yrs::Any>::new()));
+        let content_array = node_data_map.insert(
+            txn,
+            "content",
+            ArrayPrelim::from(Vec::<yrs::Any>::new()),
+        );
         for child_id in &node.content {
-            content_array.push_back(txn, yrs::Any::String(child_id.clone().into()));
+            content_array
+                .push_back(txn, yrs::Any::String(child_id.clone().into()));
         }
         // 插入节点标记
-        let marks_array = node_data_map.insert(txn, "marks", ArrayPrelim::from(Vec::<yrs::Any>::new()));
+        let marks_array = node_data_map.insert(
+            txn,
+            "marks",
+            ArrayPrelim::from(Vec::<yrs::Any>::new()),
+        );
         for mark in &node.marks {
             add_mark_to_array(&marks_array, txn, mark);
         }
@@ -188,7 +219,8 @@ impl StepConverter for NodeStepConverter {
         step: &dyn Step,
         txn: &mut TransactionMut,
     ) -> Result<StepResult, Box<dyn std::error::Error>> {
-        let client_id = txn.origin().as_ref().map(|s| s.to_string()).unwrap_or_default();
+        let client_id =
+            txn.origin().as_ref().map(|s| s.to_string()).unwrap_or_default();
 
         if let Some(add_step) = step.downcast_ref::<AddNodeStep>() {
             let nodes_map = txn.get_or_insert_map("nodes");
@@ -208,7 +240,8 @@ impl StepConverter for NodeStepConverter {
                     .as_millis() as u64,
                 client_id,
             });
-        } else if let Some(remove_step) = step.downcast_ref::<RemoveNodeStep>() {
+        } else if let Some(remove_step) = step.downcast_ref::<RemoveNodeStep>()
+        {
             let nodes_map = txn.get_or_insert_map("nodes");
             for node_id in &remove_step.node_ids {
                 nodes_map.remove(txn, &node_id.to_string());
@@ -217,7 +250,10 @@ impl StepConverter for NodeStepConverter {
             return Ok(StepResult {
                 step_id: uuid::Uuid::new_v4().to_string(),
                 step_name: step.name().to_string(),
-                description: format!("Removed {} nodes", remove_step.node_ids.len()),
+                description: format!(
+                    "Removed {} nodes",
+                    remove_step.node_ids.len()
+                ),
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
@@ -233,8 +269,12 @@ impl StepConverter for NodeStepConverter {
         "NodeStepConverter"
     }
 
-    fn supports(&self, step: &dyn Step) -> bool {
-        step.type_id() == TypeId::of::<AddNodeStep>() || step.type_id() == TypeId::of::<RemoveNodeStep>()
+    fn supports(
+        &self,
+        step: &dyn Step,
+    ) -> bool {
+        step.type_id() == TypeId::of::<AddNodeStep>()
+            || step.type_id() == TypeId::of::<RemoveNodeStep>()
     }
 }
 
@@ -247,15 +287,21 @@ impl StepConverter for AttrStepConverter {
         step: &dyn Step,
         txn: &mut TransactionMut,
     ) -> Result<StepResult, Box<dyn std::error::Error>> {
-        let client_id = txn.origin().as_ref().map(|s| s.to_string()).unwrap_or_default();
+        let client_id =
+            txn.origin().as_ref().map(|s| s.to_string()).unwrap_or_default();
         if let Some(attr_step) = step.downcast_ref::<AttrStep>() {
             let nodes_map = txn.get_or_insert_map("nodes");
-            let node_data_map = get_or_create_node_data_map(&nodes_map, txn, &attr_step.id);
+            let node_data_map =
+                get_or_create_node_data_map(&nodes_map, txn, &attr_step.id);
             // 获取或创建节点属性映射
             let attrs_map = get_or_create_node_attrs_map(&node_data_map, txn);
             // 更新节点属性
             for (key, value) in attr_step.values.iter() {
-                attrs_map.insert(txn, key.clone(), json_value_to_yrs_any(value));
+                attrs_map.insert(
+                    txn,
+                    key.clone(),
+                    json_value_to_yrs_any(value),
+                );
             }
 
             Ok(StepResult {
@@ -281,7 +327,10 @@ impl StepConverter for AttrStepConverter {
         "AttrStepConverter"
     }
 
-    fn supports(&self, step: &dyn Step) -> bool {
+    fn supports(
+        &self,
+        step: &dyn Step,
+    ) -> bool {
         step.type_id() == TypeId::of::<AttrStep>()
     }
 }
@@ -311,7 +360,7 @@ impl MarkStepConverter {
                     };
                     if mark_type == mark_type_to_remove {
                         marks_array.remove(txn, i);
-                        return; 
+                        return;
                     }
                 }
             }
@@ -325,7 +374,8 @@ impl StepConverter for MarkStepConverter {
         step: &dyn Step,
         txn: &mut TransactionMut,
     ) -> Result<StepResult, Box<dyn std::error::Error>> {
-        let client_id = txn.origin().as_ref().map(|s| s.to_string()).unwrap_or_default();
+        let client_id =
+            txn.origin().as_ref().map(|s| s.to_string()).unwrap_or_default();
 
         if let Some(add_mark_step) = step.downcast_ref::<AddMarkStep>() {
             let nodes_map = txn.get_or_insert_map("nodes");
@@ -336,23 +386,32 @@ impl StepConverter for MarkStepConverter {
             let marks_array = get_or_create_marks_array(&node_data_map, txn);
             // 添加标记
             for mark in &add_mark_step.marks {
-                 add_mark_to_array(&marks_array, txn, mark);
+                add_mark_to_array(&marks_array, txn, mark);
             }
 
             return Ok(StepResult {
                 step_id: uuid::Uuid::new_v4().to_string(),
                 step_name: step.name().to_string(),
-                description: format!("添加 {} 个标记 to node {}", add_mark_step.marks.len(), add_mark_step.id),
+                description: format!(
+                    "添加 {} 个标记 to node {}",
+                    add_mark_step.marks.len(),
+                    add_mark_step.id
+                ),
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
                     .as_millis() as u64,
                 client_id,
             });
-        } else if let Some(remove_mark_step) = step.downcast_ref::<RemoveMarkStep>() {
+        } else if let Some(remove_mark_step) =
+            step.downcast_ref::<RemoveMarkStep>()
+        {
             let nodes_map = txn.get_or_insert_map("nodes");
-            let node_data_map =
-                get_or_create_node_data_map(&nodes_map, txn, &remove_mark_step.id);
+            let node_data_map = get_or_create_node_data_map(
+                &nodes_map,
+                txn,
+                &remove_mark_step.id,
+            );
             let marks_array = get_or_create_marks_array(&node_data_map, txn);
             // 删除标记
             for mark_type in &remove_mark_step.mark_types {
@@ -362,7 +421,11 @@ impl StepConverter for MarkStepConverter {
             return Ok(StepResult {
                 step_id: uuid::Uuid::new_v4().to_string(),
                 step_name: step.name().to_string(),
-                description: format!("Removed {} marks from node {}", remove_mark_step.mark_types.len(), remove_mark_step.id),
+                description: format!(
+                    "Removed {} marks from node {}",
+                    remove_mark_step.mark_types.len(),
+                    remove_mark_step.id
+                ),
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
@@ -378,8 +441,12 @@ impl StepConverter for MarkStepConverter {
         "MarkStepConverter"
     }
 
-    fn supports(&self, step: &dyn Step) -> bool {
-        step.type_id() == TypeId::of::<AddMarkStep>() || step.type_id() == TypeId::of::<RemoveMarkStep>()
+    fn supports(
+        &self,
+        step: &dyn Step,
+    ) -> bool {
+        step.type_id() == TypeId::of::<AddMarkStep>()
+            || step.type_id() == TypeId::of::<RemoveMarkStep>()
     }
 }
 
@@ -397,9 +464,7 @@ impl Default for StepConverterRegistry {
 impl StepConverterRegistry {
     /// 创建一个新的注册表，包含所有默认的转换器
     pub fn new() -> Self {
-        let mut registry = Self {
-            converters: Vec::new(),
-        };
+        let mut registry = Self { converters: Vec::new() };
 
         registry.register(Box::new(NodeStepConverter));
         registry.register(Box::new(AttrStepConverter));
@@ -410,13 +475,19 @@ impl StepConverterRegistry {
     }
 
     /// 注册一个新的转换器
-    pub fn register(&mut self, converter: Box<dyn StepConverter>) {
+    pub fn register(
+        &mut self,
+        converter: Box<dyn StepConverter>,
+    ) {
         tracing::info!("🔄 注册步骤转换器: {}", converter.name());
         self.converters.push(converter);
     }
 
     /// 查找支持给定步骤的转换器
-    pub fn find_converter(&self, step: &dyn Step) -> Option<&(dyn StepConverter)> {
+    pub fn find_converter(
+        &self,
+        step: &dyn Step,
+    ) -> Option<&(dyn StepConverter)> {
         for converter in &self.converters {
             if converter.supports(step) {
                 return Some(converter.as_ref());
@@ -439,22 +510,37 @@ impl Mapper {
     }
 
     /// 将 ModuForge `Tree` 转换为 `RoomSnapshot`
-    pub fn tree_to_snapshot(tree: &Tree, room_id: String) -> RoomSnapshot {
+    pub fn tree_to_snapshot(
+        tree: &Tree,
+        room_id: String,
+    ) -> RoomSnapshot {
         let mut nodes = HashMap::new();
-            
-        fn collect_nodes(tree: &Tree, node_id: &str, nodes: &mut HashMap<String, NodeData>) {
+
+        fn collect_nodes(
+            tree: &Tree,
+            node_id: &str,
+            nodes: &mut HashMap<String, NodeData>,
+        ) {
             if let Some(node) = tree.get_node(&node_id.to_string()) {
                 let node_data = NodeData {
                     id: node.id.clone(),
                     node_type: node.r#type.clone(),
-                    attrs: node.attrs.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+                    attrs: node
+                        .attrs
+                        .iter()
+                        .map(|(k, v)| (k.clone(), v.clone()))
+                        .collect(),
                     content: node.content.iter().cloned().collect(),
                     marks: node
                         .marks
                         .iter()
                         .map(|mark| MarkData {
                             mark_type: mark.r#type.clone(),
-                            attrs: mark.attrs.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+                            attrs: mark
+                                .attrs
+                                .iter()
+                                .map(|(k, v)| (k.clone(), v.clone()))
+                                .collect(),
                         })
                         .collect(),
                 };
@@ -473,7 +559,7 @@ impl Mapper {
             room_id,
             root_id: tree.root_id.clone(),
             nodes,
-            version: 0, 
+            version: 0,
         }
     }
 }

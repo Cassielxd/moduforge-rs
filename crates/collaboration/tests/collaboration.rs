@@ -4,7 +4,8 @@ use async_trait::async_trait;
 use moduforge_state::{transaction::Command, Transaction};
 use moduforge_transform::TransformResult;
 use moduforge_collaboration::{
-    Result, SyncService, YrsMiddleware, YrsManager, CollaborationServer, RoomStatus,
+    Result, SyncService, YrsMiddleware, YrsManager, CollaborationServer,
+    RoomStatus,
 };
 use tokio::time::{sleep, Duration};
 use tracing_subscriber;
@@ -29,12 +30,12 @@ async fn test_collaboration() -> Result<()> {
     // 1. 创建核心服务
     let yrs_manager = Arc::new(YrsManager::new());
     let sync_service = Arc::new(SyncService::new(yrs_manager.clone()));
-    
+
     // 2. 创建协作服务器，使用现有的 sync_service
     let collaboration_server = CollaborationServer::with_sync_service(
-        yrs_manager.clone(), 
-        sync_service.clone(), 
-        8080
+        yrs_manager.clone(),
+        sync_service.clone(),
+        8080,
     );
     // 3. 创建并配置 ForgeRuntime (Editor) - 使用Mutex包装以支持可变访问
     let room_id = "demo-room".to_string();
@@ -46,9 +47,11 @@ async fn test_collaboration() -> Result<()> {
     {
         let runtime_guard = runtime.lock().await;
         let tree = runtime_guard.doc().get_inner().clone();
-        
+
         // 初始化房间并同步现有的 Tree 数据
-        if let Err(e) = collaboration_server.init_room_with_data(&room_id, &tree).await {
+        if let Err(e) =
+            collaboration_server.init_room_with_data(&room_id, &tree).await
+        {
             tracing::error!("Failed to initialize room with data: {}", e);
         } else {
             tracing::info!("✅ 房间 '{}' 已成功使用现有数据初始化", room_id);
@@ -73,12 +76,12 @@ async fn test_collaboration() -> Result<()> {
             tracing::info!("🔒 准备获取 runtime lock");
             let mut runtime_guard = runtime_clone_for_commands.lock().await;
             tracing::info!("🔓 已获取 runtime lock，准备执行 command");
-            
+
             match runtime_guard.command(Arc::new(TestCommand)).await {
                 Ok(_) => tracing::info!("✅ 测试命令执行成功"),
                 Err(e) => tracing::error!("❌ 测试命令执行失败: {}", e),
             }
-            
+
             tracing::info!("🔓 准备释放 runtime lock");
             // runtime_guard 在这里自动释放
         }
@@ -104,17 +107,18 @@ async fn test_room_offline() -> Result<()> {
     let yrs_manager = Arc::new(YrsManager::new());
     let sync_service = Arc::new(SyncService::new(yrs_manager.clone()));
     let server = CollaborationServer::with_sync_service(
-        yrs_manager.clone(), 
-        sync_service.clone(), 
-        8080
+        yrs_manager.clone(),
+        sync_service.clone(),
+        8080,
     );
 
     // 2. 创建测试房间
     let test_rooms = vec!["room1", "room2", "room3"];
     for room_id in &test_rooms {
-        let runtime = build_runtime(sync_service.clone(), room_id.to_string()).await;
+        let runtime =
+            build_runtime(sync_service.clone(), room_id.to_string()).await;
         let tree = runtime.doc().get_inner().clone();
-        
+
         // 初始化房间
         server.init_room_with_data(room_id, &tree).await?;
         tracing::info!("✅ 测试房间 '{}' 初始化完成", room_id);
@@ -165,17 +169,18 @@ async fn test_conditional_offline() -> Result<()> {
     let yrs_manager = Arc::new(YrsManager::new());
     let sync_service = Arc::new(SyncService::new(yrs_manager.clone()));
     let server = CollaborationServer::with_sync_service(
-        yrs_manager.clone(), 
-        sync_service.clone(), 
-        8080
+        yrs_manager.clone(),
+        sync_service.clone(),
+        8080,
     );
 
     // 2. 创建多个房间
     let test_rooms = vec!["empty-room1", "empty-room2", "active-room"];
     for room_id in &test_rooms {
-        let runtime = build_runtime(sync_service.clone(), room_id.to_string()).await;
+        let runtime =
+            build_runtime(sync_service.clone(), room_id.to_string()).await;
         let tree = runtime.doc().get_inner().clone();
-        
+
         server.init_room_with_data(room_id, &tree).await?;
     }
 
@@ -187,7 +192,7 @@ async fn test_conditional_offline() -> Result<()> {
     // 4. 测试服务器完全关闭
     tracing::info!("🔄 测试服务器关闭");
     server.shutdown(true).await?;
-    
+
     let final_rooms = server.get_active_rooms();
     tracing::info!("📊 关闭后剩余房间: {:?}", final_rooms);
     assert!(final_rooms.is_empty());
@@ -207,15 +212,15 @@ async fn test_room_not_found_error() -> Result<()> {
     let yrs_manager = Arc::new(YrsManager::new());
     let sync_service = Arc::new(SyncService::new(yrs_manager.clone()));
     let server = CollaborationServer::with_sync_service(
-        yrs_manager.clone(), 
-        sync_service.clone(), 
-        8080
+        yrs_manager.clone(),
+        sync_service.clone(),
+        8080,
     );
 
     // 2. 验证房间不存在
     let non_existent_room = "non-existent-room";
     assert!(!yrs_manager.room_exists(non_existent_room));
-    
+
     let status = sync_service.get_room_status(non_existent_room).await;
     assert_eq!(status, RoomStatus::NotExists);
 
@@ -238,9 +243,9 @@ async fn test_room_existence_check() -> Result<()> {
     let yrs_manager = Arc::new(YrsManager::new());
     let sync_service = Arc::new(SyncService::new(yrs_manager.clone()));
     let server = CollaborationServer::with_sync_service(
-        yrs_manager.clone(), 
-        sync_service.clone(), 
-        8080
+        yrs_manager.clone(),
+        sync_service.clone(),
+        8080,
     );
 
     let room_id = "test-room";
@@ -251,7 +256,8 @@ async fn test_room_existence_check() -> Result<()> {
     assert_eq!(status, RoomStatus::NotExists);
 
     // 3. 创建房间
-    let runtime = build_runtime(sync_service.clone(), room_id.to_string()).await;
+    let runtime =
+        build_runtime(sync_service.clone(), room_id.to_string()).await;
     let tree = runtime.doc().get_inner().clone();
     server.init_room_with_data(room_id, &tree).await?;
 
@@ -263,7 +269,7 @@ async fn test_room_existence_check() -> Result<()> {
     // 5. 验证可以获取房间信息
     let room_info = sync_service.get_room_info(room_id).await;
     assert!(room_info.is_some());
-    
+
     if let Some(info) = room_info {
         assert_eq!(info.room_id, room_id);
         assert_eq!(info.status, RoomStatus::Initialized);
@@ -293,15 +299,16 @@ async fn test_http_endpoints() -> Result<()> {
     let yrs_manager = Arc::new(YrsManager::new());
     let sync_service = Arc::new(SyncService::new(yrs_manager.clone()));
     let server = CollaborationServer::with_sync_service(
-        yrs_manager.clone(), 
-        sync_service.clone(), 
-        8081 // 使用不同的端口避免冲突
+        yrs_manager.clone(),
+        sync_service.clone(),
+        8081, // 使用不同的端口避免冲突
     );
 
     let room_id = "test-http-room";
 
     // 2. 创建房间
-    let runtime = build_runtime(sync_service.clone(), room_id.to_string()).await;
+    let runtime =
+        build_runtime(sync_service.clone(), room_id.to_string()).await;
     let tree = runtime.doc().get_inner().clone();
     server.init_room_with_data(room_id, &tree).await?;
 
@@ -318,7 +325,7 @@ async fn test_http_endpoints() -> Result<()> {
     // 5. 测试房间状态 API
     let room_info = sync_service.get_room_info(room_id).await;
     assert!(room_info.is_some(), "应该能获取房间信息");
-    
+
     if let Some(info) = room_info {
         assert_eq!(info.room_id, room_id);
         assert_eq!(info.status, RoomStatus::Initialized);
@@ -328,8 +335,11 @@ async fn test_http_endpoints() -> Result<()> {
     // 6. 测试健康检查 API（模拟）
     let active_rooms = sync_service.get_active_rooms();
     let room_stats = sync_service.get_rooms_stats().await;
-    
-    assert!(active_rooms.contains(&room_id.to_string()), "活跃房间列表应包含测试房间");
+
+    assert!(
+        active_rooms.contains(&room_id.to_string()),
+        "活跃房间列表应包含测试房间"
+    );
     assert!(!room_stats.is_empty(), "房间统计不应为空");
 
     tracing::info!("📊 活跃房间数: {}", active_rooms.len());
@@ -358,21 +368,22 @@ async fn test_room_precheck_logic() -> Result<()> {
     let yrs_manager = Arc::new(YrsManager::new());
     let sync_service = Arc::new(SyncService::new(yrs_manager.clone()));
     let server = CollaborationServer::with_sync_service(
-        yrs_manager.clone(), 
-        sync_service.clone(), 
-        8082
+        yrs_manager.clone(),
+        sync_service.clone(),
+        8082,
     );
 
     // 2. 测试场景：房间不存在
     let non_existent_room = "non-existent-room";
     assert!(!yrs_manager.room_exists(non_existent_room));
-    
+
     let room_status = sync_service.get_room_status(non_existent_room).await;
     assert_eq!(room_status, RoomStatus::NotExists);
 
     // 3. 测试场景：创建房间后存在
     let existing_room = "existing-room";
-    let runtime = build_runtime(sync_service.clone(), existing_room.to_string()).await;
+    let runtime =
+        build_runtime(sync_service.clone(), existing_room.to_string()).await;
     let tree = runtime.doc().get_inner().clone();
     server.init_room_with_data(existing_room, &tree).await?;
 
@@ -383,12 +394,16 @@ async fn test_room_precheck_logic() -> Result<()> {
     // 4. 测试场景：房间信息获取
     let room_info = sync_service.get_room_info(existing_room).await;
     assert!(room_info.is_some());
-    
+
     if let Some(info) = room_info {
         assert_eq!(info.room_id, existing_room);
         assert_eq!(info.status, RoomStatus::Initialized);
         assert_eq!(info.client_count, 0); // 没有客户端连接
-        tracing::info!("📊 房间信息: 节点数={}, 客户端数={}", info.node_count, info.client_count);
+        tracing::info!(
+            "📊 房间信息: 节点数={}, 客户端数={}",
+            info.node_count,
+            info.client_count
+        );
     }
 
     // 5. 清理

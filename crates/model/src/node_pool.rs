@@ -50,7 +50,7 @@ impl NodePool {
     }
 
     pub fn root(&self) -> Arc<Node> {
-        self.inner[&self.inner.root_id].0.clone()
+        self.inner[&self.inner.root_id].clone()
     }
 
     pub fn root_id(&self) -> &NodeId {
@@ -88,13 +88,13 @@ impl NodePool {
         &self,
         id: &NodeId,
     ) -> Option<Arc<Node>> {
-        self.inner.get_node(id).map(|node| node.0.clone())
+        self.inner.get_node(id).map(|node| node.clone())
     }
     pub fn get_parent_node(
         &self,
         id: &NodeId,
     ) -> Option<Arc<Node>> {
-        self.inner.get_parent_node(id).map(|node| node.0.clone())
+        self.inner.get_parent_node(id).map(|node| node.clone())
     }
 
     /// 检查节点是否存在
@@ -517,7 +517,6 @@ impl NodePool {
                     .cloned()
                     .collect::<Vec<_>>()
             })
-            .map(|node| node.0.clone())
             .collect()
     }
 
@@ -552,10 +551,7 @@ impl NodePool {
                 // 按批次处理节点
                 nodes
                     .chunks(batch_size)
-                    .flat_map(|chunk|{
-                        let nodes: Vec<Arc<Node>> = chunk.iter().map(|node| node.0.clone()).collect();
-                        predicate(&nodes)
-                    })
+                    .flat_map(|chunk| predicate(&chunk))
                     .collect::<Vec<_>>()
             })
             .collect()
@@ -592,7 +588,7 @@ impl NodePool {
                 shard
                     .values()
                     .filter(|node| predicate(node))
-                    .map(|node| transform(&node.0))
+                    .map(|node| transform(node))
                     .collect::<Vec<T>>()
             })
             .collect()
@@ -639,7 +635,7 @@ impl NodePool {
                 shard
                     .values()
                     .filter(|node| predicate(node))
-                    .fold(init.clone(), |acc, node| fold(acc, &node.0))
+                    .fold(init.clone(), |acc, node| fold(acc, node))
             })
             // 合并所有分片的结果
             .reduce(|| init.clone(), |a, _b| fold(a, &dummy_node))
@@ -650,7 +646,7 @@ impl NodePool {
         let mut result = Vec::new();
         for shard in &self.inner.nodes {
             for node in shard.values() {
-                result.push(node.0.clone());
+                result.push(node.clone());
             }
         }
         result
@@ -918,16 +914,16 @@ impl OptimizedQueryEngine {
             // 批量收集节点信息，使用引用避免克隆
             for node in shard {
                 // 收集类型信息
-                type_nodes.push((node.r#type.clone(), Arc::clone(&node.0)));
+                type_nodes.push((node.r#type.clone(), Arc::clone(&node)));
 
                 // 收集深度信息
                 if let Some(depth) = self.pool.get_node_depth(&node.id) {
-                    depth_nodes.push((depth, Arc::clone(&node.0)));
+                    depth_nodes.push((depth, Arc::clone(&node)));
                 }
 
                 // 收集标记信息
                 for mark in &node.marks {
-                    mark_nodes.push((mark.r#type.clone(), Arc::clone(&node.0)));
+                    mark_nodes.push((mark.r#type.clone(), Arc::clone(&node)));
                 }
             }
 

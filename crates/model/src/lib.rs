@@ -36,7 +36,6 @@ pub mod node_type;
 pub mod schema;
 //内容匹配定义
 pub mod content;
-pub mod arc_ptr;
 //id生成器定义
 pub mod error;
 pub mod id_generator;

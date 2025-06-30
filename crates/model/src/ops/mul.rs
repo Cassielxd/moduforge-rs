@@ -18,7 +18,7 @@ impl<'a> Mul<usize> for NodeRef<'a> {
             let mut nodes = Vec::new();
             for _ in 0..count {
                 // 创建节点的副本
-                let mut node = current_node.0.as_ref().clone();
+                let mut node = current_node.as_ref().clone();
                 node.id = IdGenerator::get_id();
                 node.content = im::Vector::new();
                 nodes.push(node);
@@ -44,7 +44,7 @@ impl<'a> Mul<NodeId> for NodeRef<'a> {
     ) -> Self::Output {
         // 获取要复制的节点
         if let Some(source_node) = self.tree.get_node(&node_id) {
-            let mut node = source_node.0.as_ref().clone();
+            let mut node = source_node.as_ref().clone();
             node.id = IdGenerator::get_id();
             node.content = im::Vector::new();
             // 添加到当前节点
@@ -66,7 +66,7 @@ impl<'a> Mul<Vec<NodeId>> for NodeRef<'a> {
 
         for node_id in node_ids {
             if let Some(source_node) = self.tree.get_node(&node_id) {
-                let mut node = source_node.0.as_ref().clone();
+                let mut node = source_node.as_ref().clone();
                 node.id = IdGenerator::get_id();
                 node.content = im::Vector::new();
                 cloned_nodes.push(node);
