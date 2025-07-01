@@ -13,14 +13,14 @@ ModuForge-RS 是基于 Rust 的状态管理和数据转换框架，采用：
 ### 依赖配置
 ```toml
 [dependencies]
-moduforge-core = "0.4.4"
-moduforge-model = "0.4.4"
-moduforge-state = "0.4.4"
-moduforge-transform = "0.4.4"
-moduforge-rules-engine = "0.4.4"
-moduforge-rules-expression = "0.4.4"
-moduforge-collaboration = "0.4.4"
-moduforge-template = "0.4.4"
+moduforge-core = "0.4.5"
+moduforge-model = "0.4.5"
+moduforge-state = "0.4.5"
+moduforge-transform = "0.4.5"
+moduforge-rules-engine = "0.4.5"
+moduforge-rules-expression = "0.4.5"
+moduforge-collaboration = "0.4.5"
+moduforge-template = "0.4.5"
 
 # 必需的支持库
 tokio = { version = "1.0", features = ["full"] }

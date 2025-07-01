@@ -27,7 +27,7 @@ impl YrsManager {
             return awareness_ref.clone();
         }
 
-        let doc = Doc::new();
+        let doc: Doc = Doc::new();
         let awareness = Awareness::new(doc);
         let awareness_ref = Arc::new(RwLock::new(awareness));
         self.awareness_refs.insert(room_id.to_string(), awareness_ref.clone());
