@@ -26,14 +26,14 @@ cp path/to/moduforge-rs/.cursorrules-external-simple ./.cursorrules
 ```toml
 [dependencies]
 # 核心依赖
-moduforge-core = "0.4.5"
-moduforge-model = "0.4.5" 
-moduforge-state = "0.4.5"
-moduforge-transform = "0.4.5"
-moduforge-rules-engine = "0.4.5"
-moduforge-rules-expression = "0.4.5"
-moduforge-collaboration = "0.4.5"
-moduforge-template = "0.4.5"
+moduforge-core = "0.4.6"
+moduforge-model = "0.4.6" 
+moduforge-state = "0.4.6"
+moduforge-transform = "0.4.6"
+moduforge-rules-engine = "0.4.6"
+moduforge-rules-expression = "0.4.6"
+moduforge-collaboration = "0.4.6"
+moduforge-template = "0.4.6"
 
 # 必需的支持库
 tokio = { version = "1.0", features = ["full"] }
