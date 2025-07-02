@@ -1,75 +1,70 @@
-# ModuForge 协作 Crate
+# ModuForge 协作系统 (moduforge-collaboration)
 
-`moduforge-collaboration` 是一个为 ModuForge 生态系统提供实时协作功能的 Rust crate。它允许多个用户同时在同一个文档上工作，并实时同步所有更改。
+`moduforge-collaboration` 是一个为 ModuForge 生态系统提供实时协作功能的 Rust crate。它基于 CRDT (无冲突复制数据类型) 技术，允许多个用户同时在同一个文档上工作，并实时同步所有更改。
 
-## 核心技术
+## 🏗️ 架构概述
 
-为了确保高性能和高可靠性，协作服务器构建在一系列健壮且现代的技术之上：
+协作系统采用分层架构设计，每个组件都有明确的职责：
 
--   **WebSocket**: 服务器使用 WebSocket (`tokio-tungstenite`) 在客户端和服务器之间进行持久、低延迟的双向通信。这对于实现实时协作至关重要。
--   **CRDTs (无冲突复制数据类型)**: 同步逻辑的核心是 `yrs`，它是流行的 Yjs CRDT 框架的 Rust 移植。CRDTs 允许本地优先的开发模式，并保证即使在多个用户并发编辑的情况下，文档状态最终也能无冲突地达成一致。
--   **Tokio**: 整个服务器构建在 Tokio 异步运行时之上，使其能够高效地处理大量并发连接。
-
-## 架构
-
-该 crate 由几个协同工作的关键组件构成，共同提供协作服务：
-
-### `CollaborationServer`
-
-这是服务器的主要入口点。其职责包括：
--   接受来自客户端的 WebSocket 连接请求。
--   管理每个客户端连接的生命周期，包括注册和清理。
--   将客户端组织到"房间"中，每个房间对应一个唯一的文档协作会话。
--   向房间内的所有客户端广播消息。
-
-### `SyncService`
-
-`SyncService` 充当业务逻辑层。它处理来自客户端的传入消息，并与其他组件协调。其处理的事务包括：
--   客户端加入或离开房间的请求。
--   处理 `Yrs` 更新消息，并将其应用到相应的文档上。
--   为新加入的客户端同步文档状态。
-
-### `YrsManager`
-
-该组件负责管理所有活动的 CRDT 文档 (`yrs::Doc`)。它：
--   维护一个从 `room_id` 到 `yrs::Doc` 的映射。
--   提供一种线程安全的方式来访问、创建和更新文档。
--   确保对给定文档的所有更改都得到正确处理。
-
-## 房间管理和错误处理
-
-### 🔒 **严格的房间存在性检查**
-
-从安全性和资源管理角度考虑，系统采用严格的房间管理策略：
-
-#### **房间必须预先初始化**
-```rust
-// ✅ 正确方式：预先初始化房间
-let server = CollaborationServer::with_sync_service(yrs_manager, sync_service, 8080);
-server.init_room_with_data("room-123", &tree).await?;
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    CollaborationServer                      │
+│              (WebSocket 服务器 + 路由管理)                    │
+├─────────────────────────────────────────────────────────────┤
+│                    SyncService                              │
+│              (业务逻辑 + 状态管理)                            │
+├─────────────────────────────────────────────────────────────┤
+│                    YrsManager                               │
+│              (CRDT 文档管理)                                 │
+├─────────────────────────────────────────────────────────────┤
+│                    Mapper                                   │
+│              (数据转换 + 步骤映射)                            │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-#### **客户端连接检查**
-当客户端尝试连接到房间时：
-- ✅ **房间存在** → 允许连接，正常进行 WebSocket 升级
-- ❌ **房间不存在** → 返回 404 错误，拒绝连接
+## 🧩 核心组件
 
+### 1. CollaborationServer
+**文件**: `src/ws_server.rs`  
+**职责**: WebSocket 服务器和 HTTP 路由管理
+
+- **WebSocket 连接管理**: 处理客户端连接、断开和消息路由
+- **房间存在性检查**: 严格的房间验证机制
+- **HTTP 端点**: 提供房间状态查询和健康检查
+- **错误处理**: 统一的错误响应格式
+
+**关键特性**:
 ```rust
-// WebSocket 连接: ws://localhost:8080/collaboration/room-123
+// 严格的房间存在性检查
+if !server.sync_service().yrs_manager().room_exists(&room_id) {
+    return Err(warp::reject::custom(RoomNotFoundError::new(room_id)));
+}
 
-// 如果 room-123 不存在，客户端会收到：
-{
-  "error": "ROOM_NOT_FOUND",
-  "message": "房间 'room-123' 不存在",
-  "room_id": "room-123",
-  "code": 404
+// 自定义错误处理
+async fn handle_rejection(err: Rejection) -> Result<impl Reply> {
+    if let Some(room_error) = err.find::<RoomNotFoundError>() {
+        return Ok(json!({
+            "error": "ROOM_NOT_FOUND",
+            "message": format!("房间 '{}' 不存在", room_error.room_id()),
+            "code": 404
+        }));
+    }
+    // ... 其他错误处理
 }
 ```
 
-### 🎯 **房间状态管理**
+### 2. SyncService
+**文件**: `src/sync_service.rs`  
+**职责**: 业务逻辑和状态管理
 
-#### **房间状态枚举**
+- **房间生命周期管理**: 创建、初始化、下线房间
+- **事务处理**: 将 ModuForge 事务同步到 Yrs 文档
+- **状态查询**: 提供房间状态和统计信息
+- **数据同步**: Tree 到 Yrs 文档的双向转换
+
+**房间状态枚举**:
 ```rust
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum RoomStatus {
     NotExists,    // 房间不存在
     Created,      // 房间已创建但未初始化数据
@@ -79,182 +74,379 @@ pub enum RoomStatus {
 }
 ```
 
-#### **状态检查 API**
+### 3. YrsManager
+**文件**: `src/yrs_manager.rs`  
+**职责**: CRDT 文档管理
+
+- **文档生命周期**: 创建、访问、清理 Yrs 文档
+- **线程安全**: 使用 `DashMap` 和 `RwLock` 确保并发安全
+- **资源管理**: 自动清理不活跃的房间
+- **批量操作**: 支持批量房间管理
+
+**核心方法**:
 ```rust
-// 检查房间是否存在
-let exists = yrs_manager.room_exists("room-id");
-
-// 获取房间状态
-let status = sync_service.get_room_status("room-id").await;
-
-// 获取详细房间信息
-let room_info = sync_service.get_room_info("room-id").await;
+impl YrsManager {
+    // 获取或创建房间的 Awareness 引用
+    pub fn get_or_create_awareness(&self, room_id: &str) -> AwarenessRef;
+    
+    // 检查房间是否存在
+    pub fn room_exists(&self, room_id: &str) -> bool;
+    
+    // 移除房间并清理资源
+    pub async fn remove_room(&self, room_id: &str) -> Option<AwarenessRef>;
+    
+    // 强制清理房间资源
+    pub async fn force_cleanup_room(&self, room_id: &str) -> bool;
+}
 ```
 
-## 数据流
+### 4. Mapper
+**文件**: `src/mapping.rs`  
+**职责**: 数据转换和步骤映射
 
-1.  **服务器启动** → 预初始化房间并同步现有 Tree 数据
-2.  客户端请求连接到特定房间
-3.  **房间存在性检查** → 验证房间是否已初始化
-4.  **连接建立** → 仅当房间存在时才升级到 WebSocket
-5.  客户端自动获得完整的文档状态（通过 Yrs 的增量同步机制）
-6.  当客户端进行更改时，通过 `YrsMiddleware` 同步到 Yrs 文档
-7.  所有更改实时广播给房间内的其他客户端
+- **步骤转换器**: 将 ModuForge 步骤转换为 Yrs 操作
+- **类型安全**: 使用 Trait 系统确保类型安全
+- **可扩展性**: 支持自定义转换器注册
+- **数据序列化**: Tree 和快照之间的转换
 
-## 通信协议
+**转换器系统**:
+```rust
+pub trait StepConverter: Send + Sync {
+    fn apply_to_yrs_txn(
+        &self,
+        step: &dyn Step,
+        txn: &mut TransactionMut,
+    ) -> Result<StepResult, Box<dyn std::error::Error>>;
+    
+    fn name(&self) -> &'static str;
+    fn supports(&self, step: &dyn Step) -> bool;
+}
 
-客户端和服务器之间的通信是通过一个 JSON 序列化的枚举 `WsMessage` 来处理的。这定义了协作服务的 API。
+// 内置转换器
+pub struct NodeStepConverter;    // 节点操作
+pub struct AttrStepConverter;    // 属性操作
+pub struct MarkStepConverter;    // 标记操作
+```
 
-关键消息类型包括：
--   `JoinRoom { room_id }`: 客户端请求加入房间。
--   `LeaveRoom { room_id }`: 客户端离开房间。
--   `YrsUpdate { room_id, update }`: 客户端发送文档更改（作为二进制的 `Yrs` 更新负载）。
--   `YrsSyncRequest { room_id, state_vector }`: 客户端请求它尚未拥有的最新更改。
+### 5. YrsMiddleware
+**文件**: `src/middleware.rs`  
+**职责**: 中间件集成
 
-## 如何运行
+- **事务拦截**: 拦截 ModuForge 事务并同步到 Yrs
+- **自动同步**: 无需手动调用，自动处理状态变更
+- **错误处理**: 优雅处理同步失败
 
-要启动协作服务器，您需要实例化主要组件并运行 `CollaborationServer`。
+```rust
+#[async_trait]
+impl Middleware for YrsMiddleware {
+    async fn after_dispatch(
+        &self,
+        _state: Option<Arc<State>>,
+        transactions: &[Transaction],
+    ) -> ForgeResult<Option<Transaction>> {
+        // 自动同步事务到 Yrs 文档
+        self.sync_service
+            .handle_transaction_applied(transactions, &self.room_id)
+            .await?;
+        Ok(None)
+    }
+}
+```
 
-以下是如何启动服务器的完整示例：
+## 🔧 技术栈
 
-```rust,ignore
-use mf_collaboration::{CollaborationServer, YrsManager, SyncService};
+### 核心依赖
+```toml
+[dependencies]
+# 异步运行时
+tokio = { workspace = true }
+async-trait = { workspace = true }
+
+# WebSocket 和 HTTP
+warp = "0.3.7"
+yrs-warp = "0.8.0"
+
+# CRDT 引擎
+yrs = "0.18.2"
+
+# 并发和同步
+parking_lot = { workspace = true }
+dashmap = { workspace = true }
+
+# 序列化
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# 日志和监控
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# ModuForge 生态系统
+moduforge-model = { version = "0.4.6", path = "../model" }
+moduforge-state = { version = "0.4.6", path = "../state" }
+moduforge-transform = { version = "0.4.6", path = "../transform" }
+moduforge-core = { version = "0.4.6", path = "../core" }
+```
+
+### 核心技术
+- **CRDTs**: 基于 Yrs (Yjs Rust 移植) 的无冲突复制数据类型
+- **WebSocket**: 使用 Warp 框架的高性能 WebSocket 服务器
+- **异步编程**: 基于 Tokio 的异步运行时
+- **类型安全**: 完整的 Rust 类型系统保证
+
+## 🚀 快速开始
+
+### 基本使用
+
+```rust
+use mf_collab::{CollaborationServer, YrsManager, SyncService};
 use std::sync::Arc;
-use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // 1. 初始化 YrsManager
+    // 1. 初始化核心组件
     let yrs_manager = Arc::new(YrsManager::new());
-
-    // 2. 初始化 SyncService
     let sync_service = Arc::new(SyncService::new(yrs_manager.clone()));
-
-    // 3. 初始化 CollaborationServer
+    
+    // 2. 创建协作服务器
     let server = CollaborationServer::with_sync_service(
         yrs_manager,
         sync_service.clone(),
         8080
     );
 
-    // 4. 关键步骤：使用现有数据预初始化房间
+    // 3. 预初始化房间（关键步骤）
     let rooms_to_initialize = ["room1", "room2", "project-main"];
     
     for room_id in &rooms_to_initialize {
-        // 从存储加载或创建初始 Tree
         if let Some(existing_tree) = load_room_data(room_id).await? {
             server.init_room_with_data(room_id, &existing_tree).await?;
             println!("✅ 房间 '{}' 已初始化", room_id);
-        } else {
-            println!("⚠️ 房间 '{}' 无初始数据，跳过初始化", room_id);
         }
     }
 
-    // 5. 启动服务器
-    println!("正在启动协作服务器于 127.0.0.1:8080...");
-    println!("🔒 只有预初始化的房间才能接受客户端连接");
+    // 4. 启动服务器
+    println!("🚀 协作服务器启动于 127.0.0.1:8080");
     server.start().await;
 
     Ok(())
 }
-
-async fn load_room_data(room_id: &str) -> anyhow::Result<Option<Tree>> {
-    // 这里实现从数据库、文件等加载 Tree 的逻辑
-    // 返回 Some(tree) 如果有现有数据，否则返回 None
-    Ok(None)
-}
 ```
 
-### 错误处理示例
+### 与 ModuForge 运行时集成
 
-#### **客户端连接错误处理**
-```javascript
-// 前端 JavaScript 示例
-const ws = new WebSocket('ws://localhost:8080/collaboration/non-existent-room');
-
-ws.onerror = function(error) {
-    console.error('WebSocket 连接失败:', error);
-    // 服务器会返回 404 状态码，表示房间不存在
-};
-
-// 或者使用 fetch 检查房间状态
-async function checkRoomExists(roomId) {
-    try {
-        const response = await fetch(`http://localhost:8080/collaboration/${roomId}`);
-        if (response.status === 404) {
-            const error = await response.json();
-            console.log('房间不存在:', error.message);
-            return false;
-        }
-        return true;
-    } catch (error) {
-        console.error('检查房间状态失败:', error);
-        return false;
-    }
-}
-```
-
-### 高级使用场景
-
-#### **动态房间管理**
 ```rust
-// 运行时创建新房间
-pub async fn create_room_on_demand(
-    server: &CollaborationServer,
-    room_id: &str,
-    initial_tree: &Tree
-) -> Result<bool> {
-    // 检查房间是否已存在
-    if server.sync_service().yrs_manager().room_exists(room_id) {
-        return Ok(false); // 房间已存在
-    }
+use mf_core::{ForgeRuntime, RuntimeOptions};
+use mf_collab::YrsMiddleware;
+
+async fn setup_collaborative_runtime(
+    sync_service: Arc<SyncService>,
+    room_id: String,
+) -> ForgeRuntime {
+    let mut options = RuntimeOptions::default();
     
-    // 初始化新房间
-    server.init_room_with_data(room_id, initial_tree).await?;
-    Ok(true)
+    // 添加 Yrs 中间件
+    let yrs_middleware = YrsMiddleware {
+        sync_service: sync_service.clone(),
+        room_id: room_id.clone(),
+    };
+    options.add_middleware(yrs_middleware);
+    
+    // 创建运行时
+    ForgeRuntime::new(options).await
 }
 ```
 
-#### **房间生命周期管理**
+## 🔒 安全特性
+
+### 严格的房间管理
+- **预初始化要求**: 只有预初始化的房间才能接受客户端连接
+- **存在性验证**: 每个连接请求都验证房间存在性
+- **资源隔离**: 每个房间独立管理，避免资源泄露
+
+### 错误处理
 ```rust
-// 完整的房间生命周期
-async fn room_lifecycle_example() -> Result<()> {
-    let server = setup_server().await;
-    let room_id = "example-room";
-    
-    // 1. 检查房间状态
-    let initial_status = server.sync_service().get_room_status(room_id).await;
-    assert_eq!(initial_status, RoomStatus::NotExists);
-    
-    // 2. 初始化房间
-    let tree = create_initial_tree();
-    server.init_room_with_data(room_id, &tree).await?;
-    
-    // 3. 验证房间已初始化
-    let status = server.sync_service().get_room_status(room_id).await;
-    assert_eq!(status, RoomStatus::Initialized);
-    
-    // 4. 客户端现在可以连接
-    // WebSocket 连接: ws://localhost:8080/collaboration/example-room
-    
-    // 5. 房间下线
-    server.offline_room(room_id, true).await?;
-    
-    // 6. 验证房间已下线
-    let final_status = server.sync_service().get_room_status(room_id).await;
-    assert_eq!(final_status, RoomStatus::NotExists);
-    
-    Ok(())
+// 房间不存在时的错误响应
+{
+    "error": "ROOM_NOT_FOUND",
+    "message": "房间 'room-123' 不存在",
+    "room_id": "room-123",
+    "code": 404
 }
 ```
 
-## 最佳实践
+## 📊 监控和管理
 
-1. **🔒 严格房间管理** - 只有预初始化的房间才能接受连接
-2. **📊 状态监控** - 定期检查房间状态和连接数
-3. **⚡ 预初始化** - 在服务器启动时预初始化常用房间
-4. **🧹 生命周期管理** - 及时下线不活跃的房间释放资源
-5. **🚨 错误处理** - 客户端应优雅处理房间不存在的情况
-6. **📝 日志记录** - 详细记录房间操作以便调试和监控
+### 房间状态查询
+```rust
+// 获取房间状态
+let status = sync_service.get_room_status("room-id").await;
 
-这种设计确保了协作功能的高安全性、可控性和优秀的用户体验。
+// 获取房间详细信息
+let room_info = sync_service.get_room_info("room-id").await;
+// RoomInfo {
+//     room_id: "room-id",
+//     status: RoomStatus::Initialized,
+//     node_count: 42,
+//     client_count: 3,
+//     last_activity: SystemTime { ... }
+// }
+```
+
+### 批量操作
+```rust
+// 下线空房间
+let empty_rooms = server.offline_empty_rooms(true).await?;
+
+// 下线不活跃房间
+let inactive_rooms = server.offline_inactive_rooms(
+    Duration::from_secs(3600), // 1小时无活动
+    true
+).await?;
+
+// 条件下线
+let rooms_to_offline = server.offline_rooms_by_condition(
+    |room_info| room_info.client_count == 0,
+    true
+).await?;
+```
+
+## 🌐 WebSocket API
+
+### 连接端点
+```
+WebSocket: ws://localhost:8080/collaboration/{room_id}
+HTTP 状态检查: GET /collaboration/{room_id}
+健康检查: GET /health
+```
+
+### 消息格式
+```rust
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum WsMessage {
+    JoinRoom { room_id: String },
+    LeaveRoom { room_id: String },
+    YrsUpdate { room_id: String, update: Vec<u8> },
+    YrsSyncRequest { room_id: String, state_vector: Vec<u8> },
+}
+```
+
+## 🧪 测试
+
+项目包含完整的测试套件，覆盖核心功能：
+
+```bash
+# 运行所有测试
+cargo test
+
+# 运行特定测试
+cargo test test_collaboration
+cargo test test_room_offline
+cargo test test_conditional_offline
+```
+
+### 测试覆盖范围
+- ✅ 基本协作功能
+- ✅ 房间生命周期管理
+- ✅ 错误处理和边界情况
+- ✅ HTTP 端点功能
+- ✅ 房间存在性检查
+- ✅ 批量操作功能
+
+## 🔧 配置选项
+
+### 服务器配置
+```rust
+// 自定义端口
+let server = CollaborationServer::with_sync_service(
+    yrs_manager,
+    sync_service,
+    9000 // 自定义端口
+);
+
+// 自定义错误处理
+server.set_error_handler(custom_error_handler);
+```
+
+### 中间件配置
+```rust
+// 自定义中间件栈
+let mut middleware_stack = MiddlewareStack::new();
+middleware_stack.add(YrsMiddleware::new(sync_service, room_id));
+middleware_stack.add(LoggingMiddleware::new());
+```
+
+## 📈 性能优化
+
+### 内存管理
+- **智能清理**: 自动清理不活跃的房间
+- **批量操作**: 支持批量房间管理减少锁竞争
+- **资源池**: 复用 Yrs 文档对象
+
+### 并发处理
+- **异步 I/O**: 基于 Tokio 的高性能异步处理
+- **锁优化**: 使用 `RwLock` 和 `DashMap` 优化并发访问
+- **连接池**: 高效的 WebSocket 连接管理
+
+## 🚨 错误处理
+
+### 错误类型
+```rust
+#[derive(Error, Debug)]
+pub enum TransmissionError {
+    #[error("Yrs 操作错误: {0}")]
+    YrsError(String),
+    
+    #[error("WebSocket 错误: {0}")]
+    WebSocketError(String),
+    
+    #[error("房间不存在: {0}")]
+    RoomNotFound(String),
+    
+    #[error("同步错误: {0}")]
+    SyncError(String),
+    
+    #[error("其他错误: {0}")]
+    Other(#[from] anyhow::Error),
+}
+```
+
+### 错误恢复策略
+- **自动重连**: 客户端自动重连机制
+- **状态恢复**: 从快照恢复房间状态
+- **优雅降级**: 部分功能失效时的降级处理
+
+## 🔮 未来规划
+
+### 计划功能
+- [ ] 持久化存储支持
+- [ ] 分布式部署
+- [ ] 实时性能监控
+- [ ] 插件系统扩展
+- [ ] 移动端优化
+
+### 性能目标
+- [ ] 支持 1000+ 并发连接
+- [ ] 毫秒级同步延迟
+- [ ] 内存使用优化
+- [ ] 网络带宽优化
+
+## 📚 相关文档
+
+- [ModuForge 核心文档](../core/README.md)
+- [状态管理文档](../state/README.md)
+- [数据模型文档](../model/README.md)
+- [转换系统文档](../transform/README.md)
+
+## 🤝 贡献指南
+
+欢迎贡献代码！请确保：
+
+1. 遵循 Rust 编码规范
+2. 添加适当的测试
+3. 更新相关文档
+4. 通过所有 CI 检查
+
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 详见 [LICENSE](../../LICENSE) 文件。

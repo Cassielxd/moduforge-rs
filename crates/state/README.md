@@ -1,448 +1,531 @@
-# ModuForge Core
+# ModuForge-RS 状态管理包
 
-ModuForge Core 是一个基于 Rust 实现的文档编辑器核心库，提供了灵活的文档模型和状态管理。
+[![Crates.io](https://img.shields.io/crates/v/moduforge-state)](https://crates.io/crates/moduforge-state)
+[![Documentation](https://docs.rs/moduforge-state/badge.svg)](https://docs.rs/moduforge-state)
+[![License](https://img.shields.io/crates/l/moduforge-state)](LICENSE)
 
-## 核心概念
+ModuForge-RS 状态管理包提供了基于不可变数据结构的现代化状态管理系统，支持事务处理、插件扩展、资源管理和实时协作。该包是 ModuForge-RS 框架的核心组件，为应用程序提供可靠、高效的状态管理能力。
 
-### 1. 文档模型 (Document Model)
+## 🏗️ 架构概述
 
-文档模型是 ModuForge 的核心，它定义了文档的结构和行为。主要包含以下几个关键组件：
+ModuForge-RS 状态管理采用不可变数据结构范式，确保状态变更的可预测性和可追溯性。系统基于以下核心设计原则：
 
-#### 1.1 节点类型 (NodeType)
+- **不可变状态**: 使用 `im-rs` 库实现高效的不可变数据结构
+- **事务驱动**: 所有状态变更通过事务进行，支持 ACID 特性
+- **插件架构**: 可扩展的插件系统，支持动态功能扩展
+- **资源管理**: 全局资源表和生命周期管理
+- **事件溯源**: 完整的状态变更历史记录和重放能力
+
+### 核心架构组件
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   State         │    │   Transaction   │    │   Plugin        │
+│   (状态管理)     │◄──►│   (事务处理)     │◄──►│   (插件系统)     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Resource      │    │   ResourceTable │    │   GothamState   │
+│   (资源管理)     │    │   (资源表)       │    │   (框架状态)     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+## 🚀 核心功能
+
+### 1. 状态管理 (State)
+- **不可变状态**: 基于 `im::HashMap` 的不可变状态存储
+- **版本控制**: 自动版本号管理，支持状态回滚
+- **配置管理**: 灵活的状态配置和初始化
+- **序列化支持**: 完整的状态序列化和反序列化
+
+### 2. 事务处理 (Transaction)
+- **ACID 事务**: 原子性、一致性、隔离性、持久性
+- **批量操作**: 高效的批量状态变更处理
+- **元数据支持**: 丰富的元数据存储和检索
+- **命令模式**: 可扩展的命令执行接口
+
+### 3. 插件系统 (Plugin)
+- **动态加载**: 运行时插件加载和卸载
+- **优先级管理**: 基于优先级的插件执行顺序
+- **状态隔离**: 插件状态的安全隔离和管理
+- **生命周期**: 完整的插件生命周期管理
+
+### 4. 资源管理 (Resource)
+- **类型安全**: 基于 `TypeId` 的类型安全资源管理
+- **全局资源表**: 集中式资源注册和查找
+- **生命周期**: 自动资源清理和内存管理
+- **并发安全**: 线程安全的资源访问
+
+### 5. 日志系统 (Logging)
+- **结构化日志**: 基于 `tracing` 的结构化日志记录
+- **多输出**: 支持控制台和文件双重输出
+- **级别控制**: 灵活的日志级别配置
+- **性能监控**: 内置性能指标收集
+
+## 📦 技术栈
+
+### 核心依赖
+```toml
+[dependencies]
+# 不可变数据结构
+im = { version = "15.1", features = ["serde"] }
+
+# 序列化
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+
+# 异步运行时
+tokio = { version = "1.0", features = ["full"] }
+async-trait = "0.1"
+
+# 并发和同步
+crossbeam = "0.8"
+dashmap = "6.1.0"
+
+# 错误处理
+anyhow = "1"
+thiserror = "2.0.12"
+
+# 日志系统
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
+
+# 时间处理
+time = "0.3"
+```
+
+### ModuForge-RS 内部依赖
+```toml
+# 数据模型
+moduforge-model = "0.4.6"
+
+# 数据转换
+moduforge-transform = "0.4.6"
+```
+
+## 🚀 快速开始
+
+### 基本使用
+
 ```rust
-pub struct NodeType {
-    pub name: String,           // 节点类型标识符
-    pub spec: NodeSpec,         // 节点规范定义
-    pub desc: String,           // 节点描述
-    pub groups: Vec<String>,    // 节点所属分组
-    pub attrs: HashMap<String, Attribute>,  // 节点属性定义
-    pub default_attrs: HashMap<String, String>,  // 默认属性值
-    pub content_match: Option<ContentMatch>,  // 内容匹配规则
-    pub mark_set: Option<Vec<MarkType>>,     // 允许的标记类型
-}
-```
+use mf_state::{State, StateConfig, Transaction, init_logging};
+use mf_model::{schema::Schema, node_pool::NodePool};
+use std::sync::Arc;
 
-节点类型定义了：
-- 节点的基本属性（名称、描述、分组）
-- 节点的属性约束
-- 节点的内容结构规则
-- 节点支持的标记类型
-
-#### 1.2 节点规范 (NodeSpec)
-```rust
-pub struct NodeSpec {
-    pub content: Option<String>,    // 内容约束表达式
-    pub marks: Option<String>,      // 标记类型表达式
-    pub group: Option<String>,      // 分组信息
-    pub desc: Option<String>,       // 描述信息
-    pub attrs: Option<HashMap<String, AttributeSpec>>,  // 属性规范
-}
-```
-
-节点规范用于配置节点类型的行为和约束。
-
-### 2. 内容匹配系统 (Content Matching System)
-
-内容匹配系统负责验证和构建文档结构，确保文档内容符合预定义的规则。
-
-#### 2.1 内容匹配规则 (ContentMatch)
-```rust
-pub struct ContentMatch {
-    pub next: Vec<MatchEdge>,       // 可能的下一节点类型
-    pub wrap_cache: Vec<Option<NodeType>>,  // 包装节点缓存
-    pub valid_end: bool,            // 是否为有效的结束状态
-}
-```
-
-内容匹配规则定义了：
-- 允许的节点序列
-- 节点的重复规则
-- 节点的可选性
-
-#### 2.2 内容表达式语法
-
-支持以下内容表达式：
-- `*` - 零个或多个节点
-- `+` - 一个或多个节点
-- `?` - 零个或一个节点
-- `|` - 节点类型选择
-- 空格分隔的序列
-
-例如：
-```rust
-"DW+"      // 一个或多个 DW 节点
-"DW*"      // 零个或多个 DW 节点
-"DW djgc"  // DW 节点后跟 djgc 节点
-```
-
-### 3. 状态流转系统 (State Transition System)
-
-#### 3.1 状态定义
-```rust
-pub struct State {
-    pub config: Arc<Configuration>,           // 编辑器配置
-    pub fields_instances: ImHashMap<String, PluginState>,  // 插件状态实例
-    pub node_pool: Arc<NodePool>,             // 文档节点池
-    pub version: u64,                         // 状态版本号
-}
-```
-
-#### 3.2 状态转换流程
-
-1. **初始化状态**
-```rust
-let state = State::create(state_config).await?;
-```
-
-2. **状态转换规则**
-- 每个操作都会产生新的状态
-- 状态转换必须保持文档一致性
-- 状态转换必须记录在历史中
-- 状态转换必须经过插件验证
-
-3. **状态验证**
-- 文档结构验证
-- 插件状态验证
-- 事务过滤验证
-
-#### 3.3 核心 apply_transaction 方法
-
-`apply_transaction` 是状态转换系统的核心方法，负责处理事务的应用和插件的交互。其执行流程如下：
-
-```
-+------------------+
-|      开始        |
-+------------------+
-         ↓
-+------------------+
-|    事务过滤      |
-+------------------+
-         ↓
-    +----------+
-    |过滤失败?  |
-    +----------+
-         ↓
-    +----------+     +------------------+
-    |  是      |     |    初始化事务    |
-    +----------+     |    列表和状态    |
-         ↓          |    追踪          |
-+------------------+     +------------------+
-|   返回原始状态    |     ↓
-+------------------+     +------------------+
-                        |  插件事务处理循环  |
-                        +------------------+
-                                 ↓
-                        +------------------+
-                        |   检查所有插件    |
-                        +------------------+
-                                 ↓
-                        +------------------+
-                        |   有新事务?      |
-                        +------------------+
-                                 ↓
-                    +----------+     +------------------+
-                    |  是      |     |    事务后处理    |
-                    +----------+     +------------------+
-                         ↓          ↓
-                    +------------------+     +------------------+
-                    |   应用新事务     |     |  遍历所有插件    |
-                    +------------------+     +------------------+
-                         ↓          ↓
-                    +------------------+     +------------------+
-                    |   更新状态追踪   |     |  执行插件后处理  |
-                    +------------------+     +------------------+
-                         ↓          ↓
-                    +------------------+     +------------------+
-                    |   添加到事务列表 |     |  更新插件状态    |
-                    +------------------+     +------------------+
-                         ↓          ↓
-                    +------------------+     +------------------+
-                    |      结束       |     |      结束       |
-                    +------------------+     +------------------+
-```
-
-这个方法的主要特点：
-
-1. **事务过滤机制**
-   - 在应用事务前进行过滤
-   - 支持插件自定义过滤规则
-   - 可以阻止不合法的事务
-
-2. **插件事务追加**
-   - 支持插件追加新事务
-   - 维护事务处理顺序
-   - 防止循环依赖
-
-3. **状态追踪**
-   - 记录每个插件的处理状态
-   - 追踪事务处理进度
-   - 确保状态一致性
-
-4. **事务后处理**
-   - 允许插件进行清理工作
-   - 更新插件状态
-   - 维护系统一致性
-
-### 4. 事务系统 (Transaction System)
-
-#### 4.1 事务定义
-```rust
-pub struct Transaction {
-    pub steps: Vec<Step>,          // 事务步骤
-    pub doc: Arc<NodePool>,        // 文档节点池
-    pub metadata: TransactionMeta, // 事务元数据
-}
-```
-
-#### 4.2 事务执行流程
-
-1. **事务开始**
-```rust
-let tr = state.tr();
-```
-
-2. **事务应用流程**
-```rust
-// 1. 事务前处理
-state.before_apply_transaction(&mut tr).await?;
-
-// 2. 事务过滤
-if !state.filter_transaction(&tr, None).await? {
-    return Ok(TransactionResult { 
-        state: self.clone(), 
-        trs: vec![tr] 
-    });
-}
-
-// 3. 应用事务
-let mut new_state = state.apply_inner(&tr).await?;
-
-// 4. 事务后处理
-state.after_apply_transaction(&new_state, &mut tr).await?;
-```
-
-3. **事务类型**
-
-a. **简单事务**
-- 单个编辑操作
-- 直接执行和回滚
-- 不包含子事务
-
-b. **复合事务**
-- 多个编辑操作
-- 可以包含子事务
-- 原子性保证
-
-c. **插件事务**
-- 由插件产生的事务
-- 可以修改或扩展原有事务
-- 可以过滤事务执行
-
-#### 4.3 核心 apply 方法分析
-
-`apply` 方法是状态转换的核心，它负责将事务应用到当前状态。主要流程如下：
-
-1. **事务前处理**
-```rust
-pub async fn before_apply_transaction(&self, tr: &mut Transaction) -> StateResult<()> {
-    // 调用所有插件的 before_apply_transaction 钩子
-    for plugin in &self.config.plugins {
-        plugin.before_apply_transaction(tr, self).await?;
-    }
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    // 初始化日志系统
+    init_logging("info", Some("logs/state.log"))?;
+    
+    // 创建状态配置
+    let schema = Arc::new(Schema::default());
+    let state_config = StateConfig {
+        schema: Some(schema),
+        doc: None,
+        stored_marks: None,
+        plugins: None,
+        resource_manager: None,
+    };
+    
+    // 创建状态实例
+    let state = State::create(state_config).await?;
+    
+    // 创建事务
+    let mut transaction = Transaction::new(&state);
+    
+    // 添加节点
+    let node_id = "new_node".to_string();
+    transaction.add_node(
+        node_id.clone(),
+        vec![/* 节点数据 */]
+    )?;
+    
+    // 设置元数据
+    transaction.set_meta("action", "add_node");
+    transaction.set_meta("user_id", "user_123");
+    
+    // 应用事务
+    let result = state.apply(transaction).await?;
+    
+    println!("事务应用成功，新状态版本: {}", result.state.version);
     Ok(())
 }
 ```
 
-2. **事务过滤**
+### 插件开发
+
 ```rust
-pub async fn filter_transaction(&self, tr: &Transaction, ignore: Option<usize>) -> StateResult<bool> {
-    // 检查所有插件是否允许事务执行
-    for (i, plugin) in self.config.plugins.iter().enumerate() {
-        if Some(i) != ignore && !plugin.apply_filter_transaction(tr, self).await {
-            return Ok(false);
+use mf_state::{
+    plugin::{Plugin, PluginSpec, PluginTrait, StateField},
+    resource::Resource,
+    State, Transaction, StateResult
+};
+use async_trait::async_trait;
+use std::sync::Arc;
+
+#[derive(Debug)]
+struct MyPluginState {
+    counter: i32,
+}
+
+impl Resource for MyPluginState {}
+
+#[derive(Debug)]
+struct MyPlugin;
+
+#[async_trait]
+impl PluginTrait for MyPlugin {
+    async fn filter_transaction(
+        &self,
+        tr: &Transaction,
+        _state: &State,
+    ) -> bool {
+        // 检查事务是否应该被过滤
+        !tr.get_meta::<String>("skip_plugin").is_some()
+    }
+    
+    async fn append_transaction(
+        &self,
+        _trs: &[Transaction],
+        _old_state: &State,
+        _new_state: &State,
+    ) -> StateResult<Option<Transaction>> {
+        // 可以在这里添加额外的事务
+        Ok(None)
+    }
+}
+
+#[derive(Debug)]
+struct MyStateField;
+
+#[async_trait]
+impl StateField for MyStateField {
+    async fn init(
+        &self,
+        _config: &StateConfig,
+        _instance: Option<&State>,
+    ) -> Arc<dyn Resource> {
+        Arc::new(MyPluginState { counter: 0 })
+    }
+    
+    async fn apply(
+        &self,
+        _tr: &Transaction,
+        value: Arc<dyn Resource>,
+        _old_state: &State,
+        _new_state: &State,
+    ) -> Arc<dyn Resource> {
+        // 更新插件状态
+        if let Some(state) = value.downcast_arc::<MyPluginState>() {
+            Arc::new(MyPluginState {
+                counter: state.counter + 1,
+            })
+        } else {
+            value
         }
     }
-    Ok(true)
 }
+
+// 创建插件
+let plugin = Plugin::new(PluginSpec {
+    key: ("my_plugin".to_string(), "v1".to_string()),
+    tr: Some(Arc::new(MyPlugin)),
+    state_field: Some(Arc::new(MyStateField)),
+    priority: 10,
+});
 ```
 
-3. **事务应用**
+### 资源管理
+
 ```rust
-pub async fn apply_inner(&self, tr: &Transaction) -> StateResult<State> {
-    // 1. 创建新的配置
-    let mut config = self.config.as_ref().clone();
-    config.doc = Some(tr.doc.clone());
+use mf_state::{
+    resource::Resource,
+    resource_table::ResourceTable,
+    gotham_state::GothamState,
+    ops::GlobalResourceManager
+};
+use std::sync::Arc;
+
+#[derive(Debug, Clone)]
+struct MyResource {
+    data: String,
+}
+
+impl Resource for MyResource {}
+
+// 使用资源表
+let resource_table = ResourceTable::default();
+resource_table.add("my_resource".to_string(), MyResource {
+    data: "Hello World".to_string(),
+});
+
+// 获取资源
+if let Some(resource) = resource_table.get::<MyResource>("my_resource") {
+    println!("资源数据: {}", resource.data);
+}
+
+// 使用 Gotham 状态
+let gotham_state = GothamState::default();
+gotham_state.put(MyResource {
+    data: "Gotham Resource".to_string(),
+});
+
+if let Some(resource) = gotham_state.try_get::<MyResource>() {
+    println!("Gotham 资源: {}", resource.data);
+}
+
+// 使用全局资源管理器
+let mut manager = GlobalResourceManager::new();
+manager.resource_table.add("global_resource".to_string(), MyResource {
+    data: "Global Resource".to_string(),
+});
+```
+
+## 🔧 配置选项
+
+### 状态配置
+
+```rust
+use mf_state::StateConfig;
+use mf_model::{schema::Schema, node_pool::NodePool, mark::Mark};
+use std::sync::Arc;
+
+let config = StateConfig {
+    // 文档结构定义
+    schema: Some(Arc::new(Schema::default())),
     
-    // 2. 创建新状态
-    let mut new_instance = State::new(Arc::new(config));
+    // 初始文档内容
+    doc: Some(Arc::new(NodePool::default())),
     
-    // 3. 应用插件状态
-    for plugin in &self.config.plugins {
-        if let Some(field) = &plugin.spec.state {
-            if let Some(old_plugin_state) = self.get_field(&plugin.key) {
-                let value = field.apply(tr, old_plugin_state, self, &new_instance).await;
-                new_instance.set_field(&plugin.key, value)?;
-            }
-        }
-    }
+    // 存储的标记
+    stored_marks: Some(vec![Mark::default()]),
     
-    Ok(new_instance)
-}
-```
-
-4. **事务后处理**
-```rust
-async fn after_apply_transaction(&self, new_state: &State, tr: &mut Transaction) -> StateResult<()> {
-    // 调用所有插件的 after_apply_transaction 钩子
-    for plugin in &self.config.plugins {
-        plugin.after_apply_transaction(new_state, tr, self).await?;
-    }
-    Ok(())
-}
-```
-
-#### 4.4 插件系统集成
-
-插件系统通过以下方式与状态转换集成：
-
-1. **插件特征**
-```rust
-pub trait PluginTrait: Send + Sync + Debug {
-    async fn append_transaction(&self, tr: &Transaction, old_state: &State, new_state: &State) -> Option<Transaction>;
-    async fn filter_transaction(&self, tr: &Transaction, state: &State) -> bool;
-    async fn before_apply_transaction(&self, tr: &mut Transaction, state: &State) -> Result<(), Box<dyn std::error::Error>>;
-    async fn after_apply_transaction(&self, new_state: &State, tr: &mut Transaction, old_state: &State) -> Result<(), Box<dyn std::error::Error>>;
-}
-```
-
-2. **状态字段特征**
-```rust
-pub trait StateField: Send + Sync + Debug {
-    async fn init(&self, config: &StateConfig, instance: Option<&State>) -> PluginState;
-    async fn apply(&self, tr: &Transaction, value: PluginState, old_state: &State, new_state: &State) -> PluginState;
-}
-```
-
-这种设计允许：
-- 插件可以修改事务内容
-- 插件可以过滤事务执行
-- 插件可以在事务前后执行自定义逻辑
-- 插件可以维护自己的状态
-
-### 5. 执行流程
-
-#### 5.1 文档创建流程
-
-1. **初始化 Schema**
-```rust
-let schema = Schema::compile(schema_spec)?;
-```
-
-2. **创建根节点**
-```rust
-let root = schema.top_node_type.create_and_fill(
-    Some(id),
-    None,
-    vec![],
-    None,
-    &schema,
-);
-```
-
-3. **内容填充过程**
-- 检查内容匹配规则
-- 创建缺失的必需节点
-- 递归创建子节点
-- 建立节点间的引用关系
-
-#### 5.2 内容验证流程
-
-1. **节点内容验证**
-```rust
-node_type.check_content(content, schema)
-```
-
-2. **属性验证**
-```rust
-node_type.check_attrs(attrs)
-```
-
-3. **内容匹配验证**
-```rust
-content_match.match_fragment(fragment, schema)
-```
-
-### 6. 示例
-
-#### 6.1 定义文档结构
-```rust
-let schema_spec = SchemaSpec {
-    nodes: {
-        let mut nodes = HashMap::new();
-        nodes.insert(
-            "doc".to_string(),
-            NodeSpec {
-                content: Some("DW+".to_string()),
-                marks: None,
-                group: None,
-                desc: None,
-                attrs: None,
-            },
-        );
-        // ... 其他节点定义
-        nodes
-    },
-    marks: HashMap::new(),
-    top_node: Some("doc".to_string()),
+    // 插件列表
+    plugins: Some(vec![/* 插件列表 */]),
+    
+    // 资源管理器
+    resource_manager: Some(Arc::new(GlobalResourceManager::new())),
 };
 ```
 
-#### 6.2 创建文档
+### 日志配置
+
 ```rust
-let schema = Schema::compile(schema_spec)?;
-let id = IdGenerator::get_id();
-let nodes = schema.top_node_type.create_and_fill(
-    Some(id),
-    None,
-    vec![],
-    None,
-    &schema,
-);
+use mf_state::init_logging;
+
+// 只输出到控制台
+init_logging("debug", None)?;
+
+// 同时输出到文件和控制台
+init_logging("info", Some("logs/moduforge.log"))?;
+
+// 不同日志级别
+init_logging("trace", Some("logs/detail.log"))?;  // 最详细
+init_logging("debug", Some("logs/debug.log"))?;   // 调试信息
+init_logging("info", Some("logs/info.log"))?;     // 一般信息
+init_logging("warn", Some("logs/warn.log"))?;     // 警告信息
+init_logging("error", Some("logs/error.log"))?;   // 错误信息
 ```
 
-## 使用说明
+## 📊 性能特性
 
-1. 首先定义文档的 Schema，包括：
-   - 节点类型定义
-   - 内容规则
-   - 属性约束
-   - 标记类型
+### 不可变数据结构优化
+- **结构共享**: 利用 `im-rs` 的结构共享减少内存使用
+- **延迟克隆**: 只在必要时进行数据克隆
+- **批量操作**: 支持高效的批量状态变更
 
-2. 使用 Schema 创建文档：
-   - 创建根节点
-   - 添加子节点
-   - 设置节点属性
-   - 应用标记
+### 并发性能
+- **无锁设计**: 使用不可变数据结构避免锁竞争
+- **原子操作**: 基于原子操作的状态版本管理
+- **并发安全**: 线程安全的状态访问和修改
 
-3. 验证文档结构：
-   - 检查内容规则
-   - 验证属性
-   - 确保标记正确
+### 内存管理
+- **智能缓存**: 自动缓存频繁访问的状态
+- **资源池**: 高效的资源分配和回收
+- **内存监控**: 内置内存使用监控
 
-## 注意事项
+## 🛠️ 错误处理
 
-1. 内容匹配规则必须是无歧义的
-2. 节点属性必须满足规范要求
-3. 标记类型必须在节点类型允许的范围内
-4. 文档结构必须符合预定义的规则
-5. 状态转换必须保持一致性
-6. 事务必须正确处理回滚
+ModuForge-RS 状态管理包提供了完善的错误处理机制：
 
-## 性能考虑
+```rust
+use mf_state::error::{StateResult, error};
 
-1. 内容匹配使用 DFA 实现，确保高效的匹配过程
-2. 节点引用使用 ID 而不是直接引用，减少内存占用
-3. 使用缓存优化重复操作
-4. 延迟创建子节点，避免不必要的开销
-5. 状态转换使用不可变数据结构
-6. 事务使用增量更新策略 
+// 自定义错误处理
+fn handle_state_error(result: StateResult<State>) -> anyhow::Result<State> {
+    match result {
+        Ok(state) => Ok(state),
+        Err(e) => {
+            // 记录错误
+            tracing::error!("状态操作失败: {}", e);
+            
+            // 根据错误类型进行不同处理
+            if e.to_string().contains("schema") {
+                return Err(error::schema_error("Schema 配置错误").into());
+            }
+            
+            Err(e)
+        }
+    }
+}
+```
+
+### 常见错误类型
+- **插件错误**: 插件初始化或执行失败
+- **事务错误**: 事务应用或验证失败
+- **配置错误**: 状态配置无效
+- **序列化错误**: 状态序列化或反序列化失败
+- **资源错误**: 资源操作失败
+
+## 🧪 测试
+
+### 单元测试
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[tokio::test]
+    async fn test_state_creation() {
+        let config = StateConfig::default();
+        let state = State::create(config).await.unwrap();
+        assert_eq!(state.version, 1);
+    }
+    
+    #[tokio::test]
+    async fn test_transaction_application() {
+        let state = State::create(StateConfig::default()).await.unwrap();
+        let mut transaction = Transaction::new(&state);
+        
+        // 添加测试步骤
+        transaction.set_meta("test", "value");
+        
+        let result = state.apply(transaction).await.unwrap();
+        assert_eq!(result.state.version, 2);
+    }
+}
+```
+
+### 集成测试
+
+```rust
+#[cfg(test)]
+mod integration_tests {
+    use super::*;
+    
+    #[tokio::test]
+    async fn test_plugin_integration() {
+        // 创建带插件的状态
+        let plugin = create_test_plugin();
+        let config = StateConfig {
+            plugins: Some(vec![Arc::new(plugin)]),
+            ..Default::default()
+        };
+        
+        let state = State::create(config).await.unwrap();
+        
+        // 测试插件功能
+        let mut transaction = Transaction::new(&state);
+        transaction.set_meta("plugin_test", "value");
+        
+        let result = state.apply(transaction).await.unwrap();
+        assert!(result.state.has_field("test_plugin"));
+    }
+}
+```
+
+## 🔍 监控和调试
+
+### 性能监控
+
+```rust
+use mf_state::{State, Transaction};
+use std::time::Instant;
+
+async fn monitor_transaction_performance(state: &State, transaction: Transaction) {
+    let start = Instant::now();
+    
+    let result = state.apply(transaction).await.unwrap();
+    
+    let duration = start.elapsed();
+    tracing::info!(
+        "事务处理完成 - 版本: {}, 耗时: {:?}",
+        result.state.version,
+        duration
+    );
+}
+```
+
+### 状态调试
+
+```rust
+use mf_state::State;
+
+fn debug_state(state: &State) {
+    tracing::debug!("状态信息:");
+    tracing::debug!("  版本: {}", state.version);
+    tracing::debug!("  字段数量: {}", state.fields_instances.len());
+    tracing::debug!("  插件数量: {}", state.plugins().len());
+    tracing::debug!("  文档节点数: {}", state.doc().len());
+}
+```
+
+## 📚 API 参考
+
+### 核心类型
+
+- **`State`**: 主状态管理结构体
+- **`StateConfig`**: 状态配置结构体
+- **`Transaction`**: 事务处理结构体
+- **`Plugin`**: 插件结构体
+- **`Resource`**: 资源特征
+- **`ResourceTable`**: 资源表结构体
+- **`GothamState`**: Gotham 框架状态
+
+### 主要方法
+
+#### State
+- `create(config)`: 创建新状态
+- `apply(transaction)`: 应用事务
+- `get_field(name)`: 获取字段
+- `serialize()`: 序列化状态
+- `deserialize(data, config)`: 反序列化状态
+
+#### Transaction
+- `new(state)`: 创建新事务
+- `add_node(parent_id, nodes)`: 添加节点
+- `remove_node(parent_id, node_ids)`: 删除节点
+- `set_node_attribute(id, values)`: 设置节点属性
+- `add_mark(id, marks)`: 添加标记
+- `remove_mark(id, mark_types)`: 删除标记
+- `set_meta(key, value)`: 设置元数据
+- `get_meta(key)`: 获取元数据
+
+#### Plugin
+- `new(spec)`: 创建新插件
+- `get_state(state)`: 获取插件状态
+- `apply_filter_transaction(tr, state)`: 应用事务过滤
+- `apply_append_transaction(trs, old_state, new_state)`: 应用事务追加
+
+## 🤝 贡献指南
+
+我们欢迎社区贡献！请查看以下指南：
+
+1. **代码风格**: 遵循 Rust 标准编码规范
+2. **测试覆盖**: 为新功能添加相应的测试
+3. **文档更新**: 更新相关文档和示例
+4. **性能考虑**: 考虑性能影响和优化
+
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+## 🔗 相关链接
+
+- [ModuForge-RS 主页](https://github.com/moduforge/moduforge-rs)
+- [API 文档](https://docs.rs/moduforge-state)
+- [示例项目](https://github.com/moduforge/moduforge-rs/tree/main/demo)
+- [问题反馈](https://github.com/moduforge/moduforge-rs/issues) 
