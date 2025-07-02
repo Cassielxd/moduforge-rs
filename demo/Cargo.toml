@@ -10,14 +10,14 @@ homepage = {workspace=true}
 repository = {workspace=true}
 
 [dependencies]
-serde = {workspace=true}
+
 serde_json = {workspace=true}
-thiserror= {workspace=true}
+
 async-trait= {workspace=true}
 tokio= {workspace=true}
 im = {workspace=true}
 anyhow = "1.0"
-tracing = "0.1"
+
 tracing-subscriber = "0.3"
 chrono = "0.4"
 rand = "0.8"
@@ -25,9 +25,4 @@ moduforge-model = {version = "0.4.6", path = "../crates/model"}
 moduforge-state = {version = "0.4.6", path = "../crates/state"}
 moduforge-transform = {version = "0.4.6", path = "../crates/transform"}
 moduforge-core = {version = "0.4.6", path = "../crates/core"}
-moduforge-macros = {version = "0.4.6", path = "../crates/macro"}
-moduforge-macros-derive = {version = "0.4.6", path = "../crates/derive"}
-rayon = { workspace = true }
-crossbeam = { workspace = true }
-metrics = "0.22.0"
 metrics-exporter-prometheus = "0.13.1"
