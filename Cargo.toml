@@ -23,8 +23,7 @@ tokio = { version = "1", features = ["full"] }
 tokio-util = "0.7.14"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
-# lazy_static 线程安全全局变量
-lazy_static = "1.4"
+
 anyhow="1"
 # im 不可变数据实现
 im = { version = "15.1", features = ["serde"] }
@@ -39,7 +38,6 @@ crossbeam = "0.8"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2"
-time = { version = "0.3", features = ["formatting"] }
 
 uuid={ version = "1.0", features = ["v4"] }
 futures="0.3"

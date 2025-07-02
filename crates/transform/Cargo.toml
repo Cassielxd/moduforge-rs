@@ -17,15 +17,6 @@ path="src/lib.rs"
 im= {workspace=true}
 serde = {workspace=true}
 serde_json = {workspace=true}
-thiserror= {workspace=true}
-async-trait= {workspace=true}
-tokio= {workspace=true}
-
-# 日志系统
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-tracing-appender = { workspace = true }
-time = { workspace = true }
 anyhow = { workspace = true }
 
 # 模型

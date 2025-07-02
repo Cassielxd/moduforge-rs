@@ -17,28 +17,17 @@ path="src/lib.rs"
 im= {workspace=true}
 serde = {workspace=true}
 serde_json = {workspace=true}
-thiserror= {workspace=true}
-async-trait= {workspace=true}
-tokio= {workspace=true}
+
 nanoid = "0.4.0"
 
-# 日志系统
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-tracing-appender = { workspace = true }
-time = { workspace = true }
+
 anyhow = { workspace = true }
 
 rayon = { workspace = true }
 lru = { workspace = true }
 
-crossbeam = { workspace = true }
 parking_lot ={ workspace = true }
 
-dashmap = { workspace = true }
-once_cell = "1.19"
 
-# 用于操作符扩展的依赖
-regex = "1.0"
-rand = "0.8"
+once_cell = "1.19"
 

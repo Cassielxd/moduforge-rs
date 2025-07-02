@@ -23,10 +23,8 @@ uuid = { workspace=true }
 anyhow = { workspace=true }
 thiserror = { workspace=true }
 tracing = "0.1"
-parking_lot ={ workspace=true }
 dashmap = { workspace=true }
-chrono = { version = "0.4", features = ["serde"] }
-im = { workspace=true }
+
 warp = "0.3.7"
 yrs-warp = "0.8.0"
 yrs = "0.18.2"
@@ -36,6 +34,4 @@ moduforge-transform = {version = "0.4.6", path = "../transform"}
 moduforge-core = {version = "0.4.6", path = "../core"}
 moduforge-macros = {version = "0.4.6", path = "../macro"}
 async-trait =  { workspace=true }
-lazy_static =  { workspace=true }
-once_cell =  { workspace=true }
 fastrand = "2.0"
