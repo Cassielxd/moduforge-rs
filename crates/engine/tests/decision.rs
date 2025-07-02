@@ -3,7 +3,7 @@ use serde_json::json;
 use std::ops::Deref;
 use std::sync::Arc;
 use tokio::runtime::Builder;
-use moduforge_rules_engine::{
+use mf_engine::{
     Decision, DecisionGraphValidationError, EvaluationError,
 };
 

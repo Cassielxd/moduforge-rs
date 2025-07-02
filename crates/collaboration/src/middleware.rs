@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use moduforge_core::{middleware::Middleware, ForgeResult};
-use moduforge_state::{State, Transaction};
+use mf_core::{middleware::Middleware, ForgeResult};
+use mf_state::{State, Transaction};
 use tracing::error;
 
 use crate::SyncService;

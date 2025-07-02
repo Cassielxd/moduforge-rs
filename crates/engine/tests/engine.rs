@@ -1,10 +1,10 @@
 use crate::support::{
     create_fs_loader, load_raw_test_data, load_test_data, test_data_root,
 };
-use moduforge_rules_expression::functions::custom::{
+use mf_expression::functions::custom::{
     CustomFunctionHelper, CustomFunctionRegistry,
 };
-use moduforge_rules_expression::variable::VariableType;
+use mf_expression::variable::VariableType;
 use serde::Deserialize;
 use serde_json::json;
 use std::fs;
@@ -14,12 +14,12 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 use tokio::runtime::Builder;
-use moduforge_rules_engine::loader::{LoaderError, MemoryLoader};
-use moduforge_rules_engine::model::{
+use mf_engine::loader::{LoaderError, MemoryLoader};
+use mf_engine::model::{
     DecisionContent, DecisionNode, DecisionNodeKind, FunctionNodeContent,
 };
-use moduforge_rules_engine::Variable;
-use moduforge_rules_engine::{DecisionEngine, EvaluationError, EvaluationOptions};
+use mf_engine::Variable;
+use mf_engine::{DecisionEngine, EvaluationError, EvaluationOptions};
 
 mod support;
 

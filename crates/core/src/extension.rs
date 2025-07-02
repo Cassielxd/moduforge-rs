@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use moduforge_state::{ops::GlobalResourceManager, plugin::Plugin};
+use mf_state::{ops::GlobalResourceManager, plugin::Plugin};
 
 use crate::{types::GlobalAttributeItem, ForgeResult};
 pub type OpFn =

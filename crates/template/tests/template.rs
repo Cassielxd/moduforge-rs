@@ -1,6 +1,6 @@
 use serde_json::{json, Value};
-use moduforge_rules_expression::variable::Variable;
-use moduforge_rules_template::render;
+use mf_expression::variable::Variable;
+use mf_template::render;
 
 #[test]
 fn test_values_types() {

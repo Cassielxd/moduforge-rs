@@ -49,8 +49,8 @@ async-trait = "0.1"
 
 ```rust
 // main.rs 或 lib.rs
-use moduforge_core::{ForgeResult, async_runtime::ForgeAsyncRuntime, types::RuntimeOptions};
-use moduforge_state::init_logging;
+use mf_core::{ForgeResult, async_runtime::ForgeAsyncRuntime, types::RuntimeOptions};
+use mf_state::init_logging;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -71,9 +71,9 @@ async fn main() -> anyhow::Result<()> {
 ### 场景1：文本编辑器项目
 
 ```rust
-use moduforge_core::{ForgeResult, async_runtime::ForgeAsyncRuntime, types::RuntimeOptions};
-use moduforge_state::transaction::Transaction;
-use moduforge_transform::attr_step::AttrStep;
+use mf_core::{ForgeResult, async_runtime::ForgeAsyncRuntime, types::RuntimeOptions};
+use mf_state::transaction::Transaction;
+use mf_transform::attr_step::AttrStep;
 use serde_json::json;
 use std::sync::Arc;
 
@@ -106,7 +106,7 @@ impl TextRuntime {
 ### 场景2：文档管理系统
 
 ```rust
-use moduforge_state::{State, StateConfig, Transaction};
+use mf_state::{State, StateConfig, Transaction};
 use std::sync::Arc;
 
 pub struct DocumentManager {
@@ -142,9 +142,9 @@ impl DocumentManager {
 ### 场景3：协作编辑平台
 
 ```rust
-use moduforge_core::{ForgeResult, async_runtime::ForgeAsyncRuntime, types::RuntimeOptions};
-use moduforge_state::transaction::Transaction;
-use moduforge_collaboration::sync_service::SyncService;
+use mf_core::{ForgeResult, async_runtime::ForgeAsyncRuntime, types::RuntimeOptions};
+use mf_state::transaction::Transaction;
+use mf_collaboration::sync_service::SyncService;
 
 pub struct CollaborativeRuntime {
     runtime: ForgeAsyncRuntime,
@@ -176,7 +176,7 @@ impl CollaborativeRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use moduforge_state::{State, StateConfig};
+    use mf_state::{State, StateConfig};
 
     #[tokio::test]
     async fn test_integration() {

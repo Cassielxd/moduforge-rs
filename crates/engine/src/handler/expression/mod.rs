@@ -8,8 +8,8 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context};
 use serde::Serialize;
 use tokio::sync::Mutex;
-use moduforge_rules_expression::variable::Variable;
-use moduforge_rules_expression::Isolate;
+use mf_expression::variable::Variable;
+use mf_expression::Isolate;
 
 pub struct ExpressionHandler {
     trace: bool,

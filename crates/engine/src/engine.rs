@@ -9,7 +9,7 @@ use crate::loader::{
 };
 use crate::model::DecisionContent;
 use crate::EvaluationError;
-use moduforge_rules_expression::variable::Variable;
+use mf_expression::variable::Variable;
 
 /// 决策引擎结构体，用于生成和评估决策
 #[derive(Debug, Clone)]
@@ -106,7 +106,7 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static>
         K: AsRef<str>,
     {
         // 使用 StateGuard 自动管理 State 生命周期
-        let _guard = moduforge_rules_expression::StateGuard::new(state);
+        let _guard = mf_expression::StateGuard::new(state);
 
         // 执行评估，即使发生异常，State 也会被正确清理
         self.evaluate_with_opts(key, context, options).await
@@ -124,7 +124,7 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static>
         K: AsRef<str>,
     {
         // 使用 StateGuard 自动管理 State 生命周期
-        let _guard = moduforge_rules_expression::StateGuard::new(state);
+        let _guard = mf_expression::StateGuard::new(state);
 
         // 执行评估，即使发生异常，State 也会被正确清理
         self.evaluate(key, context).await

@@ -9,6 +9,10 @@ documentation = {workspace=true}
 homepage = {workspace=true}
 repository = {workspace=true}
 
+[lib]
+name = "mf_collab"
+path = "src/lib.rs"
+
 [dependencies]
 tokio =  { workspace=true }
 tracing-subscriber = "0.3"

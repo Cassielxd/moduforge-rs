@@ -6,7 +6,7 @@ use super::{
     step::{Step, StepResult},
 };
 use im::HashMap as ImHashMap;
-use moduforge_model::{schema::Schema, tree::Tree, types::NodeId};
+use mf_model::{schema::Schema, tree::Tree, types::NodeId};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value};
 
@@ -84,10 +84,10 @@ impl Step for AttrStep {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use moduforge_model::node::Node;
-    use moduforge_model::attrs::Attrs;
-    use moduforge_model::node_type::NodeSpec;
-    use moduforge_model::schema::{SchemaSpec, AttributeSpec};
+    use mf_model::node::Node;
+    use mf_model::attrs::Attrs;
+    use mf_model::node_type::NodeSpec;
+    use mf_model::schema::{SchemaSpec, AttributeSpec};
     use std::collections::HashMap;
     use std::sync::Arc;
     use serde_json::json;

@@ -19,7 +19,7 @@ homepage = "https://github.com/Cassielxd/moduforge-rs"
 repository = "https://github.com/Cassielxd/moduforge-rs"
 
 [workspace.dependencies]
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
 tokio-util = "0.7.14"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"

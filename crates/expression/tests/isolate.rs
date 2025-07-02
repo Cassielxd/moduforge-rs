@@ -1,7 +1,7 @@
 use serde_json::{json, Value};
 
-use moduforge_rules_expression::variable::Variable;
-use moduforge_rules_expression::Isolate;
+use mf_expression::variable::Variable;
+use mf_expression::Isolate;
 
 struct TestEnv {
     env: Value,
@@ -639,7 +639,7 @@ mod test {
     use serde_json::Value;
     use std::env;
     use std::ops::Index;
-    use moduforge_rules_expression::Isolate;
+    use mf_expression::Isolate;
 
     fn test_csv_standard(csv_data: &str) {
         let mut r = csv::ReaderBuilder::new()

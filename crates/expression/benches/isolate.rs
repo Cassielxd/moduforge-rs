@@ -3,8 +3,8 @@ use std::ops::Index;
 use criterion::{criterion_group, criterion_main, Bencher, Criterion};
 use csv::StringRecord;
 
-use moduforge_rules_expression::variable::Variable;
-use moduforge_rules_expression::Isolate;
+use mf_expression::variable::Variable;
+use mf_expression::Isolate;
 
 fn bench_unary(
     b: &mut Bencher,

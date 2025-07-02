@@ -10,6 +10,7 @@ homepage = {workspace=true}
 repository = {workspace=true}
 
 [lib]
+name = "mf_model"
 path="src/lib.rs"
 
 [dependencies]

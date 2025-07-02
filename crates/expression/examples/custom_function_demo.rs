@@ -1,8 +1,8 @@
-use moduforge_rules_expression::{Isolate, Variable};
-use moduforge_rules_expression::functions::custom::{
+use mf_expression::{Isolate, Variable};
+use mf_expression::functions::custom::{
     CustomFunctionHelper, CustomFunctionRegistry,
 };
-use moduforge_rules_expression::variable::VariableType;
+use mf_expression::variable::VariableType;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 

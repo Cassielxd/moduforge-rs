@@ -62,7 +62,7 @@ pub const META_DEPENDENCY_SATISFIED: &str = "dependency_satisfied";
 ```rust
 use std::{collections::HashMap, sync::Arc};
 use async_trait::async_trait;
-use moduforge_state::{
+use mf_state::{
     resource::Resource,
     plugin::{Plugin, PluginSpec, PluginTrait, StateField},
     state::{State, StateConfig},

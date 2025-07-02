@@ -1,4 +1,4 @@
-use moduforge_rules_expression::lexer::{
+use mf_expression::lexer::{
     ArithmeticOperator, Bracket, ComparisonOperator, Identifier, Lexer,
     LogicalOperator, Operator, QuotationMark, Token, TokenKind,
 };

@@ -4,7 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 use anyhow::anyhow;
-use moduforge_state::debug;
+use mf_state::debug;
 use tokio::sync::{mpsc, oneshot};
 use async_trait::async_trait;
 use tokio::select;

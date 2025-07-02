@@ -12,7 +12,7 @@
 //! 通过 `PerformanceConfig` 可以配置各种超时时间：
 //!
 //! ```rust
-//! use moduforge_core::async_runtime::PerformanceConfig;
+//! use mf_core::async_runtime::PerformanceConfig;
 //!
 //! let config = PerformanceConfig {
 //!     enable_monitoring: true,
@@ -49,7 +49,7 @@ use crate::{
     types::RuntimeOptions,
     ForgeResult,
 };
-use moduforge_state::{
+use mf_state::{
     debug,
     state::TransactionResult,
     transaction::{Command, Transaction},

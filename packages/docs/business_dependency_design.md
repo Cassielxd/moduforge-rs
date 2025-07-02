@@ -19,8 +19,8 @@
 ```rust
 use std::{collections::HashMap, sync::Arc};
 use async_trait::async_trait;
-use moduforge_state::{resource::Resource, plugin::{Plugin, PluginSpec}};
-use moduforge_core::{event::Event, async_processor::AsyncProcessor};
+use mf_state::{resource::Resource, plugin::{Plugin, PluginSpec}};
+use mf_core::{event::Event, async_processor::AsyncProcessor};
 
 /// 业务依赖描述
 #[derive(Debug, Clone)]
@@ -128,7 +128,7 @@ impl BusinessDependencyManager {
 ```rust
 use std::{collections::HashMap, sync::Arc};
 use async_trait::async_trait;
-use moduforge_state::{
+use mf_state::{
     resource::Resource,
     plugin::{Plugin, PluginSpec, PluginTrait, StateField},
     state::{State, StateConfig},
@@ -340,7 +340,7 @@ impl StateField for BBusinessStateField {
 
 ```rust
 use std::sync::Arc;
-use moduforge_state::{
+use mf_state::{
     plugin::{Plugin, PluginSpec},
     state::{State, StateConfig},
     ops::GlobalResourceManager,

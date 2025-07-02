@@ -7,7 +7,7 @@ use yrs_warp::broadcast::BroadcastGroup;
 use yrs_warp::ws::{WarpSink, WarpStream};
 use tokio::sync::Mutex;
 use futures_util::StreamExt;
-use moduforge_model::tree::Tree;
+use mf_model::tree::Tree;
 use serde_json::json;
 
 /// 自定义错误类型用于房间不存在的情况

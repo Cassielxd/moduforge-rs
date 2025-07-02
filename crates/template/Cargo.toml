@@ -8,6 +8,8 @@ license = {workspace=true}
 documentation = {workspace=true}
 homepage = {workspace=true}
 repository = {workspace=true}
+[lib]
+name = "mf_template"
 
 [dependencies]
 moduforge-rules-expression = { path = "../expression", version = "0.4.5" }

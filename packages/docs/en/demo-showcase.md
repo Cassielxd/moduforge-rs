@@ -362,8 +362,8 @@ pub struct CacheState {
 
 ### 1. 系统初始化
 ```rust
-use moduforge_core::{async_runtime::AsyncRuntime, types::RuntimeOptions};
-use moduforge_state::{StateConfig, init_logging};
+use mf_core::{async_runtime::AsyncRuntime, types::RuntimeOptions};
+use mf_state::{StateConfig, init_logging};
 
 async fn initialize_demo_system() -> ForgeResult<AsyncRuntime> {
     // 初始化日志系统

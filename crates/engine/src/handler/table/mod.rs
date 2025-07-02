@@ -1,6 +1,6 @@
 pub mod zen;
 
-use moduforge_rules_expression::variable::Variable;
+use mf_expression::variable::Variable;
 
 #[derive(Debug, Clone)]
 pub(crate) enum RowOutputKind {

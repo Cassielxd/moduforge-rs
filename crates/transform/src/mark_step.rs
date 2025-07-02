@@ -1,6 +1,6 @@
 use std::{sync::Arc};
 
-use moduforge_model::{mark::Mark, schema::Schema, tree::Tree, types::NodeId};
+use mf_model::{mark::Mark, schema::Schema, tree::Tree, types::NodeId};
 
 use crate::{transform_error, TransformResult};
 

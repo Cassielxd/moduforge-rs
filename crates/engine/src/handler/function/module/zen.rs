@@ -105,7 +105,7 @@ fn evaluate_expression<'js>(
     expression: String,
     context: JsValue,
 ) -> rquickjs::Result<JsValue> {
-    let s = moduforge_rules_expression::evaluate_expression(
+    let s = mf_expression::evaluate_expression(
         expression.as_str(),
         context.0,
     )
@@ -119,7 +119,7 @@ fn evaluate_unary_expression<'js>(
     expression: String,
     context: JsValue,
 ) -> rquickjs::Result<bool> {
-    let s = moduforge_rules_expression::evaluate_unary_expression(
+    let s = mf_expression::evaluate_unary_expression(
         expression.as_str(),
         context.0,
     )

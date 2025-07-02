@@ -47,7 +47,7 @@ pub struct NodeSpec {
 
 ```rust
 // 预算业务的 NodeSpec 定义
-use moduforge_model::node_type::NodeSpec;
+use mf_model::node_type::NodeSpec;
 use std::collections::HashMap;
 
 pub fn create_budget_schema() -> HashMap<String, NodeSpec> {
@@ -182,7 +182,7 @@ pub fn create_budget_schema() -> HashMap<String, NodeSpec> {
 ### 3. 标记 (Mark) 系统映射
 
 ```rust
-use moduforge_model::mark_type::MarkSpec;
+use mf_model::mark_type::MarkSpec;
 
 pub fn create_budget_marks() -> HashMap<String, MarkSpec> {
     let mut marks = HashMap::new();
@@ -241,9 +241,9 @@ pub fn create_budget_marks() -> HashMap<String, MarkSpec> {
 ### 4. 实际使用示例
 
 ```rust
-use moduforge_model::node::Node;
-use moduforge_model::attrs::Attrs;
-use moduforge_model::mark::Mark;
+use mf_model::node::Node;
+use mf_model::attrs::Attrs;
+use mf_model::mark::Mark;
 
 // 创建一个清单项目节点
 pub fn create_budget_item_node() -> Node {
@@ -300,7 +300,7 @@ pub fn create_project_structure() -> Node {
 
 ```rust
 // ModuForge 的事务操作映射到预算业务
-use moduforge_state::transaction::Transaction;
+use mf_state::transaction::Transaction;
 
 impl BudgetRuntime {
     // 更新工程量

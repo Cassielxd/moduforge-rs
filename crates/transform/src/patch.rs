@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use moduforge_model::{attrs::Attrs, mark::Mark, node::Node, types::NodeId};
+use mf_model::{attrs::Attrs, mark::Mark, node::Node, types::NodeId};
 
 /// 文档补丁枚举
 /// 用于描述对文档树的各种修改操作

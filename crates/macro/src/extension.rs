@@ -3,12 +3,12 @@
 macro_rules! impl_extension {
     () => {
         {
-            moduforge_core::extension::Extension::new()
+            mf_core::extension::Extension::new()
         }
     };
     ($(attr:$attr:expr),*) => {
         {
-            let mut ext = moduforge_core::extension::Extension::new();
+            let mut ext = mf_core::extension::Extension::new();
             $(
                 ext.add_global_attribute($attr);
             )*
@@ -17,7 +17,7 @@ macro_rules! impl_extension {
     };
     ($(plugin:$plugin:expr),*) => {
         {
-            let mut ext = moduforge_core::extension::Extension::new();
+            let mut ext = mf_core::extension::Extension::new();
             $(
                 ext.add_plugin(std::sync::Arc::new($plugin));
             )*
@@ -26,7 +26,7 @@ macro_rules! impl_extension {
     };
     ($(op:$op:expr),*) => {
         {
-            let mut ext = moduforge_core::extension::Extension::new();
+            let mut ext = mf_core::extension::Extension::new();
             $(
                 ext.add_op_fn(std::sync::Arc::new($op));
             )*
@@ -35,7 +35,7 @@ macro_rules! impl_extension {
     };
     ($(attr:$attr:expr),* ; $(plugin:$plugin:expr),*) => {
         {
-            let mut ext = moduforge_core::extension::Extension::new();
+            let mut ext = mf_core::extension::Extension::new();
             $(
                 ext.add_global_attribute($attr);
             )*
@@ -47,7 +47,7 @@ macro_rules! impl_extension {
     };
     ($(attr:$attr:expr),* ; $(plugin:$plugin:expr),* ; $(op:$op:expr),*) => {
         {
-            let mut ext = moduforge_core::extension::Extension::new();
+            let mut ext = mf_core::extension::Extension::new();
             $(
                 ext.add_global_attribute($attr);
             )*

@@ -9,7 +9,9 @@ documentation = {workspace=true}
 homepage = {workspace=true}
 repository = {workspace=true}
 [lib]
-path="./src/lib.rs"
+name = "mf_core"
+path = "src/lib.rs"
+
 
 
 [dependencies]

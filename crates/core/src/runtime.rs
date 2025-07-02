@@ -12,8 +12,8 @@ use crate::{
     types::{HistoryEntryWithMeta, ProcessorResult, RuntimeOptions},
 };
 
-use moduforge_model::{node_pool::NodePool, schema::Schema};
-use moduforge_state::{
+use mf_model::{node_pool::NodePool, schema::Schema};
+use mf_state::{
     debug, error, info,
     ops::GlobalResourceManager,
     state::{State, StateConfig, TransactionResult},

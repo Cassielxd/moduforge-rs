@@ -1,11 +1,11 @@
 use bumpalo::Bump;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use moduforge_rules_expression::functions::{DeprecatedFunction, FunctionKind};
-use moduforge_rules_expression::lexer::{
+use mf_expression::functions::{DeprecatedFunction, FunctionKind};
+use mf_expression::lexer::{
     Bracket, ComparisonOperator, Lexer, LogicalOperator, Operator,
 };
-use moduforge_rules_expression::parser::{Node, Parser};
+use mf_expression::parser::{Node, Parser};
 
 struct UnaryTest {
     src: &'static str,

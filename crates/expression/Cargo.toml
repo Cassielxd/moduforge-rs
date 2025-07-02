@@ -9,6 +9,9 @@ documentation = {workspace=true}
 homepage = {workspace=true}
 repository = {workspace=true}
 
+[lib]
+name = "mf_expression"
+
 [dependencies]
 anyhow = { workspace = true }
 ahash = { workspace = true }

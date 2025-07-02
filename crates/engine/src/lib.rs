@@ -8,8 +8,8 @@
 //!
 //! ```rust
 //! use serde_json::json;
-//! use moduforge_rules_engine::DecisionEngine;
-//! use moduforge_rules_engine::model::DecisionContent;
+//! use mf_rules_engine::DecisionEngine;
+//! use mf_rules_engine::model::DecisionContent;
 //!
 //! async fn evaluate() {
 //!     let decision_content: DecisionContent = serde_json::from_str(include_str!("jdm_graph.json")).unwrap();
@@ -36,8 +36,8 @@
 //!
 //! ```rust
 //! use serde_json::json;
-//! use moduforge_rules_engine::DecisionEngine;
-//! use moduforge_rules_engine::loader::{FilesystemLoader, FilesystemLoaderOptions};
+//! use mf_rules_engine::DecisionEngine;
+//! use mf_rules_engine::loader::{FilesystemLoader, FilesystemLoaderOptions};
 //!
 //! async fn evaluate() {
 //!     let engine = DecisionEngine::new(FilesystemLoader::new(FilesystemLoaderOptions {
@@ -133,4 +133,4 @@ pub use handler::graph::DecisionGraphResponse;
 pub use handler::graph::DecisionGraphTrace;
 pub use handler::graph::DecisionGraphValidationError;
 pub use handler::node::NodeError;
-pub use moduforge_rules_expression::Variable;
+pub use mf_expression::Variable;

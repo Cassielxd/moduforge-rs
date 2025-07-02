@@ -16,8 +16,8 @@ moduforge-rules-engine 引擎是一个对业务友好的开源业务规则引擎
 
 ```rust
 use serde_json::json;
-use moduforge_rules_engine::DecisionEngine;
-use moduforge_rules_engine::model::DecisionContent;
+use mf_rules_engine::DecisionEngine;
+use mf_rules_engine::model::DecisionContent;
 
 async fn evaluate() {
     let decision_content: DecisionContent = serde_json::from_str(include_str!("jdm_graph.json")).unwrap();
@@ -45,8 +45,8 @@ async fn evaluate() {
 
 ```rust
 use serde_json::json;
-use moduforge_rules_engine::DecisionEngine;
-use moduforge_rules_engine::loader::{FilesystemLoader, FilesystemLoaderOptions};
+use mf_rules_engine::DecisionEngine;
+use mf_rules_engine::loader::{FilesystemLoader, FilesystemLoaderOptions};
 
 async fn evaluate() {
     let engine = DecisionEngine::new(FilesystemLoader::new(FilesystemLoaderOptions {
@@ -77,8 +77,8 @@ async fn evaluate() {
 ```rust
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use moduforge_rules_engine::loader::{DecisionLoader, LoaderError, LoaderResponse};
-use moduforge_rules_engine::model::DecisionContent;
+use mf_rules_engine::loader::{DecisionLoader, LoaderError, LoaderResponse};
+use mf_rules_engine::model::DecisionContent;
 
 #[derive(Debug, Default)]
 pub struct MemoryLoader {

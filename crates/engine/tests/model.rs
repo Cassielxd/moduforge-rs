@@ -1,7 +1,7 @@
 use crate::support::test_data_root;
 use std::fs;
 use std::path::Path;
-use moduforge_rules_engine::model::DecisionContent;
+use mf_engine::model::DecisionContent;
 
 mod support;
 

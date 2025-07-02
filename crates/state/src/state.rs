@@ -1,4 +1,4 @@
-use moduforge_model::{
+use mf_model::{
     id_generator::IdGenerator, mark::Mark, node_pool::NodePool, schema::Schema,
 };
 use im::HashMap as ImHashMap;

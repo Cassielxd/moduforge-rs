@@ -1,6 +1,6 @@
 use std::{any::Any, sync::Arc};
 
-use moduforge_model::{schema::Schema, tree::Tree};
+use mf_model::{schema::Schema, tree::Tree};
 use std::fmt::Debug;
 
 use crate::TransformResult;

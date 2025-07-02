@@ -1,5 +1,5 @@
-use moduforge_core::extension::Extension;
-use moduforge_state::{
+use mf_core::extension::Extension;
+use mf_state::{
     plugin::{Plugin, PluginSpec, PluginTrait, StateField},
     resource::Resource,
     state::{State, StateConfig},

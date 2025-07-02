@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use moduforge_model::schema::Schema;
-use moduforge_state::{ops::GlobalResourceManager, plugin::Plugin};
+use mf_model::schema::Schema;
+use mf_state::{ops::GlobalResourceManager, plugin::Plugin};
 
 use crate::{
     helpers::get_schema_by_resolved_extensions::get_schema_by_resolved_extensions,

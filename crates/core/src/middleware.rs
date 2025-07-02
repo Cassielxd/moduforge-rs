@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::error::ForgeResult;
-use moduforge_state::{transaction::Transaction, state::State};
+use mf_state::{transaction::Transaction, state::State};
 
 /// 可以用于事务处理的中间件 trait
 #[async_trait::async_trait]

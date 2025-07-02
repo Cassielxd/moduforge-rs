@@ -109,7 +109,7 @@ ModuForge Runtime 提供了两种运行时实现，以满足不同的使用场�
 
 ### 同步运行时示例
 ```rust
-use moduforge_runtime::{
+use mf_runtime::{
     Runtime,
     RuntimeOptions,
     EditorResult,
@@ -135,7 +135,7 @@ fn main() -> EditorResult<()> {
 
 ### 异步运行时示例
 ```rust
-use moduforge_runtime::{
+use mf_runtime::{
     Editor,
     EditorOptions,
     EditorResult,

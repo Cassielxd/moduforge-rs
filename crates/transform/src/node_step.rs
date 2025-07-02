@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use moduforge_model::{
+use mf_model::{
     node_type::NodeEnum, schema::Schema, tree::Tree, types::NodeId,
 };
 
@@ -193,7 +193,7 @@ impl Step for MoveNodeStep {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use moduforge_model::{
+    use mf_model::{
         node::Node,
         node_type::{NodeEnum, NodeType, NodeSpec},
         schema::{Schema, SchemaSpec, AttributeSpec},

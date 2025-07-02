@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use moduforge_state::StateConfig;
+use mf_state::StateConfig;
 
 use crate::{types::Content, ForgeResult};
 

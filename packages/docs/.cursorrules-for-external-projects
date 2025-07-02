@@ -38,9 +38,9 @@ uuid = { version = "1.0", features = ["v4"] }
 使用 ModuForge-RS 的异步运行时：
 
 ```rust
-use moduforge_core::{ForgeResult, async_runtime::AsyncRuntime, types::RuntimeOptions};
-use moduforge_state::{init_logging, StateConfig};
-use moduforge_core::middleware::MiddlewareStack;
+use mf_core::{ForgeResult, async_runtime::AsyncRuntime, types::RuntimeOptions};
+use mf_state::{init_logging, StateConfig};
+use mf_core::middleware::MiddlewareStack;
 
 // 初始化异步运行时
 async fn initialize_runtime() -> ForgeResult<AsyncRuntime> {
@@ -63,8 +63,8 @@ async fn initialize_runtime() -> ForgeResult<AsyncRuntime> {
 通过 Extension 系统创建插件：
 
 ```rust
-use moduforge_core::extension::Extension;
-use moduforge_state::{
+use mf_core::extension::Extension;
+use mf_state::{
     plugin::{Plugin, PluginSpec, PluginTrait, StateField},
     resource::Resource,
     state::{State, StateConfig},
@@ -202,7 +202,7 @@ async fn create_runtime_with_plugin() -> ForgeResult<AsyncRuntime> {
     let mut options = RuntimeOptions::default();
     
     // 添加扩展到运行时选项
-    options.add_extension(moduforge_core::types::Extensions::E(create_my_extension()));
+    options.add_extension(mf_core::types::Extensions::E(create_my_extension()));
     
     let state_config = StateConfig::default();
     AsyncRuntime::new(options, state_config).await
@@ -211,7 +211,7 @@ async fn create_runtime_with_plugin() -> ForgeResult<AsyncRuntime> {
 ### 3. 节点和文档操作模式
 
 ```rust
-use moduforge_model::{
+use mf_model::{
     node::Node as ModelNode,
     node_type::{NodeSpec, NodeEnum},
     attrs::Attrs,
@@ -219,7 +219,7 @@ use moduforge_model::{
     tree::Tree,
     node_pool::NodePool,
 };
-use moduforge_transform::{
+use mf_transform::{
     node_step::{AddNodeStep, RemoveNodeStep},
     attr_step::AttrStep,
 };
@@ -283,7 +283,7 @@ async fn manipulate_document(runtime: &mut AsyncRuntime) -> ForgeResult<()> {
 ### 4. 中间件开发模式
 
 ```rust
-use moduforge_core::middleware::{Middleware, MiddlewareStack};
+use mf_core::middleware::{Middleware, MiddlewareStack};
 use async_trait::async_trait;
 
 #[derive(Debug)]
@@ -332,7 +332,7 @@ fn setup_middleware() -> MiddlewareStack {
 ### 5. 事件处理模式
 
 ```rust
-use moduforge_core::event::{Event, EventHandler, EventBus};
+use mf_core::event::{Event, EventHandler, EventBus};
 
 #[derive(Debug)]
 struct StateChangeHandler;
@@ -437,7 +437,7 @@ your-project/
 #[cfg(test)]
 mod tests {
     use super::*;
-    use moduforge_state::{State, StateConfig};
+    use mf_state::{State, StateConfig};
     use tokio_test;
 
     #[tokio::test]
@@ -466,7 +466,7 @@ mod tests {
 
 ## 日志和调试
 ```rust
-use moduforge_state::{info, debug, warn, error, init_logging};
+use mf_state::{info, debug, warn, error, init_logging};
 
 // 初始化日志系统
 init_logging("debug", Some("logs/app.log")).unwrap();

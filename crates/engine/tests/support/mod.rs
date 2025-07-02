@@ -1,8 +1,8 @@
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-use moduforge_rules_engine::loader::{FilesystemLoader, FilesystemLoaderOptions};
-use moduforge_rules_engine::model::DecisionContent;
+use mf_engine::loader::{FilesystemLoader, FilesystemLoaderOptions};
+use mf_engine::model::DecisionContent;
 
 #[allow(dead_code)]
 pub fn test_data_root() -> String {

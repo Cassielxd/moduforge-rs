@@ -1,4 +1,4 @@
-use moduforge_rules_expression::{Isolate, evaluate_expression, Variable};
+use mf_expression::{Isolate, evaluate_expression, Variable};
 use serde_json::json;
 use rust_decimal_macros::dec;
 

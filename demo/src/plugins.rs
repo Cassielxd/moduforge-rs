@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use std::sync::Arc;
-use moduforge_state::{
+use mf_state::{
     plugin::{PluginTrait, StateField},
     resource::Resource,
     state::{State, StateConfig},

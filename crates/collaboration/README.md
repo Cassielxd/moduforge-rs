@@ -118,7 +118,7 @@ let room_info = sync_service.get_room_info("room-id").await;
 以下是如何启动服务器的完整示例：
 
 ```rust,ignore
-use moduforge_collaboration::{CollaborationServer, YrsManager, SyncService};
+use mf_collaboration::{CollaborationServer, YrsManager, SyncService};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 

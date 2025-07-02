@@ -4,7 +4,7 @@ use std::{
 };
 
 use async_channel::{Receiver, Sender};
-use moduforge_state::{debug, state::State, Transaction};
+use mf_state::{debug, state::State, Transaction};
 use tokio::{signal};
 
 use crate::error::{ForgeResult, error_utils};

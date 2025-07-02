@@ -1,8 +1,8 @@
 use bumpalo::Bump;
 use criterion::{criterion_group, criterion_main, Bencher, Criterion};
 
-use moduforge_rules_expression::lexer::Lexer;
-use moduforge_rules_expression::parser::Parser;
+use mf_expression::lexer::Lexer;
+use mf_expression::parser::Parser;
 
 fn bench_source(
     b: &mut Bencher,

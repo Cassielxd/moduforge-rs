@@ -9,6 +9,7 @@ documentation = {workspace=true}
 homepage = {workspace=true}
 repository = {workspace=true}
 [lib]
+name = "mf_state"
 path="src/lib.rs"
 
 [dependencies]

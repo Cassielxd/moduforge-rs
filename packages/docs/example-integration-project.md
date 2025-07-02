@@ -78,7 +78,7 @@ clap = { version = "4.0", features = ["derive"] }
 ```rust
 use anyhow::Result;
 use my_editor_project::{AppConfig, EditorApp};
-use moduforge_state::init_logging;
+use mf_state::init_logging;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -107,12 +107,12 @@ pub mod extensions;
 
 pub use config::AppConfig;
 
-use moduforge_core::{
+use mf_core::{
     ForgeResult, 
     async_runtime::AsyncRuntime, 
     types::{RuntimeOptions, Extensions}
 };
-use moduforge_state::StateConfig;
+use mf_state::StateConfig;
 use anyhow::Result;
 
 /// 编辑器应用主结构
@@ -217,8 +217,8 @@ impl AppConfig {
 
 ### src/plugins/markdown_plugin.rs
 ```rust
-use moduforge_core::extension::Extension;
-use moduforge_state::{
+use mf_core::extension::Extension;
+use mf_state::{
     plugin::{Plugin, PluginSpec, PluginTrait, StateField},
     resource::Resource,
     state::{State, StateConfig},
@@ -355,10 +355,10 @@ pub fn create_markdown_extension() -> Extension {
 
 ### src/handlers/document_handler.rs
 ```rust
-use moduforge_core::{ForgeResult, async_runtime::AsyncRuntime};
-use moduforge_state::transaction::Transaction;
-use moduforge_transform::node_step::AddNodeStep;
-use moduforge_model::{node::Node, attrs::Attrs, types::NodeId};
+use mf_core::{ForgeResult, async_runtime::AsyncRuntime};
+use mf_state::transaction::Transaction;
+use mf_transform::node_step::AddNodeStep;
+use mf_model::{node::Node, attrs::Attrs, types::NodeId};
 use serde_json::Value;
 
 /// 文档处理器
@@ -434,8 +434,8 @@ impl DocumentHandler {
 
 ### src/extensions/custom_commands.rs
 ```rust
-use moduforge_core::extension::Extension;
-use moduforge_state::{
+use mf_core::extension::Extension;
+use mf_state::{
     plugin::{Plugin, PluginSpec, PluginTrait},
     transaction::Transaction,
     state::State,
@@ -513,7 +513,7 @@ pub fn create_custom_commands_extension() -> Extension {
 ### tests/integration_tests.rs
 ```rust
 use my_editor_project::{AppConfig, EditorApp};
-use moduforge_state::init_logging;
+use mf_state::init_logging;
 
 #[tokio::test]
 async fn test_editor_initialization() {
@@ -548,7 +548,7 @@ async fn test_document_creation() {
 ### tests/plugin_tests.rs
 ```rust
 use my_editor_project::plugins::create_markdown_extension;
-use moduforge_core::extension::Extension;
+use mf_core::extension::Extension;
 
 #[test]
 fn test_markdown_plugin_creation() {
@@ -563,9 +563,9 @@ fn test_markdown_plugin_creation() {
 
 #[tokio::test]
 async fn test_plugin_state_management() {
-    use moduforge_state::{State, StateConfig};
+    use mf_state::{State, StateConfig};
     use my_editor_project::plugins::MarkdownStateField;
-    use moduforge_state::plugin::StateField;
+    use mf_state::plugin::StateField;
     
     let state_field = MarkdownStateField;
     let config = StateConfig::default();

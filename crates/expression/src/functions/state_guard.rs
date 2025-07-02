@@ -14,8 +14,8 @@ use std::marker::PhantomData;
 /// # 示例
 /// ```rust,ignore
 /// use std::sync::Arc;
-/// use moduforge_state::State;
-/// use moduforge_rules_expression::functions::StateGuard;
+/// use mf_state::State;
+/// use mf_rules_expression::functions::StateGuard;
 ///
 /// // 创建 State
 /// let state = Arc::new(State::default());
@@ -79,7 +79,7 @@ impl<S> Drop for StateGuard<S> {
 ///
 /// # 示例
 /// ```rust,ignore
-/// use moduforge_rules_expression::with_state;
+/// use mf_rules_expression::with_state;
 ///
 /// let state = Arc::new(State::default());
 ///
@@ -107,7 +107,7 @@ macro_rules! with_state {
 ///
 /// # 示例
 /// ```rust,ignore
-/// use moduforge_rules_expression::functions::with_state_async;
+/// use mf_rules_expression::functions::with_state_async;
 ///
 /// let state = Arc::new(State::default());
 ///

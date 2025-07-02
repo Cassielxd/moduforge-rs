@@ -7,8 +7,8 @@ use crate::handler::table::{RowOutput, RowOutputKind};
 use crate::model::{DecisionNodeKind, DecisionTableContent, DecisionTableHitPolicy};
 use serde::Serialize;
 use tokio::sync::Mutex;
-use moduforge_rules_expression::variable::Variable;
-use moduforge_rules_expression::Isolate;
+use mf_expression::variable::Variable;
+use mf_expression::Isolate;
 
 #[derive(Debug, Serialize)]
 struct RowResult {

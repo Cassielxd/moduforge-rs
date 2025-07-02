@@ -49,7 +49,7 @@ pub use tracing::{info, debug, warn, error};
 ///
 /// # 示例
 /// ```
-/// use moduforge_core::init_logging;
+/// use mf_core::init_logging;
 ///
 /// // 只输出到控制台
 /// init_logging("debug", None)?;

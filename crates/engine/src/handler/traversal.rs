@@ -18,8 +18,8 @@ use crate::model::{
     SwitchStatementHitPolicy,
 };
 use crate::DecisionGraphTrace;
-use moduforge_rules_expression::variable::Variable;
-use moduforge_rules_expression::Isolate;
+use mf_expression::variable::Variable;
+use mf_expression::Isolate;
 
 /// # Petgraph 库说明
 ///

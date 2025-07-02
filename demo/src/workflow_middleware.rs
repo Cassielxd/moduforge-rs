@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use std::{sync::Arc, time::SystemTime};
-use moduforge_core::{
+use mf_core::{
     middleware::{Middleware},
     error::ForgeResult,
 };
-use moduforge_state::{state::State, transaction::Transaction};
+use mf_state::{state::State, transaction::Transaction};
 
 /// 认证中间件
 /// 负责验证用户身份和会话状态

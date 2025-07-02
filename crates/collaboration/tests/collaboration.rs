@@ -1,9 +1,9 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 use async_trait::async_trait;
-use moduforge_state::{transaction::Command, Transaction};
-use moduforge_transform::TransformResult;
-use moduforge_collaboration::{
+use mf_state::{transaction::Command, Transaction};
+use mf_transform::TransformResult;
+use mf_collab::{
     Result, SyncService, YrsMiddleware, YrsManager, CollaborationServer,
     RoomStatus,
 };
@@ -11,14 +11,14 @@ use tokio::time::{sleep, Duration};
 use tracing_subscriber;
 use tokio::sync::Mutex;
 
-use moduforge_core::{
+use mf_core::{
     middleware::MiddlewareStack,
     node::Node,
     runtime::ForgeRuntime,
     types::{Extensions, RuntimeOptions},
 };
-use moduforge_macros::node;
-use moduforge_model::{node_type::NodeEnum};
+use mf_macro::node;
+use mf_model::{node_type::NodeEnum};
 
 #[tokio::test]
 async fn test_collaboration() -> Result<()> {

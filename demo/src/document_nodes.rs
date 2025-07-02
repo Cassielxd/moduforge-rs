@@ -1,6 +1,6 @@
-use moduforge_core::node::Node;
-use moduforge_model::node_type::NodeSpec;
-use moduforge_model::schema::AttributeSpec;
+use mf_core::node::Node;
+use mf_model::node_type::NodeSpec;
+use mf_model::schema::AttributeSpec;
 use std::collections::HashMap;
 use serde_json::Value;
 

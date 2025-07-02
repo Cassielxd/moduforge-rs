@@ -8,7 +8,7 @@ use crate::model::DecisionContent;
 use crate::util::validator_cache::ValidatorCache;
 use crate::{DecisionGraphValidationError, EvaluationError};
 use std::sync::Arc;
-use moduforge_rules_expression::variable::Variable;
+use mf_expression::variable::Variable;
 
 /// Represents a JDM decision which can be evaluated
 #[derive(Debug, Clone)]
@@ -99,7 +99,7 @@ where
     ) -> Result<DecisionGraphResponse, Box<EvaluationError>> {
         // 使用 StateGuard 自动管理 State 生命周期
         let _guard =
-            moduforge_rules_expression::functions::StateGuard::new(state);
+            mf_expression::functions::StateGuard::new(state);
 
         // 执行评估
         let result = self.evaluate(context).await;

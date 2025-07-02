@@ -123,7 +123,7 @@ tracing = { version = "0.1", features = ["log"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 // 环境变量
-RUST_LOG=moduforge_collaboration=warn,info
+RUST_LOG=mf_collaboration=warn,info
 ```
 
 ### 3. 网络优化

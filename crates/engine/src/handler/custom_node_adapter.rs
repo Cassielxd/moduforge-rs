@@ -6,8 +6,8 @@ use serde::Serialize;
 use serde_json::Value;
 use std::ops::Deref;
 use std::sync::Arc;
-use moduforge_rules_expression::variable::Variable;
-use moduforge_rules_template::TemplateRenderError;
+use mf_expression::variable::Variable;
+use mf_template::TemplateRenderError;
 
 pub trait CustomNodeAdapter {
     fn handle(
@@ -59,7 +59,7 @@ impl CustomNodeRequest {
             return Ok(Some(selected_value));
         };
 
-        let template_value = moduforge_rules_template::render(
+        let template_value = mf_template::render(
             template.as_ref(),
             self.input.clone(),
         )?;

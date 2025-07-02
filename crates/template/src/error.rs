@@ -1,7 +1,7 @@
 use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 use thiserror::Error;
-use moduforge_rules_expression::IsolateError;
+use mf_expression::IsolateError;
 
 #[derive(Debug, Error)]
 pub enum TemplateRenderError {

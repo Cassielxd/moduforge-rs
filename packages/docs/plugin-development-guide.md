@@ -12,7 +12,7 @@ ModuForge-RS 的插件系统基于三个核心组件：
 ### 第一步：定义插件状态资源
 
 ```rust
-use moduforge_state::resource::Resource;
+use mf_state::resource::Resource;
 
 #[derive(Debug, Clone)]
 pub struct MyPluginState {
@@ -45,7 +45,7 @@ impl MyPluginState {
 ### 第二步：实现状态字段管理器
 
 ```rust
-use moduforge_state::{
+use mf_state::{
     plugin::StateField,
     resource::Resource,
     state::{State, StateConfig},
@@ -135,7 +135,7 @@ impl StateField for MyStateField {
 ### 第三步：实现插件行为
 
 ```rust
-use moduforge_state::{
+use mf_state::{
     plugin::PluginTrait,
     transaction::Transaction,
     state::State,
@@ -225,8 +225,8 @@ impl PluginTrait for MyPlugin {
 ### 第四步：创建完整的插件
 
 ```rust
-use moduforge_core::extension::Extension;
-use moduforge_state::plugin::{Plugin, PluginSpec};
+use mf_core::extension::Extension;
+use mf_state::plugin::{Plugin, PluginSpec};
 use std::sync::Arc;
 
 /// 创建我的插件扩展
@@ -477,7 +477,7 @@ impl PluginTrait for PermissionPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use moduforge_state::{State, StateConfig};
+    use mf_state::{State, StateConfig};
     use tokio_test;
 
     #[tokio::test]
@@ -542,14 +542,14 @@ mod tests {
 #[cfg(test)]
 mod integration_tests {
     use super::*;
-    use moduforge_core::{async_runtime::AsyncRuntime, types::RuntimeOptions};
-    use moduforge_state::StateConfig;
+    use mf_core::{async_runtime::AsyncRuntime, types::RuntimeOptions};
+    use mf_state::StateConfig;
 
     #[tokio::test]
     async fn test_plugin_integration() {
         // 创建带插件的运行时
         let mut options = RuntimeOptions::default();
-        options.add_extension(moduforge_core::types::Extensions::E(create_my_plugin_extension()));
+        options.add_extension(mf_core::types::Extensions::E(create_my_plugin_extension()));
         
         let state_config = StateConfig::default();
         let mut runtime = AsyncRuntime::new(options, state_config).await.unwrap();
@@ -606,7 +606,7 @@ impl MyStateField {
 ### 错误处理
 
 ```rust
-use moduforge_state::error::{StateError, StateResult};
+use mf_state::error::{StateError, StateResult};
 use thiserror::Error;
 
 #[derive(Error, Debug)]

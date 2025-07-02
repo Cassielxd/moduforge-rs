@@ -6,7 +6,7 @@ mod parser;
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
-use moduforge_rules_expression::variable::Variable;
+use mf_expression::variable::Variable;
 
 pub use crate::error::{ParserError, TemplateRenderError};
 

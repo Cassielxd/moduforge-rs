@@ -3,10 +3,10 @@ use serde_json::json;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
-use moduforge_rules_engine::handler::custom_node_adapter::NoopCustomNode;
-use moduforge_rules_engine::loader::{FilesystemLoader, FilesystemLoaderOptions};
-use moduforge_rules_engine::DecisionEngine;
-use moduforge_rules_expression::variable::Variable;
+use mf_engine::handler::custom_node_adapter::NoopCustomNode;
+use mf_engine::loader::{FilesystemLoader, FilesystemLoaderOptions};
+use mf_engine::DecisionEngine;
+use mf_expression::variable::Variable;
 
 fn create_graph() -> DecisionEngine<FilesystemLoader, NoopCustomNode> {
     let cargo_root = Path::new(env!("CARGO_MANIFEST_DIR"));

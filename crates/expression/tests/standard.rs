@@ -3,11 +3,11 @@ use rust_decimal::Decimal;
 
 use rust_decimal_macros::dec;
 
-use moduforge_rules_expression::lexer::{
+use mf_expression::lexer::{
     ArithmeticOperator, Bracket, ComparisonOperator, Lexer, LogicalOperator,
     Operator,
 };
-use moduforge_rules_expression::parser::{Node, Parser};
+use mf_expression::parser::{Node, Parser};
 
 struct StandardTest {
     src: &'static str,

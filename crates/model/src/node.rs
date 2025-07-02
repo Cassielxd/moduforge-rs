@@ -15,8 +15,8 @@ use serde::{Deserialize, Serialize};
 /// # 示例
 ///
 /// ```
-/// use moduforge_rs::model::node::Node;
-/// use moduforge_rs::model::attrs::Attrs;
+/// use mf_rs::model::node::Node;
+/// use mf_rs::model::attrs::Attrs;
 ///
 /// let node = Node::new(
 ///     "node1",

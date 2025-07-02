@@ -4,8 +4,8 @@ use std::slice::Iter;
 
 use crate::error::TemplateRenderError;
 use crate::parser::Node;
-use moduforge_rules_expression::variable::Variable;
-use moduforge_rules_expression::Isolate;
+use mf_expression::variable::Variable;
+use mf_expression::Isolate;
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum InterpreterResult<'a> {

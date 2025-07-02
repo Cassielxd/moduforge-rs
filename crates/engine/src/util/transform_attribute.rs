@@ -3,7 +3,7 @@ use crate::model::{TransformAttributes, TransformExecutionMode};
 use anyhow::Context;
 use serde_json::Value;
 use std::future::Future;
-use moduforge_rules_expression::{Isolate, Variable};
+use mf_expression::{Isolate, Variable};
 
 impl TransformAttributes {
     pub(crate) async fn run_with<F, Fut>(

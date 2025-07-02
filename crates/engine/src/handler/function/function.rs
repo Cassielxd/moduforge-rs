@@ -11,7 +11,7 @@ use rquickjs::{
     async_with, AsyncContext, AsyncRuntime, CatchResultExt, Ctx, Module,
 };
 use serde::{Deserialize, Serialize};
-use moduforge_rules_expression::variable::Variable;
+use mf_expression::variable::Variable;
 
 pub struct FunctionConfig {
     pub listeners: Option<Vec<Box<dyn RuntimeListener>>>,

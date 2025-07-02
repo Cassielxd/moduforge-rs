@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use crate::{mapping::Mapper};
 use crate::error::Result;
 use crate::yrs_manager::YrsManager;
-use moduforge_state::Transaction;
-use moduforge_model::tree::Tree;
+use mf_state::Transaction;
+use mf_model::tree::Tree;
 use crate::RoomSnapshot;
 
 /// 房间状态枚举
@@ -93,7 +93,7 @@ impl SyncService {
         tree: &Tree,
         txn: &mut yrs::TransactionMut,
     ) -> Result<()> {
-        use moduforge_transform::{step::Step, node_step::AddNodeStep};
+        use mf_transform::{step::Step, node_step::AddNodeStep};
 
         let registry = Mapper::global_registry();
 

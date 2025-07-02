@@ -1,5 +1,5 @@
 use std::{collections::HashMap, time::SystemTime};
-use moduforge_state::resource::Resource;
+use mf_state::resource::Resource;
 use im::HashMap as ImHashMap;
 
 /// 用户状态资源

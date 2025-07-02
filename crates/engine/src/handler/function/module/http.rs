@@ -8,7 +8,7 @@ use rquickjs::prelude::{Async, Func, Opt};
 use rquickjs::{CatchResultExt, Ctx, FromJs, IntoAtom, IntoJs, Object, Value};
 use std::str::FromStr;
 use std::sync::OnceLock;
-use moduforge_rules_expression::variable::Variable;
+use mf_expression::variable::Variable;
 
 pub(crate) struct HttpResponse<'js> {
     data: Value<'js>,

@@ -5,7 +5,7 @@ use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use serde_json::json;
 use std::rc::Rc;
-use moduforge_rules_expression::variable::Variable;
+use mf_expression::variable::Variable;
 
 #[derive(Debug)]
 pub struct JsValue(pub Variable);

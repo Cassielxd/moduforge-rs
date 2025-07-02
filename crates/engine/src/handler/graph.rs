@@ -26,7 +26,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Instant;
 use thiserror::Error;
-use moduforge_rules_expression::variable::Variable;
+use mf_expression::variable::Variable;
 
 /// 决策图结构体
 /// 用于表示和管理决策图，包含图的构建、验证和评估功能

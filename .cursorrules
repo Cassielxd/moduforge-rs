@@ -282,9 +282,9 @@ src/
 
 ### 初始化框架
 ```rust
-use moduforge_core::{AsyncRuntime, RuntimeOptions};
-use moduforge_state::{State, StateConfig};
-use moduforge_core::middleware::MiddlewareStack;
+use mf_core::{AsyncRuntime, RuntimeOptions};
+use mf_state::{State, StateConfig};
+use mf_core::middleware::MiddlewareStack;
 
 // 创建运行时配置
 let mut options = RuntimeOptions::default();
@@ -299,8 +299,8 @@ let runtime = AsyncRuntime::new(options, state_config).await?;
 
 ### 节点定义和使用
 ```rust
-use moduforge_core::node::Node;
-use moduforge_model::{
+use mf_core::node::Node;
+use mf_model::{
     node::Node as ModelNode, 
     attrs::Attrs, 
     types::NodeId,
@@ -309,7 +309,7 @@ use moduforge_model::{
     tree::Tree,
     node_pool::NodePool
 };
-use moduforge_macro::node;
+use mf_macro::node;
 use std::collections::HashMap;
 use serde_json::Value;
 use std::sync::Arc;
@@ -381,8 +381,8 @@ let node_by_id = node_pool.get_node(&NodeId::from("text_1"));
 
 ### 创建插件
 ```rust
-use moduforge_state::plugin::{Plugin, PluginSpec, PluginTrait, StateField};
-use moduforge_core::extension::Extension;
+use mf_state::plugin::{Plugin, PluginSpec, PluginTrait, StateField};
+use mf_core::extension::Extension;
 
 #[derive(Debug)]
 struct MyPlugin;
@@ -413,8 +413,8 @@ extension.add_plugin(Arc::new(plugin));
 
 ### 创建中间件
 ```rust
-use moduforge_core::middleware::{Middleware, MiddlewareStack};
-use moduforge_state::{State, Transaction};
+use mf_core::middleware::{Middleware, MiddlewareStack};
+use mf_state::{State, Transaction};
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -464,8 +464,8 @@ options.set_middleware_stack(middleware_stack);
 
 ### 创建事件处理器
 ```rust
-use moduforge_core::event::{Event, EventHandler, EventBus};
-use moduforge_state::State;
+use mf_core::event::{Event, EventHandler, EventBus};
+use mf_state::State;
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -508,8 +508,8 @@ event_bus.broadcast(Event::Create(Arc::new(state))).await?;
 
 ### 使用规则引擎
 ```rust
-use moduforge_rules_engine::{DecisionEngine, EvaluationOptions};
-use moduforge_rules_engine::loader::{FilesystemLoader, FilesystemLoaderOptions};
+use mf_rules_engine::{DecisionEngine, EvaluationOptions};
+use mf_rules_engine::loader::{FilesystemLoader, FilesystemLoaderOptions};
 
 // 创建决策引擎
 let engine = DecisionEngine::new(FilesystemLoader::new(FilesystemLoaderOptions {
@@ -524,7 +524,7 @@ let result = engine.evaluate("my_decision.json", &context).await?;
 
 ### 表达式求值
 ```rust
-use moduforge_rules_expression::{evaluate_expression, Variable};
+use mf_rules_expression::{evaluate_expression, Variable};
 use serde_json::json;
 
 let context = json!({ "value": 100, "tax_rate": 0.1 });
@@ -533,9 +533,9 @@ let result = evaluate_expression("value * tax_rate", context.into())?;
 
 ### 事务处理
 ```rust
-use moduforge_state::{Transaction, State};
-use moduforge_transform::{Transform, node_step::AddNodeStep};
-use moduforge_model::{node::Node, types::NodeId};
+use mf_state::{Transaction, State};
+use mf_transform::{Transform, node_step::AddNodeStep};
+use mf_model::{node::Node, types::NodeId};
 
 // 创建事务
 let mut transaction = Transaction::new();
@@ -577,7 +577,7 @@ let result = runtime.apply_transaction(transaction).await?;
 
 ### 日志记录
 ```rust
-use moduforge_state::init_logging;
+use mf_state::init_logging;
 
 // 初始化日志系统
 init_logging("info", Some("logs/app.log"))?;

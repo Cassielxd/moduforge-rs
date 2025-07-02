@@ -1,12 +1,12 @@
-use moduforge_core::{
+use mf_core::{
     async_runtime::ForgeAsyncRuntime,
     types::{EditorOptionsBuilder, Extensions},
     node::Node,
     extension::Extension,
     middleware::MiddlewareStack,
 };
-use moduforge_model::node_type::NodeSpec;
-use moduforge_state::{
+use mf_model::node_type::NodeSpec;
+use mf_state::{
     plugin::{Plugin, PluginSpec},
     transaction::Command,
 };
@@ -43,8 +43,8 @@ impl SimpleCommand {
 impl Command for SimpleCommand {
     async fn execute(
         &self,
-        tr: &mut moduforge_state::transaction::Transaction,
-    ) -> moduforge_transform::TransformResult<()> {
+        tr: &mut mf_state::transaction::Transaction,
+    ) -> mf_transform::TransformResult<()> {
         tr.set_meta("action", self.action.clone());
         tr.set_meta("source", "simple_demo");
 

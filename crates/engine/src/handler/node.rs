@@ -4,7 +4,7 @@ use serde_json::Value;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 use thiserror::Error;
-use moduforge_rules_expression::variable::Variable;
+use mf_expression::variable::Variable;
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

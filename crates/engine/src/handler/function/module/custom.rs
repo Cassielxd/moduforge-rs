@@ -29,7 +29,7 @@ use crate::handler::function::error::{FunctionResult, ResultExt};
 use crate::handler::function::listener::{RuntimeEvent, RuntimeListener};
 use crate::handler::function::module::export_default;
 use crate::handler::function::serde::JsValue;
-use moduforge_rules_expression::{
+use mf_expression::{
     CustomFunctionRegistry, functions::arguments::Arguments,
 };
 use rquickjs::module::{Declarations, Exports, ModuleDef};
