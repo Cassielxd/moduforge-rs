@@ -1,24 +1,16 @@
 use futures_util::stream::{SplitSink, SplitStream};
-use futures_util::{ready, SinkExt, Stream, StreamExt};
+use futures_util::{ready, Stream, StreamExt};
 use std::pin::Pin;
-use std::sync::Arc;
 use std::task::{Context, Poll};
-use std::collections::HashSet;
-use tokio::time::{timeout, Duration};
-use tokio::sync::Mutex as AsyncMutex;
 use tokio::net::TcpStream;
-use tokio::sync::RwLock;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
 use yrs::sync::{
-    Awareness, Error, Message as YrsMessage, Protocol, DefaultProtocol,
+     Error, Protocol,
 };
-use yrs::{Doc, GetString, Text, Transact, ReadTxn, Map, Array, Subscription};
-use yrs::updates::encoder::Encode;
-use yrs::types::ToJson;
+
 use yrs_warp::conn::Connection;
 use yrs_warp::AwarenessRef;
-use std::sync::Weak;
 
 /// 客户端 WebSocket Sink 包装器，类似于 WarpSink 但用于客户端
 #[derive(Debug)]
@@ -107,15 +99,15 @@ impl Stream for ClientStream {
                     Message::Close(_) => {
                         return Poll::Ready(None);
                     },
-                    Message::Ping(data) => {
+                    Message::Ping(_) => {
                         // 忽略 ping/pong 消息，继续处理下一个
                         return self.poll_next(cx);
                     },
-                    Message::Pong(data) => {
+                    Message::Pong(_) => {
                         // 忽略 ping/pong 消息，继续处理下一个
                         return self.poll_next(cx);
                     },
-                    Message::Frame(frame) => {
+                    Message::Frame(_) => {
                         return self.poll_next(cx);
                     },
                 };
