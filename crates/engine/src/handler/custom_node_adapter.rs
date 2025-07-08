@@ -59,10 +59,8 @@ impl CustomNodeRequest {
             return Ok(Some(selected_value));
         };
 
-        let template_value = mf_template::render(
-            template.as_ref(),
-            self.input.clone(),
-        )?;
+        let template_value =
+            mf_template::render(template.as_ref(), self.input.clone())?;
         Ok(Some(template_value))
     }
 

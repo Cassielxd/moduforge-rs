@@ -35,3 +35,4 @@ moduforge-core = {version = "0.4.6", path = "../core"}
 moduforge-macros = {version = "0.4.6", path = "../macro"}
 async-trait =  { workspace=true }
 fastrand = "2.0"
+tokio-tungstenite="0.27.0"

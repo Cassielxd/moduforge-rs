@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-use mf_model::{
-    node_type::NodeEnum, schema::Schema, tree::Tree, types::NodeId,
-};
+use mf_model::{node_type::NodeEnum, schema::Schema, tree::Tree, types::NodeId};
 
 use crate::transform_error;
 

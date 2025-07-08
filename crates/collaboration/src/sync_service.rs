@@ -37,12 +37,12 @@ pub struct RoomInfo {
 #[derive(Clone)]
 pub struct SyncService {
     yrs_manager: Arc<YrsManager>,
-    client_id: u64,
+    client_id: String,
 }
 
 impl SyncService {
     pub fn new(yrs_manager: Arc<YrsManager>) -> Self {
-        Self { yrs_manager, client_id: fastrand::u64(..) }
+        Self { yrs_manager, client_id: "server".to_string() }
     }
 
     /// 初始化房间，确保 Yrs 文档存在
@@ -67,7 +67,7 @@ impl SyncService {
         let awareness_ref = self.yrs_manager.get_or_create_awareness(room_id);
         let mut awareness = awareness_ref.write().await;
         let doc = awareness.doc_mut();
-        let mut txn = doc.transact_mut_with(yrs::Origin::from(self.client_id));
+        let mut txn = doc.transact_mut_with(self.client_id.clone());
 
         // 清空现有数据（如果有的话）
         let nodes_map = txn.get_or_insert_map("nodes");
@@ -141,8 +141,7 @@ impl SyncService {
         {
             let mut awareness = awareness_ref.write().await;
             let doc = awareness.doc_mut();
-            let mut txn =
-                doc.transact_mut_with(yrs::Origin::from(self.client_id));
+            let mut txn = doc.transact_mut_with(self.client_id.clone());
 
             // 使用全局注册表应用所有事务中的步骤
             let registry = Mapper::global_registry();

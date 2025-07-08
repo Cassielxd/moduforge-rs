@@ -105,11 +105,8 @@ fn evaluate_expression<'js>(
     expression: String,
     context: JsValue,
 ) -> rquickjs::Result<JsValue> {
-    let s = mf_expression::evaluate_expression(
-        expression.as_str(),
-        context.0,
-    )
-    .or_throw(&ctx)?;
+    let s = mf_expression::evaluate_expression(expression.as_str(), context.0)
+        .or_throw(&ctx)?;
 
     Ok(JsValue(s))
 }

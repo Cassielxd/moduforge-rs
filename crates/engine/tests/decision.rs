@@ -3,9 +3,7 @@ use serde_json::json;
 use std::ops::Deref;
 use std::sync::Arc;
 use tokio::runtime::Builder;
-use mf_engine::{
-    Decision, DecisionGraphValidationError, EvaluationError,
-};
+use mf_engine::{Decision, DecisionGraphValidationError, EvaluationError};
 
 mod support;
 
