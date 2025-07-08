@@ -180,13 +180,6 @@ impl WebsocketProvider {
     }
 
 
-    pub fn broadcast_message(
-        &self,
-        _buf: Vec<u8>,
-    ) {
-        // TODO: 广播消息到 ws/bc
-    }
-
 
     /// 断开连接并清理资源
     pub async fn disconnect(&mut self) {
