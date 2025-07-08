@@ -95,7 +95,7 @@ impl WebsocketProvider {
                 Err(e) => {
                     self.status = ConnectionStatus::Disconnected;
                     self.ws_reconnect_attempts += 1;
-
+                    tracing::error!("ClientConn connect error: {}", e);
                     return;
                 },
             };
