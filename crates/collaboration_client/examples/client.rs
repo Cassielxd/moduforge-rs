@@ -5,7 +5,7 @@ use yrs_warp::AwarenessRef;
 use tracing_subscriber;
 use serde_json;
 
-use mf_collab_client::{provider::WebsocketProvider, types::ProviderEvent};
+use mf_collab_client::{provider::WebsocketProvider};
 
 /// 客户端示例，连接到 `collaboration.rs` 中启动的测试服务器
 #[tokio::main]
