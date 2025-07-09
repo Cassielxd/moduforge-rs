@@ -182,10 +182,10 @@ tracing = "0.1"
 tracing-subscriber = "0.3"
 
 # ModuForge 生态系统
-moduforge-model = { version = "0.4.6", path = "../model" }
-moduforge-state = { version = "0.4.6", path = "../state" }
-moduforge-transform = { version = "0.4.6", path = "../transform" }
-moduforge-core = { version = "0.4.6", path = "../core" }
+moduforge-model = { version = "0.4.7", path = "../model" }
+moduforge-state = { version = "0.4.7", path = "../state" }
+moduforge-transform = { version = "0.4.7", path = "../transform" }
+moduforge-core = { version = "0.4.7", path = "../core" }
 ```
 
 ### 核心技术
