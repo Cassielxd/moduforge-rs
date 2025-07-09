@@ -21,6 +21,14 @@ repository = "https://github.com/Cassielxd/moduforge-rs"
 [workspace.dependencies]
 tokio = { version = "1", features = ["full"] }
 tokio-util = "0.7.14"
+
+tracing = "0.1"
+futures-util = "0.3"
+yrs-warp = "0.8.0"
+yrs = "0.18.2"
+tokio-tungstenite = "0.21.0"
+url = "2.5"
+
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 
@@ -35,7 +43,6 @@ chrono = "0.4"
 async-channel = "2.3.1"
 crossbeam = "0.8"
 # 日志系统
-tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2"
 
