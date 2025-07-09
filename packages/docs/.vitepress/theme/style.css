@@ -1,0 +1,270 @@
+/**
+ * 自定义样式文件
+ * 增强 VitePress 文档站点的视觉效果
+ */
+
+/* ========== Mermaid 图表样式优化 ========== */
+
+/* Mermaid 容器样式 */
+.mermaid {
+  /* 图表居中显示 */
+  text-align: center;
+  /* 添加边距 */
+  margin: 2rem 0;
+  /* 添加边框 */
+  border: 1px solid var(--vp-c-border);
+  /* 圆角边框 */
+  border-radius: 8px;
+  /* 内边距 */
+  padding: 1.5rem;
+  /* 背景色 */
+  background-color: var(--vp-c-bg-soft);
+  /* 过渡效果 */
+  transition: all 0.3s ease;
+  /* 阴影效果 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* 暗色模式下的 Mermaid 样式 */
+.dark .mermaid {
+  border-color: var(--vp-c-border-dark);
+  background-color: var(--vp-c-bg-soft-dark);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Mermaid 图表悬停效果 */
+.mermaid:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.dark .mermaid:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Mermaid SVG 样式 */
+.mermaid svg {
+  /* 最大宽度 */
+  max-width: 100%;
+  /* 高度自适应 */
+  height: auto;
+  /* 字体设置 */
+  font-family: var(--vp-font-family-base);
+}
+
+/* 流程图节点样式优化 */
+.mermaid .flowchart-link {
+  stroke: var(--vp-c-brand-1);
+  stroke-width: 2px;
+}
+
+.mermaid .node rect,
+.mermaid .node polygon,
+.mermaid .node circle,
+.mermaid .node ellipse {
+  fill: var(--vp-c-bg);
+  stroke: var(--vp-c-brand-1);
+  stroke-width: 2px;
+}
+
+.mermaid .node .label {
+  color: var(--vp-c-text-1);
+  font-weight: 500;
+}
+
+/* 序列图样式优化 */
+.mermaid .actor {
+  fill: var(--vp-c-brand-soft);
+  stroke: var(--vp-c-brand-1);
+}
+
+.mermaid .messageLine0,
+.mermaid .messageLine1 {
+  stroke: var(--vp-c-brand-1);
+}
+
+.mermaid .messageText {
+  fill: var(--vp-c-text-1);
+  font-family: var(--vp-font-family-base);
+}
+
+/* 甘特图样式优化 */
+.mermaid .section0,
+.mermaid .section1,
+.mermaid .section2,
+.mermaid .section3 {
+  fill: var(--vp-c-brand-soft);
+}
+
+.mermaid .task0,
+.mermaid .task1,
+.mermaid .task2,
+.mermaid .task3 {
+  fill: var(--vp-c-brand-1);
+}
+
+/* ========== 代码块增强 ========== */
+
+/* 代码块容器 */
+div[class*="language-"] {
+  position: relative;
+  border-radius: 8px;
+  margin: 1.5rem 0;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.dark div[class*="language-"] {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* 代码块语言标签 */
+div[class*="language-"]:before {
+  position: absolute;
+  top: 0.8rem;
+  right: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--vp-c-text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  z-index: 3;
+}
+
+/* ========== 表格样式增强 ========== */
+
+.vp-doc table {
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.dark .vp-doc table {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.vp-doc th {
+  background-color: var(--vp-c-bg-soft);
+  font-weight: 600;
+  text-align: left;
+}
+
+.vp-doc tr:hover {
+  background-color: var(--vp-c-bg-soft);
+}
+
+/* ========== 提示框样式增强 ========== */
+
+.custom-block {
+  border-radius: 8px;
+  margin: 1.5rem 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.dark .custom-block {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ========== 响应式图表 ========== */
+
+/* 小屏幕设备优化 */
+@media (max-width: 768px) {
+  .mermaid {
+    margin: 1rem 0;
+    padding: 1rem;
+    border-radius: 6px;
+  }
+  
+  .mermaid svg {
+    font-size: 12px;
+  }
+}
+
+/* 超小屏幕设备优化 */
+@media (max-width: 480px) {
+  .mermaid {
+    margin: 0.75rem 0;
+    padding: 0.75rem;
+    border-radius: 4px;
+  }
+  
+  .mermaid svg {
+    font-size: 10px;
+  }
+}
+
+/* ========== 打印样式 ========== */
+
+@media print {
+  .mermaid {
+    border: 1px solid #ddd;
+    background: white;
+    box-shadow: none;
+    page-break-inside: avoid;
+  }
+  
+  .mermaid svg {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* ========== 自定义滚动条 ========== */
+
+.mermaid::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.mermaid::-webkit-scrollbar-track {
+  background: var(--vp-c-bg-soft);
+  border-radius: 3px;
+}
+
+.mermaid::-webkit-scrollbar-thumb {
+  background: var(--vp-c-brand-1);
+  border-radius: 3px;
+}
+
+.mermaid::-webkit-scrollbar-thumb:hover {
+  background: var(--vp-c-brand-dark);
+}
+
+/* ========== 动画效果 ========== */
+
+@keyframes mermaidFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mermaid {
+  animation: mermaidFadeIn 0.6s ease-out;
+}
+
+/* ========== 图表标题样式 ========== */
+
+.mermaid-title {
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+  margin-bottom: 1rem;
+}
+
+/* ========== 图表说明样式 ========== */
+
+.mermaid-description {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--vp-c-text-2);
+  margin-top: 1rem;
+  font-style: italic;
+} 

@@ -7,7 +7,7 @@ use mf_transform::{
 use mf_model::{mark::Mark, node::Node, tree::Tree};
 use std::{any::TypeId, collections::HashMap};
 
-use crate::{NodeData, MarkData, RoomSnapshot, StepResult};
+use crate::{utils::{add_mark_to_array, get_or_create_marks_array, get_or_create_node_attrs_map, get_or_create_node_data_map, json_value_to_yrs_any}, MarkData, NodeData, RoomSnapshot, StepResult};
 use serde_json::Value as JsonValue;
 use yrs::{
     types::{array::ArrayRef, map::MapRef, Value},
@@ -79,97 +79,6 @@ impl StepConverter for DefaultStepConverter {
     }
 }
 
-// --- 转换器的辅助方法 ---
-
-fn json_value_to_yrs_any(value: &JsonValue) -> yrs::Any {
-    match value {
-        JsonValue::Null => yrs::Any::Null,
-        JsonValue::Bool(b) => yrs::Any::Bool(*b),
-        JsonValue::Number(n) => {
-            if let Some(i) = n.as_i64() {
-                yrs::Any::BigInt(i)
-            } else if let Some(f) = n.as_f64() {
-                yrs::Any::Number(f)
-            } else {
-                yrs::Any::Null
-            }
-        },
-        JsonValue::String(s) => yrs::Any::String(s.clone().into()),
-        JsonValue::Array(arr) => {
-            let yrs_array: Vec<yrs::Any> =
-                arr.iter().map(json_value_to_yrs_any).collect();
-            yrs::Any::Array(yrs_array.into())
-        },
-        JsonValue::Object(obj) => {
-            let yrs_map: std::collections::HashMap<String, yrs::Any> = obj
-                .iter()
-                .map(|(k, v)| (k.clone(), json_value_to_yrs_any(v)))
-                .collect();
-            yrs::Any::Map(yrs_map.into())
-        },
-    }
-}
-
-/// 将标记添加到 Yrs 数组中
-fn add_mark_to_array(
-    marks_array: &ArrayRef,
-    txn: &mut TransactionMut,
-    mark: &Mark,
-) {
-    let mark_map = MapPrelim::<yrs::Any>::from([
-        ("type".to_string(), yrs::Any::String(mark.r#type.clone().into())),
-        ("attrs".to_string(), {
-            let attrs_map: std::collections::HashMap<String, yrs::Any> = mark
-                .attrs
-                .iter()
-                .map(|(k, v)| (k.clone(), json_value_to_yrs_any(v)))
-                .collect();
-            yrs::Any::Map(attrs_map.into())
-        }),
-    ]);
-    marks_array.push_back(txn, mark_map);
-}
-
-/// 获取或创建节点数据映射
-fn get_or_create_node_data_map(
-    nodes_map: &MapRef,
-    txn: &mut TransactionMut,
-    node_id: &str,
-) -> MapRef {
-    if let Some(Value::YMap(map)) = nodes_map.get(txn, node_id) {
-        map
-    } else {
-        nodes_map.insert(txn, node_id.to_string(), MapPrelim::<yrs::Any>::new())
-    }
-}
-
-/// 获取或创建节点属性映射
-fn get_or_create_node_attrs_map(
-    node_data_map: &MapRef,
-    txn: &mut TransactionMut,
-) -> MapRef {
-    if let Some(Value::YMap(map)) = node_data_map.get(txn, "attrs") {
-        map
-    } else {
-        node_data_map.insert(txn, "attrs", MapPrelim::<yrs::Any>::new())
-    }
-}
-
-/// 获取或创建标记数组
-fn get_or_create_marks_array(
-    node_data_map: &MapRef,
-    txn: &mut TransactionMut,
-) -> ArrayRef {
-    if let Some(Value::YArray(array)) = node_data_map.get(txn, "marks") {
-        array
-    } else {
-        node_data_map.insert(
-            txn,
-            "marks",
-            ArrayPrelim::from(Vec::<yrs::Any>::new()),
-        )
-    }
-}
 
 /// 节点相关步骤的转换器
 pub struct NodeStepConverter;

@@ -10,10 +10,19 @@
     "serve": "vitepress serve"
   },
   "devDependencies": {
+    "@types/node": "^20.0.0",
     "vitepress": "^1.0.0",
-    "@types/node": "^20.0.0"
+    "vitepress-plugin-mermaid": "^2.0.16"
   },
-  "keywords": ["moduforge", "rust", "framework", "documentation"],
+  "keywords": [
+    "moduforge",
+    "rust",
+    "framework",
+    "documentation"
+  ],
   "author": "ModuForge Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "mermaid": "^11.8.1"
+  }
 }

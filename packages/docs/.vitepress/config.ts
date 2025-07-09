@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
 
-export default defineConfig({
+export default withMermaid(defineConfig({
   title: 'ModuForge-RS',
   description: '基于 Rust 的状态管理和数据转换框架',
   
@@ -8,6 +9,55 @@ export default defineConfig({
   base: '/',
   outDir: 'dist',
   cleanUrls: true,
+  
+  // 🔧 修复死链接问题 - 忽略开发环境链接
+  ignoreDeadLinks: [
+    // 忽略本地开发环境链接
+    /^http:\/\/localhost/,
+    /^http:\/\/127\.0\.0\.1/,
+    // 明确指定要忽略的链接
+    'http://localhost:3000',
+    'http://localhost:3000/',
+    'http://localhost:3000/index',
+    'http://localhost:3000/en/index',
+  ],
+  
+  // 🎨 Mermaid 配置
+  mermaid: {
+    // 主题配置
+    theme: 'default',
+    // 自定义配置
+    themeConfig: {
+      // 亮色主题配置
+      primaryColor: '#3b82f6',
+      primaryTextColor: '#1f2937',
+      primaryBorderColor: '#e5e7eb',
+      lineColor: '#6b7280',
+      secondaryColor: '#f3f4f6',
+      tertiaryColor: '#ffffff',
+      // 流程图配置
+      background: '#ffffff',
+      mainBkg: '#ffffff',
+      secondBkg: '#f8fafc',
+      tertiaryBkg: '#f1f5f9',
+    },
+    // 图表配置
+    flowchart: {
+      useMaxWidth: true,
+      htmlLabels: true,
+      curve: 'basis'
+    },
+    sequence: {
+      useMaxWidth: true,
+      wrap: true,
+      width: 200
+    },
+    gantt: {
+      useMaxWidth: true,
+      leftPadding: 75,
+      gridLineStartPadding: 35
+    }
+  },
   
   // 多语言配置
   locales: {
@@ -20,7 +70,7 @@ export default defineConfig({
         nav: [
           { text: '首页', link: '/' },
           { text: '指南', link: '/plugin-development-guide' },
-          { text: '架构', link: '/architecture_use_cases' },
+          { text: '架构', link: '/architecture-design' },
           { text: '示例', link: '/demo-showcase' },
           {
             text: '更多',
@@ -55,6 +105,8 @@ export default defineConfig({
               text: '架构设计',
               collapsed: false,
               items: [
+                { text: '架构设计总览', link: '/architecture-design' },
+                { text: '协作系统', link: '/collaboration-system' },
                 { text: '应用场景分析', link: '/architecture_use_cases' },
                 { text: '架构限制分析', link: '/architecture_limitations_analysis' },
                 { text: '业务依赖设计', link: '/business_dependency_design' },
@@ -113,7 +165,7 @@ export default defineConfig({
         nav: [
           { text: 'Home', link: '/en/' },
           { text: 'Guide', link: '/en/plugin-development-guide' },
-          { text: 'Architecture', link: '/en/architecture_use_cases' },
+          { text: 'Architecture', link: '/en/architecture-design' },
           { text: 'Examples', link: '/en/demo-showcase' },
           {
             text: 'More',
@@ -148,6 +200,8 @@ export default defineConfig({
               text: 'Architecture',
               collapsed: false,
               items: [
+                { text: 'Architecture Design Overview', link: '/en/architecture-design' },
+                { text: 'Collaboration System', link: '/en/collaboration-system' },
                 { text: 'Use Cases Analysis', link: '/en/architecture_use_cases' },
                 { text: 'Limitations Analysis', link: '/en/architecture_limitations_analysis' },
                 { text: 'Business Dependency Design', link: '/en/business_dependency_design' },
@@ -216,7 +270,8 @@ export default defineConfig({
     },
     lineNumbers: true,
     config: (md) => {
-      // 可以在这里添加 markdown-it 插件
+      // Markdown-it 插件配置
+      // Mermaid 插件会自动处理 mermaid 代码块
     }
   },
   
@@ -225,6 +280,10 @@ export default defineConfig({
     server: {
       port: 3000,
       host: true
+    },
+    // 优化配置
+    optimizeDeps: {
+      include: ['mermaid']
     }
   }
-}) 
+})) 
