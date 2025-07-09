@@ -7,7 +7,6 @@ use yrs_warp::broadcast::BroadcastGroup;
 use yrs_warp::ws::{WarpSink, WarpStream};
 use tokio::sync::Mutex;
 use futures_util::StreamExt;
-use mf_model::tree::Tree;
 use serde_json::json;
 
 /// 自定义错误类型用于房间不存在的情况
@@ -105,20 +104,6 @@ impl CollaborationServer {
         Ok(reply.into_response())
     }
 
-    /// 初始化房间，可选择性地使用现有的 Tree 数据进行同步
-    /// 这是关键的初始化时机：在客户端连接前确保房间已经准备好
-    pub async fn init_room_with_data(
-        &self,
-        room_id: &str,
-        tree: &Tree,
-    ) -> crate::Result<()> {
-        tracing::info!("🔄 初始化房间: '{}' 使用数据", room_id);
-
-        self.sync_service.init_room_with_tree(room_id, tree).await?;
-        tracing::info!("🔄 房间 '{}' 初始化完成", room_id);
-
-        Ok(())
-    }
 
     /// 房间下线 - 优雅关闭房间
     /// 1. 通知所有客户端房间即将关闭
@@ -352,6 +337,7 @@ impl CollaborationServer {
         let ws_route = warp::path("collaboration")
             .and(warp::path::param::<String>()) // Expect a room_id in the path, e.g., /collaboration/my-room-name
             .and(warp::ws())
+            .and(warp::addr::remote()) // 这里添加
             .and(warp::any().map(move || server.clone()))
             .and_then(Self::ws_handler);
 
@@ -430,36 +416,20 @@ impl CollaborationServer {
     async fn ws_handler(
         room_id: String,
         ws: Ws,
+        remote_addr: Option<std::net::SocketAddr>, 
         server: CollaborationServer,
     ) -> Result<impl Reply, Rejection> {
         let yrs_manager = server.yrs_manager.clone();
-
-        // 🔍 关键检查：房间必须已存在，不自动创建
-        if !yrs_manager.room_exists(&room_id) {
-            tracing::warn!("❌ 客户端尝试连接不存在的房间: {}", room_id);
-
-            // 返回自定义的房间不存在错误
-            return Err(warp::reject::custom(RoomNotFoundError::new(room_id)));
-        }
-
         // 获取已存在的 awareness（不创建新的）
-        let awareness_ref = match yrs_manager.get_awareness_ref(&room_id) {
-            Some(awareness) => awareness,
-            None => {
-                // 理论上不应该到达这里，因为上面已经检查过房间存在
-                tracing::error!("🚨 房间 {} 存在但无法获取 awareness", room_id);
-                return Err(warp::reject::custom(RoomNotFoundError::new(
-                    room_id,
-                )));
-            },
-        };
-
+        let awareness_ref = yrs_manager.get_or_create_awareness(&room_id);
         Ok(ws.on_upgrade(move |socket| async move {
             tracing::info!("✅ 客户端成功连接到现有房间: {}", room_id);
-
+            let client_addr = remote_addr
+            .map(|addr| addr.to_string())
+            .unwrap_or_else(|| "unknown".to_string());
             // The buffer capacity can be adjusted as needed. 128 is a reasonable default.
             let bcast = Arc::new(BroadcastGroup::new(awareness_ref, 128).await);
-            Self::peer(socket, bcast, room_id.clone()).await;
+            Self::peer(socket, bcast, room_id.clone(), client_addr).await;
         }))
     }
 
@@ -468,13 +438,12 @@ impl CollaborationServer {
         ws: WebSocket,
         bcast: Arc<BroadcastGroup>,
         room_id: String,
+        client_addr: String,
     ) {
         let (sink, stream) = ws.split();
         let sink = Arc::new(Mutex::new(WarpSink::from(sink)));
         let stream = WarpStream::from(stream);
-
         // 增加客户端连接的详细日志
-        let client_addr = "unknown"; // 如果需要可以从 WebSocket 获取真实地址
         tracing::info!(
             "🔗 新客户端连接到房间: {} (地址: {})",
             room_id,

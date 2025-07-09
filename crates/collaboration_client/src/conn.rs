@@ -107,7 +107,7 @@ impl Stream for ClientStream {
                         // 忽略 ping/pong 消息，继续处理下一个
                         return self.poll_next(cx);
                     },
-                    Message::Frame(_) => {
+                    _ => {
                         return self.poll_next(cx);
                     },
                 };

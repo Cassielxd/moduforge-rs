@@ -28,10 +28,5 @@ dashmap = { workspace=true }
 warp = "0.3.7"
 yrs-warp = { workspace=true }
 yrs = { workspace=true }
-moduforge-model = {version = "0.4.6", path = "../model"}
-moduforge-state = {version = "0.4.6", path = "../state"}
-moduforge-transform = {version = "0.4.6", path = "../transform"}
-moduforge-core = {version = "0.4.6", path = "../core"}
-moduforge-macros = {version = "0.4.6", path = "../macro"}
 async-trait =  { workspace=true }
 fastrand = "2.0"
