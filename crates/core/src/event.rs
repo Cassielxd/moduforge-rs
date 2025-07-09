@@ -143,7 +143,6 @@ impl<T: Send + 'static> EventBus<T> {
                             Err(e) => {
                                 debug!("事件管理器,处理关闭信号时出错: {}", e);
                                 cleanup_tasks(&mut join_set).await;
-                                let _ = join_set.shutdown().await;
                                 break;
                             }
                         }

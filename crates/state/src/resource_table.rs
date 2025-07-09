@@ -95,9 +95,11 @@ impl ResourceTable {
         &self,
         rid: ResourceId,
     ) -> Option<Arc<T>> {
-        let resource = self.get::<T>(rid.clone())?;
-        self.index.remove(&rid);
-        Some(resource)
+        let (_, resource) = self.index.remove(&rid)?;
+        match resource.downcast_arc::<T>() {
+            Some(resource) => Some(resource.clone()),
+            None => None,
+        }
     }
 
     // 从资源表中移除并返回指定ID的任意类型资源
