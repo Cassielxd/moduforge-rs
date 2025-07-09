@@ -91,21 +91,34 @@ impl ResourceTable {
     }
 
     // 从资源表中移除并返回指定ID的特定类型资源
+    // 使用原子操作避免双重查找，提高性能和线程安全性
     pub fn take<T: Resource>(
         &self,
         rid: ResourceId,
     ) -> Option<Arc<T>> {
-        let resource = self.get::<T>(rid.clone())?;
-        self.index.remove(&rid);
-        Some(resource)
+        // 原子地移除并获取资源，避免双重查找
+        let (_, resource) = self.index.remove(&rid)?;
+        
+        // 尝试转换为目标类型
+        match resource.downcast_arc::<T>() {
+            Ok(typed_resource) => Some(typed_resource),
+            Err(original_resource) => {
+                // 类型转换失败，需要将资源放回去
+                // 这避免了资源丢失，确保数据一致性
+                self.index.insert(rid, original_resource);
+                None
+            }
+        }
     }
 
     // 从资源表中移除并返回指定ID的任意类型资源
+    // 优化的原子操作版本
     pub fn take_any(
         &self,
         rid: ResourceId,
     ) -> Option<Arc<dyn Resource>> {
-        self.index.remove(&rid).map(|rc| rc.1)
+        // 直接使用原子移除操作，避免双重查找
+        self.index.remove(&rid).map(|(_, resource)| resource)
     }
 }
 

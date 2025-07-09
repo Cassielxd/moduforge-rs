@@ -74,11 +74,41 @@ impl Transaction {
     pub fn merge(
         &mut self,
         other: &mut Self,
-    ) {
-        // 使用批量应用来优化性能
-        let steps_to_apply: Vec<_> = other.steps.iter().cloned().collect();
-        if let Err(e) = self.apply_steps_batch(steps_to_apply) {
-            eprintln!("批量应用步骤失败: {}", e);
+    ) -> TransformResult<()> {
+        // 创建事务合并的快照，以支持原子性操作
+        let original_steps_count = self.steps.len();
+        let original_meta = self.meta.clone();
+        
+        // 原子性地获取other的步骤，避免并发修改
+        let steps_to_apply: Vec<_> = std::mem::take(&mut other.steps);
+        
+        // 合并元数据，避免数据丢失
+        for (key, value) in other.meta.iter() {
+            self.meta.insert(key.clone(), value.clone());
+        }
+        
+        // 尝试批量应用步骤
+        match self.apply_steps_batch(steps_to_apply.clone()) {
+            Ok(_) => {
+                // 成功：清空other的元数据，因为已经被合并
+                other.meta.clear();
+                Ok(())
+            },
+            Err(e) => {
+                // 失败：回滚所有变更，确保事务的原子性
+                tracing::warn!("事务合并失败，正在回滚: {}", e);
+                
+                // 回滚步骤
+                self.steps.truncate(original_steps_count);
+                
+                // 回滚元数据
+                self.meta = original_meta;
+                
+                // 恢复other的步骤
+                other.steps = steps_to_apply;
+                
+                Err(e)
+            }
         }
     }
     /// 获取当前文档状态
