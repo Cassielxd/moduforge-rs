@@ -7,7 +7,14 @@ use mf_transform::{
 use mf_model::{mark::Mark, node::Node, tree::Tree};
 use std::{any::TypeId, collections::HashMap};
 
-use crate::{utils::{add_mark_to_array, get_or_create_marks_array, get_or_create_node_attrs_map, get_or_create_node_data_map, json_value_to_yrs_any}, MarkData, NodeData, RoomSnapshot, StepResult};
+use crate::{
+    utils::{
+        add_mark_to_array, get_or_create_marks_array,
+        get_or_create_node_attrs_map, get_or_create_node_data_map,
+        json_value_to_yrs_any,
+    },
+    MarkData, NodeData, RoomSnapshot, StepResult,
+};
 use serde_json::Value as JsonValue;
 use yrs::{
     types::{array::ArrayRef, map::MapRef, Value},
@@ -23,6 +30,11 @@ pub trait StepConverter: Send + Sync {
         step: &dyn Step,
         txn: &mut TransactionMut,
     ) -> Result<StepResult, Box<dyn std::error::Error>>;
+    /// 将 Yrs 变更转换成 ModuForge step
+    fn apply_yrs_to_step(&self){
+        
+    }
+
 
     /// 返回转换器的名称
     fn name(&self) -> &'static str;
@@ -78,7 +90,6 @@ impl StepConverter for DefaultStepConverter {
         true // Default converter supports all types as a fallback.
     }
 }
-
 
 /// 节点相关步骤的转换器
 pub struct NodeStepConverter;

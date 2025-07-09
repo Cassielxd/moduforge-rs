@@ -20,7 +20,6 @@ impl Default for WebsocketProviderOptions {
     }
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoomSnapshot {
     pub room_id: String,
@@ -53,4 +52,3 @@ pub struct StepResult {
     pub timestamp: u64,
     pub client_id: String,
 }
-

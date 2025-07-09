@@ -1,8 +1,8 @@
 pub mod conn;
+pub mod mapping;
 pub mod provider;
 pub mod types;
 pub mod utils;
-pub mod mapping;
 
 pub use types::*;
 

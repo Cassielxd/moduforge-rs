@@ -104,7 +104,6 @@ impl CollaborationServer {
         Ok(reply.into_response())
     }
 
-
     /// 房间下线 - 优雅关闭房间
     /// 1. 通知所有客户端房间即将关闭
     /// 2. 等待客户端完成当前操作
@@ -416,7 +415,7 @@ impl CollaborationServer {
     async fn ws_handler(
         room_id: String,
         ws: Ws,
-        remote_addr: Option<std::net::SocketAddr>, 
+        remote_addr: Option<std::net::SocketAddr>,
         server: CollaborationServer,
     ) -> Result<impl Reply, Rejection> {
         let yrs_manager = server.yrs_manager.clone();
@@ -425,8 +424,8 @@ impl CollaborationServer {
         Ok(ws.on_upgrade(move |socket| async move {
             tracing::info!("✅ 客户端成功连接到现有房间: {}", room_id);
             let client_addr = remote_addr
-            .map(|addr| addr.to_string())
-            .unwrap_or_else(|| "unknown".to_string());
+                .map(|addr| addr.to_string())
+                .unwrap_or_else(|| "unknown".to_string());
             // The buffer capacity can be adjusted as needed. 128 is a reasonable default.
             let bcast = Arc::new(BroadcastGroup::new(awareness_ref, 128).await);
             Self::peer(socket, bcast, room_id.clone(), client_addr).await;

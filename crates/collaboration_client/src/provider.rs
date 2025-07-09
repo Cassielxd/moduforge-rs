@@ -17,7 +17,7 @@ pub struct WebsocketProvider {
     pub max_backoff_time: u64,
     pub ws_url: Option<Url>,
     pub client_id: u64,
-    subscriptions:Vec<Subscription>
+    subscriptions: Vec<Subscription>,
 }
 
 impl WebsocketProvider {
@@ -60,11 +60,14 @@ impl WebsocketProvider {
             ws_reconnect_attempts: 0,
             max_backoff_time: options.max_backoff_time,
             ws_url,
-            subscriptions:Vec::new()
+            subscriptions: Vec::new(),
         }
     }
-    
-    pub fn subscription(&mut self,subscription: Subscription){
+
+    pub fn subscription(
+        &mut self,
+        subscription: Subscription,
+    ) {
         self.subscriptions.push(subscription);
     }
 
@@ -79,7 +82,7 @@ impl WebsocketProvider {
 
     async fn setup_connection(&mut self) {
         self.status = ConnectionStatus::Connecting;
-     
+
         let ws_url = match &self.ws_url {
             Some(url) => url.as_str(),
             None => {
@@ -106,13 +109,11 @@ impl WebsocketProvider {
 
         // 设置统一的变更监听器
         self.setup_update_listeners().await;
-
     }
 
     /// 设置统一的文档变更监听器
     /// 监听所有文档变更并发送事件通知
     async fn setup_update_listeners(&mut self) {
-
         // 延迟 100 毫秒，以避免与 yrs-warp 的初始事务发生竞争
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
@@ -168,14 +169,11 @@ impl WebsocketProvider {
                         let mut sink = binding.lock().await;
                         sink.send(msg).await.unwrap();
                     });
-
                 });
-                self.subscriptions.push(awareness_subscription);
+            self.subscriptions.push(awareness_subscription);
             tracing::info!("✅ 本地 Awareness 变更监听器已设置");
         }
     }
-
-
 
     /// 断开连接并清理资源
     pub async fn disconnect(&mut self) {

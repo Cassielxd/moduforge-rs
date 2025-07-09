@@ -5,9 +5,7 @@ use std::task::{Context, Poll};
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
-use yrs::sync::{
-     Error, Protocol,
-};
+use yrs::sync::{Error, Protocol};
 
 use yrs_warp::conn::Connection;
 use yrs_warp::AwarenessRef;
@@ -90,12 +88,8 @@ impl Stream for ClientStream {
             Some(Ok(msg)) => {
                 // 处理不同类型的 WebSocket 消息
                 let bytes = match msg {
-                    Message::Binary(data) => {
-                        data
-                    },
-                    Message::Text(text) => {
-                        text.into_bytes()
-                    },
+                    Message::Binary(data) => data,
+                    Message::Text(text) => text.into_bytes(),
                     Message::Close(_) => {
                         return Poll::Ready(None);
                     },

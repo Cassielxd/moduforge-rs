@@ -1,15 +1,8 @@
-
 use std::sync::Arc;
 
-use mf_collab::{
-    Result, SyncService, YrsManager, CollaborationServer,
-    
-};
+use mf_collab::{Result, SyncService, YrsManager, CollaborationServer};
 
 use tracing_subscriber;
-
-
-
 
 #[tokio::test]
 async fn test_collaboration() -> Result<()> {
@@ -40,4 +33,3 @@ async fn test_collaboration() -> Result<()> {
     }
     Ok(())
 }
-

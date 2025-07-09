@@ -71,7 +71,7 @@ impl<T: Send + 'static> EventBus<T> {
         let shutdown_rt = self.shutdown.1.clone();
         tokio::spawn(async move {
             let mut join_set = tokio::task::JoinSet::new();
-              
+
             // 定义清理函数，确保所有任务都被正确清理
             async fn cleanup_tasks(join_set: &mut tokio::task::JoinSet<()>) {
                 debug!("开始清理事件处理任务...");
@@ -85,7 +85,9 @@ impl<T: Send + 'static> EventBus<T> {
                             debug!("事件处理任务错误: {}", e);
                         }
                     }
-                }).await {
+                })
+                .await
+                {
                     Ok(_) => debug!("所有事件处理任务已正常清理"),
                     Err(_) => debug!("事件处理任务清理超时"),
                 }
@@ -105,7 +107,7 @@ impl<T: Send + 'static> EventBus<T> {
                                     }
                                 }
                             }
-                                                       
+
                             // 并发处理所有handler
                             let handlers_clone = event_handlers.read().unwrap().clone();
                             join_set.spawn(async move {

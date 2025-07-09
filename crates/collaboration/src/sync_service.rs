@@ -51,9 +51,6 @@ impl SyncService {
         self.yrs_manager.get_or_create_awareness(room_id);
     }
 
-
-
-
     /// 检查房间是否已初始化（有数据）
     pub async fn is_room_initialized(
         &self,
