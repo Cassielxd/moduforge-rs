@@ -39,14 +39,14 @@ edition = "2021"
 
 [dependencies]
 # ModuForge-RS 核心组件
-moduforge-core = "0.4.6"
-moduforge-model = "0.4.6"
-moduforge-state = "0.4.6"
-moduforge-transform = "0.4.6"
-moduforge-rules-engine = "0.4.6"
-moduforge-rules-expression = "0.4.6"
-moduforge-collaboration = "0.4.6"
-moduforge-template = "0.4.6"
+moduforge-core = "0.4.7"
+moduforge-model = "0.4.7"
+moduforge-state = "0.4.7"
+moduforge-transform = "0.4.7"
+moduforge-rules-engine = "0.4.7"
+moduforge-rules-expression = "0.4.7"
+moduforge-collaboration = "0.4.7"
+moduforge-template = "0.4.7"
 
 # 必需依赖
 tokio = { version = "1.0", features = ["full"] }
