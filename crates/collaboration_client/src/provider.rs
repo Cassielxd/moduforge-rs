@@ -1,3 +1,6 @@
+use std::time::Duration;
+
+use tokio::time::timeout;
 use tokio_tungstenite::connect_async;
 use yrs::sync::{Message, SyncMessage};
 use yrs::updates::encoder::Encode;
@@ -66,54 +69,189 @@ impl WebsocketProvider {
     ) {
         self.subscriptions.push(subscription);
     }
-
     pub async fn connect(&mut self) {
+        if let Err(e) = self.smart_connect().await {
+            tracing::error!("{}", e);
+        }
+    }
+    pub async fn connect_with_retry(
+        &mut self,
+        config: Option<ConnectionRetryConfig>,
+    ) -> anyhow::Result<()> {
+        let config = config.unwrap_or_default();
+        let mut attempt = 0;
+        let mut delay = config.initial_delay_ms;
+
+        while attempt < config.max_attempts {
+            attempt += 1;
+            self.update_status(ConnectionStatus::Retrying {
+                attempt,
+                max_attempts: config.max_attempts,
+            });
+
+            tracing::info!("🔄 连接尝试 {}/{}", attempt, config.max_attempts);
+
+            match self.try_connect().await {
+                Ok(()) => {
+                    self.update_status(ConnectionStatus::Connected);
+                    return Ok(());
+                },
+                Err(e) => {
+                    let error = self.classify_connection_error(&e);
+
+                    if attempt >= config.max_attempts {
+                        // 🔥 发送连接失败事件
+                        if let Some(sender) = &self.sync_event_sender {
+                            let _ = sender.send(SyncEvent::ConnectionFailed(
+                                error.clone(),
+                            ));
+                        }
+                        self.update_status(ConnectionStatus::Failed(
+                            error.clone(),
+                        ));
+                        tracing::error!(
+                            "❌ 连接失败，已达到最大重试次数: {}",
+                            error
+                        );
+                        return Err(anyhow::anyhow!("连接失败: {}", error));
+                    }
+
+                    tracing::warn!(
+                        "⚠️ 连接失败 (尝试 {}/{}): {}",
+                        attempt,
+                        config.max_attempts,
+                        error
+                    );
+
+                    // 指数退避延迟
+                    tokio::time::sleep(Duration::from_millis(delay)).await;
+                    delay = (delay as f64 * config.backoff_multiplier) as u64;
+                    delay = delay.min(config.max_delay_ms);
+                },
+            }
+        }
+
+        Err(anyhow::anyhow!("连接失败，已达到最大重试次数"))
+    }
+    async fn try_connect(&mut self) -> anyhow::Result<()> {
         if self.status == ConnectionStatus::Connected
             || self.status == ConnectionStatus::Connecting
         {
-            return;
+            return Ok(());
         }
-        self.setup_connection().await;
-    }
 
-    async fn setup_connection(&mut self) {
         self.status = ConnectionStatus::Connecting;
 
         let ws_url = match &self.ws_url {
             Some(url) => url.as_str(),
             None => {
-                self.status = ConnectionStatus::Disconnected;
-                return;
+                return Err(anyhow::anyhow!("无效的 WebSocket URL"));
             },
         };
 
-        // 建立 WebSocket 连接
-        let (ws_stream, _) = match connect_async(ws_url).await {
-            Ok(result) => result,
-            Err(e) => {
-                self.status = ConnectionStatus::Disconnected;
-                self.ws_reconnect_attempts += 1;
-                tracing::error!("WebSocket 连接失败: {}", e);
-                return;
+        // 设置连接超时
+        let connect_timeout = Duration::from_secs(10);
+
+        match timeout(connect_timeout, connect_async(ws_url)).await {
+            Ok(connect_result) => {
+                match connect_result {
+                    Ok((ws_stream, _)) => {
+                        let (sink, stream) = ws_stream.split();
+
+                        // 使用带同步检测的连接
+                        let client_conn = Connection::new_with_sync_detection(
+                            self.awareness.clone(),
+                            ClientSink(sink),
+                            ClientStream(stream),
+                            self.sync_event_sender.clone(),
+                        );
+
+                        self.client_conn = Some(client_conn);
+                        self.ws_reconnect_attempts = 0;
+
+                        Ok(())
+                    },
+                    Err(e) => {
+                        self.status = ConnectionStatus::Disconnected;
+                        Err(anyhow::anyhow!("WebSocket 连接失败: {}", e))
+                    },
+                }
             },
-        };
+            Err(_) => {
+                self.status = ConnectionStatus::Disconnected;
+                Err(anyhow::anyhow!("连接超时"))
+            },
+        }
+    }
 
-        let (sink, stream) = ws_stream.split();
+    /// 分类连接错误
+    fn classify_connection_error(
+        &self,
+        error: &anyhow::Error,
+    ) -> ConnectionError {
+        let error_str = error.to_string().to_lowercase();
 
-        // 🔥 使用带同步检测的连接
-        let client_conn = Connection::new_with_sync_detection(
-            self.awareness.clone(),
-            ClientSink(sink),
-            ClientStream(stream),
-            self.sync_event_sender.clone(),
-        );
+        if error_str.contains("timeout") || error_str.contains("timed out") {
+            ConnectionError::Timeout(10000)
+        } else if error_str.contains("connection refused")
+            || error_str.contains("failed to connect")
+        {
+            ConnectionError::ServerUnavailable(
+                "服务端未启动或端口未开放".to_string(),
+            )
+        } else if error_str.contains("websocket") {
+            ConnectionError::WebSocketError(error.to_string())
+        } else {
+            ConnectionError::NetworkError(error.to_string())
+        }
+    }
+    fn update_status(
+        &mut self,
+        new_status: ConnectionStatus,
+    ) {
+        self.status = new_status.clone();
 
-        self.client_conn = Some(client_conn);
-        self.status = ConnectionStatus::Connected;
-        self.ws_reconnect_attempts = 0;
+        // 发送状态变化事件
+        if let Some(sender) = &self.sync_event_sender {
+            let _ = sender.send(SyncEvent::ConnectionChanged(new_status));
+        }
+    }
+    /// 检查服务端是否可用
+    pub async fn check_server_availability(&self) -> bool {
+        if let Some(ws_url) = &self.ws_url {
+            let http_url = ws_url
+                .as_str()
+                .replace("ws://", "http://")
+                .replace("wss://", "https://");
 
-        // 设置统一的变更监听器
+            // 尝试 HTTP 连接检查
+            match tokio::time::timeout(
+                Duration::from_secs(3),
+                reqwest::get(&http_url),
+            )
+            .await
+            {
+                Ok(Ok(_)) => true,
+                _ => false,
+            }
+        } else {
+            false
+        }
+    }
+    // 智能连接（先检查服务端可用性）
+    pub async fn smart_connect(&mut self) -> anyhow::Result<()> {
+        // 先检查服务端是否可用
+        if !self.check_server_availability().await {
+            self.status = ConnectionStatus::Failed(
+                ConnectionError::ServerUnavailable("服务端未启动".to_string()),
+            );
+            return Err(anyhow::anyhow!("服务端未启动或不可访问"));
+        }
+
+        // 使用重试机制连接
+        self.connect_with_retry(None).await?;
         self.setup_update_listeners().await;
+        Ok(())
     }
 
     /// 设置统一的文档变更监听器

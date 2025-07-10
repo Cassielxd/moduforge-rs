@@ -64,6 +64,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     SyncEvent::DataReceived => {
                         println!("📥 收到数据更新");
                     },
+                    SyncEvent::ConnectionFailed(error) => {
+                        println!("🔌 监听: {:?}", error);
+                    },
+                    SyncEvent::ConnectionChanged(status) => {
+                        println!("🔌 连接状态: {:?}", status);
+                    },
                     _ => {},
                 }
             }

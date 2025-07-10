@@ -21,7 +21,7 @@ repository = "https://github.com/Cassielxd/moduforge-rs"
 [workspace.dependencies]
 tokio = { version = "1", features = ["full"] }
 tokio-util = "0.7.14"
-
+reqwest = "0.12.11"
 tracing = "0.1"
 futures-util = "0.3"
 yrs-warp = "0.8.0"

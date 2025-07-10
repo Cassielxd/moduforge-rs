@@ -325,7 +325,7 @@ pub async fn handle_msg<P: Protocol>(
     }
 }
 
-use crate::types::{ProtocolSyncState, SyncEvent, SyncEventSender};
+use crate::types::{ConnectionError, ProtocolSyncState, SyncEvent, SyncEventSender};
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
 /// 同步状态跟踪器
@@ -428,5 +428,21 @@ impl SyncTracker {
         if let Some(sender) = &self.event_sender {
             let _ = sender.send(event);
         }
+    }
+    /// 重置同步状态（用于重连）
+    pub fn reset(&mut self) {
+        self.protocol_state.store(0, Ordering::Relaxed);
+        self.has_data.store(false, Ordering::Relaxed);
+        self.start_time = Some(Instant::now());
+        self.step2_time = None;
+    }
+
+    /// 标记连接失败
+    pub fn on_connection_failed(
+        &self,
+        error: &ConnectionError,
+    ) {
+        tracing::error!("🔌 连接失败: {}", error);
+        self.emit_event(SyncEvent::ConnectionFailed(error.clone()));
     }
 }

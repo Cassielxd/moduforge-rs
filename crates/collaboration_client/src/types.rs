@@ -7,6 +7,8 @@ pub enum ConnectionStatus {
     Disconnected,
     Connecting,
     Connected,
+    Failed(ConnectionError), // 新增失败状态
+    Retrying { attempt: u32, max_attempts: u32 }, // 新增重试状态
 }
 
 pub struct WebsocketProviderOptions {
@@ -78,8 +80,42 @@ pub enum SyncEvent {
     DataReceived,
     /// 连接状态变化
     ConnectionChanged(ConnectionStatus),
+    /// 连接失败
+    ConnectionFailed(ConnectionError),
 }
 
 /// 同步事件回调
 pub type SyncEventSender = broadcast::Sender<SyncEvent>;
 pub type SyncEventReceiver = broadcast::Receiver<SyncEvent>;
+
+/// 连接错误类型
+#[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]
+pub enum ConnectionError {
+    #[error("服务端未启动或无法连接: {0}")]
+    ServerUnavailable(String),
+    #[error("连接超时: {0}ms")]
+    Timeout(u64),
+    #[error("网络错误: {0}")]
+    NetworkError(String),
+    #[error("WebSocket 错误: {0}")]
+    WebSocketError(String),
+}
+
+#[derive(Debug, Clone)]
+pub struct ConnectionRetryConfig {
+    pub max_attempts: u32,
+    pub initial_delay_ms: u64,
+    pub max_delay_ms: u64,
+    pub backoff_multiplier: f64,
+}
+
+impl Default for ConnectionRetryConfig {
+    fn default() -> Self {
+        Self {
+            max_attempts: 5,
+            initial_delay_ms: 1000,
+            max_delay_ms: 30000,
+            backoff_multiplier: 2.0,
+        }
+    }
+}
