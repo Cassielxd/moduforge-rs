@@ -1,18 +1,24 @@
+use tokio_tungstenite::connect_async;
 use yrs::sync::{Message, SyncMessage};
 use yrs::updates::encoder::Encode;
 use yrs::{Subscription};
 use url::Url;
-use yrs_warp::AwarenessRef;
+use crate::AwarenessRef;
+use crate::conn::Connection;
 use crate::types::*;
-use crate::conn::ClientConn;
-use futures_util::SinkExt;
+use crate::client::{ClientSink, ClientStream};
+use futures_util::{SinkExt, StreamExt};
 
 pub struct WebsocketProvider {
     pub server_url: String,
     pub room_name: String,
     pub awareness: AwarenessRef,
-    client_conn: Option<ClientConn>,
+    client_conn: Option<Connection<ClientSink, ClientStream>>,
     pub status: ConnectionStatus,
+    // 同步检测相关
+    sync_event_sender: Option<SyncEventSender>,
+    sync_event_receiver: Option<SyncEventReceiver>,
+
     pub ws_reconnect_attempts: u32,
     pub max_backoff_time: u64,
     pub ws_url: Option<Url>,
@@ -26,30 +32,18 @@ impl WebsocketProvider {
         room_name: String,
         awareness: AwarenessRef,
     ) -> Self {
-        tracing::info!("Creating new WebsocketProvider");
+        let (event_sender, event_receiver) =
+            tokio::sync::broadcast::channel(100);
 
-        Self::new_with_options(
-            server_url,
-            room_name,
-            awareness,
-            WebsocketProviderOptions::default(),
-        )
-        .await
-    }
-
-    pub async fn new_with_options(
-        server_url: String,
-        room_name: String,
-        awareness: AwarenessRef,
-        options: WebsocketProviderOptions,
-    ) -> Self {
         let ws_url = Url::parse(&format!(
             "{}/{}",
             server_url.trim_end_matches('/'),
             room_name
         ))
         .ok();
+
         let client_id = awareness.read().await.doc().client_id();
+
         Self {
             client_id,
             server_url,
@@ -57,8 +51,10 @@ impl WebsocketProvider {
             awareness,
             client_conn: None,
             status: ConnectionStatus::Disconnected,
+            sync_event_sender: Some(event_sender),
+            sync_event_receiver: Some(event_receiver),
             ws_reconnect_attempts: 0,
-            max_backoff_time: options.max_backoff_time,
+            max_backoff_time: 2500,
             ws_url,
             subscriptions: Vec::new(),
         }
@@ -91,19 +87,28 @@ impl WebsocketProvider {
             },
         };
 
-        // 使用 ClientConn 建立连接，直接传递 awareness
-        let client_conn =
-            match ClientConn::connect(ws_url, self.awareness.clone()).await {
-                Ok(conn) => conn,
-                Err(e) => {
-                    self.status = ConnectionStatus::Disconnected;
-                    self.ws_reconnect_attempts += 1;
-                    tracing::error!("ClientConn connect error: {}", e);
-                    return;
-                },
-            };
-        self.client_conn = Some(client_conn);
+        // 建立 WebSocket 连接
+        let (ws_stream, _) = match connect_async(ws_url).await {
+            Ok(result) => result,
+            Err(e) => {
+                self.status = ConnectionStatus::Disconnected;
+                self.ws_reconnect_attempts += 1;
+                tracing::error!("WebSocket 连接失败: {}", e);
+                return;
+            },
+        };
 
+        let (sink, stream) = ws_stream.split();
+
+        // 🔥 使用带同步检测的连接
+        let client_conn = Connection::new_with_sync_detection(
+            self.awareness.clone(),
+            ClientSink(sink),
+            ClientStream(stream),
+            self.sync_event_sender.clone(),
+        );
+
+        self.client_conn = Some(client_conn);
         self.status = ConnectionStatus::Connected;
         self.ws_reconnect_attempts = 0;
 
@@ -119,7 +124,7 @@ impl WebsocketProvider {
 
         // 1. 监听文档变更
         let doc_subscription = {
-            let sink = self.client_conn.as_ref().unwrap().0.sink();
+            let sink = self.client_conn.as_ref().unwrap().sink();
             let client_id = self.client_id.clone();
             let awareness_lock = self.awareness.read().await;
             let doc = awareness_lock.doc();
@@ -155,7 +160,7 @@ impl WebsocketProvider {
 
         {
             let awareness_lock = self.awareness.write().await;
-            let sink = self.client_conn.as_ref().unwrap().0.sink();
+            let sink = self.client_conn.as_ref().unwrap().sink();
 
             // 修复 on_update 签名以匹配 yrs v0.18.8
             let awareness_subscription =
@@ -173,6 +178,30 @@ impl WebsocketProvider {
             self.subscriptions.push(awareness_subscription);
             tracing::info!("✅ 本地 Awareness 变更监听器已设置");
         }
+    }
+
+    /// 等待协议级同步完成（包括空房间）
+    pub async fn wait_for_protocol_sync(
+        &self,
+        timeout_ms: u64,
+    ) -> anyhow::Result<bool> {
+        match &self.client_conn {
+            Some(conn) => Ok(conn.wait_for_initial_sync(timeout_ms).await),
+            None => Err(anyhow::anyhow!("连接未建立")),
+        }
+    }
+
+    /// 获取协议同步状态
+    pub async fn get_protocol_sync_state(&self) -> Option<ProtocolSyncState> {
+        match &self.client_conn {
+            Some(conn) => Some(conn.get_protocol_sync_state().await),
+            None => None,
+        }
+    }
+
+    /// 订阅同步事件
+    pub fn subscribe_sync_events(&mut self) -> Option<SyncEventReceiver> {
+        self.sync_event_receiver.take()
     }
 
     /// 断开连接并清理资源

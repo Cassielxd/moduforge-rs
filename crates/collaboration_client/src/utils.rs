@@ -2,9 +2,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use mf_model::mark::Mark;
 use mf_model::tree::Tree;
 use mf_state::Transaction;
-use yrs_warp::AwarenessRef;
+use crate::AwarenessRef;
 use serde_json::Value as JsonValue;
-use yrs::{Map, ReadTxn as _, Transact};
+use yrs::{Map, Transact};
 use yrs::{
     types::{array::ArrayRef, map::MapRef, Value},
     Array, ArrayPrelim, MapPrelim, TransactionMut, WriteTxn,

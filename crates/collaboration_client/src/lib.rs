@@ -1,9 +1,14 @@
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
+pub mod client;
 pub mod conn;
 pub mod mapping;
 pub mod provider;
 pub mod types;
 pub mod utils;
 
-pub use types::*;
-
 pub type ClientResult<T> = anyhow::Result<T>;
+
+pub use yrs::*;
+pub type AwarenessRef = Arc<RwLock<yrs::sync::Awareness>>;

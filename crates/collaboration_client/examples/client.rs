@@ -1,11 +1,11 @@
 use std::sync::Arc;
 use tokio::time::{self, Duration};
 use yrs::{sync::Awareness, DeepObservable, Doc, Map, Observable, Transact};
-use yrs_warp::AwarenessRef;
+use mf_collab_client::AwarenessRef;
 use tracing_subscriber;
 use serde_json;
 
-use mf_collab_client::{provider::WebsocketProvider};
+use mf_collab_client::{provider::WebsocketProvider, types::SyncEvent};
 
 /// 客户端示例，连接到 `collaboration.rs` 中启动的测试服务器
 #[tokio::main]
@@ -37,6 +37,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .await;
 
+    // 订阅同步事件
+    if let Some(mut receiver) = provider.subscribe_sync_events() {
+        tokio::spawn(async move {
+            while let Ok(event) = receiver.recv().await {
+                match event {
+                    SyncEvent::InitialSyncCompleted {
+                        has_data,
+                        elapsed_ms,
+                    } => {
+                        if has_data {
+                            println!(
+                                "🎉 同步完成，房间有数据！耗时: {}ms",
+                                elapsed_ms
+                            );
+                        } else {
+                            println!(
+                                "📭 同步完成，空房间！耗时: {}ms",
+                                elapsed_ms
+                            );
+                        }
+                    },
+                    SyncEvent::ProtocolStateChanged(state) => {
+                        println!("📡 协议状态: {:?}", state);
+                    },
+                    SyncEvent::DataReceived => {
+                        println!("📥 收到数据更新");
+                    },
+                    _ => {},
+                }
+            }
+        });
+    }
+
     // 3. 连接到服务器
     provider.connect().await;
     {
@@ -64,8 +97,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }));
         provider.subscription(nodes_map.observe_deep(move |txn, events| {
-            
-            for event  in  events.iter(){
+            for event in events.iter() {
                 match event {
                     yrs::types::Event::Array(array_event) => {
                         // 更新了 标记数组 需要转换成 step
@@ -73,9 +105,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     yrs::types::Event::Map(map_event) => {
                         // 更新了 节点属性 需要转换成 step 或者 添加节点
                     },
-                    _ => {
-
-                    },
+                    _ => {},
                 }
             }
         }));

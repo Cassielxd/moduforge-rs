@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use tokio::sync::broadcast;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,3 +53,33 @@ pub struct StepResult {
     pub timestamp: u64,
     pub client_id: String,
 }
+
+/// 协议同步状态
+#[derive(Debug, Clone, PartialEq)]
+pub enum ProtocolSyncState {
+    /// 未开始
+    NotStarted,
+    /// 已发送 SyncStep1
+    Step1Sent,
+    /// 已接收 SyncStep2 - 这就是首次同步完成的标志！
+    Step2Received,
+    /// 后续更新中
+    Updating,
+}
+
+/// 同步事件
+#[derive(Debug, Clone)]
+pub enum SyncEvent {
+    /// 协议同步状态变化
+    ProtocolStateChanged(ProtocolSyncState),
+    /// 首次同步完成（空房间也算）
+    InitialSyncCompleted { has_data: bool, elapsed_ms: u64 },
+    /// 收到数据更新
+    DataReceived,
+    /// 连接状态变化
+    ConnectionChanged(ConnectionStatus),
+}
+
+/// 同步事件回调
+pub type SyncEventSender = broadcast::Sender<SyncEvent>;
+pub type SyncEventReceiver = broadcast::Receiver<SyncEvent>;
