@@ -254,9 +254,9 @@ futures = { workspace = true }
 metrics = "0.22.0"
 
 # ModuForge 生态系统
-moduforge-model = { version = "0.4.7", path = "../model" }
-moduforge-state = { version = "0.4.7", path = "../state" }
-moduforge-transform = { version = "0.4.7", path = "../transform" }
+moduforge-model = { version = "0.4.8", path = "../model" }
+moduforge-state = { version = "0.4.8", path = "../state" }
+moduforge-transform = { version = "0.4.8", path = "../transform" }
 ```
 
 ### 核心技术
