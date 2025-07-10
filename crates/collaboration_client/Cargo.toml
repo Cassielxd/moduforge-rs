@@ -28,6 +28,7 @@ anyhow = { workspace=true }
 thiserror = { workspace=true }
 reqwest = { workspace=true }
 chrono = "0.4"
+im =  { workspace=true }
 moduforge-model = {version = "0.4.9", path = "../model"}
 moduforge-state = {version = "0.4.9", path = "../state"}
 moduforge-transform = {version = "0.4.9", path = "../transform"}

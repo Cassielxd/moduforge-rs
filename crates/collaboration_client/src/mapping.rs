@@ -5,19 +5,13 @@ use mf_transform::{
     step::Step,
 };
 use mf_model::{node::Node, tree::Tree};
-use std::{any::TypeId, collections::HashMap};
+use std::{any::TypeId};
 
-use crate::{
-    utils::{
-        add_mark_to_array, get_or_create_marks_array,
-        get_or_create_node_attrs_map, get_or_create_node_data_map,
-        json_value_to_yrs_any,
-    },
-    types::{MarkData, NodeData, RoomSnapshot, StepResult},
-};
+use crate::{types::StepResult, utils::Utils};
 use yrs::{
     types::{array::ArrayRef, map::MapRef, Value},
-    Array, ArrayPrelim, Map, MapPrelim, TransactionMut, WriteTxn,
+    Array, ArrayPrelim, Map, MapPrelim, ReadTxn, Transact, TransactionMut,
+    WriteTxn,
 };
 
 /// 将 `Step` 转换为 Yrs 事务的 Trait
@@ -98,14 +92,18 @@ impl NodeStepConverter {
         node: &Node,
     ) {
         let node_data_map =
-            get_or_create_node_data_map(nodes_map, txn, &node.id);
+            Utils::get_or_create_node_data_map(nodes_map, txn, &node.id);
         // 插入节点类型
         node_data_map.insert(txn, "type", node.r#type.clone());
         // 插入节点属性
         let attrs_map =
             node_data_map.insert(txn, "attrs", MapPrelim::<yrs::Any>::new());
         for (key, value) in node.attrs.iter() {
-            attrs_map.insert(txn, key.clone(), json_value_to_yrs_any(value));
+            attrs_map.insert(
+                txn,
+                key.clone(),
+                Utils::json_value_to_yrs_any(value),
+            );
         }
         // 插入节点内容
         let content_array = node_data_map.insert(
@@ -124,7 +122,23 @@ impl NodeStepConverter {
             ArrayPrelim::from(Vec::<yrs::Any>::new()),
         );
         for mark in &node.marks {
-            add_mark_to_array(&marks_array, txn, mark);
+            Utils::add_mark_to_array(&marks_array, txn, mark);
+        }
+    }
+
+    /// 递归插入节点及其所有子节点
+    fn insert_node_enum_recursive(
+        &self,
+        txn: &mut TransactionMut,
+        nodes_map: &MapRef,
+        node_enum: &mf_model::node_type::NodeEnum,
+    ) {
+        // 插入当前节点
+        self.insert_node_data(txn, nodes_map, &node_enum.0);
+
+        // 递归插入所有子节点
+        for child_enum in &node_enum.1 {
+            self.insert_node_enum_recursive(txn, nodes_map, child_enum);
         }
     }
 }
@@ -141,9 +155,30 @@ impl StepConverter for NodeStepConverter {
         if let Some(add_step) = step.downcast_ref::<AddNodeStep>() {
             let nodes_map = txn.get_or_insert_map("nodes");
             let all_nodes = &add_step.nodes;
+            let parent_id = add_step.parent_id.clone();
+
+            // 如果parent_id 不是根节点需要 修改 parent_id节点的 content 数组
+            // 获取根节点 id 从 meta 区域
+            let meta_map = txn.get_or_insert_map("meta");
+            let root_id = meta_map.get(txn, "root_id");
+            if let Some(root_id) = root_id
+                && root_id.to_string(txn) != parent_id
+            {
+                let node_data_map = Utils::get_or_create_node_data_map(
+                    &nodes_map, txn, &parent_id,
+                );
+                let content_array =
+                    Utils::get_or_create_content_array(&node_data_map, txn);
+                for node_enum in all_nodes {
+                    content_array.push_back(
+                        txn,
+                        yrs::Any::String(node_enum.0.id.clone().into()),
+                    );
+                }
+            }
 
             for node_enum in all_nodes {
-                self.insert_node_data(txn, &nodes_map, &node_enum.0);
+                self.insert_node_enum_recursive(txn, &nodes_map, node_enum);
             }
 
             return Ok(StepResult {
@@ -207,16 +242,20 @@ impl StepConverter for AttrStepConverter {
             txn.origin().as_ref().map(|s| s.to_string()).unwrap_or_default();
         if let Some(attr_step) = step.downcast_ref::<AttrStep>() {
             let nodes_map = txn.get_or_insert_map("nodes");
-            let node_data_map =
-                get_or_create_node_data_map(&nodes_map, txn, &attr_step.id);
+            let node_data_map = Utils::get_or_create_node_data_map(
+                &nodes_map,
+                txn,
+                &attr_step.id,
+            );
             // 获取或创建节点属性映射
-            let attrs_map = get_or_create_node_attrs_map(&node_data_map, txn);
+            let attrs_map =
+                Utils::get_or_create_node_attrs_map(&node_data_map, txn);
             // 更新节点属性
             for (key, value) in attr_step.values.iter() {
                 attrs_map.insert(
                     txn,
                     key.clone(),
-                    json_value_to_yrs_any(value),
+                    Utils::json_value_to_yrs_any(value),
                 );
             }
 
@@ -296,13 +335,17 @@ impl StepConverter for MarkStepConverter {
         if let Some(add_mark_step) = step.downcast_ref::<AddMarkStep>() {
             let nodes_map = txn.get_or_insert_map("nodes");
             // 获取或创建节点数据映射
-            let node_data_map =
-                get_or_create_node_data_map(&nodes_map, txn, &add_mark_step.id);
+            let node_data_map = Utils::get_or_create_node_data_map(
+                &nodes_map,
+                txn,
+                &add_mark_step.id,
+            );
             // 获取或创建标记数组
-            let marks_array = get_or_create_marks_array(&node_data_map, txn);
+            let marks_array =
+                Utils::get_or_create_marks_array(&node_data_map, txn);
             // 添加标记
             for mark in &add_mark_step.marks {
-                add_mark_to_array(&marks_array, txn, mark);
+                Utils::add_mark_to_array(&marks_array, txn, mark);
             }
 
             return Ok(StepResult {
@@ -323,12 +366,13 @@ impl StepConverter for MarkStepConverter {
             step.downcast_ref::<RemoveMarkStep>()
         {
             let nodes_map = txn.get_or_insert_map("nodes");
-            let node_data_map = get_or_create_node_data_map(
+            let node_data_map = Utils::get_or_create_node_data_map(
                 &nodes_map,
                 txn,
                 &remove_mark_step.id,
             );
-            let marks_array = get_or_create_marks_array(&node_data_map, txn);
+            let marks_array =
+                Utils::get_or_create_marks_array(&node_data_map, txn);
             // 删除标记
             for mark_type in &remove_mark_step.mark_types {
                 self.remove_mark_from_array(&marks_array, txn, mark_type);
@@ -425,57 +469,94 @@ impl Mapper {
         REGISTRY.get_or_init(StepConverterRegistry::new)
     }
 
-    /// 将 ModuForge `Tree` 转换为 `RoomSnapshot`
-    pub fn tree_to_snapshot(
+    /// 将 Yrs 文档转换为 ModuForge Tree
+    /// 这是从协作状态重建文档树的关键方法
+    pub fn yrs_doc_to_tree(
+        doc: &yrs::Doc
+    ) -> Result<Tree, Box<dyn std::error::Error>> {
+        use mf_model::types::NodeId;
+        use std::collections::HashMap;
+
+        let root_id = Utils::get_root_id_from_yrs_doc(doc)?;
+        let txn = doc.transact();
+        let nodes_map =
+            txn.get_map("nodes").ok_or("Yrs 文档中没有找到 nodes 映射")?;
+        let mut tree_nodes = HashMap::new();
+        let mut parent_map = HashMap::new();
+
+        Utils::build_tree_nodes_from_yrs(
+            &root_id,
+            &nodes_map,
+            &txn,
+            &mut tree_nodes,
+            &mut parent_map,
+            None,
+        )?;
+
+        let root_node = tree_nodes
+            .get(&NodeId::from(root_id))
+            .ok_or("根节点不存在")?
+            .as_ref()
+            .clone();
+        let root_enum =
+            Utils::build_node_enum_from_map(&root_node, &tree_nodes);
+        Ok(Tree::from(root_enum))
+    }
+
+    /// 将 Tree 直接写入 Yrs 文档
+    /// 用于初始化协作文档
+    pub fn tree_to_yrs_doc(
         tree: &Tree,
-        room_id: String,
-    ) -> RoomSnapshot {
-        let mut nodes = HashMap::new();
+        doc: &yrs::Doc,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut txn = doc.transact_mut();
+        let nodes_map = txn.get_or_insert_map("nodes");
 
-        fn collect_nodes(
-            tree: &Tree,
-            node_id: &str,
-            nodes: &mut HashMap<String, NodeData>,
-        ) {
-            if let Some(node) = tree.get_node(&node_id.to_string()) {
-                let node_data = NodeData {
-                    id: node.id.clone(),
-                    node_type: node.r#type.clone(),
-                    attrs: node
-                        .attrs
-                        .iter()
-                        .map(|(k, v)| (k.clone(), v.clone()))
-                        .collect(),
-                    content: node.content.iter().cloned().collect(),
-                    marks: node
-                        .marks
-                        .iter()
-                        .map(|mark| MarkData {
-                            mark_type: mark.r#type.clone(),
-                            attrs: mark
-                                .attrs
-                                .iter()
-                                .map(|(k, v)| (k.clone(), v.clone()))
-                                .collect(),
-                        })
-                        .collect(),
-                };
+        // 清空现有数据
+        nodes_map.clear(&mut txn);
 
-                nodes.insert(node_id.to_string(), node_data);
+        // 使用现有的转换器系统
+        let registry = Self::global_registry();
 
-                for child_id in &node.content {
-                    collect_nodes(tree, child_id, nodes);
+        // 获取根节点的所有子树
+        if let Some(root_tree) = tree.all_children(&tree.root_id, None) {
+            use mf_transform::{step::Step, node_step::AddNodeStep};
+
+            // 创建一个 AddNodeStep 来添加整个子树
+            let add_step = AddNodeStep {
+                parent_id: tree.root_id.clone(),
+                nodes: vec![root_tree],
+            };
+
+            // 使用现有的转换器应用步骤
+            if let Some(converter) =
+                registry.find_converter(&add_step as &dyn Step)
+            {
+                if let Err(e) =
+                    converter.apply_to_yrs_txn(&add_step as &dyn Step, &mut txn)
+                {
+                    return Err(
+                        format!("Failed to sync tree to Yrs: {}", e).into()
+                    );
                 }
+            } else {
+                return Err("No converter found for AddNodeStep".into());
             }
         }
 
-        collect_nodes(tree, &tree.root_id, &mut nodes);
+        Ok(())
+    }
 
-        RoomSnapshot {
-            room_id,
-            root_id: tree.root_id.clone(),
-            nodes,
-            version: 0,
-        }
+    /// 获取 Yrs 文档的版本信息
+    pub fn get_yrs_doc_version(doc: &yrs::Doc) -> u64 {
+        let txn = doc.transact();
+        txn.state_vector().len() as u64
+    }
+
+    /// 检查 Yrs 文档是否为空
+    pub fn is_yrs_doc_empty(doc: &yrs::Doc) -> bool {
+        let txn = doc.transact();
+        let nodes_map = txn.get_map("nodes");
+        nodes_map.map_or(true, |map| map.len(&txn) == 0)
     }
 }
