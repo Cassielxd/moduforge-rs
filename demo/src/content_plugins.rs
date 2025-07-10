@@ -131,7 +131,7 @@ impl StateField for UserStateField {
     async fn init(
         &self,
         _config: &StateConfig,
-        _instance: Option<&State>,
+        _instance: &State,
     ) -> Arc<dyn Resource> {
         println!("   🔧 初始化用户管理状态");
         Arc::new(UserState::new())
@@ -233,7 +233,7 @@ impl StateField for PermissionStateField {
     async fn init(
         &self,
         _config: &StateConfig,
-        _instance: Option<&State>,
+        _instance: &State,
     ) -> Arc<dyn Resource> {
         println!("   🔧 初始化权限控制状态");
         Arc::new(PermissionState::new())
@@ -320,7 +320,7 @@ impl StateField for CollaborationStateField {
     async fn init(
         &self,
         _config: &StateConfig,
-        _instance: Option<&State>,
+        _instance: &State,
     ) -> Arc<dyn Resource> {
         println!("   🔧 初始化协作同步状态");
         Arc::new(CollaborationState::new())
@@ -407,7 +407,7 @@ impl StateField for VersionControlStateField {
     async fn init(
         &self,
         _config: &StateConfig,
-        _instance: Option<&State>,
+        _instance: &State,
     ) -> Arc<dyn Resource> {
         println!("   🔧 初始化版本控制状态");
         Arc::new(VersionState::new())

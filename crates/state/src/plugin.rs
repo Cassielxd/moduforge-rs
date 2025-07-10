@@ -39,7 +39,7 @@ pub trait StateField: Send + Sync + Debug {
     async fn init(
         &self,
         config: &StateConfig,
-        instance: Option<&State>,
+        instance: &State,
     ) -> Arc<dyn Resource>;
     /// 应用状态变更
     /// 根据事务内容更新插件状态

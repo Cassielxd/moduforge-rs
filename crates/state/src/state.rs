@@ -70,7 +70,7 @@ impl State {
         for plugin in &instance.config.plugins {
             if let Some(field) = &plugin.spec.state_field {
                 tracing::debug!("正在初始化插件状态: {}", plugin.key);
-                let value = field.init(&state_config, Some(&instance)).await;
+                let value = field.init(&state_config, &instance).await;
                 field_values.push((plugin.key.clone(), value));
             }
         }
@@ -300,10 +300,10 @@ impl State {
                     if let Some(old_plugin_state) = self.get_field(&key) {
                         old_plugin_state
                     } else {
-                        field.init(&state_config, Some(&instance)).await
+                        field.init(&state_config, &instance).await
                     }
                 } else {
-                    field.init(&state_config, Some(&instance)).await
+                    field.init(&state_config, &instance).await
                 };
                 field_values.push((key, value));
             }

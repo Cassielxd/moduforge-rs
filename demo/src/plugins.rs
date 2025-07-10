@@ -86,7 +86,7 @@ impl StateField for UserStateField {
     async fn init(
         &self,
         _config: &StateConfig,
-        _instance: Option<&State>,
+        _instance: &State,
     ) -> Arc<dyn Resource> {
         println!("   🔧 初始化用户状态字段");
         Arc::new(UserState::new())
@@ -249,7 +249,7 @@ impl StateField for AuthStateField {
     async fn init(
         &self,
         _config: &StateConfig,
-        _instance: Option<&State>,
+        _instance: &State,
     ) -> Arc<dyn Resource> {
         println!("   🔧 初始化权限状态字段");
         Arc::new(AuthState::new())
@@ -423,7 +423,7 @@ impl StateField for AuditStateField {
     async fn init(
         &self,
         _config: &StateConfig,
-        _instance: Option<&State>,
+        _instance: &State,
     ) -> Arc<dyn Resource> {
         println!("   🔧 初始化审计状态字段");
         Arc::new(AuditState::new())
@@ -553,7 +553,7 @@ impl StateField for CacheStateField {
     async fn init(
         &self,
         _config: &StateConfig,
-        _instance: Option<&State>,
+        _instance: &State,
     ) -> Arc<dyn Resource> {
         println!("   🔧 初始化缓存状态字段");
         Arc::new(CacheState::new())
