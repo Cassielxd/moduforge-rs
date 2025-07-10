@@ -9,6 +9,8 @@ pub mod types;
 pub mod utils;
 
 pub type ClientResult<T> = anyhow::Result<T>;
+pub mod yrs {
+    pub use yrs::*;
+}
 
-pub use yrs::*;
 pub type AwarenessRef = Arc<RwLock<yrs::sync::Awareness>>;
