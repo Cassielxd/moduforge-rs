@@ -95,6 +95,50 @@ impl Utils {
     }
 
     /// 将事务应用到 Yrs 文档
+    pub async fn apply_transaction_to_yrs(
+        awareness_ref: AwarenessRef,
+        transaction: &Transaction,
+    ) -> ClientResult<()> {
+        // 使用异步锁获取房间信息
+
+        let mut awareness = awareness_ref.write().await;
+        let doc = awareness.doc_mut();
+        let mut txn = doc.transact_mut_with(doc.client_id().clone());
+
+        // 使用全局注册表应用所有事务中的步骤
+        let registry = Mapper::global_registry();
+
+        
+        let steps = &transaction.steps;
+        for step in steps {
+            if let Some(converter) = registry.find_converter(step.as_ref())
+            {
+                if let Err(e) =
+                    converter.apply_to_yrs_txn(step.as_ref(), &mut txn)
+                {
+                    tracing::error!("🔄 应用步骤到 Yrs 事务失败: {}", e);
+                }
+            } else {
+                let type_name = std::any::type_name_of_val(step.as_ref());
+                tracing::warn!(
+                    "🔄 应用步骤到 Yrs 事务失败: 没有找到步骤的转换器: {}",
+                    type_name
+                );
+            }
+        }
+    
+        // 统一提交所有更改
+        txn.commit();
+        tracing::debug!(
+            "🔄 应用 {} 个步骤到文档: {}",
+            transaction.steps.len(),
+            doc.client_id()
+        );
+
+        Ok(())
+    }
+
+    /// 将事务应用到 Yrs 文档
     pub async fn apply_transactions_to_yrs(
         awareness_ref: AwarenessRef,
         transactions: &[Transaction],
