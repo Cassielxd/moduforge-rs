@@ -268,7 +268,7 @@ impl WebsocketProvider {
             let doc = awareness_lock.doc();
             doc.observe_update_v1(move |txn, event| {
                 let origin = txn.origin();
-
+                
                 if let Some(origin_ref) = origin {
                     let origin_bytes = origin_ref.as_ref();
                     if let Ok(origin_str) = std::str::from_utf8(origin_bytes) {

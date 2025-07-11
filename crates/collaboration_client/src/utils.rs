@@ -1,8 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 use mf_model::mark::Mark;
-use mf_model::node_type::NodeEnum;
 use mf_model::tree::Tree;
-use mf_state::Transaction;
+use mf_state::transaction::Transaction;
 use crate::mapping::{NodeStepConverter, StepConverter};
 use crate::AwarenessRef;
 use serde_json::Value as JsonValue;
@@ -67,7 +66,7 @@ impl Utils {
     ) -> ClientResult<()> {
         let mut awareness = awareness_ref.write().await;
         let doc = awareness.doc_mut();
-        let mut txn = doc.transact_mut_with(doc.client_id().clone());
+        let mut txn = doc.transact_mut_with(doc.client_id().clone().to_string());
 
         // 清空现有数据（如果有的话）
         let nodes_map = txn.get_or_insert_map("nodes");
@@ -89,7 +88,7 @@ impl Utils {
 
         tracing::info!(
             "成功初始化树，包含 {} 个节点，根节点ID: {}",
-            tree.nodes.len(),
+            tree.nodes.iter().map(|shard| shard.len()).sum::<usize>(),
             tree.root_id
         );
         Ok(())
@@ -102,16 +101,13 @@ impl Utils {
     ) -> ClientResult<()> {
         use mf_transform::{step::Step, node_step::AddNodeStep};
 
-        let root_node = tree.get_node(&tree.root_id).unwrap();
         // 获取根节点的所有子树
         if let Some(root_tree) = tree.all_children(&tree.root_id, None) {
             // 创建一个 AddNodeStep 来添加整个子树
+            // 注意：root_tree 已经包含了根节点，不需要重复添加
             let add_step = AddNodeStep {
                 parent_id: tree.root_id.clone(),
-                nodes: vec![NodeEnum(
-                    root_node.as_ref().clone(),
-                    vec![root_tree],
-                )],
+                nodes: vec![root_tree],
             };
             let node_step_converter = NodeStepConverter;
             if let Err(e) = node_step_converter
@@ -137,7 +133,7 @@ impl Utils {
 
         let mut awareness = awareness_ref.write().await;
         let doc = awareness.doc_mut();
-        let mut txn = doc.transact_mut_with(doc.client_id().clone());
+        let mut txn = doc.transact_mut_with(doc.client_id().clone().to_string());
 
         // 使用全局注册表应用所有事务中的步骤
         let registry = Mapper::global_registry();
@@ -181,7 +177,7 @@ impl Utils {
 
         let mut awareness = awareness_ref.write().await;
         let doc = awareness.doc_mut();
-        let mut txn = doc.transact_mut_with(doc.client_id().clone());
+        let mut txn = doc.transact_mut_with(doc.client_id().clone().to_string());
 
         // 使用全局注册表应用所有事务中的步骤
         let registry = Mapper::global_registry();
