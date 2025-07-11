@@ -30,14 +30,14 @@ impl Utils {
     /// 这是从协作状态重建文档树的关键方法
     pub fn apply_yrs_to_tree(
         doc: &yrs::Doc
-    ) -> Result<Tree, Box<dyn std::error::Error>> {
+    ) -> ClientResult<Tree> {
         use mf_model::types::NodeId;
         use std::collections::HashMap;
 
         let root_id = Utils::get_root_id_from_yrs_doc(doc)?;
         let txn = doc.transact();
         let nodes_map =
-            txn.get_map("nodes").ok_or("Yrs 文档中没有找到 nodes 映射")?;
+            txn.get_map("nodes").ok_or(anyhow::anyhow!("Yrs 文档中没有找到 nodes 映射"))?;
         let mut tree_nodes = HashMap::new();
         let mut parent_map = HashMap::new();
 
@@ -52,7 +52,7 @@ impl Utils {
 
         let root_node = tree_nodes
             .get(&NodeId::from(root_id))
-            .ok_or("根节点不存在")?
+            .ok_or(anyhow::anyhow!("根节点不存在"))?
             .as_ref()
             .clone();
         let root_enum =
@@ -366,7 +366,7 @@ impl Utils {
     /// 从 Yrs 文档中获取根节点ID
     pub fn get_root_id_from_yrs_doc(
         doc: &yrs::Doc
-    ) -> Result<String, Box<dyn std::error::Error>> {
+    ) -> ClientResult<String> {
         let txn = doc.transact();
         // 优先从 meta 区域读取
         if let Some(meta_map) = txn.get_map("meta") {
@@ -378,11 +378,11 @@ impl Utils {
         }
         // fallback: 兼容老数据，取 nodes_map 第一个节点
         let nodes_map =
-            txn.get_map("nodes").ok_or("Yrs 文档中没有找到 nodes 映射")?;
+            txn.get_map("nodes").ok_or(anyhow::anyhow!("Yrs 文档中没有找到 nodes 映射"))?;
         for (key, _) in nodes_map.iter(&txn) {
             return Ok(key.to_string());
         }
-        Err("Yrs 文档中没有找到根节点".into())
+        Err(anyhow::anyhow!("Yrs 文档中没有找到根节点"))
     }
 
     /// 从 Yrs 文档的 nodes_map 递归构建所有节点和 parent_map
@@ -393,10 +393,10 @@ impl Utils {
         tree_nodes: &mut HashMap<NodeId, Arc<Node>>,
         parent_map: &mut HashMap<NodeId, NodeId>,
         parent_id: Option<&NodeId>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> ClientResult<()> {
         let node_data = nodes_map.get(txn, node_id);
         if node_data.is_none() {
-            return Err(format!("节点 {} 在 Yrs 文档中不存在", node_id).into());
+            return Err(anyhow::anyhow!("节点 {} 在 Yrs 文档中不存在", node_id));
         }
         let node_data = node_data.unwrap();
         if let yrs::types::Value::YMap(node_map) = node_data {

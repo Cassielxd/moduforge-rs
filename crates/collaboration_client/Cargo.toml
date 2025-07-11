@@ -1,6 +1,6 @@
 [package]
 name = "moduforge-collaboration-client"
-version = "0.4.13"
+version = "0.4.14"
 edition = {workspace=true}
 description = "moduforge 协作系统"
 authors = {workspace=true}
