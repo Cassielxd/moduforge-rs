@@ -25,6 +25,40 @@ pub fn get_unix_time() -> u64 {
 
 pub struct Utils;
 impl Utils {
+    
+    /// 将 Yrs 文档转换为 ModuForge Tree
+    /// 这是从协作状态重建文档树的关键方法
+    pub fn apply_yrs_to_tree(
+        doc: &yrs::Doc
+    ) -> Result<Tree, Box<dyn std::error::Error>> {
+        use mf_model::types::NodeId;
+        use std::collections::HashMap;
+
+        let root_id = Utils::get_root_id_from_yrs_doc(doc)?;
+        let txn = doc.transact();
+        let nodes_map =
+            txn.get_map("nodes").ok_or("Yrs 文档中没有找到 nodes 映射")?;
+        let mut tree_nodes = HashMap::new();
+        let mut parent_map = HashMap::new();
+
+        Utils::build_tree_nodes_from_yrs(
+            &root_id,
+            &nodes_map,
+            &txn,
+            &mut tree_nodes,
+            &mut parent_map,
+            None,
+        )?;
+
+        let root_node = tree_nodes
+            .get(&NodeId::from(root_id))
+            .ok_or("根节点不存在")?
+            .as_ref()
+            .clone();
+        let root_enum =
+            Utils::build_node_enum_from_map(&root_node, &tree_nodes);
+        Ok(Tree::from(root_enum))
+    }
     /// 初始化树
     /// 将树同步到 Yrs 文档
     pub async fn apply_tree_to_yrs(
