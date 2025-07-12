@@ -32,14 +32,19 @@ pub mod attrs;
 pub mod mark_type;
 //节点类型定义
 pub mod node_type;
+//图节点类型定义
+pub mod node_type_graph;
 //模式定义
 pub mod schema;
 //内容匹配定义
 pub mod content;
+//内容关系定义
+pub mod content_relation;
 //id生成器定义
 pub mod error;
 pub mod id_generator;
 pub mod node_pool;
 pub mod ops;
 pub mod tree;
+pub mod graph;
 pub mod types;

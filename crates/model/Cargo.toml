@@ -28,6 +28,7 @@ lru = { workspace = true }
 
 parking_lot ={ workspace = true }
 
+petgraph = { workspace = true }
 
 once_cell = "1.19"
 
