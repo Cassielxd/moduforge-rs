@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::fmt::{self, Debug};
 use serde::{Deserialize, Serialize};
 use petgraph::prelude::{StableDiGraph, NodeIndex, EdgeIndex};
-use petgraph::visit::{EdgeRef, IntoNodeIdentifiers, VisitMap, Visitable};
+use petgraph::visit::{EdgeRef, IntoNodeIdentifiers, VisitMap, Visitable, IntoEdgeReferences};
 use petgraph::{Incoming, Outgoing};
 use im::HashMap as ImHashMap;
 use im::Vector as ImVector;
@@ -15,7 +15,7 @@ use crate::{
 };
 
 /// 关系类型枚举，定义节点间的不同关系类型
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum RelationType {
     /// 父子关系（树形结构）
     ParentChild,
@@ -181,7 +181,7 @@ impl GraphNode {
     pub fn remove_label(&mut self, label: &str) {
         self.labels = self.labels
             .iter()
-            .filter(|l| l != label)
+            .filter(|l| *l != label)
             .cloned()
             .collect();
     }
@@ -276,10 +276,8 @@ impl HybridGraph {
         let current_edges = self.relation_index.get(&relation_type)
             .cloned()
             .unwrap_or_else(ImVector::new);
-        self.relation_index = self.relation_index.update(
-            relation_type,
-            current_edges.push_back(edge_index)
-        );
+        let updated_edges = current_edges.push_back(edge_index);
+        self.relation_index = self.relation_index.update(relation_type, updated_edges);
         
         Ok(edge_index)
     }
@@ -535,7 +533,7 @@ mod tests {
 
     fn create_test_node(id: &str, node_type: &str) -> Node {
         Node::new(
-            id,
+            NodeId::from(id),
             node_type.to_string(),
             Attrs::default(),
             vec![],
@@ -557,8 +555,8 @@ mod tests {
         
         let index = graph.add_node(node).unwrap();
         assert_eq!(graph.node_count(), 1);
-        assert!(graph.contains_node(&"node1".into()));
-        assert_eq!(graph.get_root().unwrap().id(), &"node1".into());
+        assert!(graph.contains_node(&NodeId::from("node1")));
+        assert_eq!(graph.get_root().unwrap().id(), &NodeId::from("node1"));
     }
 
     #[test]
@@ -571,12 +569,12 @@ mod tests {
         graph.add_node(node2).unwrap();
         
         let relation = Relation::new(RelationType::ParentChild);
-        graph.add_relation(&"node1".into(), &"node2".into(), relation).unwrap();
+        graph.add_relation(&NodeId::from("node1"), &NodeId::from("node2"), relation).unwrap();
         
         assert_eq!(graph.edge_count(), 1);
-        let children = graph.get_children(&"node1".into());
+        let children = graph.get_children(&NodeId::from("node1"));
         assert_eq!(children.len(), 1);
-        assert_eq!(children[0].id(), &"node2".into());
+        assert_eq!(children[0].id(), &NodeId::from("node2"));
     }
 
     #[test]
@@ -589,11 +587,11 @@ mod tests {
         graph.add_node(node2).unwrap();
         
         let relation = Relation::new(RelationType::ParentChild);
-        graph.add_relation(&"node1".into(), &"node2".into(), relation).unwrap();
+        graph.add_relation(&NodeId::from("node1"), &NodeId::from("node2"), relation).unwrap();
         
-        let parent = graph.get_parent(&"node2".into());
+        let parent = graph.get_parent(&NodeId::from("node2"));
         assert!(parent.is_some());
-        assert_eq!(parent.unwrap().id(), &"node1".into());
+        assert_eq!(parent.unwrap().id(), &NodeId::from("node1"));
     }
 
     #[test]
@@ -606,15 +604,15 @@ mod tests {
         graph.add_node(node2).unwrap();
         
         let relation = Relation::new(RelationType::ParentChild);
-        graph.add_relation(&"node1".into(), &"node2".into(), relation).unwrap();
+        graph.add_relation(&NodeId::from("node1"), &NodeId::from("node2"), relation).unwrap();
         
         assert_eq!(graph.node_count(), 2);
         assert_eq!(graph.edge_count(), 1);
         
-        graph.remove_node(&"node2".into()).unwrap();
+        graph.remove_node(&NodeId::from("node2")).unwrap();
         
         assert_eq!(graph.node_count(), 1);
         assert_eq!(graph.edge_count(), 0);
-        assert!(!graph.contains_node(&"node2".into()));
+        assert!(!graph.contains_node(&NodeId::from("node2")));
     }
 }
