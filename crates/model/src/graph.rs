@@ -131,6 +131,8 @@ pub struct GraphNode {
     pub labels: ImVector<String>,
     /// 节点属性
     pub properties: ImHashMap<String, serde_json::Value>,
+    /// 节点标记
+    pub marks: ImVector<crate::mark::Mark>,
     /// 节点状态
     pub state: NodeState,
 }
@@ -158,6 +160,7 @@ impl GraphNode {
             index: None,
             labels: ImVector::new(),
             properties: ImHashMap::new(),
+            marks: ImVector::new(),
             state: NodeState::Active,
         }
     }
@@ -199,6 +202,35 @@ impl GraphNode {
     /// 设置状态
     pub fn set_state(&mut self, state: NodeState) {
         self.state = state;
+    }
+
+    /// 添加标记
+    pub fn add_mark(&mut self, mark: crate::mark::Mark) {
+        self.marks = self.marks.push_back(mark);
+    }
+
+    /// 移除标记
+    pub fn remove_mark(&mut self, mark_type: &str) {
+        self.marks = self.marks
+            .iter()
+            .filter(|m| m.r#type != mark_type)
+            .cloned()
+            .collect();
+    }
+
+    /// 获取标记
+    pub fn get_marks(&self) -> &ImVector<crate::mark::Mark> {
+        &self.marks
+    }
+
+    /// 检查是否有指定类型的标记
+    pub fn has_mark(&self, mark_type: &str) -> bool {
+        self.marks.iter().any(|m| m.r#type == mark_type)
+    }
+
+    /// 获取指定类型的标记
+    pub fn get_mark(&self, mark_type: &str) -> Option<&crate::mark::Mark> {
+        self.marks.iter().find(|m| m.r#type == mark_type)
     }
 }
 
