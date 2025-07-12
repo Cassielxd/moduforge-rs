@@ -34,8 +34,7 @@ impl Middleware for LoggingMiddleware {
     ) -> ForgeResult<()> {
         let action = transaction
             .get_meta::<String>("action")
-            .map(|s| s.as_str())
-            .unwrap_or("unknown");
+            .unwrap_or("unknown".to_string());
 
         println!(
             "🔍 [{}] 事务处理开始 - ID: {}, 动作: {}",
@@ -55,9 +54,7 @@ impl Middleware for LoggingMiddleware {
     ) -> ForgeResult<Option<Transaction>> {
         for transaction in transactions {
             let action = transaction
-                .get_meta::<String>("action")
-                .map(|s| s.as_str())
-                .unwrap_or("unknown");
+                .get_meta::<String>("action").unwrap_or("unknown".to_string());
 
             let start_time =
                 transaction.get_meta::<SystemTime>("middleware_start_time");
@@ -117,7 +114,7 @@ impl Middleware for MetricsMiddleware {
         transaction: &mut Transaction,
     ) -> ForgeResult<()> {
         // 记录性能监控开始时间
-        transaction.set_meta("metrics_start_time", Instant::now());
+        transaction.set_meta("metrics_start_time", SystemTime::now());
 
         let count = self
             .transaction_count
@@ -140,7 +137,7 @@ impl Middleware for MetricsMiddleware {
     ) -> ForgeResult<Option<Transaction>> {
         for transaction in transactions {
             if let Some(start_time) =
-                transaction.get_meta::<Instant>("metrics_start_time")
+                transaction.get_meta::<SystemTime>("metrics_start_time")
             {
                 let duration = start_time.elapsed();
                 let steps_count = transaction.steps.len();
@@ -157,13 +154,6 @@ impl Middleware for MetricsMiddleware {
                     );
                 }
 
-                // 性能警告
-                if duration.as_millis() > 100 {
-                    println!(
-                        "⚠️  [{}] 性能警告: 事务处理时间过长 ({:?})",
-                        self.name, duration
-                    );
-                }
 
                 if steps_count > 10 {
                     println!(

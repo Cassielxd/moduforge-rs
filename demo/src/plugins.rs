@@ -42,9 +42,9 @@ impl PluginTrait for UserPlugin {
                                 new_tr.set_meta("action", "update_user_status");
                                 new_tr.set_meta(
                                     "username",
-                                    username.as_ptr().clone(),
+                                    username.clone(),
                                 );
-                                new_tr.set_meta("role", role.as_ptr().clone());
+                                new_tr.set_meta("role", role.clone());
                                 return Ok(Some(new_tr));
                             }
                         }
@@ -175,7 +175,7 @@ impl PluginTrait for AuthPlugin {
                             );
                             new_tr.set_meta(
                                 "document_title",
-                                title.as_ptr().clone(),
+                                title.clone(),
                             );
                             return Ok(Some(new_tr));
                         }
@@ -191,7 +191,7 @@ impl PluginTrait for AuthPlugin {
                         new_tr.set_meta("generated_by", "auth_plugin");
                         new_tr.set_meta("action", "content_permission_checked");
                         new_tr
-                            .set_meta("content_type", action.as_ptr().clone());
+                            .set_meta("content_type", action.clone());
                         return Ok(Some(new_tr));
                     },
                     "document_edit" => {
@@ -228,7 +228,7 @@ impl PluginTrait for AuthPlugin {
                             "   🔍 权限验证插件: 验证用户 {} 的编辑权限",
                             user_id
                         );
-                        return **user_id == "user_123"; // 简单的权限检查
+                        return user_id == "user_123"; // 简单的权限检查
                     }
                     return false;
                 },
@@ -490,7 +490,7 @@ impl PluginTrait for CachePlugin {
                             cache_tr.set_meta("action", "document_cached");
                             cache_tr.set_meta(
                                 "document_title",
-                                title.as_ptr().clone(),
+                                title.clone(),
                             );
                             return Ok(Some(cache_tr));
                         }
@@ -506,7 +506,7 @@ impl PluginTrait for CachePlugin {
                         cache_tr.set_meta("generated_by", "cache_plugin");
                         cache_tr.set_meta("action", "content_cache_updated");
                         cache_tr
-                            .set_meta("content_type", action.as_ptr().clone());
+                            .set_meta("content_type", action.clone());
                         return Ok(Some(cache_tr));
                     },
                     "create_snapshot" => {

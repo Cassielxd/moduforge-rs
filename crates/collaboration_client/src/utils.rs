@@ -17,14 +17,14 @@ use std::sync::Arc;
 use std::collections::HashMap;
 
 /// 获取当前时间戳（毫秒）
-pub fn get_unix_time() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis()
-        as u64
-}
+
 
 pub struct Utils;
 impl Utils {
-    
+    pub fn get_unix_time() -> u64 {
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis()
+            as u64
+    }
     /// 将 Yrs 文档转换为 ModuForge Tree
     /// 这是从协作状态重建文档树的关键方法
     pub fn apply_yrs_to_tree(
@@ -123,7 +123,20 @@ impl Utils {
 
         Ok(())
     }
-
+    // 将事务应用到 Yrs 文档
+    pub fn apply_transaction_meta_to_yrs(
+        transaction: &Transaction,
+        txn: &mut TransactionMut,
+    ) -> ClientResult<()> {
+        let tr_meta =txn.get_or_insert_map("tr_meta");
+        tr_meta.clear(txn);
+        tr_meta.insert(txn, "transaction_id", yrs::Any::BigInt(transaction.id as i64));
+        tr_meta.insert(txn, "timestamp", yrs::Any::BigInt(Utils::get_unix_time() as i64));
+        transaction.meta.iter().for_each(|(k, v)| {
+            tr_meta.insert(txn, k.as_str(), Utils::json_value_to_yrs_any(v));
+        });
+        Ok(())
+    }
     /// 将事务应用到 Yrs 文档
     pub async fn apply_transaction_to_yrs(
         awareness_ref: AwarenessRef,
@@ -134,11 +147,10 @@ impl Utils {
         let mut awareness = awareness_ref.write().await;
         let doc = awareness.doc_mut();
         let mut txn = doc.transact_mut_with(doc.client_id().clone().to_string());
-
+        Utils::apply_transaction_meta_to_yrs(transaction, &mut txn)?;
         // 使用全局注册表应用所有事务中的步骤
         let registry = Mapper::global_registry();
 
-        
         let steps = &transaction.steps;
         for step in steps {
             if let Some(converter) = registry.find_converter(step.as_ref())
@@ -156,7 +168,6 @@ impl Utils {
                 );
             }
         }
-    
         // 统一提交所有更改
         txn.commit();
         tracing::debug!(

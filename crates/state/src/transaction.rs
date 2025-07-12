@@ -37,7 +37,7 @@ pub trait Command: Send + Sync + Debug {
 #[derive(Debug, Clone)]
 pub struct Transaction {
     /// 存储元数据的哈希表，支持任意类型数据
-    pub meta: im::HashMap<String, Arc<dyn std::any::Any>>,
+    pub meta: im::HashMap<String, serde_json::Value>,
     /// 事务的时间戳
     pub id: u64,
     transform: Transform,
@@ -143,7 +143,7 @@ impl Transaction {
     /// 设置元数据
     /// key: 键
     /// value: 值（支持任意类型）
-    pub fn set_meta<K, T: std::any::Any>(
+    pub fn set_meta<K, T: serde::Serialize>(
         &mut self,
         key: K,
         value: T,
@@ -152,16 +152,21 @@ impl Transaction {
         K: Into<String>,
     {
         let key_str = key.into();
-        self.meta.insert(key_str, Arc::new(value));
+        self.meta.insert(key_str, serde_json::to_value(value).unwrap());
         self
     }
     /// 获取元数据
     /// key: 键
     /// 返回: Option<&T>，如果存在且类型匹配则返回Some，否则返回None
-    pub fn get_meta<T: 'static>(
+    pub fn get_meta<T: serde::de::DeserializeOwned>(
         &self,
         key: &str,
-    ) -> Option<&Arc<T>> {
-        self.meta.get(key)?.downcast_ref::<Arc<T>>()
+    ) -> Option<T> {
+        let value = self.meta.get(key)?;
+        let value_json: Result<T, serde_json::Error> = serde_json::from_value(value.clone());
+        match value_json {
+            Ok(value) => Some(value),
+            Err(_) => None,
+        }
     }
 }

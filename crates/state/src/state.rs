@@ -208,7 +208,6 @@ impl State {
                         .await?
                     {
                         if new_state.filter_transaction(&tr, Some(i)).await? {
-                            tr.set_meta("appendedTransaction", root_tr.clone());
                             if seen.is_none() {
                                 let mut s: Vec<SeenState> = Vec::new();
                                 for j in 0..sorted_plugins.len() {

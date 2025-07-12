@@ -54,7 +54,6 @@ impl Middleware for AuthenticationMiddleware {
                     // 对于其他操作，检查是否已认证
                     if !transaction
                         .get_meta::<bool>("authenticated")
-                        .map(|x| **x)
                         .unwrap_or(false)
                     {
                         println!("🔒 [{}] 检查用户认证状态", self.name);
@@ -159,9 +158,7 @@ impl Middleware for PermissionMiddleware {
         // 记录权限检查结果
         for transaction in transactions {
             if transaction
-                .get_meta::<bool>("permission_checked")
-                .map(|x| **x)
-                .unwrap_or(false)
+                .get_meta::<bool>("permission_checked").unwrap_or(false)
             {
                 println!("📊 [{}] 权限检查完成", self.name);
             }
@@ -311,9 +308,7 @@ impl Middleware for VersionControlMiddleware {
 
         for transaction in transactions {
             if transaction
-                .get_meta::<bool>("auto_snapshot_needed")
-                .map(|x| **x)
-                .unwrap_or(false)
+                .get_meta::<bool>("auto_snapshot_needed").unwrap_or(false)
             {
                 needs_snapshot = true;
                 break;
@@ -363,9 +358,7 @@ impl Middleware for AuditLogMiddleware {
     ) -> ForgeResult<()> {
         if let Some(action) = transaction.get_meta::<String>("action") {
             let user = transaction
-                .get_meta::<String>("username")
-                .map(|s| s.as_str())
-                .unwrap_or("system");
+                .get_meta::<String>("username").unwrap_or("system".to_string());
 
             println!(
                 "📝 [{}] 记录操作: {} (用户: {})",
@@ -388,9 +381,7 @@ impl Middleware for AuditLogMiddleware {
 
         for transaction in transactions {
             if transaction
-                .get_meta::<bool>("audit_logged")
-                .map(|x| **x)
-                .unwrap_or(false)
+                .get_meta::<bool>("audit_logged").unwrap_or(false)
             {
                 operation_count += 1;
 
