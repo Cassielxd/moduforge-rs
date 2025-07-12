@@ -48,4 +48,5 @@ pub mod ops;
 pub mod tree;
 pub mod graph;
 pub mod versioned_graph;
+pub mod graph_node_type;
 pub mod types;
