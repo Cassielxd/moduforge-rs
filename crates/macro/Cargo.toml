@@ -15,8 +15,8 @@ path="./src/lib.rs"
 
 [dependencies]
 anyhow = {workspace=true}
-moduforge-model = {version = "0.4.9", path = "../model"}
-moduforge-state = {version = "0.4.9", path = "../state"}
-moduforge-transform = {version = "0.4.9", path = "../transform"}
-moduforge-core = {version = "0.4.9", path = "../core"}
+moduforge-model = {version = "0.4.10", path = "../model"}
+moduforge-state = {version = "0.4.10", path = "../state"}
+moduforge-transform = {version = "0.4.10", path = "../transform"}
+moduforge-core = {version = "0.4.10", path = "../core"}
 

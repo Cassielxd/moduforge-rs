@@ -21,8 +21,8 @@ anyhow = "1.0"
 tracing-subscriber = "0.3"
 chrono = "0.4"
 rand = "0.8"
-moduforge-model = {version = "0.4.9", path = "../crates/model"}
-moduforge-state = {version = "0.4.9", path = "../crates/state"}
-moduforge-transform = {version = "0.4.9", path = "../crates/transform"}
-moduforge-core = {version = "0.4.9", path = "../crates/core"}
+moduforge-model = {version = "0.4.10", path = "../crates/model"}
+moduforge-state = {version = "0.4.10", path = "../crates/state"}
+moduforge-transform = {version = "0.4.10", path = "../crates/transform"}
+moduforge-core = {version = "0.4.10", path = "../crates/core"}
 metrics-exporter-prometheus = "0.13.1"

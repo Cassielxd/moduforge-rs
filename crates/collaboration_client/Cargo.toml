@@ -29,11 +29,11 @@ thiserror = { workspace=true }
 reqwest = { workspace=true }
 chrono = "0.4"
 im =  { workspace=true }
-moduforge-model = {version = "0.4.9", path = "../model"}
-moduforge-state = {version = "0.4.9", path = "../state"}
-moduforge-transform = {version = "0.4.9", path = "../transform"}
-moduforge-core = {version = "0.4.9", path = "../core"}
-moduforge-macros = {version = "0.4.9", path = "../macro"}
+moduforge-model = {version = "0.4.10", path = "../model"}
+moduforge-state = {version = "0.4.10", path = "../state"}
+moduforge-transform = {version = "0.4.10", path = "../transform"}
+moduforge-core = {version = "0.4.10", path = "../core"}
+moduforge-macros = {version = "0.4.10", path = "../macro"}
 
 # 新增依赖用于静态分发 StepConverter
 ctor = { workspace=true }
