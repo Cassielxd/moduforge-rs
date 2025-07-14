@@ -2,7 +2,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use mf_model::mark::Mark;
 use mf_model::tree::Tree;
 use mf_state::transaction::Transaction;
-use crate::mapping::{NodeStepConverter, StepConverter};
+// 新版本映射模块已经通过 crate::mapping 提供所有必要的API
 use crate::AwarenessRef;
 use serde_json::Value as JsonValue;
 use yrs::{Map, ReadTxn, Transact};
@@ -11,7 +11,7 @@ use yrs::{
     Array, ArrayPrelim, MapPrelim, TransactionMut, WriteTxn,
 };
 
-use crate::{mapping::Mapper, ClientResult};
+use crate::ClientResult;
 use mf_model::{node::Node, attrs::Attrs, types::NodeId};
 use std::sync::Arc;
 use std::collections::HashMap;
@@ -99,7 +99,7 @@ impl Utils {
         tree: &Tree,
         txn: &mut yrs::TransactionMut,
     ) -> ClientResult<()> {
-        use mf_transform::{step::Step, node_step::AddNodeStep};
+        use mf_transform::node_step::AddNodeStep;
 
         // 获取根节点的所有子树
         if let Some(root_tree) = tree.all_children(&tree.root_id, None) {
@@ -109,15 +109,19 @@ impl Utils {
                 parent_id: tree.root_id.clone(),
                 nodes: vec![root_tree],
             };
-            let node_step_converter = NodeStepConverter;
-            if let Err(e) = node_step_converter
-                .apply_to_yrs_txn(&add_step as &dyn Step, txn)
-            {
+            
+            // 使用新版本的转换器API
+            let context = crate::mapping::create_context(
+                "tree_sync_client".to_string(),
+                "tree_sync_user".to_string(),
+            );
+            
+            if let Err(e) = crate::mapping::convert_step(&add_step, txn, &context) {
                 tracing::error!("🔄 同步树节点到 Yrs 失败: {}", e);
                 return Err(anyhow::anyhow!(format!(
                     "Failed to sync tree: {}",
                     e
-                ),));
+                )));
             }
         }
 
@@ -148,24 +152,16 @@ impl Utils {
         let doc = awareness.doc_mut();
         let mut txn = doc.transact_mut_with(doc.client_id().clone().to_string());
         Utils::apply_transaction_meta_to_yrs(transaction, &mut txn)?;
-        // 使用全局注册表应用所有事务中的步骤
-        let registry = Mapper::global_registry();
+        // 使用新版本的转换API应用所有事务中的步骤
+        let context = crate::mapping::create_context(
+            "transaction_client".to_string(),
+            "transaction_user".to_string(),
+        );
 
         let steps = &transaction.steps;
         for step in steps {
-            if let Some(converter) = registry.find_converter(step.as_ref())
-            {
-                if let Err(e) =
-                    converter.apply_to_yrs_txn(step.as_ref(), &mut txn)
-                {
-                    tracing::error!("🔄 应用步骤到 Yrs 事务失败: {}", e);
-                }
-            } else {
-                let type_name = std::any::type_name_of_val(step.as_ref());
-                tracing::warn!(
-                    "🔄 应用步骤到 Yrs 事务失败: 没有找到步骤的转换器: {}",
-                    type_name
-                );
+            if let Err(e) = crate::mapping::convert_step(step.as_ref(), &mut txn, &context) {
+                tracing::error!("🔄 应用步骤到 Yrs 事务失败: {}", e);
             }
         }
         // 统一提交所有更改
@@ -190,25 +186,17 @@ impl Utils {
         let doc = awareness.doc_mut();
         let mut txn = doc.transact_mut_with(doc.client_id().clone().to_string());
 
-        // 使用全局注册表应用所有事务中的步骤
-        let registry = Mapper::global_registry();
+        // 使用新版本的转换API应用所有事务中的步骤
+        let context = crate::mapping::create_context(
+            "bulk_transaction_client".to_string(),
+            "bulk_transaction_user".to_string(),
+        );
 
         for tr in transactions {
             let steps = &tr.steps;
             for step in steps {
-                if let Some(converter) = registry.find_converter(step.as_ref())
-                {
-                    if let Err(e) =
-                        converter.apply_to_yrs_txn(step.as_ref(), &mut txn)
-                    {
-                        tracing::error!("🔄 应用步骤到 Yrs 事务失败: {}", e);
-                    }
-                } else {
-                    let type_name = std::any::type_name_of_val(step.as_ref());
-                    tracing::warn!(
-                        "🔄 应用步骤到 Yrs 事务失败: 没有找到步骤的转换器: {}",
-                        type_name
-                    );
+                if let Err(e) = crate::mapping::convert_step(step.as_ref(), &mut txn, &context) {
+                    tracing::error!("🔄 应用步骤到 Yrs 事务失败: {}", e);
                 }
             }
         }

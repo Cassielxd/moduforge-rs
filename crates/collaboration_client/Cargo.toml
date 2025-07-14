@@ -34,3 +34,6 @@ moduforge-state = {version = "0.4.9", path = "../state"}
 moduforge-transform = {version = "0.4.9", path = "../transform"}
 moduforge-core = {version = "0.4.9", path = "../core"}
 moduforge-macros = {version = "0.4.9", path = "../macro"}
+
+# 新增依赖用于静态分发 StepConverter
+ctor = "0.2"
