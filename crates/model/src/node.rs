@@ -2,6 +2,7 @@ use super::attrs::Attrs;
 use super::mark::Mark;
 use super::types::NodeId;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 /// 基础节点定义，任何数据都可以认为是节点
 ///
 /// # 属性
@@ -79,5 +80,70 @@ impl Node {
     /// 返回节点包含的子节点数量
     pub fn child_count(&self) -> usize {
         self.content.len()
+    }
+    /// 更新节点属性
+    ///
+    /// # 参数
+    ///
+    /// * `new_values` - 新的属性值
+    ///
+    /// # 返回值
+    pub fn update_attr(&self, new_values: im::HashMap<String, Value>) -> Self {
+        let mut new_node = self.clone();
+        let new_attrs = self.attrs.update(new_values);
+        new_node.attrs = new_attrs;
+        new_node
+    }
+    pub fn insert_content_at_index(&self, index: usize, node_id: &str) -> Self {
+        let mut new_node = self.clone();
+        new_node.content.insert(index, node_id.into());
+        new_node
+    }
+    pub fn insert_contents(&self, node_ids: &Vec<String>) -> Self {
+        let mut new_node = self.clone();
+        for node_id in node_ids {
+            new_node.content.push_back(node_id.into());
+        }
+        new_node
+    }
+    pub fn insert_content(&self, node_id: &str) -> Self {
+        let mut new_node = self.clone();
+        new_node.content.push_back(node_id.into());
+        new_node
+    }
+
+    pub fn remove_mark_by_name(&self, mark_name: &str) -> Self {
+        let mut new_node = self.clone();
+        new_node.marks = new_node
+            .marks
+            .iter()
+            .filter(|&m| m.r#type != mark_name)
+            .cloned()
+            .collect();
+        new_node
+    }
+    pub fn remove_mark(&self, mark_types: &[String]) -> Self {
+        let mut new_node = self.clone();
+        new_node.marks = new_node
+            .marks
+            .iter()
+            .filter(|&m| !mark_types.contains(&m.r#type))
+            .cloned()
+            .collect();
+        new_node
+    }
+    pub fn add_marks(&self, marks: &Vec<Mark>) -> Self {
+        let mark_types =
+            marks.iter().map(|m| m.r#type.clone()).collect::<Vec<String>>();
+        let mut new_node = self.clone();
+        //如果存在相同类型的mark，则覆盖
+        new_node.marks = new_node
+            .marks
+            .iter()
+            .filter(|m| !mark_types.contains(&m.r#type))
+            .cloned()
+            .collect();
+        new_node.marks.extend(marks.iter().map(|m| m.clone()));
+        new_node
     }
 }

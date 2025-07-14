@@ -34,7 +34,7 @@ pub trait Command: Send + Sync + Debug {
     fn name(&self) -> String;
 }
 /// 事务结构体，用于管理文档的修改操作
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Transaction {
     /// 存储元数据的哈希表，支持任意类型数据
     pub meta: im::HashMap<String, serde_json::Value>,
@@ -42,6 +42,12 @@ pub struct Transaction {
     pub id: u64,
     transform: Transform,
 }
+impl Debug for Transaction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Transaction {{ id: {}}}", self.id)
+    }
+}
+
 unsafe impl Send for Transaction {}
 unsafe impl Sync for Transaction {}
 impl Deref for Transaction {

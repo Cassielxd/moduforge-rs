@@ -237,10 +237,7 @@ impl Tree {
         let node = self.nodes[shard_index]
             .get(id)
             .ok_or(error_helpers::node_not_found(id.clone()))?;
-        let old_values = node.attrs.clone();
-        let mut new_node = node.as_ref().clone();
-        let new_attrs = old_values.update(new_values);
-        new_node.attrs = new_attrs.clone();
+        let new_node = node.as_ref().update_attr(new_values);
         self.nodes[shard_index] =
             self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
         Ok(())
@@ -341,11 +338,16 @@ impl Tree {
         let parent = self.nodes[parent_shard_index]
             .get(parent_id)
             .ok_or(error_helpers::parent_not_found(parent_id.clone()))?;
-        let mut new_parent = parent.as_ref().clone();
-        new_parent.content.insert(index, node.id.clone());
+        let  new_parent = parent.as_ref().insert_content_at_index(index, &node.id);
+        //更新父节点
         self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
             .update(parent_id.clone(), Arc::new(new_parent));
+        //更新父子关系映射
         self.parent_map.insert(node.id.clone(), parent_id.clone());
+        //更新子节点
+        let shard_index = self.get_shard_index(&node.id);
+        self.nodes[shard_index] = self.nodes[shard_index]
+            .update(node.id.clone(), Arc::new(node.clone()));
         Ok(())
     }
     pub fn add_node(
@@ -357,16 +359,26 @@ impl Tree {
         let parent = self.nodes[parent_shard_index]
             .get(parent_id)
             .ok_or(error_helpers::parent_not_found(parent_id.clone()))?;
-        let mut new_parent = parent.as_ref().clone();
-        new_parent.content.push_back(nodes[0].id.clone());
+        let node_ids = nodes.iter().map(|n| n.id.clone()).collect();
+        // 更新父节点 - 添加所有节点的ID到content中
+        let new_parent = parent.as_ref().insert_contents(&node_ids);
+        
+        // 更新父节点到分片中
         self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
             .update(parent_id.clone(), Arc::new(new_parent));
-        self.parent_map.insert(nodes[0].id.clone(), parent_id.clone());
+        
+        // 更新所有子节点
         for node in nodes {
-            let shard_index = self.get_shard_index(&node.id);
+            // 设置当前节点的父子关系映射
+            self.parent_map.insert(node.id.clone(), parent_id.clone());
+            
+            // 设置当前节点的子节点的父子关系映射
             for child_id in &node.content {
                 self.parent_map.insert(child_id.clone(), node.id.clone());
             }
+            
+            // 将节点添加到对应的分片中
+            let shard_index = self.get_shard_index(&node.id);
             self.nodes[shard_index] = self.nodes[shard_index]
                 .update(node.id.clone(), Arc::new(node.clone()));
         }
@@ -451,13 +463,7 @@ impl Tree {
         let node = self.nodes[shard_index]
             .get(id)
             .ok_or(error_helpers::node_not_found(id.clone()))?;
-        let mut new_node = node.as_ref().clone();
-        new_node.marks = new_node
-            .marks
-            .iter()
-            .filter(|&m| m.r#type != mark_name)
-            .cloned()
-            .collect();
+        let new_node = node.as_ref().remove_mark_by_name(mark_name);
         self.nodes[shard_index] =
             self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
         Ok(())
@@ -478,13 +484,7 @@ impl Tree {
         let node = self.nodes[shard_index]
             .get(id)
             .ok_or(error_helpers::node_not_found(id.clone()))?;
-        let mut new_node = node.as_ref().clone();
-        new_node.marks = new_node
-            .marks
-            .iter()
-            .filter(|&m| !mark_types.contains(&m.r#type))
-            .cloned()
-            .collect();
+        let new_node = node.as_ref().remove_mark(mark_types);
         self.nodes[shard_index] =
             self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
         Ok(())
@@ -499,17 +499,7 @@ impl Tree {
         let node = self.nodes[shard_index]
             .get(id)
             .ok_or(error_helpers::node_not_found(id.clone()))?;
-        let mut new_node = node.as_ref().clone();
-        //如果存在相同类型的mark，则覆盖
-        let mark_types =
-            marks.iter().map(|m| m.r#type.clone()).collect::<Vec<String>>();
-        new_node.marks = new_node
-            .marks
-            .iter()
-            .filter(|m| !mark_types.contains(&m.r#type))
-            .cloned()
-            .collect();
-        new_node.marks.extend(marks.iter().map(|m| m.clone()));
+        let new_node = node.as_ref().add_marks(marks);
         self.nodes[shard_index] =
             self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
         Ok(())
@@ -552,26 +542,8 @@ impl Tree {
             // 确保position不超过当前content的长度
             let insert_pos = pos.min(new_target_parent.content.len());
 
-            if insert_pos == new_target_parent.content.len() {
-                // 在末尾插入
-                new_target_parent.content.push_back(node_id.clone());
-            } else {
-                // 在指定位置插入
-                let mut new_content = im::Vector::new();
-
-                // 添加position之前的所有元素
-                for (i, child_id) in
-                    new_target_parent.content.iter().enumerate()
-                {
-                    if i == insert_pos {
-                        // 在这个位置插入新节点
-                        new_content.push_back(node_id.clone());
-                    }
-                    new_content.push_back(child_id.clone());
-                }
-
-                new_target_parent.content = new_content;
-            }
+            // 在指定位置插入节点
+            new_target_parent.content.insert(insert_pos, node_id.clone());
         } else {
             // 没有指定位置，添加到末尾
             new_target_parent.content.push_back(node_id.clone());
@@ -680,11 +652,6 @@ impl Tree {
             .update(parent_id.clone(), Arc::new(new_parent));
         let mut remove_nodes = Vec::new();
         self.remove_subtree(&remove_node_id, &mut remove_nodes)?;
-        for node in remove_nodes {
-            let shard_index = self.get_shard_index(&node.id);
-            self.nodes[shard_index].remove(&node.id);
-            self.parent_map.remove(&node.id);
-        }
         Ok(())
     }
 
