@@ -18,7 +18,7 @@ use metrics_exporter_prometheus::PrometheusBuilder;
 // 使用已定义的模块
 #[allow(unused_imports)]
 use crate::resources::*;
-use crate::plugins::*;
+use crate::{event_handler::DemoEventHandler, plugins::*};
 use crate::edit_commands::*;
 use crate::middleware::*;
 use crate::document_nodes::*;
@@ -180,6 +180,7 @@ pub async fn run_simple_demo() -> Result<()> {
         ])
         .middleware_stack(middleware_stack)
         .history_limit(50)
+        .add_event_handler(Arc::new(DemoEventHandler))
         .build();
 
     let mut editor = ForgeAsyncRuntime::create(options)
@@ -352,7 +353,7 @@ pub async fn run_simple_demo() -> Result<()> {
     println!("   ✅ 属性系统: 节点支持丰富的配置属性(对齐、缩进、样式等)");
 
     println!("\n🎉 ModuForge-RS 多插件协作演示完成!");
-
+    editor.shutdown().await?;
     // 手动释放编辑器避免运行时冲突
     std::mem::drop(editor);
 

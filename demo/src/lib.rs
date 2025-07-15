@@ -6,3 +6,4 @@ pub mod plugins;
 pub mod resources;
 pub mod simple_demo;
 pub mod workflow_middleware;
+pub mod event_handler;
