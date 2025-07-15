@@ -36,12 +36,24 @@ unsafe impl Send for ForgeRuntime {}
 unsafe impl Sync for ForgeRuntime {}
 impl ForgeRuntime {
     /// 创建新的编辑器实例
-    /// options: 编辑器配置选项
+    /// 
+    /// 此方法会自动从以下位置加载XML schema配置：
+    /// 1. 优先使用 `config.extension.xml_schema_paths` 中配置的路径
+    /// 2. 如果没有配置，则尝试加载默认的 `schema/main.xml`
+    /// 3. 如果都没有，则使用默认配置
+    /// 
+    /// # 参数
+    /// * `options` - 编辑器配置选项
+    /// 
+    /// # 返回值
+    /// * `ForgeResult<Self>` - 编辑器实例或错误
     pub async fn create(options: RuntimeOptions) -> ForgeResult<Self> {
         Self::create_with_config(options, ForgeConfig::default()).await
     }
 
-    /// 从XML schema文件创建编辑器实例
+
+
+    /// 从指定路径的XML schema文件创建编辑器实例
     ///
     /// # 参数
     /// * `xml_schema_path` - XML schema文件路径
@@ -55,31 +67,21 @@ impl ForgeRuntime {
     /// ```rust
     /// use mf_core::ForgeRuntime;
     ///
-    /// // 使用默认选项
-    /// let runtime = ForgeRuntime::from_xml_schema(
+    /// // 从指定路径加载schema
+    /// let runtime = ForgeRuntime::from_xml_schema_path(
     ///     "./schemas/document.xml",
     ///     None,
     ///     None
     /// ).await?;
-    ///
-    /// // 使用自定义选项
-    /// let mut options = RuntimeOptions::default();
-    /// options.set_history_limit(Some(200));
-    /// let runtime = ForgeRuntime::from_xml_schema(
-    ///     "./schemas/document.xml",
-    ///     Some(options),
-    ///     None
-    /// ).await?;
     /// ```
-    pub async fn from_xml_schema(
+    pub async fn from_xml_schema_path(
         xml_schema_path: &str,
         options: Option<RuntimeOptions>,
         config: Option<ForgeConfig>,
     ) -> ForgeResult<Self> {
-        let extension_manager = ExtensionManager::from_xml_file(xml_schema_path)?;
-        let final_options = Self::merge_options_with_extensions(options, extension_manager);
-
-        Self::create_with_config(final_options, config.unwrap_or_default()).await
+        let mut config = config.unwrap_or_default();
+        config.extension.xml_schema_paths = vec![xml_schema_path.to_string()];
+        Self::create_with_config(options.unwrap_or_default(), config).await
     }
 
     /// 合并RuntimeOptions和ExtensionManager
@@ -138,10 +140,9 @@ impl ForgeRuntime {
         options: Option<RuntimeOptions>,
         config: Option<ForgeConfig>,
     ) -> ForgeResult<Self> {
-        let extension_manager = ExtensionManager::from_xml_files(xml_schema_paths)?;
-        let final_options = Self::merge_options_with_extensions(options, extension_manager);
-
-        Self::create_with_config(final_options, config.unwrap_or_default()).await
+        let mut config = config.unwrap_or_default();
+        config.extension.xml_schema_paths = xml_schema_paths.iter().map(|s| s.to_string()).collect();
+        Self::create_with_config(options.unwrap_or_default(), config).await
     }
 
     /// 从XML内容字符串创建编辑器实例
@@ -180,14 +181,28 @@ impl ForgeRuntime {
     }
 
     /// 使用指定配置创建编辑器实例
+    /// 
+    /// 此方法会自动从以下位置加载XML schema配置：
+    /// 1. 优先使用 `config.extension.xml_schema_paths` 中配置的路径
+    /// 2. 如果没有配置，则尝试加载默认的 `schema/main.xml`
+    /// 3. 如果都没有，则使用默认配置
+    /// 
+    /// # 参数
+    /// * `options` - 编辑器配置选项
+    /// * `config` - 编辑器配置
+    /// 
+    /// # 返回值
+    /// * `ForgeResult<Self>` - 编辑器实例或错误
     pub async fn create_with_config(
         options: RuntimeOptions,
         config: ForgeConfig,
     ) -> ForgeResult<Self> {
         let start_time = Instant::now();
         info!("正在创建新的编辑器实例");
-        let extension_manager =
-            ExtensionManager::new(&options.get_extensions())?;
+        
+        // 构建扩展管理器 - 自动处理XML schema
+        let extension_manager = Self::create_extension_manager(&options, &config)?;
+        
         debug!("已初始化扩展管理器");
 
         let event_bus = EventBus::with_config(config.event.clone());
@@ -250,6 +265,98 @@ impl ForgeRuntime {
             })?;
         debug!("已广播创建事件");
         Ok(())
+    }
+
+    /// 创建扩展管理器 - 自动处理XML schema配置
+    /// 
+    /// # 参数
+    /// * `options` - 运行时选项
+    /// * `config` - 编辑器配置
+    /// 
+    /// # 返回值
+    /// * `ForgeResult<ExtensionManager>` - 扩展管理器实例或错误
+    fn create_extension_manager(
+        options: &RuntimeOptions,
+        config: &ForgeConfig,
+    ) -> ForgeResult<ExtensionManager> {
+        // 检查是否有配置的XML schema路径
+        if !config.extension.xml_schema_paths.is_empty() {
+            debug!("使用配置的XML schema路径: {:?}", config.extension.xml_schema_paths);
+            
+            // 转换为字符串引用
+            let paths: Vec<&str> = config.extension.xml_schema_paths.iter().map(|s| s.as_str()).collect();
+            let extension_manager = ExtensionManager::from_xml_files(&paths)?;
+            
+            // 合并现有的扩展
+            let merged_extensions = Self::merge_extensions_with_xml(options, extension_manager)?;
+            return Ok(merged_extensions);
+        }
+
+        // 检查默认的 schema/main.xml 文件
+        let default_schema_path = "schema/main.xml";
+        if std::path::Path::new(default_schema_path).exists() {
+            debug!("使用默认的 schema 文件: {}", default_schema_path);
+            let extension_manager = ExtensionManager::from_xml_file(default_schema_path)?;
+            let merged_extensions = Self::merge_extensions_with_xml(options, extension_manager)?;
+            return Ok(merged_extensions);
+        }
+
+        // 没有找到任何XML schema，使用默认配置
+        debug!("未找到XML schema配置，使用默认扩展");
+        ExtensionManager::new(&options.get_extensions())
+    }
+
+    /// 合并XML扩展和现有扩展
+    /// 
+    /// # 参数
+    /// * `options` - 运行时选项
+    /// * `xml_extension_manager` - 从XML加载的扩展管理器
+    /// 
+    /// # 返回值
+    /// * `ForgeResult<ExtensionManager>` - 合并后的扩展管理器
+    fn merge_extensions_with_xml(
+        options: &RuntimeOptions,
+        xml_extension_manager: ExtensionManager,
+    ) -> ForgeResult<ExtensionManager> {
+        let schema = xml_extension_manager.get_schema();
+        let mut all_extensions = Vec::new();
+
+        // 先添加XML扩展（优先级更高）
+        for (name, node_type) in &schema.nodes {
+            let node = crate::node::Node::create(name, node_type.spec.clone());
+            all_extensions.push(crate::types::Extensions::N(node));
+        }
+
+        for (name, mark_type) in &schema.marks {
+            let mark = crate::mark::Mark::new(name, mark_type.spec.clone());
+            all_extensions.push(crate::types::Extensions::M(mark));
+        }
+
+        // 再添加现有扩展（避免重复）
+        for ext in options.get_extensions() {
+            let name = match &ext {
+                crate::types::Extensions::N(node) => &node.name,
+                crate::types::Extensions::M(mark) => &mark.name,
+                crate::types::Extensions::E(_) => {
+                    // 直接添加事件扩展，不需要检查重复
+                    all_extensions.push(ext);
+                    continue;
+                }
+            };
+            
+            // 检查是否已经存在
+            let exists = match &ext {
+                crate::types::Extensions::N(_) => schema.nodes.contains_key(name),
+                crate::types::Extensions::M(_) => schema.marks.contains_key(name),
+                crate::types::Extensions::E(_) => false, // 事件扩展总是添加
+            };
+
+            if !exists {
+                all_extensions.push(ext);
+            }
+        }
+
+        ExtensionManager::new(&all_extensions)
     }
 
     /// 销毁编辑器实例

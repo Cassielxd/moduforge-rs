@@ -545,7 +545,7 @@ impl XmlSchemaParser {
     }
 
     /// 使用上下文解析文件为Extensions（支持global_attributes）
-    fn parse_file_to_extensions_with_context(
+    pub fn parse_file_to_extensions_with_context(
         file_path: &str,
         context: &mut MultiFileParseContext
     ) -> XmlSchemaResult<Vec<Extensions>> {
@@ -640,7 +640,7 @@ impl XmlSchemaParser {
     }
 
     /// 使用上下文解析文件（支持引用）
-    fn parse_file_with_context(
+    pub fn parse_file_with_context(
         file_path: &str,
         context: &mut MultiFileParseContext
     ) -> XmlSchemaResult<SchemaSpec> {
@@ -744,7 +744,7 @@ impl XmlSchemaParser {
     }
 
     /// 从SchemaSpec转换为Extensions
-    fn convert_to_extensions_from_spec(schema_spec: SchemaSpec) -> XmlSchemaResult<Vec<Extensions>> {
+    pub fn convert_to_extensions_from_spec(schema_spec: SchemaSpec) -> XmlSchemaResult<Vec<Extensions>> {
         let xml_schema = XmlSchema {
             top_node: schema_spec.top_node,
             nodes: Some(XmlNodes {
@@ -1098,7 +1098,7 @@ impl XmlSchemaParser {
     }
 
     /// 解析属性默认值
-    fn parse_attribute_value(value_str: &str) -> XmlSchemaResult<Value> {
+    pub fn parse_attribute_value(value_str: &str) -> XmlSchemaResult<Value> {
         // 尝试解析为JSON值
         if let Ok(json_value) = serde_json::from_str::<Value>(value_str) {
             return Ok(json_value);

@@ -102,10 +102,11 @@ impl Schema {
             let content_expr = type_.spec.content.as_deref().unwrap_or("");
             let mark_expr = type_.spec.marks.as_deref();
 
+            let content_expr_string = content_expr.to_string();
             let content_match = content_expr_cache
-                .entry(content_expr.to_string())
+                .entry(content_expr_string.clone())
                 .or_insert_with(|| {
-                    ContentMatch::parse(content_expr.to_string(), &nodes)
+                    ContentMatch::parse(content_expr_string, &nodes)
                 })
                 .clone();
 
@@ -113,7 +114,7 @@ impl Schema {
                 Some("_") => None,
                 Some(expr) => {
                     let marks_result = gather_marks(
-                        &schema,
+                        &marks,
                         expr.split_whitespace().collect(),
                     );
                     match marks_result {
@@ -180,28 +181,30 @@ pub struct AttributeSpec {
 /// 收集标记类型
 /// 根据给定的标记名称列表，收集对应的标记类型
 fn gather_marks<'a>(
-    schema: &'a Schema,
+    marks_map: &'a HashMap<String, MarkType>,
     marks: Vec<&'a str>,
 ) -> Result<Vec<&'a MarkType>, String> {
     let mut found = Vec::new();
 
     for name in marks {
-        if let Some(mark) = schema.marks.get(name) {
+        if let Some(mark) = marks_map.get(name) {
             found.push(mark);
+        } else if name == "_" {
+            // "_" 表示所有标记类型都被允许
+            found.extend(marks_map.values());
         } else {
-            let mut ok = None;
-            for mark_ref in schema.marks.values() {
-                if name == "_"
-                    || mark_ref.spec.group.as_ref().is_some_and(|group| {
-                        group.split_whitespace().any(|g| g == name)
-                    })
-                {
+            // 尝试通过组名匹配标记
+            let mut matched = false;
+            for mark_ref in marks_map.values() {
+                if mark_ref.spec.group.as_ref().is_some_and(|group| {
+                    group.split_whitespace().any(|g| g == name)
+                }) {
                     found.push(mark_ref);
-                    ok = Some(mark_ref);
+                    matched = true;
                     break;
                 }
             }
-            if ok.is_none() {
+            if !matched {
                 return Err(format!("未知的标记类型: '{}'", name));
             }
         }

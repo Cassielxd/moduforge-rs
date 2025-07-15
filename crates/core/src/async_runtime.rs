@@ -88,12 +88,24 @@ impl DerefMut for ForgeAsyncRuntime {
 }
 impl ForgeAsyncRuntime {
     /// 创建新的编辑器实例
-    /// options: 编辑器配置选项
+    /// 
+    /// 此方法会自动从以下位置加载XML schema配置：
+    /// 1. 优先使用 `config.extension.xml_schema_paths` 中配置的路径
+    /// 2. 如果没有配置，则尝试加载默认的 `schema/main.xml`
+    /// 3. 如果都没有，则使用默认配置
+    /// 
+    /// # 参数
+    /// * `options` - 编辑器配置选项
+    /// 
+    /// # 返回值
+    /// * `ForgeResult<Self>` - 异步编辑器实例或错误
     pub async fn create(options: RuntimeOptions) -> ForgeResult<Self> {
         Self::create_with_config(options, ForgeConfig::default()).await
     }
 
-    /// 从XML schema文件创建异步编辑器实例
+
+
+    /// 从指定路径的XML schema文件创建异步编辑器实例
     ///
     /// # 参数
     /// * `xml_schema_path` - XML schema文件路径
@@ -107,22 +119,21 @@ impl ForgeAsyncRuntime {
     /// ```rust
     /// use mf_core::ForgeAsyncRuntime;
     ///
-    /// let runtime = ForgeAsyncRuntime::from_xml_schema(
+    /// // 从指定路径加载schema
+    /// let runtime = ForgeAsyncRuntime::from_xml_schema_path(
     ///     "./schemas/document.xml",
     ///     None,
     ///     None
     /// ).await?;
     /// ```
-    pub async fn from_xml_schema(
+    pub async fn from_xml_schema_path(
         xml_schema_path: &str,
         options: Option<RuntimeOptions>,
         config: Option<ForgeConfig>,
     ) -> ForgeResult<Self> {
-        let base = ForgeRuntime::from_xml_schema(xml_schema_path, options, config).await?;
-        Ok(ForgeAsyncRuntime {
-            base,
-            flow_engine: FlowEngine::new().await?,
-        })
+        let mut config = config.unwrap_or_default();
+        config.extension.xml_schema_paths = vec![xml_schema_path.to_string()];
+        Self::create_with_config(options.unwrap_or_default(), config).await
     }
 
     /// 从多个XML schema文件创建异步编辑器实例
@@ -139,11 +150,9 @@ impl ForgeAsyncRuntime {
         options: Option<RuntimeOptions>,
         config: Option<ForgeConfig>,
     ) -> ForgeResult<Self> {
-        let base = ForgeRuntime::from_xml_schemas(xml_schema_paths, options, config).await?;
-        Ok(ForgeAsyncRuntime {
-            base,
-            flow_engine: FlowEngine::new().await?,
-        })
+        let mut config = config.unwrap_or_default();
+        config.extension.xml_schema_paths = xml_schema_paths.iter().map(|s| s.to_string()).collect();
+        Self::create_with_config(options.unwrap_or_default(), config).await
     }
 
     /// 从XML内容字符串创建异步编辑器实例
@@ -168,6 +177,18 @@ impl ForgeAsyncRuntime {
     }
 
     /// 使用指定配置创建异步编辑器实例
+    /// 
+    /// 此方法会自动从以下位置加载XML schema配置：
+    /// 1. 优先使用 `config.extension.xml_schema_paths` 中配置的路径
+    /// 2. 如果没有配置，则尝试加载默认的 `schema/main.xml`
+    /// 3. 如果都没有，则使用默认配置
+    /// 
+    /// # 参数
+    /// * `options` - 编辑器配置选项
+    /// * `config` - 编辑器配置
+    /// 
+    /// # 返回值
+    /// * `ForgeResult<Self>` - 异步编辑器实例或错误
     pub async fn create_with_config(
         options: RuntimeOptions,
         config: ForgeConfig,
