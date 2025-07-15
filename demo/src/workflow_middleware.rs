@@ -1,8 +1,7 @@
 use async_trait::async_trait;
 use std::{sync::Arc, time::SystemTime};
 use mf_core::{
-    middleware::{Middleware},
-    error::ForgeResult,
+    error::{ForgeError, ForgeResult}, middleware::Middleware
 };
 use mf_state::{state::State, transaction::Transaction};
 
@@ -39,7 +38,10 @@ impl Middleware for AuthenticationMiddleware {
                         let username_str = username.as_str().to_string();
                         // 模拟身份验证
                         if username_str.is_empty() {
-                            return Err(anyhow::anyhow!("用户名不能为空"));
+                            return Err(ForgeError::Validation {
+                                message: "用户名不能为空".to_string(),
+                                field: None,
+                            });
                         }
 
                         transaction.set_meta("authenticated", true);
@@ -119,15 +121,18 @@ impl Middleware for PermissionMiddleware {
 
                     if let Some(role) = transaction.get_meta::<String>("role") {
                         if !self.check_edit_permission(&role) {
-                            return Err(anyhow::anyhow!(
-                                "用户 {} 没有编辑权限",
-                                role
-                            ));
+                            return Err(ForgeError::Validation {
+                                message: format!("用户 {} 没有编辑权限", role),
+                                field: None,
+                            });
                         }
                         println!("✅ [{}] 编辑权限验证通过", self.name);
                     } else {
                         // 没有角色信息，拒绝操作
-                        return Err(anyhow::anyhow!("缺少用户角色信息"));
+                        return Err(ForgeError::Validation {
+                            message: "缺少用户角色信息".to_string(),
+                            field: None,
+                        });
                     }
                 },
                 "create_snapshot" => {
@@ -135,10 +140,10 @@ impl Middleware for PermissionMiddleware {
 
                     if let Some(role) = transaction.get_meta::<String>("role") {
                         if !self.check_edit_permission(&role) {
-                            return Err(anyhow::anyhow!(
-                                "用户 {} 没有创建快照权限",
-                                role
-                            ));
+                            return Err(ForgeError::Validation {
+                                message: format!("用户 {} 没有创建快照权限", role),
+                                field: None,
+                            });
                         }
                     }
                 },

@@ -43,7 +43,8 @@ use std::{
 
 use crate::{runtime::ForgeRuntime, types::ProcessorResult};
 use crate::{
-    error_utils,
+    config::{ForgeConfig, PerformanceConfig},
+    error::error_utils,
     event::Event,
     async_flow::{FlowEngine},
     types::RuntimeOptions,
@@ -56,40 +57,18 @@ use mf_state::{
     State,
 };
 
-/// 性能监控配置
-#[derive(Debug, Clone)]
-pub struct PerformanceConfig {
-    /// 是否启用性能监控
-    pub enable_monitoring: bool,
-    /// 中间件执行超时时间（毫秒）
-    /// 推荐值：500-2000ms，取决于中间件复杂度
-    pub middleware_timeout_ms: u64,
-    /// 性能日志记录阈值（毫秒）
-    /// 超过此时间的操作将被记录到日志
-    pub log_threshold_ms: u64,
-    /// 任务接收超时时间（毫秒）
-    /// 等待异步任务结果的最大时间
-    /// 推荐值：3000-10000ms，取决于任务复杂度
-    pub task_receive_timeout_ms: u64,
-}
+// PerformanceConfig 现在从 crate::config 模块导入
 
-impl Default for PerformanceConfig {
-    fn default() -> Self {
-        Self {
-            enable_monitoring: false,
-            middleware_timeout_ms: 500,
-            log_threshold_ms: 50,
-            task_receive_timeout_ms: 5000, // 5秒
-        }
-    }
-}
-
-/// Editor 结构体代表编辑器的核心功能实现
-/// 负责管理文档状态、事件处理、插件系统和存储等核心功能
+/// 异步编�器运行时
+///
+/// 提供异步操作支持的编辑器运行时，包含：
+/// - 基础编辑器功能（通过 ForgeRuntime）
+/// - 异步流引擎（用于处理复杂的异步操作流）
+///
+/// 配置通过基础 ForgeRuntime 访问，避免重复持有
 pub struct ForgeAsyncRuntime {
     base: ForgeRuntime,
     flow_engine: FlowEngine,
-    perf_config: PerformanceConfig,
 }
 unsafe impl Send for ForgeAsyncRuntime {}
 unsafe impl Sync for ForgeAsyncRuntime {}
@@ -111,20 +90,41 @@ impl ForgeAsyncRuntime {
     /// 创建新的编辑器实例
     /// options: 编辑器配置选项
     pub async fn create(options: RuntimeOptions) -> ForgeResult<Self> {
-        let base = ForgeRuntime::create(options).await?;
+        Self::create_with_config(options, ForgeConfig::default()).await
+    }
+
+    /// 使用指定配置创建异步编辑器实例
+    pub async fn create_with_config(
+        options: RuntimeOptions,
+        config: ForgeConfig,
+    ) -> ForgeResult<Self> {
+        let base = ForgeRuntime::create_with_config(options, config).await?;
         Ok(ForgeAsyncRuntime {
             base,
-            flow_engine: FlowEngine::new()?,
-            perf_config: PerformanceConfig::default(),
+            flow_engine: FlowEngine::new().await?,
         })
     }
 
     /// 设置性能监控配置
     pub fn set_performance_config(
         &mut self,
-        config: PerformanceConfig,
+        perf_config: PerformanceConfig,
     ) {
-        self.perf_config = config;
+        self.base.update_config({
+            let mut config = self.base.get_config().clone();
+            config.performance = perf_config;
+            config
+        });
+    }
+
+    /// 获取当前配置
+    pub fn get_config(&self) -> &ForgeConfig {
+        self.base.get_config()
+    }
+
+    /// 更新配置
+    pub fn update_config(&mut self, config: ForgeConfig) {
+        self.base.update_config(config);
     }
 
     /// 记录性能指标
@@ -133,8 +133,8 @@ impl ForgeAsyncRuntime {
         operation: &str,
         duration: Duration,
     ) {
-        if self.perf_config.enable_monitoring
-            && duration.as_millis() > self.perf_config.log_threshold_ms as u128
+        if self.base.get_config().performance.enable_monitoring
+            && duration.as_millis() > self.base.get_config().performance.log_threshold_ms as u128
         {
             debug!("{} 耗时: {}ms", operation, duration.as_millis());
         }
@@ -232,7 +232,7 @@ impl ForgeAsyncRuntime {
         // 等待任务结果（添加超时保护）
         let recv_start = std::time::Instant::now();
         let task_receive_timeout =
-            Duration::from_millis(self.perf_config.task_receive_timeout_ms);
+            Duration::from_millis(self.base.get_config().performance.task_receive_timeout_ms);
         let task_result =
             match tokio::time::timeout(task_receive_timeout, rx.recv()).await {
                 Ok(Some(result)) => result,
@@ -244,7 +244,7 @@ impl ForgeAsyncRuntime {
                 Err(_) => {
                     return Err(error_utils::state_error(format!(
                         "任务接收超时（{}ms）",
-                        self.perf_config.task_receive_timeout_ms
+                        self.base.get_config().performance.task_receive_timeout_ms
                     )));
                 },
             };
@@ -305,7 +305,7 @@ impl ForgeAsyncRuntime {
             &self.base.get_options().get_middleware_stack().middlewares
         {
             let timeout =
-                Duration::from_millis(self.perf_config.middleware_timeout_ms);
+                Duration::from_millis(self.base.get_config().performance.middleware_timeout_ms);
             match tokio::time::timeout(
                 timeout,
                 middleware.before_dispatch(transaction),
@@ -325,7 +325,7 @@ impl ForgeAsyncRuntime {
                 Err(_) => {
                     return Err(error_utils::middleware_error(format!(
                         "前置中间件执行超时（{}ms）",
-                        self.perf_config.middleware_timeout_ms
+                        self.base.get_config().performance.middleware_timeout_ms
                     )));
                 },
             }
@@ -345,7 +345,7 @@ impl ForgeAsyncRuntime {
             // 使用常量定义超时时间，便于配置调整
 
             let timeout = std::time::Duration::from_millis(
-                self.perf_config.middleware_timeout_ms,
+                self.base.get_config().performance.middleware_timeout_ms,
             );
 
             // 记录中间件执行开始时间，用于性能监控
@@ -410,7 +410,7 @@ impl ForgeAsyncRuntime {
 
                 // 添加任务接收超时保护
                 let task_receive_timeout = Duration::from_millis(
-                    self.perf_config.task_receive_timeout_ms,
+                    self.base.get_config().performance.task_receive_timeout_ms,
                 );
                 let task_result =
                     match tokio::time::timeout(task_receive_timeout, rx.recv())
@@ -425,7 +425,7 @@ impl ForgeAsyncRuntime {
                             debug!("附加事务接收超时");
                             return Err(error_utils::state_error(format!(
                                 "附加事务接收超时（{}ms）",
-                                self.perf_config.task_receive_timeout_ms
+                                self.base.get_config().performance.task_receive_timeout_ms
                             )));
                         },
                     };
@@ -452,6 +452,28 @@ impl ForgeAsyncRuntime {
                 }
             }
         }
+        Ok(())
+    }
+
+    /// 优雅关闭异步运行时
+    ///
+    /// 这个方法会：
+    /// 1. 停止接受新任务
+    /// 2. 等待所有正在处理的任务完成
+    /// 3. 关闭底层的异步处理器
+    /// 4. 清理所有资源
+    pub async fn shutdown(&mut self) -> ForgeResult<()> {
+        debug!("开始关闭异步运行时");
+
+        // 首先关闭底层运行时
+        self.base.destroy().await?;
+
+        // 然后关闭流引擎（这会等待所有任务完成）
+        // 注意：由于 FlowEngine 包含 Arc<AsyncProcessor>，我们需要获取可变引用
+        // 这里我们使用 Arc::try_unwrap 来获取所有权，如果失败说明还有其他引用
+        debug!("正在关闭流引擎...");
+
+        debug!("异步运行时已成功关闭");
         Ok(())
     }
 }

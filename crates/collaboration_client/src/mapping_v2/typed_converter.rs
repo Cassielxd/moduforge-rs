@@ -19,7 +19,7 @@ where
     ) -> ConversionResult<StepResult>;
 
     /// 验证步骤是否有效（可选实现）
-    fn validate_step(&self, step: &T, context: &ConversionContext) -> ConversionResult<()> {
+    fn validate_step(&self, _step: &T, _context: &ConversionContext) -> ConversionResult<()> {
         // 默认实现：总是有效
         Ok(())
     }

@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use anyhow::anyhow;
+use crate::{error::error_utils, config::ProcessorConfig};
 use mf_state::debug;
 use tokio::sync::{mpsc, oneshot};
 use async_trait::async_trait;
@@ -84,32 +84,7 @@ impl Display for ProcessorError {
 
 impl std::error::Error for ProcessorError {}
 
-/// 任务处理器的配置参数
-/// - max_queue_size: 任务队列的最大容量
-/// - max_concurrent_tasks: 最大并发任务数
-/// - task_timeout: 单个任务的最大执行时间
-/// - max_retries: 最大重试次数
-/// - retry_delay: 重试延迟时间
-#[derive(Clone, Debug)]
-pub struct ProcessorConfig {
-    pub max_queue_size: usize,
-    pub max_concurrent_tasks: usize,
-    pub task_timeout: Duration,
-    pub max_retries: u32,
-    pub retry_delay: Duration,
-}
-
-impl Default for ProcessorConfig {
-    fn default() -> Self {
-        Self {
-            max_queue_size: 1000,
-            max_concurrent_tasks: 10,
-            task_timeout: Duration::from_secs(30),
-            max_retries: 3,
-            retry_delay: Duration::from_secs(1),
-        }
-    }
-}
+// ProcessorConfig 现在从 crate::config 模块导入
 
 /// 任务处理器的统计信息
 /// - total_tasks: 总任务数
@@ -219,7 +194,7 @@ impl<T: Clone + Send + Sync + 'static, O: Clone + Send + Sync + 'static>
         self.queue
             .send(queued_task)
             .await
-            .map_err(|_| anyhow!("队列已经满了"))?;
+            .map_err(|_| error_utils::resource_exhausted_error("任务队列"))?;
 
         let mut stats = self.stats.lock().await;
         stats.total_tasks += 1;
@@ -300,6 +275,19 @@ where
     ) -> Result<O, ProcessorError>;
 }
 
+/// 处理器状态
+#[derive(Debug, Clone, PartialEq)]
+pub enum ProcessorState {
+    /// 未启动
+    NotStarted,
+    /// 运行中
+    Running,
+    /// 正在关闭
+    Shutting,
+    /// 已关闭
+    Shutdown,
+}
+
 /// 异步任务处理器
 /// 负责管理任务队列、并发处理和任务生命周期
 /// - T: 任务类型
@@ -316,6 +304,7 @@ where
     processor: Arc<P>,
     shutdown_tx: Option<oneshot::Sender<()>>,
     handle: Option<tokio::task::JoinHandle<()>>,
+    state: Arc<tokio::sync::Mutex<ProcessorState>>,
 }
 
 impl<T, O, P> AsyncProcessor<T, O, P>
@@ -336,6 +325,7 @@ where
             processor: Arc::new(processor),
             shutdown_tx: None,
             handle: None,
+            state: Arc::new(tokio::sync::Mutex::new(ProcessorState::NotStarted)),
         }
     }
 
@@ -351,10 +341,20 @@ where
 
     /// 启动任务处理器
     /// 创建后台任务来处理队列中的任务
-    pub fn start(&mut self) {
+    pub async fn start(&mut self) -> Result<(), ProcessorError> {
+        let mut state = self.state.lock().await;
+        if *state != ProcessorState::NotStarted {
+            return Err(ProcessorError::InternalError(
+                "处理器已经启动或正在关闭".to_string(),
+            ));
+        }
+        *state = ProcessorState::Running;
+        drop(state);
+
         let queue = self.task_queue.clone();
         let processor = self.processor.clone();
         let config = self.config.clone();
+        let state_ref = self.state.clone();
         let (shutdown_tx, mut shutdown_rx) = oneshot::channel();
 
         self.shutdown_tx = Some(shutdown_tx);
@@ -362,22 +362,79 @@ where
         let handle = tokio::spawn(async move {
             let mut join_set = tokio::task::JoinSet::new();
 
+            // 定义清理函数
+            async fn cleanup_tasks(
+                join_set: &mut tokio::task::JoinSet<()>,
+                timeout: Duration,
+            ) {
+                debug!("开始清理正在运行的任务...");
+
+                // 等待所有任务完成，设置超时
+                let cleanup_start = Instant::now();
+                while !join_set.is_empty() {
+                    if cleanup_start.elapsed() > timeout {
+                        debug!("清理超时，强制中止剩余任务");
+                        join_set.abort_all();
+                        break;
+                    }
+
+                    if let Some(result) = join_set.join_next().await {
+                        if let Err(e) = result {
+                            if !e.is_cancelled() {
+                                debug!("任务执行失败: {}", e);
+                            }
+                        }
+                    }
+                }
+                debug!("任务清理完成");
+            }
+
             loop {
                 select! {
                     // 处理关闭信号
                     _ = &mut shutdown_rx => {
+                        debug!("收到关闭信号，开始优雅关闭");
+                        // 更新状态为正在关闭
+                        {
+                            let mut state = state_ref.lock().await;
+                            *state = ProcessorState::Shutting;
+                        }
+
+                        // 清理所有正在运行的任务
+                        cleanup_tasks(&mut join_set, Duration::from_secs(30)).await;
                         break;
                     }
 
                     // 处理任务完成
                     Some(result) = join_set.join_next() => {
                         if let Err(e) = result {
-                            debug!("任务执行失败: {}", e);
+                            if !e.is_cancelled() {
+                                debug!("任务执行失败: {}", e);
+                            }
                         }
                     }
 
                     // 获取新任务并处理
                     Some((task, task_id, result_tx, _priority, retry_count)) = queue.get_next_ready() => {
+                        // 检查是否正在关闭
+                        {
+                            let state = state_ref.lock().await;
+                            if *state != ProcessorState::Running {
+                                // 如果正在关闭，拒绝新任务
+                                let task_result = TaskResult {
+                                    task_id,
+                                    status: TaskStatus::Cancelled,
+                                    task: Some(task),
+                                    output: None,
+                                    error: Some("处理器正在关闭".to_string()),
+                                    processing_time: Some(Duration::from_millis(0)),
+                                };
+                                queue.update_stats(&task_result).await;
+                                let _ = result_tx.send(task_result).await;
+                                continue;
+                            }
+                        }
+
                         if join_set.len() < config.max_concurrent_tasks {
                             let processor = processor.clone();
                             let config = config.clone();
@@ -446,14 +503,44 @@ where
                     }
                 }
             }
+
+            // 设置最终状态为已关闭
+            {
+                let mut state = state_ref.lock().await;
+                *state = ProcessorState::Shutdown;
+            }
+            debug!("异步处理器已完全关闭");
         });
 
         self.handle = Some(handle);
+        Ok(())
     }
 
     /// 优雅地关闭处理器
     /// 等待所有正在处理的任务完成后再关闭
-    pub fn shutdown(&mut self) -> Result<(), ProcessorError> {
+    pub async fn shutdown(&mut self) -> Result<(), ProcessorError> {
+        // 检查当前状态
+        {
+            let mut state = self.state.lock().await;
+            match *state {
+                ProcessorState::NotStarted => {
+                    return Err(ProcessorError::InternalError(
+                        "处理器尚未启动".to_string(),
+                    ));
+                }
+                ProcessorState::Shutdown => {
+                    return Ok(()); // 已经关闭
+                }
+                ProcessorState::Shutting => {
+                    // 正在关闭，等待完成
+                }
+                ProcessorState::Running => {
+                    *state = ProcessorState::Shutting;
+                }
+            }
+        }
+
+        // 发送关闭信号
         if let Some(shutdown_tx) = self.shutdown_tx.take() {
             shutdown_tx.send(()).map_err(|_| {
                 ProcessorError::InternalError(
@@ -461,7 +548,41 @@ where
                 )
             })?;
         }
+
+        // 等待后台任务完成
+        if let Some(handle) = self.handle.take() {
+            if let Err(e) = handle.await {
+                return Err(ProcessorError::InternalError(format!(
+                    "等待后台任务完成时出错: {}",
+                    e
+                )));
+            }
+        }
+
+        // 确认状态已更新为已关闭
+        {
+            let state = self.state.lock().await;
+            if *state != ProcessorState::Shutdown {
+                return Err(ProcessorError::InternalError(
+                    "关闭过程未正确完成".to_string(),
+                ));
+            }
+        }
+
+        debug!("异步处理器已成功关闭");
         Ok(())
+    }
+
+    /// 获取处理器当前状态
+    pub async fn get_state(&self) -> ProcessorState {
+        let state = self.state.lock().await;
+        state.clone()
+    }
+
+    /// 检查处理器是否正在运行
+    pub async fn is_running(&self) -> bool {
+        let state = self.state.lock().await;
+        *state == ProcessorState::Running
     }
 
     pub async fn get_stats(&self) -> ProcessorStats {
@@ -469,7 +590,10 @@ where
     }
 }
 
-/// 实现Drop特征，确保处理器在销毁时能够优雅关闭
+/// 实现Drop特征，确保处理器在销毁时能够发送关闭信号
+///
+/// 注意：Drop 是同步的，无法等待异步任务完成。
+/// 建议在销毁前显式调用 `shutdown().await` 来确保优雅关闭。
 impl<T, O, P> Drop for AsyncProcessor<T, O, P>
 where
     T: Clone + Send + Sync + 'static,
@@ -477,9 +601,16 @@ where
     P: TaskProcessor<T, O>,
 {
     fn drop(&mut self) {
-        if self.shutdown_tx.is_some() {
-            // 创建一个新的运行时来处理异步关闭
-            let _ = self.shutdown();
+        // 只能发送关闭信号，无法等待异步任务完成
+        if let Some(shutdown_tx) = self.shutdown_tx.take() {
+            let _ = shutdown_tx.send(());
+            debug!("AsyncProcessor Drop: 已发送关闭信号");
+        }
+
+        // 如果有 handle，尝试中止它（非阻塞）
+        if let Some(handle) = self.handle.take() {
+            handle.abort();
+            debug!("AsyncProcessor Drop: 已中止后台任务");
         }
     }
 }
@@ -509,9 +640,10 @@ mod tests {
             task_timeout: Duration::from_secs(1),
             max_retries: 3,
             retry_delay: Duration::from_secs(1),
+            cleanup_timeout: Duration::from_secs(10),
         };
         let mut processor = AsyncProcessor::new(config, TestProcessor);
-        processor.start();
+        processor.start().await.unwrap();
 
         let mut receivers = Vec::new();
         for i in 0..10 {
@@ -525,6 +657,9 @@ mod tests {
             assert!(result.error.is_none());
             assert!(result.output.is_some());
         }
+
+        // 优雅关闭
+        processor.shutdown().await.unwrap();
     }
 
     #[tokio::test]
@@ -535,9 +670,10 @@ mod tests {
             task_timeout: Duration::from_secs(1),
             max_retries: 3,
             retry_delay: Duration::from_secs(1),
+            cleanup_timeout: Duration::from_secs(10),
         };
         let mut processor = AsyncProcessor::new(config, TestProcessor);
-        processor.start();
+        processor.start().await.unwrap();
 
         // Submit some tasks
         let mut receivers = Vec::new();
@@ -547,7 +683,7 @@ mod tests {
         }
 
         // Initiate shutdown
-        processor.shutdown().unwrap();
+        processor.shutdown().await.unwrap();
 
         // Verify all tasks completed
         for mut rx in receivers {
@@ -564,9 +700,10 @@ mod tests {
             task_timeout: Duration::from_secs(1),
             max_retries: 3,
             retry_delay: Duration::from_secs(1),
+            cleanup_timeout: Duration::from_secs(10),
         };
         let mut processor = AsyncProcessor::new(config, TestProcessor);
-        processor.start();
+        processor.start().await.unwrap();
 
         // Submit some tasks
         let mut receivers = Vec::new();
@@ -575,13 +712,17 @@ mod tests {
             receivers.push(rx);
         }
 
-        // Drop the processor, which should trigger shutdown
+        // Drop the processor, which should trigger shutdown signal
         drop(processor);
 
-        // Verify all tasks completed
+        // Verify tasks completed or were cancelled
         for mut rx in receivers {
             let result = rx.recv().await.unwrap();
-            assert_eq!(result.status, TaskStatus::Completed);
+            // Tasks might be completed or cancelled depending on timing
+            assert!(matches!(
+                result.status,
+                TaskStatus::Completed | TaskStatus::Cancelled
+            ));
         }
     }
 }

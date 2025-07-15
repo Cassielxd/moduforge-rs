@@ -199,7 +199,7 @@ impl State {
                 let old_state =
                     seen.as_ref().map(|s| &s[i].state).unwrap_or(self);
                 if n < trs.len() {
-                    if let Some(mut tr) = plugin
+                    if let Some(tr) = plugin
                         .apply_append_transaction(
                             &trs[n..],
                             old_state,

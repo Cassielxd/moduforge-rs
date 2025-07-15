@@ -1,14 +1,12 @@
 use async_trait::async_trait;
 use std::{
     sync::Arc,
-    time::{Instant, SystemTime},
+    time::{SystemTime},
 };
 use mf_core::{
-    middleware::{Middleware},
-    error::ForgeResult,
+    error::{ForgeError, ForgeResult}, middleware::Middleware
 };
 use mf_state::{state::State, transaction::Transaction};
-use anyhow;
 
 /// 日志记录中间件
 /// 记录所有事务的处理过程和结果
@@ -251,7 +249,10 @@ impl Middleware for ValidationMiddleware {
         // 执行基本验证
         if let Err(error) = self.validate_transaction_basic(transaction) {
             println!("❌ [{}] 验证失败: {}", self.name, error);
-            return Err(anyhow::anyhow!("验证失败: {}", error));
+            return Err(ForgeError::Validation {
+                message: error.to_string(),
+                field: None,
+            });
         }
 
         println!("✅ [{}] 事务验证通过", self.name);

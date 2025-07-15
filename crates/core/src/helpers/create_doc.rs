@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use mf_state::StateConfig;
 
-use crate::{types::Content, ForgeResult};
+use crate::{error::ForgeError, types::Content, ForgeResult};
 
 /// 创建文档
 pub async fn create_doc(
@@ -23,7 +23,10 @@ pub async fn create_doc(
     };
     if let Some(doc) = &config.doc {
         if let Err(err) = doc.validate_hierarchy() {
-            return Err(anyhow::anyhow!(err.to_string()));
+            return Err(ForgeError::Validation {
+                message: err.to_string(),
+                field: None,
+            });
         }
     }
     Ok(())

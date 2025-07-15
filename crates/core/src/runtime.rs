@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use crate::{
+    config::ForgeConfig,
     error::{error_utils, ForgeResult},
     event::{Event, EventBus},
     extension_manager::ExtensionManager,
@@ -20,9 +21,6 @@ use mf_state::{
     transaction::{Command, Transaction},
 };
 
-/// 默认中间件超时时间（毫秒）
-const DEFAULT_MIDDLEWARE_TIMEOUT_MS: u64 = 500;
-
 /// Editor 结构体代表编辑器的核心功能实现
 /// 负责管理文档状态、事件处理、插件系统和存储等核心功能
 pub struct ForgeRuntime {
@@ -32,6 +30,7 @@ pub struct ForgeRuntime {
     extension_manager: ExtensionManager,
     history_manager: HistoryManager<HistoryEntryWithMeta>,
     options: RuntimeOptions,
+    config: ForgeConfig,
 }
 unsafe impl Send for ForgeRuntime {}
 unsafe impl Sync for ForgeRuntime {}
@@ -39,28 +38,36 @@ impl ForgeRuntime {
     /// 创建新的编辑器实例
     /// options: 编辑器配置选项
     pub async fn create(options: RuntimeOptions) -> ForgeResult<Self> {
+        Self::create_with_config(options, ForgeConfig::default()).await
+    }
+
+    /// 使用指定配置创建编辑器实例
+    pub async fn create_with_config(
+        options: RuntimeOptions,
+        config: ForgeConfig,
+    ) -> ForgeResult<Self> {
         let start_time = Instant::now();
         info!("正在创建新的编辑器实例");
         let extension_manager =
             ExtensionManager::new(&options.get_extensions())?;
         debug!("已初始化扩展管理器");
 
-        let event_bus = EventBus::new();
+        let event_bus = EventBus::with_config(config.event.clone());
         debug!("已创建文档和事件总线");
         let op_state = GlobalResourceManager::new();
         for op_fn in extension_manager.get_op_fns() {
             op_fn(&op_state)?;
         }
 
-        let mut config = StateConfig {
+        let mut state_config = StateConfig {
             schema: Some(extension_manager.get_schema()),
             doc: None,
             stored_marks: None,
             plugins: Some(extension_manager.get_plugins().clone()),
             resource_manager: Some(Arc::new(op_state)),
         };
-        create_doc::create_doc(&options.get_content(), &mut config).await?;
-        let state: State = State::create(config).await?;
+        create_doc::create_doc(&options.get_content(), &mut state_config).await?;
+        let state: State = State::create(state_config).await?;
 
         let state: Arc<State> = Arc::new(state);
         debug!("已创建编辑器状态");
@@ -70,15 +77,16 @@ impl ForgeRuntime {
             state: state.clone(),
             flow_engine: Arc::new(FlowEngine::new()?),
             extension_manager,
-            history_manager: HistoryManager::new(
+            history_manager: HistoryManager::with_config(
                 HistoryEntryWithMeta::new(
                     state.clone(),
                     "创建工程项目".to_string(),
                     serde_json::Value::Null,
                 ),
-                options.get_history_limit(),
+                config.history.clone(),
             ),
             options,
+            config,
         };
         runtime.init().await?;
         info!("编辑器实例创建成功");
@@ -133,7 +141,7 @@ impl ForgeRuntime {
         for middleware in &self.options.get_middleware_stack().middlewares {
             let start_time = Instant::now();
             let timeout =
-                std::time::Duration::from_millis(DEFAULT_MIDDLEWARE_TIMEOUT_MS);
+                std::time::Duration::from_millis(self.config.performance.middleware_timeout_ms);
             match tokio::time::timeout(
                 timeout,
                 middleware.before_dispatch(transaction),
@@ -158,7 +166,7 @@ impl ForgeRuntime {
                 Err(_) => {
                     return Err(error_utils::middleware_error(format!(
                         "前置中间件执行超时（{}ms）",
-                        DEFAULT_MIDDLEWARE_TIMEOUT_MS
+                        self.config.performance.middleware_timeout_ms
                     )));
                 },
             }
@@ -175,7 +183,7 @@ impl ForgeRuntime {
         for middleware in &self.options.get_middleware_stack().middlewares {
             let start_time = Instant::now();
             let timeout =
-                std::time::Duration::from_millis(DEFAULT_MIDDLEWARE_TIMEOUT_MS);
+                std::time::Duration::from_millis(self.config.performance.middleware_timeout_ms);
             let middleware_result = match tokio::time::timeout(
                 timeout,
                 middleware.after_dispatch(state.clone(), transactions),
@@ -199,7 +207,7 @@ impl ForgeRuntime {
                 Err(_) => {
                     return Err(error_utils::middleware_error(format!(
                         "后置中间件执行超时（{}ms）",
-                        DEFAULT_MIDDLEWARE_TIMEOUT_MS
+                        self.config.performance.middleware_timeout_ms
                     )));
                 },
             };
@@ -397,6 +405,16 @@ impl ForgeRuntime {
         &self.options
     }
 
+    /// 获取当前配置
+    pub fn get_config(&self) -> &ForgeConfig {
+        &self.config
+    }
+
+    /// 更新配置
+    pub fn update_config(&mut self, config: ForgeConfig) {
+        self.config = config;
+    }
+
     pub fn get_state(&self) -> &Arc<State> {
         &self.state
     }
@@ -440,6 +458,7 @@ impl ForgeRuntime {
 }
 impl Drop for ForgeRuntime {
     fn drop(&mut self) {
-        self.event_bus.destroy();
+        // 在 Drop 中只能使用同步方法
+        self.event_bus.destroy_blocking();
     }
 }

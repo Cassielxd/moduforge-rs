@@ -173,7 +173,7 @@ impl StaticConverterRegistry {
     pub fn validate_step(
         &self,
         step: &dyn Step,
-        context: &ConversionContext,
+        _context: &ConversionContext,
     ) -> ConversionResult<()> {
         let step_type_id = step.type_id();
         

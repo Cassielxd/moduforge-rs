@@ -26,6 +26,8 @@
 pub mod async_flow;
 pub mod async_processor;
 pub mod async_runtime;
+pub mod async_utils;
+pub mod config;
 pub mod error;
 pub mod event;
 pub mod extension;
@@ -54,3 +56,19 @@ pub mod state {
 pub mod transform {
     pub use mf_transform::*;
 }
+
+// 公共 API 导出
+pub use async_processor::{AsyncProcessor, ProcessorError, TaskProcessor, TaskResult, TaskStatus};
+pub use async_runtime::ForgeAsyncRuntime;
+pub use config::{
+    ForgeConfig, ForgeConfigBuilder, Environment, ProcessorConfig, PerformanceConfig,
+    EventConfig, HistoryConfig, ExtensionConfig, CacheConfig, ConfigValidationError
+};
+pub use error::ForgeError;
+pub use event::{Event, EventBus, EventHandler};
+pub use extension::Extension;
+pub use extension_manager::ExtensionManager;
+pub use history_manager::{History, HistoryManager};
+pub use runtime::ForgeRuntime;
+pub use sync_processor::{SyncProcessor, TaskProcessor as SyncTaskProcessor};
+pub use types::*;
