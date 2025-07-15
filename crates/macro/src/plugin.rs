@@ -70,7 +70,7 @@ macro_rules! impl_state_field {
             async fn init(
                 &self,
                 config: &StateConfig,
-                instance: Option<&State>,
+                instance: &State,
             ) -> Arc<dyn Resource> {
                 $init_fn(config, instance).await
             }
