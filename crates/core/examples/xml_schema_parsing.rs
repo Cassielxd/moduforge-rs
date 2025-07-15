@@ -2,8 +2,8 @@
 //! 
 //! 本示例展示如何使用XML格式定义Schema，并将其解析为ModuForge可用的结构。
 
-use mf_core::{XmlSchemaParser, XmlSchemaResult};
-use mf_model::schema::Schema;
+use mf_core::{XmlSchemaParser, XmlSchemaResult, Extensions};
+use mf_model::schema::{Schema, SchemaSpec};
 
 fn main() -> XmlSchemaResult<()> {
     println!("=== XML Schema 解析示例 ===\n");
@@ -186,27 +186,146 @@ fn extensions_parsing() -> XmlSchemaResult<()> {
     Ok(())
 }
 
-/// 文件解析示例
+/// 文件解析示例 - 多文件解析
 fn file_parsing_example() -> XmlSchemaResult<()> {
-    println!("\n4. 从文件解析示例:");
-    
-    // 检查示例文件是否存在
-    let file_path = "test-data/xml-schemas/basic-document.xml";
+    println!("\n4. 多文件解析示例:");
+
+    let current_dir = std::env::current_dir().unwrap();
+    println!("   当前工作目录: {:?}", current_dir);
+
+    let file_path = "test-data/xml-schemas/multi-file/main-schema.xml";
     if std::path::Path::new(file_path).exists() {
-        let schema_spec = XmlSchemaParser::parse_from_file(file_path)?;
-        println!("   ✅ 从文件解析成功: {}", file_path);
+        println!("   ✅ 找到多文件schema: {}", file_path);
+
+        // 检查引用的文件是否存在
+        let base_dir = std::path::Path::new(file_path).parent().unwrap();
+        let ref_files = ["base-nodes.xml", "formatting-marks.xml", "link-marks.xml", "table-extension.xml"];
+        for ref_file in &ref_files {
+            let ref_path = base_dir.join(ref_file);
+            if ref_path.exists() {
+                println!("   ✅ 引用文件存在: {}", ref_file);
+            } else {
+                println!("   ❌ 引用文件缺失: {}", ref_file);
+            }
+        }
+
+        // 使用多文件解析方法，支持import/include
+        println!("   开始多文件解析...");
+        let schema_spec = XmlSchemaParser::parse_multi_file(file_path)?;
+        println!("   ✅ 多文件解析成功");
         println!("   - 节点数量: {}", schema_spec.nodes.len());
         println!("   - 标记数量: {}", schema_spec.marks.len());
-        
-        // 也可以解析为Extensions
-        let extensions = XmlSchemaParser::parse_extensions_from_file(file_path)?;
+        println!("   - 顶级节点: {:?}", schema_spec.top_node);
+
+        // 显示具体的节点和标记
+        println!("   - 节点类型: {:?}", schema_spec.nodes.keys().collect::<Vec<_>>());
+        println!("   - 标记类型: {:?}", schema_spec.marks.keys().collect::<Vec<_>>());
+
+        // 解析为Extensions（支持多文件）
+        let extensions = XmlSchemaParser::parse_multi_file_to_extensions(file_path)?;
         println!("   - Extensions数量: {}", extensions.len());
-    } else {
-        println!("   ⚠️  示例文件不存在: {}", file_path);
-        println!("   提示: 请确保在项目根目录运行此示例");
+
+        // 分析Extensions类型
+        let mut node_count = 0;
+        let mut mark_count = 0;
+        let mut extension_count = 0;
+        let mut has_global_attrs = false;
+
+        for ext in &extensions {
+            match ext {
+                Extensions::N(_) => node_count += 1,
+                Extensions::M(_) => mark_count += 1,
+                Extensions::E(extension) => {
+                    extension_count += 1;
+                    if !extension.get_global_attributes().is_empty() {
+                        has_global_attrs = true;
+                        println!("   - 发现全局属性: {} 个", extension.get_global_attributes().len());
+                    }
+                }
+            }
+        }
+
+        println!("   - 节点扩展: {}, 标记扩展: {}, 其他扩展: {}",
+                 node_count, mark_count, extension_count);
+        println!("   - 包含全局属性: {}", has_global_attrs);
+        
+        // 测试不同类型的默认值解析
+        test_attribute_types(&schema_spec);
+        
+        return Ok(());
+    }
+
+    println!("   ⚠️  多文件schema不存在: {}", file_path);
+    println!("   提示: 请确保多文件测试数据存在");
+    Ok(())
+}
+
+/// 测试不同类型的属性默认值解析
+fn test_attribute_types(schema_spec: &SchemaSpec) {
+    println!("\n🔍 属性类型解析测试:");
+    
+    // 测试 codeblock 节点的属性
+    if let Some(codeblock) = schema_spec.nodes.get("codeblock") {
+        if let Some(attrs) = &codeblock.attrs {
+            for (attr_name, attr_spec) in attrs {
+                if let Some(default_value) = &attr_spec.default {
+                    let type_name = match default_value {
+                        serde_json::Value::Bool(b) => format!("Bool({})", b),
+                        serde_json::Value::Number(n) => format!("Number({})", n),
+                        serde_json::Value::String(s) => format!("String(\"{}\")", s),
+                        serde_json::Value::Null => "Null".to_string(),
+                        serde_json::Value::Array(_) => "Array".to_string(),
+                        serde_json::Value::Object(_) => "Object".to_string(),
+                    };
+                    println!("   ✅ codeblock.{}: {}", attr_name, type_name);
+                } else {
+                    println!("   ⚪ codeblock.{}: None", attr_name);
+                }
+            }
+        }
     }
     
-    Ok(())
+    // 测试 list 节点的属性
+    if let Some(list) = schema_spec.nodes.get("list") {
+        if let Some(attrs) = &list.attrs {
+            for (attr_name, attr_spec) in attrs {
+                if let Some(default_value) = &attr_spec.default {
+                    let type_name = match default_value {
+                        serde_json::Value::Bool(b) => format!("Bool({})", b),
+                        serde_json::Value::Number(n) => format!("Number({})", n),
+                        serde_json::Value::String(s) => format!("String(\"{}\")", s),
+                        serde_json::Value::Null => "Null".to_string(),
+                        serde_json::Value::Array(_) => "Array".to_string(),
+                        serde_json::Value::Object(_) => "Object".to_string(),
+                    };
+                    println!("   ✅ list.{}: {}", attr_name, type_name);
+                } else {
+                    println!("   ⚪ list.{}: None", attr_name);
+                }
+            }
+        }
+    }
+    
+    // 测试 highlight 标记的属性
+    if let Some(highlight) = schema_spec.marks.get("highlight") {
+        if let Some(attrs) = &highlight.attrs {
+            for (attr_name, attr_spec) in attrs {
+                if let Some(default_value) = &attr_spec.default {
+                    let type_name = match default_value {
+                        serde_json::Value::Bool(b) => format!("Bool({})", b),
+                        serde_json::Value::Number(n) => format!("Number({})", n),
+                        serde_json::Value::String(s) => format!("String(\"{}\")", s),
+                        serde_json::Value::Null => "Null".to_string(),
+                        serde_json::Value::Array(_) => "Array".to_string(),
+                        serde_json::Value::Object(_) => "Object".to_string(),
+                    };
+                    println!("   ✅ highlight.{}: {}", attr_name, type_name);
+                } else {
+                    println!("   ⚪ highlight.{}: None", attr_name);
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
