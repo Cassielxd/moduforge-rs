@@ -400,9 +400,9 @@ tokio = { version = "1.0", features = ["full"] }
 tokio-tungstenite = "0.20"
 
 # ModuForge core
-moduforge-core = "0.4.10"
-moduforge-state = "0.4.10"
-moduforge-model = "0.4.10"
+moduforge-core = "0.4.11"
+moduforge-state = "0.4.11"
+moduforge-model = "0.4.11"
 
 # Utilities
 serde = { version = "1.0", features = ["derive"] }
