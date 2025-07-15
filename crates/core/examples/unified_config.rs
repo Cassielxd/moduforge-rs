@@ -71,6 +71,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             enable_hot_reload: true,
             max_memory_mb: 300,
             enable_sandbox: true,
+            xml_schema_paths: vec![],
+            enable_xml_auto_reload: false,
+            xml_parse_timeout: Duration::from_secs(5),
         })
         .cache_config(CacheConfig {
             max_entries: 5000,

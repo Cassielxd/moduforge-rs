@@ -93,6 +93,80 @@ impl ForgeAsyncRuntime {
         Self::create_with_config(options, ForgeConfig::default()).await
     }
 
+    /// 从XML schema文件创建异步编辑器实例
+    ///
+    /// # 参数
+    /// * `xml_schema_path` - XML schema文件路径
+    /// * `options` - 可选的RuntimeOptions配置
+    /// * `config` - 可选的ForgeConfig配置
+    ///
+    /// # 返回值
+    /// * `ForgeResult<Self>` - 异步编辑器实例或错误
+    ///
+    /// # 示例
+    /// ```rust
+    /// use mf_core::ForgeAsyncRuntime;
+    ///
+    /// let runtime = ForgeAsyncRuntime::from_xml_schema(
+    ///     "./schemas/document.xml",
+    ///     None,
+    ///     None
+    /// ).await?;
+    /// ```
+    pub async fn from_xml_schema(
+        xml_schema_path: &str,
+        options: Option<RuntimeOptions>,
+        config: Option<ForgeConfig>,
+    ) -> ForgeResult<Self> {
+        let base = ForgeRuntime::from_xml_schema(xml_schema_path, options, config).await?;
+        Ok(ForgeAsyncRuntime {
+            base,
+            flow_engine: FlowEngine::new().await?,
+        })
+    }
+
+    /// 从多个XML schema文件创建异步编辑器实例
+    ///
+    /// # 参数
+    /// * `xml_schema_paths` - XML schema文件路径列表
+    /// * `options` - 可选的RuntimeOptions配置
+    /// * `config` - 可选的ForgeConfig配置
+    ///
+    /// # 返回值
+    /// * `ForgeResult<Self>` - 异步编辑器实例或错误
+    pub async fn from_xml_schemas(
+        xml_schema_paths: &[&str],
+        options: Option<RuntimeOptions>,
+        config: Option<ForgeConfig>,
+    ) -> ForgeResult<Self> {
+        let base = ForgeRuntime::from_xml_schemas(xml_schema_paths, options, config).await?;
+        Ok(ForgeAsyncRuntime {
+            base,
+            flow_engine: FlowEngine::new().await?,
+        })
+    }
+
+    /// 从XML内容字符串创建异步编辑器实例
+    ///
+    /// # 参数
+    /// * `xml_content` - XML schema内容
+    /// * `options` - 可选的RuntimeOptions配置
+    /// * `config` - 可选的ForgeConfig配置
+    ///
+    /// # 返回值
+    /// * `ForgeResult<Self>` - 异步编辑器实例或错误
+    pub async fn from_xml_content(
+        xml_content: &str,
+        options: Option<RuntimeOptions>,
+        config: Option<ForgeConfig>,
+    ) -> ForgeResult<Self> {
+        let base = ForgeRuntime::from_xml_content(xml_content, options, config).await?;
+        Ok(ForgeAsyncRuntime {
+            base,
+            flow_engine: FlowEngine::new().await?,
+        })
+    }
+
     /// 使用指定配置创建异步编辑器实例
     pub async fn create_with_config(
         options: RuntimeOptions,

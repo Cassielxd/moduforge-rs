@@ -54,6 +54,39 @@ pub struct RuntimeOptions {
     middleware_stack: MiddlewareStack,
 }
 impl RuntimeOptions {
+    /// 从ExtensionManager创建RuntimeOptions
+    ///
+    /// # 参数
+    /// * `extension_manager` - ExtensionManager实例
+    ///
+    /// # 返回值
+    /// * `Self` - 新的RuntimeOptions实例
+    pub fn from_extension_manager(extension_manager: crate::extension_manager::ExtensionManager) -> Self {
+        // 从ExtensionManager获取schema并重建extensions
+        let schema = extension_manager.get_schema();
+        let mut extensions = Vec::new();
+
+        // 重建节点扩展
+        for (name, node_type) in &schema.nodes {
+            let node = crate::node::Node::create(name, node_type.spec.clone());
+            extensions.push(Extensions::N(node));
+        }
+
+        // 重建标记扩展
+        for (name, mark_type) in &schema.marks {
+            let mark = crate::mark::Mark::new(name, mark_type.spec.clone());
+            extensions.push(Extensions::M(mark));
+        }
+
+        Self {
+            content: Content::None,
+            extensions,
+            history_limit: None,
+            event_handlers: Vec::new(),
+            middleware_stack: MiddlewareStack::default(),
+        }
+    }
+
     pub fn get_middleware_stack(&self) -> MiddlewareStack {
         self.middleware_stack.clone()
     }

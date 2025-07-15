@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 表格扩展节点定义 -->
+<schema>
+  <nodes>
+    <!-- 表格节点 -->
+    <node name="table" group="block">
+      <desc>表格节点</desc>
+      <content>tablerow+</content>
+      <attrs>
+        <attr name="border" default="1"/>
+        <attr name="width"/>
+        <attr name="caption"/>
+      </attrs>
+    </node>
+    
+    <!-- 表格行节点 -->
+    <node name="tablerow">
+      <desc>表格行节点</desc>
+      <content>tablecell+</content>
+      <attrs>
+        <attr name="type" default="data"/>
+      </attrs>
+    </node>
+    
+    <!-- 表格单元格节点 -->
+    <node name="tablecell">
+      <desc>表格单元格节点</desc>
+      <content>paragraph*</content>
+      <attrs>
+        <attr name="colspan" default="1"/>
+        <attr name="rowspan" default="1"/>
+        <attr name="align" default="left"/>
+      </attrs>
+    </node>
+  </nodes>
+</schema>

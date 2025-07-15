@@ -42,6 +42,7 @@ pub mod metrics;
 pub mod middleware;
 pub mod node;
 pub mod runtime;
+pub mod schema_parser;
 pub mod types;
 pub use error::{ForgeResult, error_utils};
 /// 重命名
@@ -67,8 +68,9 @@ pub use config::{
 pub use error::ForgeError;
 pub use event::{Event, EventBus, EventHandler};
 pub use extension::Extension;
-pub use extension_manager::ExtensionManager;
+pub use extension_manager::{ExtensionManager, ExtensionManagerBuilder};
 pub use history_manager::{History, HistoryManager};
 pub use runtime::ForgeRuntime;
+pub use schema_parser::{XmlSchemaParser, XmlSchemaError, XmlSchemaResult};
 pub use sync_processor::{SyncProcessor, TaskProcessor as SyncTaskProcessor};
 pub use types::*;

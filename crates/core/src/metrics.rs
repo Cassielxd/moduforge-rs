@@ -39,6 +39,8 @@ pub const EXTENSION_MANAGER_CREATION_DURATION_SECONDS: &str =
 pub const EXTENSIONS_LOADED_TOTAL: &str = "core.extensions.loaded.total";
 /// 已加载插件总数
 pub const PLUGINS_LOADED_TOTAL: &str = "core.plugins.loaded.total";
+/// XML解析耗时（秒）
+pub const XML_PARSING_DURATION_SECONDS: &str = "core.xml.parsing.duration.seconds";
 
 pub fn register_metrics() {
     //
@@ -120,4 +122,8 @@ pub fn extensions_loaded(count: u64) {
 
 pub fn plugins_loaded(count: u64) {
     counter!(PLUGINS_LOADED_TOTAL).increment(count);
+}
+
+pub fn xml_parsing_duration(duration: std::time::Duration) {
+    histogram!(XML_PARSING_DURATION_SECONDS).record(duration.as_secs_f64());
 }

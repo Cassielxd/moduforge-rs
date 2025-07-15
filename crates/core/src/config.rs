@@ -177,6 +177,12 @@ pub struct ExtensionConfig {
     pub max_memory_mb: usize,
     /// 是否启用扩展沙箱
     pub enable_sandbox: bool,
+    /// XML schema文件路径列表
+    pub xml_schema_paths: Vec<String>,
+    /// 是否启用XML schema自动重载
+    pub enable_xml_auto_reload: bool,
+    /// XML解析超时时间
+    pub xml_parse_timeout: Duration,
 }
 
 impl Default for ExtensionConfig {
@@ -186,6 +192,9 @@ impl Default for ExtensionConfig {
             enable_hot_reload: false,
             max_memory_mb: 100,
             enable_sandbox: true,
+            xml_schema_paths: Vec::new(),
+            enable_xml_auto_reload: false,
+            xml_parse_timeout: Duration::from_secs(5),
         }
     }
 }
@@ -296,6 +305,9 @@ impl ForgeConfig {
                 enable_hot_reload: true,
                 max_memory_mb: 200,
                 enable_sandbox: false, // 开发环境关闭沙箱便于调试
+                xml_schema_paths: Vec::new(),
+                enable_xml_auto_reload: true,
+                xml_parse_timeout: Duration::from_secs(10),
             },
             cache: CacheConfig {
                 max_entries: 500,
@@ -344,6 +356,9 @@ impl ForgeConfig {
                 enable_hot_reload: false,
                 max_memory_mb: 50,
                 enable_sandbox: true,
+                xml_schema_paths: Vec::new(),
+                enable_xml_auto_reload: false,
+                xml_parse_timeout: Duration::from_secs(3),
             },
             cache: CacheConfig {
                 max_entries: 100,
@@ -392,6 +407,9 @@ impl ForgeConfig {
                 enable_hot_reload: false,
                 max_memory_mb: 500,
                 enable_sandbox: true,
+                xml_schema_paths: Vec::new(),
+                enable_xml_auto_reload: false,
+                xml_parse_timeout: Duration::from_secs(5),
             },
             cache: CacheConfig {
                 max_entries: 10000,

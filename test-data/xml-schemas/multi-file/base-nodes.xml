@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 基础节点定义 -->
+<schema>
+  <nodes>
+    <!-- 文档根节点 -->
+    <node name="doc" group="block">
+      <desc>文档根节点</desc>
+      <content>block+</content>
+      <marks>_</marks>
+      <attrs>
+        <attr name="title" default="Untitled Document"/>
+        <attr name="version" default="1.0"/>
+      </attrs>
+    </node>
+    
+    <!-- 段落节点 -->
+    <node name="paragraph" group="block">
+      <desc>段落节点</desc>
+      <content>text*</content>
+      <marks>strong em link</marks>
+      <attrs>
+        <attr name="align" default="left"/>
+        <attr name="indent" default="0"/>
+      </attrs>
+    </node>
+    
+    <!-- 标题节点 -->
+    <node name="heading" group="block">
+      <desc>标题节点</desc>
+      <content>text*</content>
+      <marks>strong em</marks>
+      <attrs>
+        <attr name="level" default="1"/>
+        <attr name="id"/>
+      </attrs>
+    </node>
+    
+    <!-- 文本节点 -->
+    <node name="text">
+      <desc>文本节点，叶子节点</desc>
+    </node>
+  </nodes>
+</schema>

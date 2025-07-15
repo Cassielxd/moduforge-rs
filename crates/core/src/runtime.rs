@@ -41,6 +41,144 @@ impl ForgeRuntime {
         Self::create_with_config(options, ForgeConfig::default()).await
     }
 
+    /// 从XML schema文件创建编辑器实例
+    ///
+    /// # 参数
+    /// * `xml_schema_path` - XML schema文件路径
+    /// * `options` - 可选的RuntimeOptions配置
+    /// * `config` - 可选的ForgeConfig配置
+    ///
+    /// # 返回值
+    /// * `ForgeResult<Self>` - 编辑器实例或错误
+    ///
+    /// # 示例
+    /// ```rust
+    /// use mf_core::ForgeRuntime;
+    ///
+    /// // 使用默认选项
+    /// let runtime = ForgeRuntime::from_xml_schema(
+    ///     "./schemas/document.xml",
+    ///     None,
+    ///     None
+    /// ).await?;
+    ///
+    /// // 使用自定义选项
+    /// let mut options = RuntimeOptions::default();
+    /// options.set_history_limit(Some(200));
+    /// let runtime = ForgeRuntime::from_xml_schema(
+    ///     "./schemas/document.xml",
+    ///     Some(options),
+    ///     None
+    /// ).await?;
+    /// ```
+    pub async fn from_xml_schema(
+        xml_schema_path: &str,
+        options: Option<RuntimeOptions>,
+        config: Option<ForgeConfig>,
+    ) -> ForgeResult<Self> {
+        let extension_manager = ExtensionManager::from_xml_file(xml_schema_path)?;
+        let final_options = Self::merge_options_with_extensions(options, extension_manager);
+
+        Self::create_with_config(final_options, config.unwrap_or_default()).await
+    }
+
+    /// 合并RuntimeOptions和ExtensionManager
+    ///
+    /// # 参数
+    /// * `options` - 可选的RuntimeOptions
+    /// * `extension_manager` - ExtensionManager实例
+    ///
+    /// # 返回值
+    /// * `RuntimeOptions` - 合并后的选项
+    fn merge_options_with_extensions(
+        options: Option<RuntimeOptions>,
+        extension_manager: ExtensionManager,
+    ) -> RuntimeOptions {
+        match options {
+            Some(opts) => {
+                // 从ExtensionManager获取extensions并合并到现有选项中
+                let schema = extension_manager.get_schema();
+                let mut xml_extensions = Vec::new();
+
+                // 重建节点扩展
+                for (name, node_type) in &schema.nodes {
+                    let node = crate::node::Node::create(name, node_type.spec.clone());
+                    xml_extensions.push(crate::types::Extensions::N(node));
+                }
+
+                // 重建标记扩展
+                for (name, mark_type) in &schema.marks {
+                    let mark = crate::mark::Mark::new(name, mark_type.spec.clone());
+                    xml_extensions.push(crate::types::Extensions::M(mark));
+                }
+
+                // 合并扩展（XML扩展优先）
+                let existing_extensions = opts.get_extensions();
+                xml_extensions.extend(existing_extensions);
+                opts.set_extensions(xml_extensions)
+            }
+            None => {
+                // 如果没有提供选项，从ExtensionManager创建新的
+                RuntimeOptions::from_extension_manager(extension_manager)
+            }
+        }
+    }
+
+    /// 从多个XML schema文件创建编辑器实例
+    ///
+    /// # 参数
+    /// * `xml_schema_paths` - XML schema文件路径列表
+    /// * `options` - 可选的RuntimeOptions配置
+    /// * `config` - 可选的ForgeConfig配置
+    ///
+    /// # 返回值
+    /// * `ForgeResult<Self>` - 编辑器实例或错误
+    pub async fn from_xml_schemas(
+        xml_schema_paths: &[&str],
+        options: Option<RuntimeOptions>,
+        config: Option<ForgeConfig>,
+    ) -> ForgeResult<Self> {
+        let extension_manager = ExtensionManager::from_xml_files(xml_schema_paths)?;
+        let final_options = Self::merge_options_with_extensions(options, extension_manager);
+
+        Self::create_with_config(final_options, config.unwrap_or_default()).await
+    }
+
+    /// 从XML内容字符串创建编辑器实例
+    ///
+    /// # 参数
+    /// * `xml_content` - XML schema内容
+    /// * `options` - 可选的RuntimeOptions配置
+    /// * `config` - 可选的ForgeConfig配置
+    ///
+    /// # 返回值
+    /// * `ForgeResult<Self>` - 编辑器实例或错误
+    ///
+    /// # 示例
+    /// ```rust
+    /// use mf_core::{ForgeRuntime, types::RuntimeOptions};
+    ///
+    /// let xml = r#"<schema>...</schema>"#;
+    ///
+    /// // 使用默认选项
+    /// let runtime = ForgeRuntime::from_xml_content(xml, None, None).await?;
+    ///
+    /// // 使用自定义选项
+    /// let mut options = RuntimeOptions::default();
+    /// options.set_history_limit(Some(100));
+    /// let runtime = ForgeRuntime::from_xml_content(xml, Some(options), None).await?;
+    /// ```
+    pub async fn from_xml_content(
+        xml_content: &str,
+        options: Option<RuntimeOptions>,
+        config: Option<ForgeConfig>,
+    ) -> ForgeResult<Self> {
+        let extension_manager = ExtensionManager::from_xml_string(xml_content)?;
+        let final_options = Self::merge_options_with_extensions(options, extension_manager);
+
+        Self::create_with_config(final_options, config.unwrap_or_default()).await
+    }
+
     /// 使用指定配置创建编辑器实例
     pub async fn create_with_config(
         options: RuntimeOptions,
