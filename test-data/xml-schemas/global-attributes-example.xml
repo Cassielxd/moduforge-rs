@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- 全局属性示例Schema -->
-<schema top_node="document">
+<schema top_node="document" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://pricing-dev.oss-cn-hangzhou.aliyuncs.com/moduforge/moduforge-schema.xsd">
   <!-- 全局属性定义 -->
   <global_attributes>
     <!-- 适用于所有块级元素的通用属性 -->
@@ -140,7 +142,6 @@
     <mark name="code" group="formatting">
       <desc>内联代码标记</desc>
       <spanning>true</spanning>
-      <excludes>strong em</excludes>
       <attrs>
         <attr name="language"/>
         <attr name="highlight" default="false"/>

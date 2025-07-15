@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified">
+
+  <!-- 根元素: schema -->
+  <xs:element name="schema">
+    <xs:annotation>
+      <xs:documentation>ModuForge XML Schema 根元素</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <!-- 导入其他schema文件 -->
+        <xs:element name="imports" minOccurs="0">
+          <xs:annotation>
+            <xs:documentation>导入其他schema文件（不允许覆盖现有定义）</xs:documentation>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="import" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:attribute name="src" type="xs:string" use="required">
+                    <xs:annotation>
+                      <xs:documentation>要导入的文件路径</xs:documentation>
+                    </xs:annotation>
+                  </xs:attribute>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- 包含其他schema文件 -->
+        <xs:element name="includes" minOccurs="0">
+          <xs:annotation>
+            <xs:documentation>包含其他schema文件（允许覆盖现有定义）</xs:documentation>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="include" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:attribute name="src" type="xs:string" use="required">
+                    <xs:annotation>
+                      <xs:documentation>要包含的文件路径</xs:documentation>
+                    </xs:annotation>
+                  </xs:attribute>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- 全局属性定义 -->
+        <xs:element name="global_attributes" minOccurs="0">
+          <xs:annotation>
+            <xs:documentation>定义适用于多种节点类型的全局属性</xs:documentation>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="global_attribute" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="attr" maxOccurs="unbounded" type="AttributeType"/>
+                  </xs:sequence>
+                  <xs:attribute name="types" type="xs:string" use="required">
+                    <xs:annotation>
+                      <xs:documentation>适用的节点类型列表，空格分隔，或使用 * 表示所有类型</xs:documentation>
+                    </xs:annotation>
+                  </xs:attribute>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- 节点定义 -->
+        <xs:element name="nodes" minOccurs="0">
+          <xs:annotation>
+            <xs:documentation>节点类型定义集合</xs:documentation>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="node" maxOccurs="unbounded" type="NodeType"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- 标记定义 -->
+        <xs:element name="marks" minOccurs="0">
+          <xs:annotation>
+            <xs:documentation>标记类型定义集合</xs:documentation>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="mark" maxOccurs="unbounded" type="MarkType"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+
+      <!-- schema根元素的属性 -->
+      <xs:attribute name="top_node" type="xs:string">
+        <xs:annotation>
+          <xs:documentation>文档的顶级节点类型名称</xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- 节点类型定义 -->
+  <xs:complexType name="NodeType">
+    <xs:annotation>
+      <xs:documentation>节点类型定义</xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="desc" type="xs:string" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>节点描述信息</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="content" type="xs:string" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>内容规则，如 "paragraph+" 或 "text*"</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="marks" type="xs:string" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>允许的标记列表，空格分隔，或使用 _ 表示不允许标记</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="attrs" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>节点属性定义</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="attr" maxOccurs="unbounded" type="AttributeType"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required">
+      <xs:annotation>
+        <xs:documentation>节点类型名称（唯一标识）</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="group" type="NodeGroupType">
+      <xs:annotation>
+        <xs:documentation>节点分组</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+  </xs:complexType>
+
+  <!-- 标记类型定义 -->
+  <xs:complexType name="MarkType">
+    <xs:annotation>
+      <xs:documentation>标记类型定义</xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="desc" type="xs:string" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>标记描述信息</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="excludes" type="xs:string" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>排斥的标记列表，不能同时使用的标记</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="spanning" type="xs:boolean" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>是否为跨度标记（true表示可以跨越多个节点）</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="attrs" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>标记属性定义</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="attr" maxOccurs="unbounded" type="AttributeType"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required">
+      <xs:annotation>
+        <xs:documentation>标记类型名称（唯一标识）</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="group" type="MarkGroupType">
+      <xs:annotation>
+        <xs:documentation>标记分组</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+  </xs:complexType>
+
+  <!-- 属性类型定义 -->
+  <xs:complexType name="AttributeType">
+    <xs:annotation>
+      <xs:documentation>属性定义</xs:documentation>
+    </xs:annotation>
+    <xs:attribute name="name" type="xs:string" use="required">
+      <xs:annotation>
+        <xs:documentation>属性名称</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="default" type="xs:string">
+      <xs:annotation>
+        <xs:documentation>属性默认值，支持字符串、数字、布尔值或JSON格式</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+  </xs:complexType>
+
+  <!-- 节点分组类型 -->
+  <xs:simpleType name="NodeGroupType">
+    <xs:annotation>
+      <xs:documentation>节点分组类型枚举</xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="block">
+        <xs:annotation>
+          <xs:documentation>块级节点</xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="inline">
+        <xs:annotation>
+          <xs:documentation>内联节点</xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="structure">
+        <xs:annotation>
+          <xs:documentation>结构性节点</xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="leaf">
+        <xs:annotation>
+          <xs:documentation>叶子节点</xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- 标记分组类型 -->
+  <xs:simpleType name="MarkGroupType">
+    <xs:annotation>
+      <xs:documentation>标记分组类型枚举</xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="formatting">
+        <xs:annotation>
+          <xs:documentation>格式化标记</xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="link">
+        <xs:annotation>
+          <xs:documentation>链接标记</xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="annotation">
+        <xs:annotation>
+          <xs:documentation>注释标记</xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="semantic">
+        <xs:annotation>
+          <xs:documentation>语义标记</xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+
+</xs:schema> 

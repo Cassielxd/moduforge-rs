@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- 表格Schema定义 -->
-<schema top_node="doc">
+<schema top_node="doc" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://pricing-dev.oss-cn-hangzhou.aliyuncs.com/moduforge/moduforge-schema.xsd">
   <nodes>
     <!-- 文档根节点 -->
     <node name="doc" group="block">

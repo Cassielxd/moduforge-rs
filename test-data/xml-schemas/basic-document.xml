@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- 基础文档Schema定义 -->
-<schema top_node="doc">
+<schema top_node="doc" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://pricing-dev.oss-cn-hangzhou.aliyuncs.com/moduforge/moduforge-schema.xsd">
+  
+  <!-- 全局属性定义 -->
+  <global_attributes>
+    <global_attribute types="paragraph heading">
+      <attr name="id"/>
+      <attr name="class"/>
+      <attr name="style"/>
+    </global_attribute>
+    <global_attribute types="*">
+      <attr name="data-custom" default="default-value"/>
+      <attr name="data-source"/>
+    </global_attribute>
+  </global_attributes>
+  
   <nodes>
     <!-- 文档根节点 -->
     <node name="doc" group="block">
@@ -89,7 +105,6 @@
     <mark name="code" group="formatting">
       <desc>内联代码标记</desc>
       <spanning>true</spanning>
-      <excludes>strong em</excludes>
       <attrs>
         <attr name="language"/>
       </attrs>
