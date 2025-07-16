@@ -1,5 +1,5 @@
 use mf_core::{
-    async_runtime::ForgeAsyncRuntime,
+    runtime::async_runtime::ForgeAsyncRuntime,
     types::{EditorOptionsBuilder, Extensions},
     node::Node,
     extension::Extension,

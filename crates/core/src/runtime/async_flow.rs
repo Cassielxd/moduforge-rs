@@ -1,7 +1,7 @@
 use std::{sync::Arc};
 
 use crate::{
-    async_processor::{
+    runtime::async_processor::{
         AsyncProcessor, ProcessorError, TaskProcessor,
         TaskResult,
     },

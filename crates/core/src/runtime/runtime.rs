@@ -9,7 +9,7 @@ use crate::{
     helpers::create_doc,
     history_manager::HistoryManager,
     metrics,
-    sync_flow::FlowEngine,
+    runtime::sync_flow::FlowEngine,
     types::{HistoryEntryWithMeta, ProcessorResult, RuntimeOptions},
 };
 

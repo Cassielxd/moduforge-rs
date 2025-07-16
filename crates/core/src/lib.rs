@@ -23,10 +23,7 @@
 //! - `node`: 节点系统
 //! - `types`: 核心类型定义
 
-pub mod async_flow;
-pub mod async_processor;
-pub mod async_runtime;
-pub mod async_utils;
+
 pub mod config;
 pub mod error;
 pub mod event;
@@ -34,14 +31,12 @@ pub mod extension;
 pub mod extension_manager;
 pub mod helpers;
 pub mod history_manager;
-pub mod sync_flow;
-pub mod sync_processor;
 
 pub mod mark;
+pub mod runtime;
 pub mod metrics;
 pub mod middleware;
 pub mod node;
-pub mod runtime;
 pub mod schema_parser;
 pub mod types;
 pub use error::{ForgeResult, error_utils};
@@ -59,8 +54,8 @@ pub mod transform {
 }
 
 // 公共 API 导出
-pub use async_processor::{AsyncProcessor, ProcessorError, TaskProcessor, TaskResult, TaskStatus};
-pub use async_runtime::ForgeAsyncRuntime;
+pub use runtime::async_processor::{AsyncProcessor, ProcessorError, TaskProcessor, TaskResult, TaskStatus};
+pub use runtime::async_runtime::ForgeAsyncRuntime;
 pub use config::{
     ForgeConfig, ForgeConfigBuilder, Environment, ProcessorConfig, PerformanceConfig,
     EventConfig, HistoryConfig, ExtensionConfig, CacheConfig, ConfigValidationError
@@ -70,7 +65,7 @@ pub use event::{Event, EventBus, EventHandler};
 pub use extension::Extension;
 pub use extension_manager::{ExtensionManager, ExtensionManagerBuilder};
 pub use history_manager::{History, HistoryManager};
-pub use runtime::ForgeRuntime;
+pub use runtime::runtime::ForgeRuntime;
 pub use schema_parser::{XmlSchemaParser, XmlSchemaError, XmlSchemaResult};
-pub use sync_processor::{SyncProcessor, TaskProcessor as SyncTaskProcessor};
+pub use runtime::sync_processor::{SyncProcessor, TaskProcessor as SyncTaskProcessor};
 pub use types::*;

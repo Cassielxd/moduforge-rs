@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use crate::{
-    sync_processor::{
+    runtime::sync_processor::{
         ProcessorError, SyncProcessor, TaskProcessor, TaskResult,
     },
     types::{ProcessorResult, TaskParams, TransactionStatus},
