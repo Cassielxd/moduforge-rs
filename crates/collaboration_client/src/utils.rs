@@ -127,20 +127,6 @@ impl Utils {
 
         Ok(())
     }
-    // 将事务应用到 Yrs 文档
-    pub fn apply_transaction_meta_to_yrs(
-        transaction: &Transaction,
-        txn: &mut TransactionMut,
-    ) -> ClientResult<()> {
-        let tr_meta =txn.get_or_insert_map("tr_meta");
-        tr_meta.clear(txn);
-        tr_meta.insert(txn, "transaction_id", yrs::Any::BigInt(transaction.id as i64));
-        tr_meta.insert(txn, "timestamp", yrs::Any::BigInt(Utils::get_unix_time() as i64));
-        transaction.meta.iter().for_each(|(k, v)| {
-            tr_meta.insert(txn, k.as_str(), Utils::json_value_to_yrs_any(v));
-        });
-        Ok(())
-    }
     /// 将事务应用到 Yrs 文档
     pub async fn apply_transaction_to_yrs(
         awareness_ref: AwarenessRef,
@@ -151,7 +137,6 @@ impl Utils {
         let mut awareness = awareness_ref.write().await;
         let doc = awareness.doc_mut();
         let mut txn = doc.transact_mut_with(doc.client_id().clone().to_string());
-        Utils::apply_transaction_meta_to_yrs(transaction, &mut txn)?;
         // 使用新版本的转换API应用所有事务中的步骤
         let context = crate::mapping::create_context(
             "transaction_client".to_string(),

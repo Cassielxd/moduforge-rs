@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -37,7 +38,7 @@ pub trait Command: Send + Sync + Debug {
 #[derive(Clone)]
 pub struct Transaction {
     /// 存储元数据的哈希表，支持任意类型数据
-    pub meta: im::HashMap<String, serde_json::Value>,
+    pub meta: im::HashMap<String, Arc<dyn Any>>,
     /// 事务的时间戳
     pub id: u64,
     transform: Transform,
@@ -149,7 +150,7 @@ impl Transaction {
     /// 设置元数据
     /// key: 键
     /// value: 值（支持任意类型）
-    pub fn set_meta<K, T: serde::Serialize>(
+    pub fn set_meta<K, T: 'static>(
         &mut self,
         key: K,
         value: T,
@@ -158,21 +159,18 @@ impl Transaction {
         K: Into<String>,
     {
         let key_str = key.into();
-        self.meta.insert(key_str, serde_json::to_value(value).unwrap());
+        self.meta.insert(key_str, Arc::new(value));
         self
     }
     /// 获取元数据
     /// key: 键
     /// 返回: Option<&T>，如果存在且类型匹配则返回Some，否则返回None
-    pub fn get_meta<T: serde::de::DeserializeOwned>(
+    pub fn get_meta<T: Clone + 'static>(
         &self,
         key: &str,
     ) -> Option<T> {
         let value = self.meta.get(key)?;
-        let value_json: Result<T, serde_json::Error> = serde_json::from_value(value.clone());
-        match value_json {
-            Ok(value) => Some(value),
-            Err(_) => None,
-        }
+        let value_any = value.downcast_ref::<T>().cloned();
+        value_any
     }
 }
