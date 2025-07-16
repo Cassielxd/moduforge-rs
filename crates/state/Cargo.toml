@@ -13,7 +13,7 @@ name = "mf_state"
 path="src/lib.rs"
 
 [dependencies]
-im= {workspace=true}
+imbl= {workspace=true}
 serde = {workspace=true}
 serde_json = {workspace=true}
 thiserror= {workspace=true}

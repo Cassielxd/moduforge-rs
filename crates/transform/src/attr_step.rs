@@ -5,7 +5,7 @@ use crate::{transform_error, TransformResult};
 use super::{
     step::{Step, StepResult},
 };
-use im::HashMap as ImHashMap;
+use imbl::HashMap as ImHashMap;
 use mf_model::{schema::Schema, tree::Tree, types::NodeId};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value};
@@ -68,7 +68,7 @@ impl Step for AttrStep {
     ) -> Option<Arc<dyn Step>> {
         match dart.get_node(&self.id) {
             Some(node) => {
-                let mut new_values = im::hashmap!();
+                let mut new_values = imbl::hashmap!();
                 for (key, value) in node.attrs.attrs.iter() {
                     new_values.insert(key.clone(), value.clone());
                 }
@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn test_attr_step_creation() {
-        let mut values = HashMap::new();
+        let mut values = imbl::HashMap::new();
         values.insert("name".to_string(), json!("test"));
         values.insert("age".to_string(), json!(25));
 

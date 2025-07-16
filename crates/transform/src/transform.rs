@@ -12,7 +12,7 @@ enum LazyDoc {
     /// 原始文档，未进行任何修改
     Original(Arc<NodePool>),
     /// 需要重新计算的状态，包含基础文档和待应用的步骤
-    Pending { base: Arc<NodePool>, steps: im::Vector<Arc<dyn Step>> },
+    Pending { base: Arc<NodePool>, steps: imbl::Vector<Arc<dyn Step>> },
     /// 已计算的最新状态
     Computed(Arc<NodePool>),
 }
@@ -26,9 +26,9 @@ pub struct Transform {
     /// 文档的草稿状态，用于临时修改 (Copy-on-Write)
     draft: Option<Tree>,
     /// 存储所有操作步骤
-    pub steps: im::Vector<Arc<dyn Step>>,
+    pub steps: imbl::Vector<Arc<dyn Step>>,
     /// 存储所有反向操作步骤
-    pub invert_steps: im::Vector<Arc<dyn Step>>,
+    pub invert_steps: imbl::Vector<Arc<dyn Step>>,
     /// 文档的模式定义
     pub schema: Arc<Schema>,
     /// 标记是否需要重新计算文档状态
@@ -44,8 +44,8 @@ impl Transform {
             base_doc: doc.clone(),
             lazy_doc: LazyDoc::Original(doc),
             draft: None,
-            steps: im::Vector::new(),
-            invert_steps: im::Vector::new(),
+            steps: imbl::Vector::new(),
+            invert_steps: imbl::Vector::new(),
             schema,
             needs_recompute: false,
         }
@@ -118,7 +118,7 @@ impl Transform {
     fn compute_doc_state(
         &self,
         base: Arc<NodePool>,
-        steps: im::Vector<Arc<dyn Step>>,
+        steps: imbl::Vector<Arc<dyn Step>>,
     ) -> Arc<NodePool> {
         if steps.is_empty() {
             return base;
@@ -194,8 +194,8 @@ impl Transform {
     pub fn rollback(&mut self) {
         self.lazy_doc = LazyDoc::Original(self.base_doc.clone());
         self.draft = None;
-        self.steps = im::Vector::new();
-        self.invert_steps = im::Vector::new();
+        self.steps = imbl::Vector::new();
+        self.invert_steps = imbl::Vector::new();
         self.needs_recompute = false;
     }
 
@@ -232,8 +232,8 @@ impl Transform {
 
     /// 清除历史记录（释放内存）
     pub fn clear_history(&mut self) {
-        self.steps = im::Vector::new();
-        self.invert_steps = im::Vector::new();
+        self.steps = imbl::Vector::new();
+        self.invert_steps = imbl::Vector::new();
     }
 
     /// 获取历史记录大小

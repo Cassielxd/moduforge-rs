@@ -23,7 +23,7 @@ pub struct NodePool {
     // 使用 Arc 包裹内部结构，实现快速克隆
     inner: Arc<Tree>,
     // 节点池的唯一标识符
-    #[serde(skip)]
+
     key: String,
 }
 
@@ -111,7 +111,7 @@ impl NodePool {
     pub fn children(
         &self,
         parent_id: &NodeId,
-    ) -> Option<im::Vector<NodeId>> {
+    ) -> Option<imbl::Vector<NodeId>> {
         self.get_node(parent_id).map(|n| n.content.clone())
     }
 
@@ -551,7 +551,7 @@ impl NodePool {
                 // 按批次处理节点
                 nodes
                     .chunks(batch_size)
-                    .flat_map(|chunk| predicate(&chunk))
+                    .flat_map(|chunk| predicate(chunk))
                     .collect::<Vec<_>>()
             })
             .collect()

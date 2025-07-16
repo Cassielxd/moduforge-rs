@@ -135,7 +135,7 @@ mod tests {
             "perf_user".to_string(),
         );
 
-        let mut attrs = im::HashMap::new();
+        let mut attrs = imbl::HashMap::new();
         attrs.insert("test_attr".to_string(), serde_json::json!("test_value"));
         
         let step = AttrStep {

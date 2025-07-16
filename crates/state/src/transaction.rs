@@ -38,7 +38,7 @@ pub trait Command: Send + Sync + Debug {
 #[derive(Clone)]
 pub struct Transaction {
     /// 存储元数据的哈希表，支持任意类型数据
-    pub meta: im::HashMap<String, Arc<dyn Any>>,
+    pub meta: imbl::HashMap<String, Arc<dyn Any>>,
     /// 事务的时间戳
     pub id: u64,
     transform: Transform,
@@ -73,7 +73,7 @@ impl Transaction {
         let node = state.doc();
         let schema = state.schema();
         Transaction {
-            meta: im::HashMap::new(),
+            meta: imbl::HashMap::new(),
             id: get_transaction_id(),
             transform: Transform::new(node, schema),
         }
@@ -98,7 +98,7 @@ impl Transaction {
     pub fn set_node_attribute(
         &mut self,
         id: String,
-        values: im::HashMap<String, Value>,
+        values: imbl::HashMap<String, Value>,
     ) -> TransformResult<()> {
         self.step(Arc::new(AttrStep::new(id, values)))?;
         Ok(())

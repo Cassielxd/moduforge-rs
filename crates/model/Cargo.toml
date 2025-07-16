@@ -14,13 +14,12 @@ name = "mf_model"
 path="src/lib.rs"
 
 [dependencies]
-im= {workspace=true}
+imbl= {workspace=true}
 serde = {workspace=true}
 serde_json = {workspace=true}
 
-nanoid = "0.4.0"
-
-
+uuid= {workspace=true}
+base62= "2.2.1"
 anyhow = { workspace = true }
 
 rayon = { workspace = true }

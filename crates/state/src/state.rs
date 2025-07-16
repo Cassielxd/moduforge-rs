@@ -1,7 +1,7 @@
 use mf_model::{
     id_generator::IdGenerator, mark::Mark, node_pool::NodePool, schema::Schema,
 };
-use im::HashMap as ImHashMap;
+use imbl::HashMap as ImHashMap;
 use std::fmt::{self, Debug};
 use std::{
     collections::HashMap,

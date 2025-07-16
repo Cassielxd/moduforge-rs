@@ -105,18 +105,18 @@ impl<'a> Add<(String, Value)> for AttrsRef<'a> {
         (key, value): (String, Value),
     ) -> Self::Output {
         self.tree
-            .update_attr(&self.key.clone().into(), im::hashmap! {key=>value})?;
+            .update_attr(&self.key.clone().into(), imbl::hashmap! {key=>value})?;
         Ok(AttrsRef::new(self.tree, self.key.clone()))
     }
 }
 
 /// 为 AttrsRef 实现自定义的 + 运算符，用于直接添加属性映射
 /// 当使用 + 运算符时，会直接使用提供的属性映射更新当前节点的属性
-impl<'a> Add<im::HashMap<String, Value>> for AttrsRef<'a> {
+impl<'a> Add<imbl::HashMap<String, Value>> for AttrsRef<'a> {
     type Output = PoolResult<AttrsRef<'a>>;
     fn add(
         self,
-        attrs: im::HashMap<String, Value>,
+        attrs: imbl::HashMap<String, Value>,
     ) -> Self::Output {
         self.tree.update_attr(&self.key.clone().into(), attrs)?;
         Ok(AttrsRef::new(self.tree, self.key.clone()))

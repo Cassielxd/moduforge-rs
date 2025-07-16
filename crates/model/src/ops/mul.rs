@@ -20,7 +20,7 @@ impl<'a> Mul<usize> for NodeRef<'a> {
                 // 创建节点的副本
                 let mut node = current_node.as_ref().clone();
                 node.id = IdGenerator::get_id();
-                node.content = im::Vector::new();
+                node.content = imbl::Vector::new();
                 nodes.push(node);
             }
             // 添加到当前节点的父节点中
@@ -46,7 +46,7 @@ impl<'a> Mul<NodeId> for NodeRef<'a> {
         if let Some(source_node) = self.tree.get_node(&node_id) {
             let mut node = source_node.as_ref().clone();
             node.id = IdGenerator::get_id();
-            node.content = im::Vector::new();
+            node.content = imbl::Vector::new();
             // 添加到当前节点
             self.tree.add_node(&self.key.clone().into(), &vec![node])?;
         }
@@ -68,7 +68,7 @@ impl<'a> Mul<Vec<NodeId>> for NodeRef<'a> {
             if let Some(source_node) = self.tree.get_node(&node_id) {
                 let mut node = source_node.as_ref().clone();
                 node.id = IdGenerator::get_id();
-                node.content = im::Vector::new();
+                node.content = imbl::Vector::new();
                 cloned_nodes.push(node);
             }
         }

@@ -1,18 +1,13 @@
-use nanoid::nanoid;
+use uuid::Uuid;
+use base62::encode;
 
 pub struct IdGenerator;
 
 impl IdGenerator {
     pub fn get_id() -> String {
-        // 使用数字和大写字母，生成12位的ID
-        // 使用自定义字符集：数字(0-9)和大写字母(A-Z)，去掉容易混淆的字符
-        const ALPHABET: [char; 32] = [
-            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
-            'd', 'e', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r',
-            's', 't', 'u', 'v', 'w', 'x',
-        ];
-
-        nanoid!(12, &ALPHABET)
+        let uuid = Uuid::new_v4();
+        let num = u128::from_be_bytes(*uuid.as_bytes());
+        encode(num)
     }
 }
 
@@ -20,7 +15,11 @@ impl IdGenerator {
 mod tests {
     use super::*;
     use std::time::Instant;
-
+    #[test]
+    fn test_id_generation() {
+        let _id = IdGenerator::get_id();
+        println!("生成新ID: {:?}", _id);
+    }
     #[test]
     fn test_id_generation_performance() {
         const ITERATIONS: usize = 1_000_000;

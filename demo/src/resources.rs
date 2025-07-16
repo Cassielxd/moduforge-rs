@@ -1,6 +1,6 @@
 use std::{collections::HashMap, time::SystemTime};
 use mf_state::resource::Resource;
-use im::HashMap as ImHashMap;
+use imbl::HashMap as ImHashMap;
 
 /// 用户状态资源
 /// 管理当前登录用户、会话信息等

@@ -406,7 +406,7 @@ impl Utils {
             }
 
             // 提取内容（子节点ID列表）
-            let mut content = im::Vector::new();
+            let mut content = imbl::Vector::new();
             if let Some(content_array) = node_map.get(txn, "content") {
                 if let yrs::types::Value::YArray(content_yrs_array) =
                     content_array
@@ -420,7 +420,7 @@ impl Utils {
             }
 
             // 提取标记
-            let mut marks = im::Vector::new();
+            let mut marks = imbl::Vector::new();
             if let Some(marks_array) = node_map.get(txn, "marks") {
                 if let yrs::types::Value::YArray(marks_yrs_array) = marks_array
                 {

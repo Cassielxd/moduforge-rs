@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::{ops::Index, num::NonZeroUsize};
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
-use im::Vector;
+use imbl::Vector;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use once_cell::sync::Lazy;
@@ -26,8 +26,8 @@ static SHARD_INDEX_CACHE: Lazy<RwLock<LruCache<String, usize>>> =
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tree {
     pub root_id: NodeId,
-    pub nodes: Vector<im::HashMap<NodeId, Arc<Node>>>, // 分片存储节点数据
-    pub parent_map: im::HashMap<NodeId, NodeId>,
+    pub nodes: Vector<imbl::HashMap<NodeId, Arc<Node>>>, // 分片存储节点数据
+    pub parent_map: imbl::HashMap<NodeId, NodeId>,
     #[serde(skip)]
     num_shards: usize, // 缓存分片数量，避免重复计算
 }
@@ -36,6 +36,7 @@ impl Debug for Tree {
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
+        
         //输出的时候 过滤掉空的 nodes 节点
         let nodes = self
             .nodes
@@ -161,8 +162,8 @@ impl Tree {
                 .unwrap_or(2),
             2,
         );
-        let mut shards = Vector::from(vec![im::HashMap::new(); num_shards]);
-        let mut parent_map = im::HashMap::new();
+        let mut shards = Vector::from(vec![imbl::HashMap::new(); num_shards]);
+        let mut parent_map = imbl::HashMap::new();
         let (root_node, children) = nodes.into_parts();
         let root_id = root_node.id.clone();
 
@@ -175,8 +176,8 @@ impl Tree {
         fn process_children(
             children: Vec<NodeEnum>,
             parent_id: &NodeId,
-            shards: &mut Vector<im::HashMap<NodeId, Arc<Node>>>,
-            parent_map: &mut im::HashMap<NodeId, NodeId>,
+            shards: &mut Vector<imbl::HashMap<NodeId, Arc<Node>>>,
+            parent_map: &mut imbl::HashMap<NodeId, NodeId>,
             num_shards: usize,
         ) {
             for child in children {
@@ -218,20 +219,20 @@ impl Tree {
                 .unwrap_or(2),
             2,
         );
-        let mut nodes = Vector::from(vec![im::HashMap::new(); num_shards]);
+        let mut nodes = Vector::from(vec![imbl::HashMap::new(); num_shards]);
         let root_id = root.id.clone();
         let mut hasher = DefaultHasher::new();
         root_id.hash(&mut hasher);
         let shard_index = (hasher.finish() as usize) % num_shards;
         nodes[shard_index] =
             nodes[shard_index].update(root_id.clone(), Arc::new(root));
-        Self { root_id, nodes, parent_map: im::HashMap::new(), num_shards }
+        Self { root_id, nodes, parent_map: imbl::HashMap::new(), num_shards }
     }
 
     pub fn update_attr(
         &mut self,
         id: &NodeId,
-        new_values: im::HashMap<String, Value>,
+        new_values: imbl::HashMap<String, Value>,
     ) -> PoolResult<()> {
         let shard_index = self.get_shard_index(id);
         let node = self.nodes[shard_index]
@@ -278,7 +279,7 @@ impl Tree {
         let zenliang: Vector<String> =
             nodes.iter().map(|n| n.0.id.clone()).collect();
         // 需要判断 new_parent.content 中是否已经存在 zenliang 中的节点
-        let mut new_content = im::Vector::new();
+        let mut new_content = imbl::Vector::new();
         for id in zenliang {
             if !new_parent.content.contains(&id) {
                 new_content.push_back(id);
@@ -303,7 +304,7 @@ impl Tree {
                 // 收集孙节点的ID并添加到子节点的content中
                 let grand_children_ids: Vector<String> =
                     grand_children.iter().map(|n| n.0.id.clone()).collect();
-                let mut new_content = im::Vector::new();
+                let mut new_content = imbl::Vector::new();
                 for id in grand_children_ids {
                     if !child_node.content.contains(&id) {
                         new_content.push_back(id);
@@ -407,14 +408,14 @@ impl Tree {
     pub fn children(
         &self,
         parent_id: &NodeId,
-    ) -> Option<im::Vector<NodeId>> {
+    ) -> Option<imbl::Vector<NodeId>> {
         self.get_node(parent_id).map(|n| n.content.clone())
     }
 
     pub fn children_node(
         &self,
         parent_id: &NodeId,
-    ) -> Option<im::Vector<Arc<Node>>> {
+    ) -> Option<imbl::Vector<Arc<Node>>> {
         self.children(parent_id)
             .map(|ids| ids.iter().filter_map(|id| self.get_node(id)).collect())
     }
@@ -471,7 +472,7 @@ impl Tree {
     pub fn get_marks(
         &self,
         id: &NodeId,
-    ) -> Option<im::Vector<Mark>> {
+    ) -> Option<imbl::Vector<Mark>> {
         self.get_node(id).map(|n| n.marks.clone())
     }
 
@@ -578,7 +579,7 @@ impl Tree {
         }
         let nodes_to_remove: std::collections::HashSet<_> =
             nodes.iter().collect();
-        let filtered_children: im::Vector<NodeId> = parent
+        let filtered_children: imbl ::Vector<NodeId> = parent
             .as_ref()
             .content
             .iter()
@@ -710,7 +711,7 @@ mod tests {
     use crate::node::Node;
     use crate::attrs::Attrs;
     use crate::mark::Mark;
-    use im::HashMap;
+    use imbl::HashMap;
     use serde_json::json;
 
     fn create_test_node(id: &str) -> Node {

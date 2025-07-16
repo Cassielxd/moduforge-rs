@@ -45,7 +45,7 @@ impl<'a> Shr<usize> for NodeRef<'a> {
         if let Some(parent) =
             self.tree.get_parent_node(&self.key.clone().into())
         {
-            let siblings: im::Vector<String> =
+            let siblings: imbl::Vector<String> =
                 self.tree.children(&parent.id).unwrap_or_default();
 
             if let Some(current_index) =
