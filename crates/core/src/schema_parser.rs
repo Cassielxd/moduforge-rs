@@ -1265,12 +1265,14 @@ struct XmlNode {
     /// 节点分组（如"block"、"inline"等）
     #[serde(rename = "@group")]
     group: Option<String>,
-    
+    #[serde(rename = "@desc")]
     /// 节点描述信息
     desc: Option<String>,
+    #[serde(rename = "@content")]
     /// 内容规则（如"paragraph+"、"text*"等）
     content: Option<String>,
     /// 允许的标记列表（空格分隔）
+    #[serde(rename = "@marks")]
     marks: Option<String>,
     /// 节点属性定义
     attrs: Option<XmlAttrs>,
@@ -1290,10 +1292,14 @@ struct XmlMark {
     group: Option<String>,
     
     /// 标记描述信息
+    #[serde(rename = "@desc")]
     desc: Option<String>,
+    /// 
     /// 排斥的标记列表（不能同时使用的标记）
+    #[serde(rename = "@excludes")]
     excludes: Option<String>,
     /// 是否为跨度标记（true表示可以跨越多个节点）
+    #[serde(rename = "@spanning", deserialize_with = "deserialize_optional_bool", default)]
     spanning: Option<bool>,
     /// 标记属性定义
     attrs: Option<XmlAttrs>,
@@ -1387,7 +1393,24 @@ where
         None => Ok(None),
     }
 }
-
+fn deserialize_optional_bool<'de, D>(deserializer: D) -> Result<Option<bool>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let opt: Option<String> = Option::deserialize(deserializer)?;
+    match opt {
+        Some(s) => {
+            if s == "true" {
+                Ok(Some(true))
+            } else if s == "false" {
+                Ok(Some(false))
+            } else {
+                Ok(Some(false))
+            }
+        }
+        None => Ok(Some(false)),
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1398,17 +1421,9 @@ mod tests {
         <?xml version="1.0" encoding="UTF-8"?>
         <schema top_node="doc">
           <nodes>
-            <node name="doc">
-              <desc>文档根节点</desc>
-              <content>paragraph+</content>
-            </node>
-            <node name="paragraph">
-              <desc>段落节点</desc>
-              <content>text*</content>
-            </node>
-            <node name="text">
-              <desc>文本节点</desc>
-            </node>
+            <node name="doc" desc="文档根节点" content="paragraph+"/>
+            <node name="paragraph" desc="段落节点" content="text*"/>
+            <node name="text" desc="文本节点"/>
           </nodes>
         </schema>
         "#;
@@ -1430,36 +1445,22 @@ mod tests {
         <?xml version="1.0" encoding="UTF-8"?>
         <schema top_node="doc">
           <nodes>
-            <node name="doc" group="block">
-              <desc>文档根节点</desc>
-              <content>paragraph+</content>
-              <marks>_</marks>
+            <node name="doc" group="block" desc="文档根节点" content="paragraph+" marks="_">
               <attrs>
                 <attr name="title" default="Untitled Document"/>
                 <attr name="version" default="1.0"/>
               </attrs>
             </node>
-            <node name="paragraph" group="block">
-              <desc>段落节点</desc>
-              <content>inline*</content>
-              <marks>strong em</marks>
-            </node>
-            <node name="text">
-              <desc>文本节点</desc>
-            </node>
+            <node name="paragraph" group="block" desc="段落节点" content="inline*" marks="strong em"/>
+            <node name="text" desc="文本节点"/>
           </nodes>
           <marks>
-            <mark name="strong" group="formatting">
-              <desc>粗体标记</desc>
-              <spanning>true</spanning>
+            <mark name="strong" group="formatting" desc="粗体标记" spanning="true">
               <attrs>
                 <attr name="weight" default="bold"/>
               </attrs>
             </mark>
-            <mark name="em" group="formatting">
-              <desc>斜体标记</desc>
-              <spanning>true</spanning>
-              <excludes>strong</excludes>
+            <mark name="em" group="formatting" desc="斜体标记" spanning="true" excludes="strong">
             </mark>
           </marks>
         </schema>
@@ -1524,12 +1525,8 @@ mod tests {
         <?xml version="1.0" encoding="UTF-8"?>
         <schema>
           <nodes>
-            <node name="duplicate">
-              <desc>第一个节点</desc>
-            </node>
-            <node name="duplicate">
-              <desc>重复的节点</desc>
-            </node>
+            <node name="duplicate" desc="第一个节点"/>
+            <node name="duplicate" desc="重复的节点"/>
           </nodes>
         </schema>
         "#;
@@ -1551,24 +1548,13 @@ mod tests {
         <?xml version="1.0" encoding="UTF-8"?>
         <schema top_node="doc">
           <nodes>
-            <node name="doc" group="block">
-              <desc>文档根节点</desc>
-              <content>paragraph+</content>
-              <marks>_</marks>
+            <node name="doc" group="block" desc="文档根节点" content="paragraph+" marks="_">
             </node>
-            <node name="paragraph" group="block">
-              <desc>段落节点</desc>
-              <content>text*</content>
-              <marks>strong</marks>
-            </node>
-            <node name="text">
-              <desc>文本节点</desc>
-            </node>
+            <node name="paragraph" group="block" desc="段落节点" content="text*" marks="strong"/>
+            <node name="text" desc="文本节点"/>
           </nodes>
           <marks>
-            <mark name="strong" group="formatting">
-              <desc>粗体标记</desc>
-              <spanning>true</spanning>
+            <mark name="strong" group="formatting" desc="粗体标记" spanning="true">
             </mark>
           </marks>
         </schema>
@@ -1609,27 +1595,16 @@ mod tests {
         <?xml version="1.0" encoding="UTF-8"?>
         <schema top_node="doc">
           <nodes>
-            <node name="doc" group="block">
-              <desc>文档根节点</desc>
-              <content>paragraph+</content>
-              <marks>_</marks>
+            <node name="doc" group="block" desc="文档根节点" content="paragraph+" marks="_">
               <attrs>
                 <attr name="title" default="Untitled Document"/>
               </attrs>
             </node>
-            <node name="paragraph" group="block">
-              <desc>段落节点</desc>
-              <content>text*</content>
-              <marks>strong</marks>
-            </node>
-            <node name="text">
-              <desc>文本节点</desc>
-            </node>
+            <node name="paragraph" group="block" desc="段落节点" content="text*" marks="strong"/>
+            <node name="text" desc="文本节点"/>
           </nodes>
           <marks>
-            <mark name="strong" group="formatting">
-              <desc>粗体标记</desc>
-              <spanning>true</spanning>
+            <mark name="strong" group="formatting" desc="粗体标记" spanning="true">
               <attrs>
                 <attr name="weight" default="bold"/>
               </attrs>
@@ -1702,17 +1677,9 @@ mod tests {
         <?xml version="1.0" encoding="UTF-8"?>
         <schema>
           <nodes>
-            <node name="doc" group="block">
-              <desc>文档根节点</desc>
-              <content>paragraph+</content>
-            </node>
-            <node name="paragraph" group="block">
-              <desc>段落节点</desc>
-              <content>text*</content>
-            </node>
-            <node name="text">
-              <desc>文本节点</desc>
-            </node>
+            <node name="doc" group="block" desc="文档根节点" content="paragraph+"/>
+            <node name="paragraph" group="block" desc="段落节点" content="text*"/>
+            <node name="text" desc="文本节点"/>
           </nodes>
         </schema>
         "#;
@@ -1725,9 +1692,7 @@ mod tests {
         <?xml version="1.0" encoding="UTF-8"?>
         <schema>
           <marks>
-            <mark name="strong" group="formatting">
-              <desc>粗体标记</desc>
-              <spanning>true</spanning>
+            <mark name="strong" group="formatting" desc="粗体标记" spanning="true">
             </mark>
           </marks>
         </schema>
@@ -1745,9 +1710,7 @@ mod tests {
             <import src="{}"/>
           </imports>
           <nodes>
-            <node name="custom" group="block">
-              <desc>自定义节点</desc>
-            </node>
+            <node name="custom" group="block" desc="自定义节点"/>
           </nodes>
         </schema>
         "#,
@@ -1792,9 +1755,7 @@ mod tests {
             <import src="{}"/>
           </imports>
           <nodes>
-            <node name="node_a">
-              <desc>节点A</desc>
-            </node>
+            <node name="node_a" desc="节点A"/>
           </nodes>
         </schema>
         "#, "file-b.xml");
@@ -1806,9 +1767,7 @@ mod tests {
             <import src="{}"/>
           </imports>
           <nodes>
-            <node name="node_b">
-              <desc>节点B</desc>
-            </node>
+            <node name="node_b" desc="节点B"/>
           </nodes>
         </schema>
         "#, "file-a.xml");
@@ -1849,17 +1808,9 @@ mod tests {
             </global_attribute>
           </global_attributes>
           <nodes>
-            <node name="doc">
-              <desc>文档根节点</desc>
-              <content>paragraph+</content>
-            </node>
-            <node name="paragraph">
-              <desc>段落节点</desc>
-              <content>text*</content>
-            </node>
-            <node name="text">
-              <desc>文本节点</desc>
-            </node>
+            <node name="doc" desc="文档根节点" content="paragraph+"/>
+            <node name="paragraph" desc="段落节点" content="text*"/>
+            <node name="text" desc="文本节点"/>
           </nodes>
         </schema>
         "#;

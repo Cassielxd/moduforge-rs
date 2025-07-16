@@ -112,21 +112,6 @@
       <xs:documentation>节点类型定义</xs:documentation>
     </xs:annotation>
     <xs:sequence>
-      <xs:element name="desc" type="xs:string" minOccurs="0">
-        <xs:annotation>
-          <xs:documentation>节点描述信息</xs:documentation>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="content" type="xs:string" minOccurs="0">
-        <xs:annotation>
-          <xs:documentation>内容规则，如 "paragraph+" 或 "text*"</xs:documentation>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="marks" type="xs:string" minOccurs="0">
-        <xs:annotation>
-          <xs:documentation>允许的标记列表，空格分隔，或使用 _ 表示不允许标记</xs:documentation>
-        </xs:annotation>
-      </xs:element>
       <xs:element name="attrs" minOccurs="0">
         <xs:annotation>
           <xs:documentation>节点属性定义</xs:documentation>
@@ -148,6 +133,21 @@
         <xs:documentation>节点分组</xs:documentation>
       </xs:annotation>
     </xs:attribute>
+    <xs:attribute name="desc" type="xs:string">
+      <xs:annotation>
+        <xs:documentation>节点描述信息</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="content" type="xs:string">
+      <xs:annotation>
+        <xs:documentation>内容规则，如 "paragraph+" 或 "text*"</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="marks" type="xs:string">
+      <xs:annotation>
+        <xs:documentation>允许的标记列表，空格分隔，或使用 _ 表示不允许标记</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
   </xs:complexType>
 
   <!-- 标记类型定义 -->
@@ -156,21 +156,6 @@
       <xs:documentation>标记类型定义</xs:documentation>
     </xs:annotation>
     <xs:sequence>
-      <xs:element name="desc" type="xs:string" minOccurs="0">
-        <xs:annotation>
-          <xs:documentation>标记描述信息</xs:documentation>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="excludes" type="xs:string" minOccurs="0">
-        <xs:annotation>
-          <xs:documentation>排斥的标记列表，不能同时使用的标记</xs:documentation>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="spanning" type="xs:boolean" minOccurs="0">
-        <xs:annotation>
-          <xs:documentation>是否为跨度标记（true表示可以跨越多个节点）</xs:documentation>
-        </xs:annotation>
-      </xs:element>
       <xs:element name="attrs" minOccurs="0">
         <xs:annotation>
           <xs:documentation>标记属性定义</xs:documentation>
@@ -190,6 +175,21 @@
     <xs:attribute name="group" type="MarkGroupType">
       <xs:annotation>
         <xs:documentation>标记分组</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="desc" type="xs:string">
+      <xs:annotation>
+        <xs:documentation>标记描述信息</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="excludes" type="xs:string">
+      <xs:annotation>
+        <xs:documentation>排斥的标记列表，不能同时使用的标记</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="spanning" type="xs:boolean">
+      <xs:annotation>
+        <xs:documentation>是否为跨度标记（true表示可以跨越多个节点）</xs:documentation>
       </xs:annotation>
     </xs:attribute>
   </xs:complexType>
