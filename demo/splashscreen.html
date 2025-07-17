@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ModuForge Demo - 启动中</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+
+        .splashscreen {
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            position: relative;
+        }
+
+        .splash-container {
+            text-align: center;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .logo-section {
+            margin-bottom: 60px;
+        }
+
+        .logo-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+        }
+
+        .app-title {
+            font-size: 36px;
+            font-weight: 600;
+            margin: 0 0 12px 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .app-subtitle {
+            font-size: 16px;
+            margin: 0;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .loading-section {
+            margin-bottom: 80px;
+        }
+
+        .loading-text {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .loading-icon {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .progress-container {
+            width: 300px;
+            height: 4px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            margin: 0 auto 12px auto;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: #ffffff;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-text {
+            font-size: 12px;
+            opacity: 0.8;
+            font-weight: 500;
+        }
+
+        .version-info {
+            opacity: 0.7;
+        }
+
+        .version-info p {
+            margin: 4px 0;
+            font-size: 12px;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="splashscreen">
+        <div class="splash-container">
+            <!-- Logo 区域 -->
+            <div class="logo-section">
+                <div class="logo-icon">📄</div>
+                <h1 class="app-title">ModuForge Demo</h1>
+                <p class="app-subtitle">项目管理与数据分析平台</p>
+            </div>
+
+            <!-- 加载进度区域 -->
+            <div class="loading-section">
+                <div class="loading-text">
+                    <div class="loading-icon"></div>
+                    <span id="loading-text">初始化应用...</span>
+                </div>
+                
+                <div class="progress-container">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+                
+                <div class="progress-text">
+                    <span id="progress-percentage">0%</span>
+                </div>
+            </div>
+
+            <!-- 版本信息 -->
+            <div class="version-info">
+                <p>版本 1.0.0</p>
+                <p>© 2024 ModuForge Team. All rights reserved.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const loadingSteps = [
+            { text: '初始化应用...', delay: 300 },
+            { text: '加载配置文件...', delay: 500 },
+            { text: '连接数据库...', delay: 400 },
+            { text: '加载用户界面...', delay: 600 },
+            { text: '准备就绪...', delay: 200 }
+        ];
+
+        let currentProgress = 0;
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-percentage');
+        const loadingText = document.getElementById('loading-text');
+
+        async function updateProgress(targetProgress, text) {
+            loadingText.textContent = text;
+            
+            return new Promise(resolve => {
+                const step = (targetProgress - currentProgress) / 20;
+                
+                const animate = () => {
+                    if (Math.abs(currentProgress - targetProgress) < 1) {
+                        currentProgress = targetProgress;
+                        progressBar.style.width = currentProgress + '%';
+                        progressText.textContent = Math.round(currentProgress) + '%';
+                        resolve();
+                        return;
+                    }
+                    
+                    currentProgress += step;
+                    progressBar.style.width = currentProgress + '%';
+                    progressText.textContent = Math.round(currentProgress) + '%';
+                    requestAnimationFrame(animate);
+                };
+                
+                animate();
+            });
+        }
+
+        async function startLoading() {
+            for (let i = 0; i < loadingSteps.length; i++) {
+                const targetProgress = ((i + 1) / loadingSteps.length) * 100;
+                await updateProgress(targetProgress, loadingSteps[i].text);
+                await new Promise(resolve => setTimeout(resolve, loadingSteps[i].delay));
+            }
+            
+            // 通知 Tauri 启动完成
+            setTimeout(() => {
+                if (window.__TAURI__ && window.__TAURI__.event) {
+                    window.__TAURI__.event.emit('splashscreen-finished');
+                } else if (window.__TAURI__ && window.__TAURI__.core) {
+                    // Tauri v2 API
+                    window.__TAURI__.core.invoke('plugin:event|emit', {
+                        event: 'splashscreen-finished'
+                    });
+                }
+            }, 500);
+        }
+
+        // 页面加载完成后开始启动流程
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(startLoading, 100);
+        });
+    </script>
+</body>
+</html> 

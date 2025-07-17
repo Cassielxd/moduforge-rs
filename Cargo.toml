@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
    "crates/*",
-   "demo",
+   "demo/src-tauri",
    "devtool-rules"
    ]
 exclude = [

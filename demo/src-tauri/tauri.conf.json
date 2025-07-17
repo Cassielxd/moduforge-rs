@@ -1,0 +1,54 @@
+{
+  "$schema": "https://schema.tauri.app/config/2.5.0",
+  "productName": "dm-demo",
+  "version": "0.1.0",
+  "identifier": "com.tauri.dev",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "ModuForge Demo",
+        "width": 1200,
+        "height": 1000,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": false,
+        "visible": false
+      },
+      {
+        "label": "splashscreen",
+        "title": "ModuForge Demo - Loading",
+        "url": "splashscreen.html",
+        "width": 400,
+        "height": 300,
+        "resizable": false,
+        "fullscreen": false,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "center": true,
+        "skipTaskbar": true,
+        "visible": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}
