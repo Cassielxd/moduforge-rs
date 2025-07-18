@@ -7,12 +7,12 @@ use rquickjs::loader::{Bundle, Loader, ModuleLoader as MDLoader, Resolver};
 use rquickjs::module::{Declared, Exports};
 use rquickjs::{embed, Ctx, Error, Module, Object};
 
-use crate::handler::function::module::custom::ModuforgeModule;
+use crate::handler::function::module::mf::ModuforgeModule;
 use crate::handler::function::module::http::HttpModule;
 use crate::handler::function::module::zen::ZenModule;
 
 pub mod console;
-pub mod custom;
+pub mod mf;
 pub mod http;
 pub mod zen;
 

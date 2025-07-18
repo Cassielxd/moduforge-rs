@@ -445,7 +445,7 @@ impl From<&Node<'_>> for UnaryNodeBehaviour {
                     ClosureFunction::FlatMap => CompareWithReference(In),
                     ClosureFunction::Count => CompareWithReference(Equal),
                 },
-                FunctionKind::Custom(_) => CompareWithReference(Equal), // 自定义函数默认用等号比较
+                FunctionKind::Mf(_) => CompareWithReference(Equal), // 自定义函数默认用等号比较
             },
             Node::MethodCall { kind, .. } => match kind {
                 MethodKind::DateMethod(dm) => match dm {

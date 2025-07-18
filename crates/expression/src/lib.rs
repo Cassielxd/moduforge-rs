@@ -78,6 +78,6 @@ pub use isolate::{Isolate, IsolateError};
 pub use variable::Variable;
 
 // 导出自定义函数相关
-pub use functions::custom::{CustomFunction, CustomFunctionRegistry};
+pub use functions::mf_function::{MfFunction, MfFunctionRegistry};
 pub use functions::defs::FunctionSignature;
 pub use functions::{StateGuard, with_state_async};

@@ -18,18 +18,18 @@ use std::marker::PhantomData;
 
 /// 自定义函数标识符
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
-pub struct CustomFunction {
+pub struct MfFunction {
     /// 函数名称
     pub name: String,
 }
 
-impl CustomFunction {
+impl MfFunction {
     pub fn new(name: String) -> Self {
         Self { name }
     }
 }
 
-impl Display for CustomFunction {
+impl Display for MfFunction {
     fn fmt(
         &self,
         f: &mut std::fmt::Formatter<'_>,
@@ -38,13 +38,13 @@ impl Display for CustomFunction {
     }
 }
 
-impl TryFrom<&str> for CustomFunction {
+impl TryFrom<&str> for MfFunction {
     type Error = strum::ParseError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         // 检查是否为已注册的自定义函数
-        if CustomFunctionRegistry::is_registered(value) {
-            Ok(CustomFunction::new(value.to_string()))
+        if MfFunctionRegistry::is_registered(value) {
+            Ok(MfFunction::new(value.to_string()))
         } else {
             Err(strum::ParseError::VariantNotFound)
         }
@@ -61,7 +61,7 @@ type ErasedExecutor = Box<
 >;
 
 /// 自定义函数定义
-pub struct CustomFunctionDefinition {
+pub struct MfFunctionDefinition {
     /// 函数名称
     pub name: String,
     /// 函数签名
@@ -70,7 +70,7 @@ pub struct CustomFunctionDefinition {
     pub executor: ErasedExecutor,
 }
 
-impl CustomFunctionDefinition {
+impl MfFunctionDefinition {
     pub fn new(
         name: String,
         signature: FunctionSignature,
@@ -80,7 +80,7 @@ impl CustomFunctionDefinition {
     }
 }
 
-impl FunctionDefinition for CustomFunctionDefinition {
+impl FunctionDefinition for MfFunctionDefinition {
     fn call(
         &self,
         args: Arguments,
@@ -164,13 +164,13 @@ thread_local! {
 }
 
 /// 自定义函数注册表
-pub struct CustomFunctionRegistry {
-    functions: HashMap<String, Rc<CustomFunctionDefinition>>,
+pub struct MfFunctionRegistry {
+    functions: HashMap<String, Rc<MfFunctionDefinition>>,
 }
 
-impl CustomFunctionRegistry {
+impl MfFunctionRegistry {
     thread_local!(
-        static INSTANCE: RefCell<CustomFunctionRegistry> = RefCell::new(CustomFunctionRegistry::new())
+        static INSTANCE: RefCell<MfFunctionRegistry> = RefCell::new(MfFunctionRegistry::new())
     );
 
     fn new() -> Self {
@@ -189,7 +189,7 @@ impl CustomFunctionRegistry {
                 return Err(format!("函数 '{}' 已经存在", name));
             }
 
-            let definition = CustomFunctionDefinition::new(
+            let definition = MfFunctionDefinition::new(
                 name.clone(),
                 signature,
                 executor,
@@ -251,11 +251,11 @@ impl CustomFunctionRegistry {
 }
 
 /// 用于注册特定状态类型 `S` 的函数的辅助结构。
-pub struct CustomFunctionHelper<S> {
+pub struct MfFunctionHelper<S> {
     _marker: PhantomData<S>,
 }
 
-impl<S: Send + Sync + 'static> CustomFunctionHelper<S> {
+impl<S: Send + Sync + 'static> MfFunctionHelper<S> {
     /// 创建一个新的辅助实例。
     pub fn new() -> Self {
         Self { _marker: PhantomData }
@@ -285,7 +285,7 @@ impl<S: Send + Sync + 'static> CustomFunctionHelper<S> {
                 executor(args, typed_state)
             });
 
-        CustomFunctionRegistry::register_function_erased(
+        MfFunctionRegistry::register_function_erased(
             name,
             signature,
             wrapped_executor,
@@ -293,15 +293,15 @@ impl<S: Send + Sync + 'static> CustomFunctionHelper<S> {
     }
 }
 
-impl<S: Send + Sync + 'static> Default for CustomFunctionHelper<S> {
+impl<S: Send + Sync + 'static> Default for MfFunctionHelper<S> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl From<&CustomFunction> for Rc<dyn FunctionDefinition> {
-    fn from(custom: &CustomFunction) -> Self {
-        CustomFunctionRegistry::get_definition(&custom.name).unwrap_or_else(
+impl From<&MfFunction> for Rc<dyn FunctionDefinition> {
+    fn from(custom: &MfFunction) -> Self {
+        MfFunctionRegistry::get_definition(&custom.name).unwrap_or_else(
             || {
                 // 如果函数不存在，返回一个错误函数
                 Rc::new(StaticFunction {

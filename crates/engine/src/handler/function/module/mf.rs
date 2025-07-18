@@ -18,7 +18,7 @@
 //! ## 架构说明
 //!
 //! ```text
-//! CustomFunctionRegistry → CustomListener → JavaScript Runtime (md namespace)
+//! MfFunctionRegistry → CustomListener → JavaScript Runtime (md namespace)
 //!        ↓                      ↓                    ↓
 //!    函数定义存储           函数注册处理          md.functionName() 调用执行
 //! ```
@@ -29,7 +29,7 @@ use crate::handler::function::error::{FunctionResult, ResultExt};
 use crate::handler::function::listener::{RuntimeEvent, RuntimeListener};
 use crate::handler::function::module::export_default;
 use crate::handler::function::serde::JsValue;
-use mf_expression::{CustomFunctionRegistry, functions::arguments::Arguments};
+use mf_expression::{MfFunctionRegistry, functions::arguments::Arguments};
 use rquickjs::module::{Declarations, Exports, ModuleDef};
 use rquickjs::prelude::{Async, Func};
 use rquickjs::{CatchResultExt, Ctx};
@@ -83,13 +83,13 @@ impl RuntimeListener for ModuforgeListener {
             };
 
             // 从自定义函数注册表中获取所有函数名称
-            let functions_keys = CustomFunctionRegistry::list_functions();
+            let functions_keys = MfFunctionRegistry::list_functions();
 
             // 遍历每个注册的函数
             for function_key in functions_keys {
                 // 根据函数名获取函数定义
                 let function_definition =
-                    CustomFunctionRegistry::get_definition(&function_key);
+                    MfFunctionRegistry::get_definition(&function_key);
 
                 if let Some(function_definition) = function_definition {
                     // 将Rust函数包装为JavaScript异步函数并注册到md命名空间下
@@ -248,7 +248,7 @@ pub struct ModuforgeModule;
 impl ModuleDef for ModuforgeModule {
     fn declare<'js>(decl: &Declarations<'js>) -> rquickjs::Result<()> {
         // 声明所有可用的函数
-        for function_key in CustomFunctionRegistry::list_functions() {
+        for function_key in MfFunctionRegistry::list_functions() {
             decl.declare(function_key.as_str())?;
         }
         decl.declare("default")?;
@@ -261,9 +261,9 @@ impl ModuleDef for ModuforgeModule {
     ) -> rquickjs::Result<()> {
         export_default(ctx, exports, |default| {
             // 为每个函数创建对应的异步函数
-            for function_key in CustomFunctionRegistry::list_functions() {
+            for function_key in MfFunctionRegistry::list_functions() {
                 if let Some(function_definition) =
-                    CustomFunctionRegistry::get_definition(&function_key)
+                    MfFunctionRegistry::get_definition(&function_key)
                 {
                     let function_definition = function_definition.clone();
                     let parameters = function_definition.required_parameters();

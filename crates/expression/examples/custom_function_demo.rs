@@ -1,6 +1,6 @@
 use mf_expression::{Isolate, Variable};
-use mf_expression::functions::custom::{
-    CustomFunctionHelper, CustomFunctionRegistry,
+use mf_expression::functions::mf_function::{
+    MfFunctionHelper, MfFunctionRegistry,
 };
 use mf_expression::variable::VariableType;
 use std::collections::HashMap;
@@ -32,7 +32,7 @@ fn main() -> anyhow::Result<()> {
     let my_state = Arc::new(MyState::new());
 
     // 2. 为 `MyState` 创建一个 Helper
-    let my_helper = CustomFunctionHelper::<MyState>::new();
+    let my_helper = MfFunctionHelper::<MyState>::new();
 
     // 3. 注册一个可以访问 `MyState` 的函数
     println!("注册函数: getMyStateCallCount()");
@@ -72,14 +72,14 @@ fn main() -> anyhow::Result<()> {
 
     // 显示所有已注册的自定义函数
     println!("\n=== 已注册的自定义函数 ===");
-    let functions = CustomFunctionRegistry::list_functions();
+    let functions = MfFunctionRegistry::list_functions();
     for func in functions {
         println!("- {}", func);
     }
 
     // 清理
     println!("\n清理所有自定义函数...");
-    CustomFunctionRegistry::clear();
+    MfFunctionRegistry::clear();
 
     println!("演示完成！");
     Ok(())

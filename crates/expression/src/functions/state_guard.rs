@@ -3,7 +3,7 @@
 //! 提供 RAII 模式的 State 管理，确保异常安全
 
 use std::sync::Arc;
-use super::custom::CustomFunctionRegistry;
+use super::mf_function::MfFunctionRegistry;
 use std::marker::PhantomData;
 
 /// State 守卫，使用 RAII 模式自动管理 State 的设置和清理
@@ -42,7 +42,7 @@ impl<S: Send + Sync + 'static> StateGuard<S> {
     /// # 返回值
     /// 返回 StateGuard 实例，当其被丢弃时会自动清理 State
     pub fn new(state: Arc<S>) -> Self {
-        CustomFunctionRegistry::set_current_state(Some(state));
+        MfFunctionRegistry::set_current_state(Some(state));
         Self { _private: PhantomData }
     }
 
@@ -51,7 +51,7 @@ impl<S: Send + Sync + 'static> StateGuard<S> {
     /// # 返回值
     /// 返回 StateGuard 实例，会立即清理当前 State 并在丢弃时保持清理状态
     pub fn empty() -> Self {
-        CustomFunctionRegistry::clear_current_state();
+        MfFunctionRegistry::clear_current_state();
         Self { _private: PhantomData }
     }
 
@@ -61,7 +61,7 @@ impl<S: Send + Sync + 'static> StateGuard<S> {
     /// * `true` - 当前线程有活跃的 State
     /// * `false` - 当前线程没有 State
     pub fn has_active_state() -> bool {
-        CustomFunctionRegistry::has_current_state()
+        MfFunctionRegistry::has_current_state()
     }
 }
 
@@ -71,7 +71,7 @@ impl<S> Drop for StateGuard<S> {
     /// 当 StateGuard 被丢弃时（正常情况或异常情况），
     /// 会自动清理当前线程的 State 上下文
     fn drop(&mut self) {
-        CustomFunctionRegistry::clear_current_state();
+        MfFunctionRegistry::clear_current_state();
     }
 }
 

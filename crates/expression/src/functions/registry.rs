@@ -4,7 +4,7 @@
 
 use crate::functions::defs::FunctionDefinition;
 use crate::functions::{DeprecatedFunction, FunctionKind, InternalFunction};
-use crate::functions::custom::CustomFunctionRegistry;
+use crate::functions::mf_function::MfFunctionRegistry;
 use nohash_hasher::{BuildNoHashHasher, IsEnabled};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -58,8 +58,8 @@ impl FunctionRegistry {
                 })
             },
             FunctionKind::Closure(_) => None, // 闭包函数不在注册表中，由编译器特殊处理
-            FunctionKind::Custom(custom) => {
-                CustomFunctionRegistry::get_definition(&custom.name)
+            FunctionKind::Mf(mf) => {
+                MfFunctionRegistry::get_definition(&mf.name)
             },
         }
     }

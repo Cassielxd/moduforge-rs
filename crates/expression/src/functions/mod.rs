@@ -8,14 +8,14 @@ pub use crate::functions::deprecated::DeprecatedFunction;
 pub use crate::functions::internal::InternalFunction;
 pub use crate::functions::method::{MethodKind, MethodRegistry};
 pub use crate::functions::registry::FunctionRegistry;
-pub use crate::functions::custom::CustomFunction;
+pub use crate::functions::mf_function::MfFunction;
 pub use crate::functions::state_guard::{StateGuard, with_state_async};
 
 use std::fmt::Display;
 use strum_macros::{Display, EnumIter, EnumString, IntoStaticStr};
 
 pub mod arguments; // 函数参数处理
-pub mod custom;
+pub mod mf_function;
 mod date_method; // 日期方法
 pub mod defs; // 函数定义接口
 mod deprecated; // 已废弃函数
@@ -36,7 +36,7 @@ pub enum FunctionKind {
     /// 闭包函数：用于数组操作的特殊函数
     Closure(ClosureFunction),
     /// 自定义函数：用户定义的扩展函数
-    Custom(CustomFunction),
+    Mf(MfFunction),
 }
 
 impl TryFrom<&str> for FunctionKind {
@@ -56,7 +56,7 @@ impl TryFrom<&str> for FunctionKind {
                 ClosureFunction::try_from(value).map(FunctionKind::Closure)
             })
             .or_else(|_| {
-                CustomFunction::try_from(value).map(FunctionKind::Custom)
+                MfFunction::try_from(value).map(FunctionKind::Mf)
             })
     }
 }
@@ -70,7 +70,7 @@ impl Display for FunctionKind {
             FunctionKind::Internal(i) => write!(f, "{i}"),
             FunctionKind::Deprecated(d) => write!(f, "{d}"),
             FunctionKind::Closure(c) => write!(f, "{c}"),
-            FunctionKind::Custom(c) => write!(f, "{c}"),
+            FunctionKind::Mf(m) => write!(f, "{m}"),
         }
     }
 }
