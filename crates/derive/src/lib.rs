@@ -10,6 +10,7 @@ pub fn derive_plugin_state(input: TokenStream) -> TokenStream {
     let expanded = quote! {
         impl Resource for #name {}
     };
+    
 
     TokenStream::from(expanded)
 }

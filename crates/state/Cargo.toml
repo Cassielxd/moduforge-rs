@@ -14,7 +14,6 @@ path="src/lib.rs"
 
 [dependencies]
 imbl= {workspace=true}
-serde = {workspace=true}
 serde_json = {workspace=true}
 thiserror= {workspace=true}
 async-trait= {workspace=true}

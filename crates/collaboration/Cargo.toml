@@ -19,7 +19,6 @@ tracing-subscriber = { workspace=true }
 futures-util = { workspace=true }
 serde = { workspace=true }
 serde_json = { workspace=true }
-uuid = { workspace=true }
 anyhow = { workspace=true }
 thiserror = { workspace=true }
 tracing = "0.1"
@@ -28,5 +27,3 @@ dashmap = { workspace=true }
 warp = "0.3.7"
 yrs-warp = { workspace=true }
 yrs = { workspace=true }
-async-trait =  { workspace=true }
-fastrand = "2.0"
