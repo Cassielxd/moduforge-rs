@@ -99,14 +99,14 @@ ahash = "0.8"
 rust_decimal = "1"
 
 # ModuForge-RS 核心包
-moduforge-core = "0.4.11"
-moduforge-state = "0.4.11"
-moduforge-model = "0.4.11"
-moduforge-transform = "0.4.11"
-moduforge-rules-engine = "0.4.11"
-moduforge-rules-expression = "0.4.11"
-moduforge-collaboration = "0.4.11"
-moduforge-template = "0.4.11"
+moduforge-core = "0.4.12"
+moduforge-state = "0.4.12"
+moduforge-model = "0.4.12"
+moduforge-transform = "0.4.12"
+moduforge-rules-engine = "0.4.12"
+moduforge-rules-expression = "0.4.12"
+moduforge-collaboration = "0.4.12"
+moduforge-template = "0.4.12"
 ```
 
 ## 代码风格指南

@@ -12,14 +12,14 @@
 ```toml
 [dependencies]
 # ModuForge-RS 核心组件
-moduforge-core = "0.4.11"
-moduforge-model = "0.4.11"
-moduforge-state = "0.4.11"
-moduforge-transform = "0.4.11"
-moduforge-rules-engine = "0.4.11"
-moduforge-rules-expression = "0.4.11"
-moduforge-collaboration = "0.4.11"
-moduforge-template = "0.4.11"
+moduforge-core = "0.4.12"
+moduforge-model = "0.4.12"
+moduforge-state = "0.4.12"
+moduforge-transform = "0.4.12"
+moduforge-rules-engine = "0.4.12"
+moduforge-rules-expression = "0.4.12"
+moduforge-collaboration = "0.4.12"
+moduforge-template = "0.4.12"
 
 # ModuForge-RS 依赖的核心库
 tokio = { version = "1.0", features = ["full"] }

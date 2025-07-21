@@ -102,7 +102,7 @@ time = "0.3"
 ### ModuForge-RS 内部依赖
 ```toml
 # 数据模型
-moduforge-model = "0.4.11"
+moduforge-model = "0.4.12"
 ```
 
 ## 🚀 快速开始

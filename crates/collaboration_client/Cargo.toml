@@ -29,9 +29,9 @@ thiserror = { workspace=true }
 reqwest = { workspace=true }
 chrono = "0.4"
 imbl =  { workspace=true }
-moduforge-model = {version = "0.4.11", path = "../model"}
-moduforge-state = {version = "0.4.11", path = "../state"}
-moduforge-transform = {version = "0.4.11", path = "../transform"}
+moduforge-model = {version = "0.4.12", path = "../model"}
+moduforge-state = {version = "0.4.12", path = "../state"}
+moduforge-transform = {version = "0.4.12", path = "../transform"}
 
 # 新增依赖用于静态分发 StepConverter
 ctor = { workspace=true }

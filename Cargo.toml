@@ -9,7 +9,7 @@ exclude = [
    "demo"
 ]
 [workspace.package]
-version = "0.4.11"
+version = "0.4.12"
 edition = "2024"
 authors = ["String <348040933@qq.com>"]
 license = "MIT"
@@ -43,7 +43,6 @@ dashmap = "6.1.0"
 async-trait = "0.1"
 chrono = "0.4"
 async-channel = "2.3.1"
-crossbeam = "0.8"
 # 日志系统
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2"
