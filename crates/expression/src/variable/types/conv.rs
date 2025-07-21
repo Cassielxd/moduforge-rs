@@ -1,6 +1,7 @@
 use crate::variable::types::VariableType;
 use serde_json::Value;
 use std::borrow::Cow;
+use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::Rc;
 
@@ -17,18 +18,18 @@ impl<'a> From<Cow<'a, Value>> for VariableType {
                 };
 
                 VariableType::from(arr)
-            },
+            }
             Value::Object(_) => {
                 let Value::Object(obj) = value.into_owned() else {
                     panic!("unexpected type of value, expected object");
                 };
 
-                VariableType::Object(
+                VariableType::Object(Rc::new(RefCell::new(
                     obj.into_iter()
-                        .map(|(k, v)| (Rc::from(k.as_str()), Rc::new(v.into())))
+                        .map(|(k, v)| (Rc::from(k.as_str()), v.into()))
                         .collect(),
-                )
-            },
+                )))
+            }
         }
     }
 }
@@ -51,13 +52,12 @@ impl From<Vec<Value>> for VariableType {
             return VariableType::Array(Rc::new(VariableType::Any));
         }
 
-        let result_type = arr.into_iter().fold(
-            None,
-            |acc: Option<VariableType>, b| match acc {
+        let result_type = arr
+            .into_iter()
+            .fold(None, |acc: Option<VariableType>, b| match acc {
                 Some(a) => Some(a.merge(&VariableType::from(b))),
                 None => Some(VariableType::from(b)),
-            },
-        );
+            });
 
         VariableType::Array(Rc::new(result_type.unwrap_or(VariableType::Any)))
     }
@@ -69,8 +69,9 @@ impl From<&Vec<Value>> for VariableType {
             return VariableType::Array(Rc::new(VariableType::Any));
         }
 
-        let result_type =
-            arr.iter().fold(None, |acc: Option<VariableType>, b| match acc {
+        let result_type = arr
+            .iter()
+            .fold(None, |acc: Option<VariableType>, b| match acc {
                 Some(a) => Some(a.merge(&VariableType::from(b))),
                 None => Some(VariableType::from(b)),
             });

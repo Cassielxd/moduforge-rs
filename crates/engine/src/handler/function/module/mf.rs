@@ -195,7 +195,7 @@ impl RuntimeListener for ModuforgeListener {
                                                 .call(Arguments(&[context.0,context2.0,context3.0]))
                                                 .or_throw(&ctx)?;
                                             // 将Rust函数的返回值序列化为JSON，再转换为JavaScript值
-                                            let k = serde_json::to_value(response)
+                                            let k: mf_expression::Variable = serde_json::to_value(response)
                                                 .or_throw(&ctx)?
                                                 .into();
                                             return rquickjs::Result::Ok(JsValue(

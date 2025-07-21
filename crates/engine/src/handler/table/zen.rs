@@ -29,17 +29,16 @@ impl DecisionTableHandler {
         Self { trace }
     }
 
-    pub async fn handle(
-        &mut self,
-        request: NodeRequest,
-    ) -> NodeResult {
+    pub async fn handle(&mut self, request: NodeRequest) -> NodeResult {
         let content = match &request.node.kind {
             DecisionNodeKind::DecisionTableNode { content } => Ok(content),
             _ => Err(anyhow!("Unexpected node type")),
         }?;
 
         let inner_handler = DecisionTableHandlerInner::new(self.trace);
-        inner_handler.handle(request.input.depth_clone(1), content).await
+        inner_handler
+            .handle(request.input.depth_clone(1), content)
+            .await
     }
 }
 
@@ -50,14 +49,13 @@ struct DecisionTableHandlerInner<'a> {
 
 impl<'a> DecisionTableHandlerInner<'a> {
     pub fn new(trace: bool) -> Self {
-        Self { isolate: Isolate::new(), trace }
+        Self {
+            isolate: Isolate::new(),
+            trace,
+        }
     }
 
-    pub async fn handle(
-        self,
-        input: Variable,
-        content: &'a DecisionTableContent,
-    ) -> NodeResult {
+    pub async fn handle(self, input: Variable, content: &'a DecisionTableContent) -> NodeResult {
         let self_mutex = Arc::new(Mutex::new(self));
 
         content
@@ -69,23 +67,24 @@ impl<'a> DecisionTableHandlerInner<'a> {
 
                     self_ref.isolate.clear_references();
                     self_ref.isolate.set_environment(input);
-                    match &content.hit_policy {
-                        DecisionTableHitPolicy::First => {
-                            self_ref.handle_first_hit(&content).await
-                        },
-                        DecisionTableHitPolicy::Collect => {
-                            self_ref.handle_collect(&content).await
-                        },
-                    }
+                    let result = match &content.hit_policy {
+                        DecisionTableHitPolicy::First => self_ref.handle_first_hit(&content).await,
+                        DecisionTableHitPolicy::Collect => self_ref.handle_collect(&content).await,
+                    };
+
+                    self_ref.isolate.update_environment(|env| {
+                        if let Some(env) = env {
+                            env.dot_remove("$");
+                        };
+                    });
+
+                    result
                 }
             })
             .await
     }
 
-    async fn handle_first_hit(
-        &mut self,
-        content: &'a DecisionTableContent,
-    ) -> NodeResult {
+    async fn handle_first_hit(&mut self, content: &'a DecisionTableContent) -> NodeResult {
         for i in 0..content.rules.len() {
             if let Some(result) = self.evaluate_row(&content, i) {
                 return Ok(NodeResponse {
@@ -98,13 +97,13 @@ impl<'a> DecisionTableHandlerInner<'a> {
             }
         }
 
-        Ok(NodeResponse { output: Variable::Null, trace_data: None })
+        Ok(NodeResponse {
+            output: Variable::Null,
+            trace_data: None,
+        })
     }
 
-    async fn handle_collect(
-        &mut self,
-        content: &'a DecisionTableContent,
-    ) -> NodeResult {
+    async fn handle_collect(&mut self, content: &'a DecisionTableContent) -> NodeResult {
         let mut results = Vec::new();
         for i in 0..content.rules.len() {
             if let Some(result) = self.evaluate_row(&content, i) {
@@ -140,18 +139,17 @@ impl<'a> DecisionTableHandlerInner<'a> {
 
             match &input.field {
                 None => {
-                    let result =
-                        self.isolate.run_standard(rule_value.as_str()).ok()?;
+                    let result = self.isolate.run_standard(rule_value.as_str()).ok()?;
                     if !result.as_bool().unwrap_or(false) {
                         return None;
                     }
-                },
+                }
                 Some(field) => {
                     self.isolate.set_reference(field.as_str()).ok()?;
                     if !self.isolate.run_unary(rule_value.as_str()).ok()? {
                         return None;
                     }
-                },
+                }
             }
         }
 
@@ -194,13 +192,9 @@ impl<'a> DecisionTableHandlerInner<'a> {
                 continue;
             };
 
-            if let Some(reference) =
-                self.isolate.get_reference(input_field.as_str())
-            {
+            if let Some(reference) = self.isolate.get_reference(input_field.as_str()) {
                 reference_map.insert(input_field.clone(), reference);
-            } else if let Some(reference) =
-                self.isolate.run_standard(input_field.as_str()).ok()
-            {
+            } else if let Some(reference) = self.isolate.run_standard(input_field.as_str()).ok() {
                 reference_map.insert(input_field.clone(), reference);
             }
 

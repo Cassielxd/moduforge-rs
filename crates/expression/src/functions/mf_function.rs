@@ -100,7 +100,7 @@ impl FunctionDefinition for MfFunctionDefinition {
 
     fn check_types(
         &self,
-        args: &[Rc<VariableType>],
+        args: &[VariableType],
     ) -> crate::functions::defs::FunctionTypecheck {
         let mut typecheck =
             crate::functions::defs::FunctionTypecheck::default();
