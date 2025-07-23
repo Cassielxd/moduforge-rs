@@ -26,6 +26,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use thiserror::Error;
 use mf_expression::variable::Variable;
+use crate::handler::function::module::mf::ModuforgeListener;
 
 pub struct DecisionGraph<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> {
     initial_graph: StableDiDecisionGraph,
@@ -110,6 +111,7 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
                     loader: self.loader.clone(),
                     adapter: self.adapter.clone(),
                 }),
+                Box::new(ModuforgeListener{})
             ]),
         })
         .await
