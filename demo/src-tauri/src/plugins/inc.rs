@@ -4,7 +4,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use mf_model::{attrs::Attrs, mark::Mark, node::Node};
-use mf_state::{plugin::StateField, resource::Resource, State, StateConfig, Transaction};
+use mf_state::{
+    plugin::StateField, resource::Resource, State, StateConfig, Transaction,
+};
 use mf_transform::{
     attr_step::AttrStep,
     mark_step::{AddMarkStep, RemoveMarkStep},
@@ -35,7 +37,10 @@ const INC_DATA_KEY: &str = "inc_data";
 
 impl IncStateField {
     ///收集增量的数据更新
-    pub fn collect_tr(tr: &Transaction, new_state: &State) {
+    pub fn collect_tr(
+        tr: &Transaction,
+        new_state: &State,
+    ) {
         if tr.steps.is_empty() {
             return;
         }
@@ -65,9 +70,12 @@ impl IncStateField {
             if let Some(_) = step.downcast_ref::<RemoveNodeStep>() {
                 let mut node_ids = Vec::new();
                 // 获取反向操作的节点 id 由于删除 有可能删除多个节点 并包含子节点 只拿RemoveNodeStep 中的 id是不够的
-                if let Some(add_step) = tr.invert_steps[index].downcast_ref::<AddNodeStep>() {
+                if let Some(add_step) =
+                    tr.invert_steps[index].downcast_ref::<AddNodeStep>()
+                {
                     for node_enum in add_step.nodes.iter() {
-                        node_ids.extend(AddNodeStep::collect_node_ids(node_enum));
+                        node_ids
+                            .extend(AddNodeStep::collect_node_ids(node_enum));
                     }
                 }
                 if node_ids.len() > 0 {
@@ -95,7 +103,9 @@ impl IncStateField {
                 }
             }
             // 删除标记
-            if let Some(remove_mark_step) = step.downcast_ref::<RemoveMarkStep>() {
+            if let Some(remove_mark_step) =
+                step.downcast_ref::<RemoveMarkStep>()
+            {
                 let node = tr.doc().get_node(&remove_mark_step.id);
                 if let Some(_) = node {
                     operations.push(Operation::RemoveMark(
@@ -115,7 +125,11 @@ impl IncStateField {
 
 #[async_trait]
 impl StateField for IncStateField {
-    async fn init(&self, _config: &StateConfig, _instance: &State) -> Arc<dyn Resource> {
+    async fn init(
+        &self,
+        _config: &StateConfig,
+        _instance: &State,
+    ) -> Arc<dyn Resource> {
         Arc::new(IncState)
     }
     async fn apply(

@@ -2,8 +2,12 @@ use crate::compiler::error::{CompilerError, CompilerResult};
 use crate::compiler::opcode::{FetchFastTarget, Jump};
 use crate::compiler::{Compare, Opcode};
 use crate::functions::registry::FunctionRegistry;
-use crate::functions::{ClosureFunction, FunctionKind, InternalFunction, MethodRegistry};
-use crate::lexer::{ArithmeticOperator, ComparisonOperator, LogicalOperator, Operator};
+use crate::functions::{
+    ClosureFunction, FunctionKind, InternalFunction, MethodRegistry,
+};
+use crate::lexer::{
+    ArithmeticOperator, ComparisonOperator, LogicalOperator, Operator,
+};
 use crate::parser::Node;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
@@ -17,12 +21,13 @@ pub struct Compiler {
 
 impl Compiler {
     pub fn new() -> Self {
-        Self {
-            bytecode: Default::default(),
-        }
+        Self { bytecode: Default::default() }
     }
 
-    pub fn compile(&mut self, root: &Node) -> CompilerResult<&[Opcode]> {
+    pub fn compile(
+        &mut self,
+        root: &Node,
+    ) -> CompilerResult<&[Opcode]> {
         self.bytecode.clear();
 
         CompilerInner::new(&mut self.bytecode, root).compile()?;
@@ -41,7 +46,10 @@ struct CompilerInner<'arena, 'bytecode_ref> {
 }
 
 impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
-    pub fn new(bytecode: &'bytecode_ref mut Vec<Opcode>, root: &'arena Node<'arena>) -> Self {
+    pub fn new(
+        bytecode: &'bytecode_ref mut Vec<Opcode>,
+        root: &'arena Node<'arena>,
+    ) -> Self {
         Self { root, bytecode }
     }
 
@@ -50,12 +58,18 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
         Ok(())
     }
 
-    fn emit(&mut self, op: Opcode) -> usize {
+    fn emit(
+        &mut self,
+        op: Opcode,
+    ) -> usize {
         self.bytecode.push(op);
         self.bytecode.len()
     }
 
-    fn emit_loop<F>(&mut self, body: F) -> CompilerResult<()>
+    fn emit_loop<F>(
+        &mut self,
+        body: F,
+    ) -> CompilerResult<()>
     where
         F: FnOnce(&mut Self) -> CompilerResult<()>,
     {
@@ -73,8 +87,10 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
         Ok(())
     }
 
-    fn emit_cond<F>(&mut self, mut body: F)
-    where
+    fn emit_cond<F>(
+        &mut self,
+        mut body: F,
+    ) where
         F: FnMut(&mut Self),
     {
         let noop = self.emit(Opcode::Jump(Jump::IfFalse, 0));
@@ -88,11 +104,18 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
         self.replace(jmp, Opcode::Jump(Jump::Forward, (e - jmp) as u32));
     }
 
-    fn replace(&mut self, at: usize, op: Opcode) {
+    fn replace(
+        &mut self,
+        at: usize,
+        op: Opcode,
+    ) {
         let _ = std::mem::replace(&mut self.bytecode[at - 1], op);
     }
 
-    fn calc_backward_jump(&self, to: usize) -> usize {
+    fn calc_backward_jump(
+        &self,
+        to: usize,
+    ) -> usize {
         self.bytecode.len() + 1 - to
     }
 
@@ -102,18 +125,21 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
         arguments: &[&'arena Node<'arena>],
         index: usize,
     ) -> CompilerResult<usize> {
-        let arg = arguments
-            .get(index)
-            .ok_or_else(|| CompilerError::ArgumentNotFound {
+        let arg = arguments.get(index).ok_or_else(|| {
+            CompilerError::ArgumentNotFound {
                 index,
                 function: function_kind.to_string(),
-            })?;
+            }
+        })?;
 
         self.compile_node(arg)
     }
 
     #[cfg_attr(feature = "stack-protection", recursive::recursive)]
-    fn compile_member_fast(&mut self, node: &'arena Node<'arena>) -> Option<Vec<FetchFastTarget>> {
+    fn compile_member_fast(
+        &mut self,
+        node: &'arena Node<'arena>,
+    ) -> Option<Vec<FetchFastTarget>> {
         match node {
             Node::Root => Some(vec![FetchFastTarget::Root]),
             Node::Identifier(v) => Some(vec![
@@ -126,7 +152,7 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                     Node::String(v) => {
                         path.push(FetchFastTarget::String(Arc::from(*v)));
                         Some(path)
-                    }
+                    },
                     Node::Number(v) => {
                         if let Some(idx) = v.to_u32() {
                             path.push(FetchFastTarget::Number(idx));
@@ -134,16 +160,19 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                         } else {
                             None
                         }
-                    }
+                    },
                     _ => None,
                 }
-            }
+            },
             _ => None,
         }
     }
 
     #[cfg_attr(feature = "stack-protection", recursive::recursive)]
-    fn compile_node(&mut self, node: &'arena Node<'arena>) -> CompilerResult<usize> {
+    fn compile_node(
+        &mut self,
+        node: &'arena Node<'arena>,
+    ) -> CompilerResult<usize> {
         match node {
             Node::Null => Ok(self.emit(Opcode::PushNull)),
             Node::Bool(v) => Ok(self.emit(Opcode::PushBool(*v))),
@@ -152,11 +181,10 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
             Node::Pointer => Ok(self.emit(Opcode::Pointer)),
             Node::Root => Ok(self.emit(Opcode::FetchRootEnv)),
             Node::Array(v) => {
-                v.iter()
-                    .try_for_each(|&n| self.compile_node(n).map(|_| ()))?;
+                v.iter().try_for_each(|&n| self.compile_node(n).map(|_| ()))?;
                 self.emit(Opcode::PushNumber(Decimal::from(v.len())));
                 Ok(self.emit(Opcode::Array))
-            }
+            },
             Node::Object(v) => {
                 v.iter().try_for_each(|&(key, value)| {
                     self.compile_node(key).map(|_| ())?;
@@ -170,7 +198,7 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
 
                 self.emit(Opcode::PushNumber(Decimal::from(v.len())));
                 Ok(self.emit(Opcode::Object))
-            }
+            },
             Node::Assignments { list, output } => {
                 self.emit(Opcode::AssignedObjectBegin);
                 list.iter().try_for_each(|&(key, value)| {
@@ -188,14 +216,13 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                 Ok(self.emit(Opcode::AssignedObjectEnd {
                     with_return: output.is_some(),
                 }))
-            }
-            Node::Identifier(v) => Ok(self.emit(Opcode::FetchEnv(Arc::from(*v)))),
+            },
+            Node::Identifier(v) => {
+                Ok(self.emit(Opcode::FetchEnv(Arc::from(*v))))
+            },
             Node::Closure(v) => self.compile_node(v),
             Node::Parenthesized(v) => self.compile_node(v),
-            Node::Member {
-                node: n,
-                property: p,
-            } => {
+            Node::Member { node: n, property: p } => {
                 if let Some(path) = self.compile_member_fast(node) {
                     Ok(self.emit(Opcode::FetchFast(path)))
                 } else {
@@ -203,7 +230,7 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                     self.compile_node(p)?;
                     Ok(self.emit(Opcode::Fetch))
                 }
-            }
+            },
             Node::TemplateString(parts) => {
                 parts.iter().try_for_each(|&n| {
                     self.compile_node(n).map(|_| ())?;
@@ -218,7 +245,7 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                 self.emit(Opcode::Array);
                 self.emit(Opcode::PushString(Arc::from("")));
                 Ok(self.emit(Opcode::Join))
-            }
+            },
             Node::Slice { node, to, from } => {
                 self.compile_node(node)?;
                 if let Some(t) = to {
@@ -236,25 +263,16 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                 }
 
                 Ok(self.emit(Opcode::Slice))
-            }
-            Node::Interval {
-                left,
-                right,
-                left_bracket,
-                right_bracket,
-            } => {
+            },
+            Node::Interval { left, right, left_bracket, right_bracket } => {
                 self.compile_node(left)?;
                 self.compile_node(right)?;
                 Ok(self.emit(Opcode::Interval {
                     left_bracket: *left_bracket,
                     right_bracket: *right_bracket,
                 }))
-            }
-            Node::Conditional {
-                condition,
-                on_true,
-                on_false,
-            } => {
+            },
+            Node::Conditional { condition, on_true, on_false } => {
                 self.compile_node(condition)?;
                 let otherwise = self.emit(Opcode::Jump(Jump::IfFalse, 0));
 
@@ -268,144 +286,160 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                 );
                 self.emit(Opcode::Pop);
                 let b = self.compile_node(on_false)?;
-                self.replace(end, Opcode::Jump(Jump::Forward, (b - end) as u32));
+                self.replace(
+                    end,
+                    Opcode::Jump(Jump::Forward, (b - end) as u32),
+                );
 
                 Ok(b)
-            }
+            },
             Node::Unary { node, operator } => {
                 let curr = self.compile_node(node)?;
                 match *operator {
                     Operator::Arithmetic(ArithmeticOperator::Add) => Ok(curr),
                     Operator::Arithmetic(ArithmeticOperator::Subtract) => {
                         Ok(self.emit(Opcode::Negate))
-                    }
-                    Operator::Logical(LogicalOperator::Not) => Ok(self.emit(Opcode::Not)),
+                    },
+                    Operator::Logical(LogicalOperator::Not) => {
+                        Ok(self.emit(Opcode::Not))
+                    },
                     _ => Err(CompilerError::UnknownUnaryOperator {
                         operator: operator.to_string(),
                     }),
                 }
-            }
-            Node::Binary {
-                left,
-                right,
-                operator,
-            } => match *operator {
+            },
+            Node::Binary { left, right, operator } => match *operator {
                 Operator::Comparison(ComparisonOperator::Equal) => {
                     self.compile_node(left)?;
                     self.compile_node(right)?;
 
                     Ok(self.emit(Opcode::Equal))
-                }
+                },
                 Operator::Comparison(ComparisonOperator::NotEqual) => {
                     self.compile_node(left)?;
                     self.compile_node(right)?;
 
                     self.emit(Opcode::Equal);
                     Ok(self.emit(Opcode::Not))
-                }
+                },
                 Operator::Logical(LogicalOperator::Or) => {
                     self.compile_node(left)?;
                     let end = self.emit(Opcode::Jump(Jump::IfTrue, 0));
                     self.emit(Opcode::Pop);
                     let r = self.compile_node(right)?;
-                    self.replace(end, Opcode::Jump(Jump::IfTrue, (r - end) as u32));
+                    self.replace(
+                        end,
+                        Opcode::Jump(Jump::IfTrue, (r - end) as u32),
+                    );
 
                     Ok(r)
-                }
+                },
                 Operator::Logical(LogicalOperator::And) => {
                     self.compile_node(left)?;
                     let end = self.emit(Opcode::Jump(Jump::IfFalse, 0));
                     self.emit(Opcode::Pop);
                     let r = self.compile_node(right)?;
-                    self.replace(end, Opcode::Jump(Jump::IfFalse, (r - end) as u32));
+                    self.replace(
+                        end,
+                        Opcode::Jump(Jump::IfFalse, (r - end) as u32),
+                    );
 
                     Ok(r)
-                }
+                },
                 Operator::Logical(LogicalOperator::NullishCoalescing) => {
                     self.compile_node(left)?;
                     let end = self.emit(Opcode::Jump(Jump::IfNotNull, 0));
                     self.emit(Opcode::Pop);
                     let r = self.compile_node(right)?;
-                    self.replace(end, Opcode::Jump(Jump::IfNotNull, (r - end) as u32));
+                    self.replace(
+                        end,
+                        Opcode::Jump(Jump::IfNotNull, (r - end) as u32),
+                    );
 
                     Ok(r)
-                }
+                },
                 Operator::Comparison(ComparisonOperator::In) => {
                     self.compile_node(left)?;
                     self.compile_node(right)?;
                     Ok(self.emit(Opcode::In))
-                }
+                },
                 Operator::Comparison(ComparisonOperator::NotIn) => {
                     self.compile_node(left)?;
                     self.compile_node(right)?;
                     self.emit(Opcode::In);
                     Ok(self.emit(Opcode::Not))
-                }
+                },
                 Operator::Comparison(ComparisonOperator::LessThan) => {
                     self.compile_node(left)?;
                     self.compile_node(right)?;
                     Ok(self.emit(Opcode::Compare(Compare::Less)))
-                }
+                },
                 Operator::Comparison(ComparisonOperator::LessThanOrEqual) => {
                     self.compile_node(left)?;
                     self.compile_node(right)?;
                     Ok(self.emit(Opcode::Compare(Compare::LessOrEqual)))
-                }
+                },
                 Operator::Comparison(ComparisonOperator::GreaterThan) => {
                     self.compile_node(left)?;
                     self.compile_node(right)?;
                     Ok(self.emit(Opcode::Compare(Compare::More)))
-                }
-                Operator::Comparison(ComparisonOperator::GreaterThanOrEqual) => {
+                },
+                Operator::Comparison(
+                    ComparisonOperator::GreaterThanOrEqual,
+                ) => {
                     self.compile_node(left)?;
                     self.compile_node(right)?;
                     Ok(self.emit(Opcode::Compare(Compare::MoreOrEqual)))
-                }
+                },
                 Operator::Arithmetic(ArithmeticOperator::Add) => {
                     self.compile_node(left)?;
                     self.compile_node(right)?;
                     Ok(self.emit(Opcode::Add))
-                }
+                },
                 Operator::Arithmetic(ArithmeticOperator::Subtract) => {
                     self.compile_node(left)?;
                     self.compile_node(right)?;
                     Ok(self.emit(Opcode::Subtract))
-                }
+                },
                 Operator::Arithmetic(ArithmeticOperator::Multiply) => {
                     self.compile_node(left)?;
                     self.compile_node(right)?;
                     Ok(self.emit(Opcode::Multiply))
-                }
+                },
                 Operator::Arithmetic(ArithmeticOperator::Divide) => {
                     self.compile_node(left)?;
                     self.compile_node(right)?;
                     Ok(self.emit(Opcode::Divide))
-                }
+                },
                 Operator::Arithmetic(ArithmeticOperator::Modulus) => {
                     self.compile_node(left)?;
                     self.compile_node(right)?;
                     Ok(self.emit(Opcode::Modulo))
-                }
+                },
                 Operator::Arithmetic(ArithmeticOperator::Power) => {
                     self.compile_node(left)?;
                     self.compile_node(right)?;
                     Ok(self.emit(Opcode::Exponent))
-                }
+                },
                 _ => Err(CompilerError::UnknownBinaryOperator {
                     operator: operator.to_string(),
                 }),
             },
             Node::FunctionCall { kind, arguments } => match kind {
-                FunctionKind::Internal(_) | FunctionKind::Deprecated(_) | FunctionKind::Mf(_) => {
-                    let function = FunctionRegistry::get_definition(kind).ok_or_else(|| {
-                        CompilerError::UnknownFunction {
+                FunctionKind::Internal(_)
+                | FunctionKind::Deprecated(_)
+                | FunctionKind::Mf(_) => {
+                    let function = FunctionRegistry::get_definition(kind)
+                        .ok_or_else(|| CompilerError::UnknownFunction {
                             name: kind.to_string(),
-                        }
-                    })?;
+                        })?;
 
                     let min_params = function.required_parameters();
-                    let max_params = min_params + function.optional_parameters();
-                    if arguments.len() < min_params || arguments.len() > max_params {
+                    let max_params =
+                        min_params + function.optional_parameters();
+                    if arguments.len() < min_params
+                        || arguments.len() > max_params
+                    {
                         return Err(CompilerError::InvalidFunctionCall {
                             name: kind.to_string(),
                             message: "Invalid number of arguments".to_string(),
@@ -420,7 +454,7 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                         kind: kind.clone(),
                         arg_count: arguments.len() as u32,
                     }))
-                }
+                },
                 FunctionKind::Closure(c) => match c {
                     ClosureFunction::All => {
                         self.compile_argument(kind, arguments, 0)?;
@@ -435,10 +469,13 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                         let e = self.emit(Opcode::PushBool(true));
                         self.replace(
                             loop_break,
-                            Opcode::Jump(Jump::IfFalse, (e - loop_break) as u32),
+                            Opcode::Jump(
+                                Jump::IfFalse,
+                                (e - loop_break) as u32,
+                            ),
                         );
                         Ok(self.emit(Opcode::End))
-                    }
+                    },
                     ClosureFunction::None => {
                         self.compile_argument(kind, arguments, 0)?;
                         self.emit(Opcode::Begin);
@@ -453,10 +490,13 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                         let e = self.emit(Opcode::PushBool(true));
                         self.replace(
                             loop_break,
-                            Opcode::Jump(Jump::IfFalse, (e - loop_break) as u32),
+                            Opcode::Jump(
+                                Jump::IfFalse,
+                                (e - loop_break) as u32,
+                            ),
                         );
                         Ok(self.emit(Opcode::End))
-                    }
+                    },
                     ClosureFunction::Some => {
                         self.compile_argument(kind, arguments, 0)?;
                         self.emit(Opcode::Begin);
@@ -473,7 +513,7 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                             Opcode::Jump(Jump::IfTrue, (e - loop_break) as u32),
                         );
                         Ok(self.emit(Opcode::End))
-                    }
+                    },
                     ClosureFunction::One => {
                         self.compile_argument(kind, arguments, 0)?;
                         self.emit(Opcode::Begin);
@@ -488,7 +528,7 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                         self.emit(Opcode::PushNumber(dec!(1)));
                         self.emit(Opcode::Equal);
                         Ok(self.emit(Opcode::End))
-                    }
+                    },
                     ClosureFunction::Filter => {
                         self.compile_argument(kind, arguments, 0)?;
                         self.emit(Opcode::Begin);
@@ -503,7 +543,7 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                         self.emit(Opcode::GetCount);
                         self.emit(Opcode::End);
                         Ok(self.emit(Opcode::Array))
-                    }
+                    },
                     ClosureFunction::Map => {
                         self.compile_argument(kind, arguments, 0)?;
                         self.emit(Opcode::Begin);
@@ -514,7 +554,7 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                         self.emit(Opcode::GetLen);
                         self.emit(Opcode::End);
                         Ok(self.emit(Opcode::Array))
-                    }
+                    },
                     ClosureFunction::FlatMap => {
                         self.compile_argument(kind, arguments, 0)?;
                         self.emit(Opcode::Begin);
@@ -526,7 +566,7 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                         self.emit(Opcode::End);
                         self.emit(Opcode::Array);
                         Ok(self.emit(Opcode::Flatten))
-                    }
+                    },
                     ClosureFunction::Count => {
                         self.compile_argument(kind, arguments, 0)?;
                         self.emit(Opcode::Begin);
@@ -539,25 +579,23 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                         })?;
                         self.emit(Opcode::GetCount);
                         Ok(self.emit(Opcode::End))
-                    }
+                    },
                 },
             },
-            Node::MethodCall {
-                kind,
-                this,
-                arguments,
-            } => {
-                let method = MethodRegistry::get_definition(kind).ok_or_else(|| {
-                    CompilerError::UnknownFunction {
-                        name: kind.to_string(),
-                    }
-                })?;
+            Node::MethodCall { kind, this, arguments } => {
+                let method =
+                    MethodRegistry::get_definition(kind).ok_or_else(|| {
+                        CompilerError::UnknownFunction {
+                            name: kind.to_string(),
+                        }
+                    })?;
 
                 self.compile_node(this)?;
 
                 let min_params = method.required_parameters() - 1;
                 let max_params = min_params + method.optional_parameters();
-                if arguments.len() < min_params || arguments.len() > max_params {
+                if arguments.len() < min_params || arguments.len() > max_params
+                {
                     return Err(CompilerError::InvalidMethodCall {
                         name: kind.to_string(),
                         message: "Invalid number of arguments".to_string(),
@@ -572,7 +610,7 @@ impl<'arena, 'bytecode_ref> CompilerInner<'arena, 'bytecode_ref> {
                     kind: kind.clone(),
                     arg_count: arguments.len() as u32,
                 }))
-            }
+            },
             Node::Error { .. } => Err(CompilerError::UnexpectedErrorNode),
         }
     }

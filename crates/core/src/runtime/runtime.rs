@@ -36,22 +36,20 @@ unsafe impl Send for ForgeRuntime {}
 unsafe impl Sync for ForgeRuntime {}
 impl ForgeRuntime {
     /// 创建新的编辑器实例
-    /// 
+    ///
     /// 此方法会自动从以下位置加载XML schema配置：
     /// 1. 优先使用 `config.extension.xml_schema_paths` 中配置的路径
     /// 2. 如果没有配置，则尝试加载默认的 `schema/main.xml`
     /// 3. 如果都没有，则使用默认配置
-    /// 
+    ///
     /// # 参数
     /// * `options` - 编辑器配置选项
-    /// 
+    ///
     /// # 返回值
     /// * `ForgeResult<Self>` - 编辑器实例或错误
     pub async fn create(options: RuntimeOptions) -> ForgeResult<Self> {
         Self::create_with_config(options, ForgeConfig::default()).await
     }
-
-
 
     /// 从指定路径的XML schema文件创建编辑器实例
     ///
@@ -104,13 +102,15 @@ impl ForgeRuntime {
 
                 // 重建节点扩展
                 for (name, node_type) in &schema.nodes {
-                    let node = crate::node::Node::create(name, node_type.spec.clone());
+                    let node =
+                        crate::node::Node::create(name, node_type.spec.clone());
                     xml_extensions.push(crate::types::Extensions::N(node));
                 }
 
                 // 重建标记扩展
                 for (name, mark_type) in &schema.marks {
-                    let mark = crate::mark::Mark::new(name, mark_type.spec.clone());
+                    let mark =
+                        crate::mark::Mark::new(name, mark_type.spec.clone());
                     xml_extensions.push(crate::types::Extensions::M(mark));
                 }
 
@@ -118,11 +118,11 @@ impl ForgeRuntime {
                 let existing_extensions = opts.get_extensions();
                 xml_extensions.extend(existing_extensions);
                 opts.set_extensions(xml_extensions)
-            }
+            },
             None => {
                 // 如果没有提供选项，从ExtensionManager创建新的
                 RuntimeOptions::from_extension_manager(extension_manager)
-            }
+            },
         }
     }
 
@@ -141,7 +141,8 @@ impl ForgeRuntime {
         config: Option<ForgeConfig>,
     ) -> ForgeResult<Self> {
         let mut config = config.unwrap_or_default();
-        config.extension.xml_schema_paths = xml_schema_paths.iter().map(|s| s.to_string()).collect();
+        config.extension.xml_schema_paths =
+            xml_schema_paths.iter().map(|s| s.to_string()).collect();
         Self::create_with_config(options.unwrap_or_default(), config).await
     }
 
@@ -175,22 +176,24 @@ impl ForgeRuntime {
         config: Option<ForgeConfig>,
     ) -> ForgeResult<Self> {
         let extension_manager = ExtensionManager::from_xml_string(xml_content)?;
-        let final_options = Self::merge_options_with_extensions(options, extension_manager);
+        let final_options =
+            Self::merge_options_with_extensions(options, extension_manager);
 
-        Self::create_with_config(final_options, config.unwrap_or_default()).await
+        Self::create_with_config(final_options, config.unwrap_or_default())
+            .await
     }
 
     /// 使用指定配置创建编辑器实例
-    /// 
+    ///
     /// 此方法会自动从以下位置加载XML schema配置：
     /// 1. 优先使用 `config.extension.xml_schema_paths` 中配置的路径
     /// 2. 如果没有配置，则尝试加载默认的 `schema/main.xml`
     /// 3. 如果都没有，则使用默认配置
-    /// 
+    ///
     /// # 参数
     /// * `options` - 编辑器配置选项
     /// * `config` - 编辑器配置
-    /// 
+    ///
     /// # 返回值
     /// * `ForgeResult<Self>` - 编辑器实例或错误
     pub async fn create_with_config(
@@ -199,10 +202,11 @@ impl ForgeRuntime {
     ) -> ForgeResult<Self> {
         let start_time = Instant::now();
         info!("正在创建新的编辑器实例");
-        
+
         // 构建扩展管理器 - 自动处理XML schema
-        let extension_manager = Self::create_extension_manager(&options, &config)?;
-        
+        let extension_manager =
+            Self::create_extension_manager(&options, &config)?;
+
         debug!("已初始化扩展管理器");
 
         let event_bus = EventBus::with_config(config.event.clone());
@@ -219,7 +223,8 @@ impl ForgeRuntime {
             plugins: Some(extension_manager.get_plugins().clone()),
             resource_manager: Some(Arc::new(op_state)),
         };
-        create_doc::create_doc(&options.get_content(), &mut state_config).await?;
+        create_doc::create_doc(&options.get_content(), &mut state_config)
+            .await?;
         let state: State = State::create(state_config).await?;
 
         let state: Arc<State> = Arc::new(state);
@@ -268,11 +273,11 @@ impl ForgeRuntime {
     }
 
     /// 创建扩展管理器 - 自动处理XML schema配置
-    /// 
+    ///
     /// # 参数
     /// * `options` - 运行时选项
     /// * `config` - 编辑器配置
-    /// 
+    ///
     /// # 返回值
     /// * `ForgeResult<ExtensionManager>` - 扩展管理器实例或错误
     fn create_extension_manager(
@@ -281,14 +286,23 @@ impl ForgeRuntime {
     ) -> ForgeResult<ExtensionManager> {
         // 检查是否有配置的XML schema路径
         if !config.extension.xml_schema_paths.is_empty() {
-            debug!("使用配置的XML schema路径: {:?}", config.extension.xml_schema_paths);
-            
+            debug!(
+                "使用配置的XML schema路径: {:?}",
+                config.extension.xml_schema_paths
+            );
+
             // 转换为字符串引用
-            let paths: Vec<&str> = config.extension.xml_schema_paths.iter().map(|s| s.as_str()).collect();
+            let paths: Vec<&str> = config
+                .extension
+                .xml_schema_paths
+                .iter()
+                .map(|s| s.as_str())
+                .collect();
             let extension_manager = ExtensionManager::from_xml_files(&paths)?;
-            
+
             // 合并现有的扩展
-            let merged_extensions = Self::merge_extensions_with_xml(options, extension_manager)?;
+            let merged_extensions =
+                Self::merge_extensions_with_xml(options, extension_manager)?;
             return Ok(merged_extensions);
         }
 
@@ -296,8 +310,10 @@ impl ForgeRuntime {
         let default_schema_path = "schema/main.xml";
         if std::path::Path::new(default_schema_path).exists() {
             debug!("使用默认的 schema 文件: {}", default_schema_path);
-            let extension_manager = ExtensionManager::from_xml_file(default_schema_path)?;
-            let merged_extensions = Self::merge_extensions_with_xml(options, extension_manager)?;
+            let extension_manager =
+                ExtensionManager::from_xml_file(default_schema_path)?;
+            let merged_extensions =
+                Self::merge_extensions_with_xml(options, extension_manager)?;
             return Ok(merged_extensions);
         }
 
@@ -307,11 +323,11 @@ impl ForgeRuntime {
     }
 
     /// 合并XML扩展和现有扩展
-    /// 
+    ///
     /// # 参数
     /// * `options` - 运行时选项
     /// * `xml_extension_manager` - 从XML加载的扩展管理器
-    /// 
+    ///
     /// # 返回值
     /// * `ForgeResult<ExtensionManager>` - 合并后的扩展管理器
     fn merge_extensions_with_xml(
@@ -341,13 +357,17 @@ impl ForgeRuntime {
                     // 直接添加事件扩展，不需要检查重复
                     all_extensions.push(ext);
                     continue;
-                }
+                },
             };
-            
+
             // 检查是否已经存在
             let exists = match &ext {
-                crate::types::Extensions::N(_) => schema.nodes.contains_key(name),
-                crate::types::Extensions::M(_) => schema.marks.contains_key(name),
+                crate::types::Extensions::N(_) => {
+                    schema.nodes.contains_key(name)
+                },
+                crate::types::Extensions::M(_) => {
+                    schema.marks.contains_key(name)
+                },
                 crate::types::Extensions::E(_) => false, // 事件扩展总是添加
             };
 
@@ -385,8 +405,9 @@ impl ForgeRuntime {
         debug!("执行前置中间件链");
         for middleware in &self.options.get_middleware_stack().middlewares {
             let start_time = Instant::now();
-            let timeout =
-                std::time::Duration::from_millis(self.config.performance.middleware_timeout_ms);
+            let timeout = std::time::Duration::from_millis(
+                self.config.performance.middleware_timeout_ms,
+            );
             match tokio::time::timeout(
                 timeout,
                 middleware.before_dispatch(transaction),
@@ -427,8 +448,9 @@ impl ForgeRuntime {
         debug!("执行后置中间件链");
         for middleware in &self.options.get_middleware_stack().middlewares {
             let start_time = Instant::now();
-            let timeout =
-                std::time::Duration::from_millis(self.config.performance.middleware_timeout_ms);
+            let timeout = std::time::Duration::from_millis(
+                self.config.performance.middleware_timeout_ms,
+            );
             let middleware_result = match tokio::time::timeout(
                 timeout,
                 middleware.after_dispatch(state.clone(), transactions),
@@ -656,7 +678,10 @@ impl ForgeRuntime {
     }
 
     /// 更新配置
-    pub fn update_config(&mut self, config: ForgeConfig) {
+    pub fn update_config(
+        &mut self,
+        config: ForgeConfig,
+    ) {
         self.config = config;
     }
 

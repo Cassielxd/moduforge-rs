@@ -8,4 +8,3 @@ pub async fn init_contex() {
     let map_p: DashMap<String, Box<dyn EditorTrait>> = DashMap::new();
     ContextHelper::set(map_p);
 }
-        

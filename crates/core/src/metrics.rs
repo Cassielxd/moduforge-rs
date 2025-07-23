@@ -40,7 +40,8 @@ pub const EXTENSIONS_LOADED_TOTAL: &str = "core.extensions.loaded.total";
 /// 已加载插件总数
 pub const PLUGINS_LOADED_TOTAL: &str = "core.plugins.loaded.total";
 /// XML解析耗时（秒）
-pub const XML_PARSING_DURATION_SECONDS: &str = "core.xml.parsing.duration.seconds";
+pub const XML_PARSING_DURATION_SECONDS: &str =
+    "core.xml.parsing.duration.seconds";
 
 pub fn register_metrics() {
     //

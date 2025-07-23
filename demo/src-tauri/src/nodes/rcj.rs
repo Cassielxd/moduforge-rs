@@ -20,87 +20,50 @@ fn get_attr_spec() -> HashMap<String, AttributeSpec> {
     let mut att = HashMap::new();
     att.insert(
         "materialCode".to_string(),
-        AttributeSpec {
-            default: Some("".into()),
-        },
+        AttributeSpec { default: Some("".into()) },
     );
     att.insert(
         "standardId".to_string(),
-        AttributeSpec {
-            default: Some("".into()),
-        },
+        AttributeSpec { default: Some("".into()) },
     );
     att.insert(
         "materialName".to_string(),
-        AttributeSpec {
-            default: Some("".into()),
-        },
+        AttributeSpec { default: Some("".into()) },
     );
     att.insert(
         "specification".to_string(),
-        AttributeSpec {
-            default: Some("".into()),
-        },
+        AttributeSpec { default: Some("".into()) },
     );
-    att.insert(
-        "type".to_string(),
-        AttributeSpec {
-            default: Some("".into()),
-        },
-    );
+    att.insert("type".to_string(), AttributeSpec { default: Some("".into()) });
     att.insert(
         "constructId".to_string(),
-        AttributeSpec {
-            default: Some("".into()),
-        },
+        AttributeSpec { default: Some("".into()) },
     );
     att.insert(
         "ifDonorMaterial".to_string(),
-        AttributeSpec {
-            default: Some(0.into()),
-        },
+        AttributeSpec { default: Some(0.into()) },
     );
     att.insert(
         "kindBackUp".to_string(),
-        AttributeSpec {
-            default: Some(0.into()),
-        },
+        AttributeSpec { default: Some(0.into()) },
     );
-    att.insert(
-        "deId".to_string(),
-        AttributeSpec {
-            default: Some("".into()),
-        },
-    );
-    att.insert(
-        "resQty".to_string(),
-        AttributeSpec {
-            default: Some(0.into()),
-        },
-    );
+    att.insert("deId".to_string(), AttributeSpec { default: Some("".into()) });
+    att.insert("resQty".to_string(), AttributeSpec { default: Some(0.into()) });
     att.insert(
         "priceMarket".to_string(),
-        AttributeSpec {
-            default: Some(0.into()),
-        },
+        AttributeSpec { default: Some(0.into()) },
     );
     att.insert(
         "priceMarketTax".to_string(),
-        AttributeSpec {
-            default: Some(0.into()),
-        },
+        AttributeSpec { default: Some(0.into()) },
     );
     att.insert(
         "priceMarketFormula".to_string(),
-        AttributeSpec {
-            default: Some(0.into()),
-        },
+        AttributeSpec { default: Some(0.into()) },
     );
     att.insert(
         "priceMarketTaxFormula".to_string(),
-        AttributeSpec {
-            default: Some(0.into()),
-        },
+        AttributeSpec { default: Some(0.into()) },
     );
     att
 }

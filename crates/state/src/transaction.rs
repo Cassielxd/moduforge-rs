@@ -44,7 +44,10 @@ pub struct Transaction {
     transform: Transform,
 }
 impl Debug for Transaction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
         write!(f, "Transaction {{ id: {}}}", self.id)
     }
 }

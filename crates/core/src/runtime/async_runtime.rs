@@ -88,22 +88,20 @@ impl DerefMut for ForgeAsyncRuntime {
 }
 impl ForgeAsyncRuntime {
     /// 创建新的编辑器实例
-    /// 
+    ///
     /// 此方法会自动从以下位置加载XML schema配置：
     /// 1. 优先使用 `config.extension.xml_schema_paths` 中配置的路径
     /// 2. 如果没有配置，则尝试加载默认的 `schema/main.xml`
     /// 3. 如果都没有，则使用默认配置
-    /// 
+    ///
     /// # 参数
     /// * `options` - 编辑器配置选项
-    /// 
+    ///
     /// # 返回值
     /// * `ForgeResult<Self>` - 异步编辑器实例或错误
     pub async fn create(options: RuntimeOptions) -> ForgeResult<Self> {
         Self::create_with_config(options, ForgeConfig::default()).await
     }
-
-
 
     /// 从指定路径的XML schema文件创建异步编辑器实例
     ///
@@ -151,7 +149,8 @@ impl ForgeAsyncRuntime {
         config: Option<ForgeConfig>,
     ) -> ForgeResult<Self> {
         let mut config = config.unwrap_or_default();
-        config.extension.xml_schema_paths = xml_schema_paths.iter().map(|s| s.to_string()).collect();
+        config.extension.xml_schema_paths =
+            xml_schema_paths.iter().map(|s| s.to_string()).collect();
         Self::create_with_config(options.unwrap_or_default(), config).await
     }
 
@@ -169,24 +168,22 @@ impl ForgeAsyncRuntime {
         options: Option<RuntimeOptions>,
         config: Option<ForgeConfig>,
     ) -> ForgeResult<Self> {
-        let base = ForgeRuntime::from_xml_content(xml_content, options, config).await?;
-        Ok(ForgeAsyncRuntime {
-            base,
-            flow_engine: FlowEngine::new().await?,
-        })
+        let base = ForgeRuntime::from_xml_content(xml_content, options, config)
+            .await?;
+        Ok(ForgeAsyncRuntime { base, flow_engine: FlowEngine::new().await? })
     }
 
     /// 使用指定配置创建异步编辑器实例
-    /// 
+    ///
     /// 此方法会自动从以下位置加载XML schema配置：
     /// 1. 优先使用 `config.extension.xml_schema_paths` 中配置的路径
     /// 2. 如果没有配置，则尝试加载默认的 `schema/main.xml`
     /// 3. 如果都没有，则使用默认配置
-    /// 
+    ///
     /// # 参数
     /// * `options` - 编辑器配置选项
     /// * `config` - 编辑器配置
-    /// 
+    ///
     /// # 返回值
     /// * `ForgeResult<Self>` - 异步编辑器实例或错误
     pub async fn create_with_config(
@@ -194,10 +191,7 @@ impl ForgeAsyncRuntime {
         config: ForgeConfig,
     ) -> ForgeResult<Self> {
         let base = ForgeRuntime::create_with_config(options, config).await?;
-        Ok(ForgeAsyncRuntime {
-            base,
-            flow_engine: FlowEngine::new().await?,
-        })
+        Ok(ForgeAsyncRuntime { base, flow_engine: FlowEngine::new().await? })
     }
 
     /// 设置性能监控配置
@@ -218,7 +212,10 @@ impl ForgeAsyncRuntime {
     }
 
     /// 更新配置
-    pub fn update_config(&mut self, config: ForgeConfig) {
+    pub fn update_config(
+        &mut self,
+        config: ForgeConfig,
+    ) {
         self.base.update_config(config);
     }
 
@@ -229,7 +226,8 @@ impl ForgeAsyncRuntime {
         duration: Duration,
     ) {
         if self.base.get_config().performance.enable_monitoring
-            && duration.as_millis() > self.base.get_config().performance.log_threshold_ms as u128
+            && duration.as_millis()
+                > self.base.get_config().performance.log_threshold_ms as u128
         {
             debug!("{} 耗时: {}ms", operation, duration.as_millis());
         }
@@ -326,8 +324,9 @@ impl ForgeAsyncRuntime {
 
         // 等待任务结果（添加超时保护）
         let recv_start = std::time::Instant::now();
-        let task_receive_timeout =
-            Duration::from_millis(self.base.get_config().performance.task_receive_timeout_ms);
+        let task_receive_timeout = Duration::from_millis(
+            self.base.get_config().performance.task_receive_timeout_ms,
+        );
         let task_result =
             match tokio::time::timeout(task_receive_timeout, rx.recv()).await {
                 Ok(Some(result)) => result,
@@ -339,7 +338,10 @@ impl ForgeAsyncRuntime {
                 Err(_) => {
                     return Err(error_utils::state_error(format!(
                         "任务接收超时（{}ms）",
-                        self.base.get_config().performance.task_receive_timeout_ms
+                        self.base
+                            .get_config()
+                            .performance
+                            .task_receive_timeout_ms
                     )));
                 },
             };
@@ -399,8 +401,9 @@ impl ForgeAsyncRuntime {
         for middleware in
             &self.base.get_options().get_middleware_stack().middlewares
         {
-            let timeout =
-                Duration::from_millis(self.base.get_config().performance.middleware_timeout_ms);
+            let timeout = Duration::from_millis(
+                self.base.get_config().performance.middleware_timeout_ms,
+            );
             match tokio::time::timeout(
                 timeout,
                 middleware.before_dispatch(transaction),
@@ -420,7 +423,10 @@ impl ForgeAsyncRuntime {
                 Err(_) => {
                     return Err(error_utils::middleware_error(format!(
                         "前置中间件执行超时（{}ms）",
-                        self.base.get_config().performance.middleware_timeout_ms
+                        self.base
+                            .get_config()
+                            .performance
+                            .middleware_timeout_ms
                     )));
                 },
             }
@@ -520,7 +526,10 @@ impl ForgeAsyncRuntime {
                             debug!("附加事务接收超时");
                             return Err(error_utils::state_error(format!(
                                 "附加事务接收超时（{}ms）",
-                                self.base.get_config().performance.task_receive_timeout_ms
+                                self.base
+                                    .get_config()
+                                    .performance
+                                    .task_receive_timeout_ms
                             )));
                         },
                     };

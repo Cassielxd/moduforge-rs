@@ -31,7 +31,10 @@ pub struct DecisionNode {
 }
 
 impl PartialEq for DecisionNode {
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(
+        &self,
+        other: &Self,
+    ) -> bool {
         self.id == other.id
     }
 }
@@ -208,7 +211,9 @@ pub struct CustomNodeContent {
     pub config: Arc<Value>,
 }
 
-fn empty_string_is_none<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+fn empty_string_is_none<'de, D>(
+    deserializer: D
+) -> Result<Option<String>, D::Error>
 where
     D: Deserializer<'de>,
 {

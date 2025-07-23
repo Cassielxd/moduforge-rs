@@ -4,7 +4,9 @@
 use app_lib::{initialize::init_contex, router::build_app, serve::AppBuilder};
 use axum::{http::StatusCode, response::IntoResponse, Router};
 use mf_state::init_logging;
-use tauri::{tray::TrayIconBuilder, tray::TrayIconEvent, AppHandle, Listener, Manager};
+use tauri::{
+    tray::TrayIconBuilder, tray::TrayIconEvent, AppHandle, Listener, Manager,
+};
 
 // 自定义事件处理函数
 fn handle_tauri_error(error: tauri::Error) {
@@ -22,9 +24,7 @@ async fn show_main_window(app: AppHandle) -> Result<(), String> {
 
     if let Some(main_window) = app.get_webview_window("main") {
         println!("找到主窗口，开始显示");
-        main_window
-            .show()
-            .map_err(|e| format!("显示主窗口失败: {}", e))?;
+        main_window.show().map_err(|e| format!("显示主窗口失败: {}", e))?;
         main_window
             .set_focus()
             .map_err(|e| format!("设置主窗口焦点失败: {}", e))?;
@@ -36,19 +36,22 @@ async fn show_main_window(app: AppHandle) -> Result<(), String> {
         println!("主窗口不存在，重新创建");
 
         // 重新创建主窗口
-        let main_window =
-            tauri::WebviewWindowBuilder::new(&app, "main", tauri::WebviewUrl::App("/".into()))
-                .title("ModuForge Demo")
-                .inner_size(1200.0, 1000.0)
-                .resizable(true)
-                .decorations(false)
-                .visible(true)
-                .center()
-                .build()
-                .map_err(|e| {
-                    println!("创建主窗口失败: {}", e);
-                    format!("创建主窗口失败: {}", e)
-                })?;
+        let main_window = tauri::WebviewWindowBuilder::new(
+            &app,
+            "main",
+            tauri::WebviewUrl::App("/".into()),
+        )
+        .title("ModuForge Demo")
+        .inner_size(1200.0, 1000.0)
+        .resizable(true)
+        .decorations(false)
+        .visible(true)
+        .center()
+        .build()
+        .map_err(|e| {
+            println!("创建主窗口失败: {}", e);
+            format!("创建主窗口失败: {}", e)
+        })?;
 
         println!("主窗口重新创建成功");
         let _ = main_window.set_focus();
@@ -70,7 +73,11 @@ async fn quit_app(app: AppHandle) -> Result<(), String> {
 
 // 显示托盘菜单的命令
 #[tauri::command]
-async fn show_tray_menu(app: AppHandle, x: f64, y: f64) -> Result<(), String> {
+async fn show_tray_menu(
+    app: AppHandle,
+    x: f64,
+    y: f64,
+) -> Result<(), String> {
     println!("显示托盘菜单 at ({}, {})", x, y);
 
     // 关闭现有菜单窗口
@@ -111,9 +118,7 @@ async fn show_tray_menu(app: AppHandle, x: f64, y: f64) -> Result<(), String> {
 async fn hide_tray_menu(app: AppHandle) -> Result<(), String> {
     println!("隐藏托盘菜单");
     if let Some(menu_window) = app.get_webview_window("tray-menu") {
-        menu_window
-            .close()
-            .map_err(|e| format!("关闭菜单窗口失败: {}", e))?;
+        menu_window.close().map_err(|e| format!("关闭菜单窗口失败: {}", e))?;
     }
     Ok(())
 }
@@ -168,12 +173,16 @@ async fn main() -> anyhow::Result<()> {
                 println!("启动屏幕显示完成，切换到主窗口");
 
                 // 关闭启动屏幕
-                if let Some(splash_window) = app_handle_timeout.get_webview_window("splashscreen") {
+                if let Some(splash_window) =
+                    app_handle_timeout.get_webview_window("splashscreen")
+                {
                     let _ = splash_window.close();
                 }
 
                 // 显示主窗口
-                if let Some(main_window) = app_handle_timeout.get_webview_window("main") {
+                if let Some(main_window) =
+                    app_handle_timeout.get_webview_window("main")
+                {
                     let _ = main_window.show();
                     let _ = main_window.center();
                     let _ = main_window.set_focus();

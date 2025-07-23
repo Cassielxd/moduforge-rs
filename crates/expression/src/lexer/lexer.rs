@@ -2,7 +2,8 @@ use crate::lexer::codes::{is_token_type, token_type};
 use crate::lexer::cursor::{Cursor, CursorItem};
 use crate::lexer::error::LexerResult;
 use crate::lexer::token::{
-    Bracket, ComparisonOperator, Identifier, LogicalOperator, Operator, Token, TokenKind,
+    Bracket, ComparisonOperator, Identifier, LogicalOperator, Operator, Token,
+    TokenKind,
 };
 use crate::lexer::{LexerError, QuotationMark, TemplateString};
 use std::str::FromStr;
@@ -17,7 +18,10 @@ impl<'arena> Lexer<'arena> {
         Self::default()
     }
 
-    pub fn tokenize(&mut self, source: &'arena str) -> LexerResult<&[Token<'arena>]> {
+    pub fn tokenize(
+        &mut self,
+        source: &'arena str,
+    ) -> LexerResult<&[Token<'arena>]> {
         self.tokens.clear();
 
         Scanner::new(source, &mut self.tokens).scan()?;
@@ -32,12 +36,11 @@ struct Scanner<'arena, 'self_ref> {
 }
 
 impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
-    pub fn new(source: &'arena str, tokens: &'self_ref mut Vec<Token<'arena>>) -> Self {
-        Self {
-            cursor: Cursor::from(source),
-            source,
-            tokens,
-        }
+    pub fn new(
+        source: &'arena str,
+        tokens: &'self_ref mut Vec<Token<'arena>>,
+    ) -> Self {
+        Self { cursor: Cursor::from(source), source, tokens }
     }
 
     pub fn scan(&mut self) -> LexerResult<()> {
@@ -48,14 +51,17 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
         Ok(())
     }
 
-    pub(crate) fn scan_cursor_item(&mut self, cursor_item: CursorItem) -> LexerResult<()> {
+    pub(crate) fn scan_cursor_item(
+        &mut self,
+        cursor_item: CursorItem,
+    ) -> LexerResult<()> {
         let (i, s) = cursor_item;
 
         match s {
             token_type!("space") => {
                 self.cursor.next();
                 Ok(())
-            }
+            },
             '\'' => self.string(QuotationMark::SingleQuote),
             '"' => self.string(QuotationMark::DoubleQuote),
             token_type!("digit") => self.number(),
@@ -79,14 +85,14 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
         self.cursor.next().ok_or_else(|| {
             let (a, b) = self.cursor.peek_back().unwrap_or((0, ' '));
 
-            LexerError::UnexpectedEof {
-                symbol: b,
-                position: a as u32,
-            }
+            LexerError::UnexpectedEof { symbol: b, position: a as u32 }
         })
     }
 
-    fn push(&mut self, token: Token<'arena>) {
+    fn push(
+        &mut self,
+        token: Token<'arena>,
+    ) {
         self.tokens.push(token);
     }
 
@@ -121,7 +127,7 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
                     });
 
                     break;
-                }
+                },
                 ('$', false) => {
                     in_expression = self.cursor.next_if_is("{");
                     if in_expression {
@@ -132,36 +138,43 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
                         });
 
                         self.tokens.push(Token {
-                            kind: TokenKind::TemplateString(TemplateString::ExpressionStart),
+                            kind: TokenKind::TemplateString(
+                                TemplateString::ExpressionStart,
+                            ),
                             span: (e as u32, (e + 2) as u32),
                             value: TemplateString::ExpressionStart.into(),
                         });
                     }
-                }
+                },
                 ('}', true) => {
                     in_expression = false;
                     self.tokens.push(Token {
-                        kind: TokenKind::TemplateString(TemplateString::ExpressionEnd),
+                        kind: TokenKind::TemplateString(
+                            TemplateString::ExpressionEnd,
+                        ),
                         span: (str_start as u32, e as u32),
                         value: TemplateString::ExpressionEnd.into(),
                     });
 
                     str_start = e + 1;
-                }
+                },
                 (_, false) => {
                     // Continue reading string
-                }
+                },
                 (_, true) => {
                     self.cursor.back();
                     self.scan_cursor_item((e, c))?;
-                }
+                },
             }
         }
 
         Ok(())
     }
 
-    fn string(&mut self, quote_kind: QuotationMark) -> LexerResult<()> {
+    fn string(
+        &mut self,
+        quote_kind: QuotationMark,
+    ) -> LexerResult<()> {
         let (start, opener) = self.next()?;
         let end: usize;
 
@@ -225,12 +238,16 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
         if let Some((e_pos, _)) = self.cursor.next_if(|c| c == 'e') {
             end = e_pos;
 
-            if let Some((sign_pos, _)) = self.cursor.next_if(|c| c == '+' || c == '-') {
+            if let Some((sign_pos, _)) =
+                self.cursor.next_if(|c| c == '+' || c == '-')
+            {
                 end = sign_pos;
             }
 
             let mut has_exponent_digits = false;
-            while let Some((exp_pos, _)) = self.cursor.next_if(|c| is_token_type!(c, "digit")) {
+            while let Some((exp_pos, _)) =
+                self.cursor.next_if(|c| is_token_type!(c, "digit"))
+            {
                 end = exp_pos;
                 has_exponent_digits = true;
             }
@@ -259,12 +276,12 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
         let value = &self.source[start..=start];
         let span = (start as u32, (start + 1) as u32);
         self.push(Token {
-            kind: TokenKind::Bracket(Bracket::from_str(value).map_err(|_| {
-                LexerError::UnexpectedSymbol {
+            kind: TokenKind::Bracket(Bracket::from_str(value).map_err(
+                |_| LexerError::UnexpectedSymbol {
                     symbol: value.to_string(),
                     span,
-                }
-            })?),
+                },
+            )?),
             span,
             value,
         });
@@ -283,12 +300,12 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
         let value = &self.source[start..=end];
         let span = (start as u32, (end + 1) as u32);
         self.push(Token {
-            kind: TokenKind::Operator(Operator::from_str(value).map_err(|_| {
-                LexerError::UnexpectedSymbol {
+            kind: TokenKind::Operator(Operator::from_str(value).map_err(
+                |_| LexerError::UnexpectedSymbol {
                     symbol: value.to_string(),
                     span,
-                }
-            })?),
+                },
+            )?),
             span,
             value,
         });
@@ -306,12 +323,12 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
 
         let value = &self.source[start..=end];
         self.push(Token {
-            kind: TokenKind::Operator(Operator::from_str(value).map_err(|_| {
-                LexerError::UnexpectedSymbol {
+            kind: TokenKind::Operator(Operator::from_str(value).map_err(
+                |_| LexerError::UnexpectedSymbol {
                     symbol: value.to_string(),
                     span: (start as u32, (end + 1) as u32),
-                }
-            })?),
+                },
+            )?),
             span: (start as u32, (end + 1) as u32),
             value,
         });
@@ -343,7 +360,9 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
         };
 
         self.push(Token {
-            kind: TokenKind::Operator(Operator::Comparison(ComparisonOperator::Equal)),
+            kind: TokenKind::Operator(Operator::Comparison(
+                ComparisonOperator::Equal,
+            )),
             span: (start as u32, (end + 1) as u32),
             value: &self.source[start..=end],
         });
@@ -357,7 +376,9 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
         let mut end = start;
 
         if self.cursor.next_if(|c| c == '?').is_some() {
-            kind = TokenKind::Operator(Operator::Logical(LogicalOperator::NullishCoalescing));
+            kind = TokenKind::Operator(Operator::Logical(
+                LogicalOperator::NullishCoalescing,
+            ));
             end += 1;
         }
 
@@ -377,12 +398,12 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
         let value = &self.source[start..=start];
         let span = (start as u32, (start + 1) as u32);
         self.push(Token {
-            kind: TokenKind::Operator(Operator::from_str(value).map_err(|_| {
-                LexerError::UnexpectedSymbol {
+            kind: TokenKind::Operator(Operator::from_str(value).map_err(
+                |_| LexerError::UnexpectedSymbol {
                     symbol: value.to_string(),
                     span,
-                }
-            })?),
+                },
+            )?),
             span,
             value,
         });
@@ -390,12 +411,17 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
         Ok(())
     }
 
-    fn not(&mut self, start: usize) -> LexerResult<()> {
+    fn not(
+        &mut self,
+        start: usize,
+    ) -> LexerResult<()> {
         if self.cursor.next_if_is(" in ") {
             let end = self.cursor.position();
 
             self.push(Token {
-                kind: TokenKind::Operator(Operator::Comparison(ComparisonOperator::NotIn)),
+                kind: TokenKind::Operator(Operator::Comparison(
+                    ComparisonOperator::NotIn,
+                )),
                 span: (start as u32, (end - 1) as u32),
                 value: "not in",
             })
@@ -403,7 +429,9 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
             let end = self.cursor.position();
 
             self.push(Token {
-                kind: TokenKind::Operator(Operator::Logical(LogicalOperator::Not)),
+                kind: TokenKind::Operator(Operator::Logical(
+                    LogicalOperator::Not,
+                )),
                 span: (start as u32, end as u32),
                 value: "not",
             })
@@ -416,24 +444,32 @@ impl<'arena, 'self_ref> Scanner<'arena, 'self_ref> {
         let (start, _) = self.next()?;
         let mut end = start;
 
-        while let Some((e, _)) = self.cursor.next_if(|c| is_token_type!(c, "alphanumeric")) {
+        while let Some((e, _)) =
+            self.cursor.next_if(|c| is_token_type!(c, "alphanumeric"))
+        {
             end = e;
         }
 
         let value = &self.source[start..=end];
         match value {
             "and" => self.push(Token {
-                kind: TokenKind::Operator(Operator::Logical(LogicalOperator::And)),
+                kind: TokenKind::Operator(Operator::Logical(
+                    LogicalOperator::And,
+                )),
                 span: (start as u32, (end + 1) as u32),
                 value,
             }),
             "or" => self.push(Token {
-                kind: TokenKind::Operator(Operator::Logical(LogicalOperator::Or)),
+                kind: TokenKind::Operator(Operator::Logical(
+                    LogicalOperator::Or,
+                )),
                 span: (start as u32, (end + 1) as u32),
                 value,
             }),
             "in" => self.push(Token {
-                kind: TokenKind::Operator(Operator::Comparison(ComparisonOperator::In)),
+                kind: TokenKind::Operator(Operator::Comparison(
+                    ComparisonOperator::In,
+                )),
                 span: (start as u32, (end + 1) as u32),
                 value,
             }),

@@ -11,11 +11,7 @@ pub struct Res<T> {
 }
 impl<T> Res<T> {
     pub fn success(data: T) -> ResponseResult<T> {
-        Ok(Res {
-            code: 200,
-            msg: None,
-            data: Some(data),
-        })
+        Ok(Res { code: 200, msg: None, data: Some(data) })
     }
     pub fn error(msg: String) -> ResponseResult<T> {
         Err(AppError(anyhow!(msg)))
@@ -43,10 +39,6 @@ macro_rules! res {
     };
     // 自定义错误码和消息
     (err $code:expr, $msg:expr) => {
-        Res {
-            code: $code,
-            msg: Some($msg.to_string()),
-            data: None,
-        }
+        Res { code: $code, msg: Some($msg.to_string()), data: None }
     };
 }

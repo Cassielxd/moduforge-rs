@@ -19,7 +19,11 @@ where
     ) -> ConversionResult<StepResult>;
 
     /// 验证步骤是否有效（可选实现）
-    fn validate_step(&self, _step: &T, _context: &ConversionContext) -> ConversionResult<()> {
+    fn validate_step(
+        &self,
+        _step: &T,
+        _context: &ConversionContext,
+    ) -> ConversionResult<()> {
         // 默认实现：总是有效
         Ok(())
     }
@@ -63,7 +67,10 @@ pub struct ConversionContext {
 }
 
 impl ConversionContext {
-    pub fn new(client_id: String, user_id: String) -> Self {
+    pub fn new(
+        client_id: String,
+        user_id: String,
+    ) -> Self {
         Self {
             client_id,
             user_id,
@@ -75,7 +82,6 @@ impl ConversionContext {
     }
 }
 
-
 /// 类型擦除的转换器包装器
 /// 用于在运行时存储不同类型的转换器
 pub struct ErasedConverter {
@@ -84,7 +90,11 @@ pub struct ErasedConverter {
     converter_name: &'static str,
     priority: u8,
     supports_concurrent: bool,
-    convert_fn: fn(&dyn Any, &mut TransactionMut, &ConversionContext) -> ConversionResult<StepResult>,
+    convert_fn: fn(
+        &dyn Any,
+        &mut TransactionMut,
+        &ConversionContext,
+    ) -> ConversionResult<StepResult>,
     validate_fn: fn(&dyn Any, &ConversionContext) -> ConversionResult<()>,
 }
 
@@ -103,14 +113,16 @@ impl ErasedConverter {
             supports_concurrent: C::supports_concurrent_execution(),
             convert_fn: |step_any, txn, context| {
                 let converter = C::default();
-                let step = step_any.downcast_ref::<T>()
-                    .ok_or_else(|| ConversionError::unsupported_step::<T>("Type mismatch"))?;
+                let step = step_any.downcast_ref::<T>().ok_or_else(|| {
+                    ConversionError::unsupported_step::<T>("Type mismatch")
+                })?;
                 converter.convert_typed(step, txn, context)
             },
             validate_fn: |step_any, context| {
                 let converter = C::default();
-                let step = step_any.downcast_ref::<T>()
-                    .ok_or_else(|| ConversionError::unsupported_step::<T>("Type mismatch"))?;
+                let step = step_any.downcast_ref::<T>().ok_or_else(|| {
+                    ConversionError::unsupported_step::<T>("Type mismatch")
+                })?;
                 converter.validate_step(step, context)
             },
         }
@@ -161,7 +173,10 @@ impl ErasedConverter {
 }
 
 impl std::fmt::Debug for ErasedConverter {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
         f.debug_struct("ErasedConverter")
             .field("type_id", &self.type_id)
             .field("type_name", &self.type_name)

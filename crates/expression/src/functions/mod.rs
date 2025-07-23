@@ -15,12 +15,12 @@ use std::fmt::Display;
 use strum_macros::{Display, EnumIter, EnumString, IntoStaticStr};
 
 pub mod arguments; // 函数参数处理
-pub mod mf_function;
 mod date_method; // 日期方法
 pub mod defs; // 函数定义接口
 mod deprecated; // 已废弃函数
 pub mod internal; // 内置函数
 mod method; // 方法注册表
+pub mod mf_function;
 pub(crate) mod registry; // 函数注册表
 pub mod state_guard; // State 守卫模块
 
@@ -55,9 +55,7 @@ impl TryFrom<&str> for FunctionKind {
             .or_else(|_| {
                 ClosureFunction::try_from(value).map(FunctionKind::Closure)
             })
-            .or_else(|_| {
-                MfFunction::try_from(value).map(FunctionKind::Mf)
-            })
+            .or_else(|_| MfFunction::try_from(value).map(FunctionKind::Mf))
     }
 }
 

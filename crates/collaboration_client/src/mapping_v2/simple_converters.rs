@@ -1,6 +1,5 @@
 /// 简化版转换器实现
 /// 不使用宏，直接实现 TypedStepConverter trait
-
 use yrs::{Array, ArrayPrelim, Map, MapPrelim, TransactionMut, WriteTxn};
 use mf_transform::{
     step::Step,
@@ -39,21 +38,27 @@ impl TypedStepConverter<AddNodeStep> for SimpleNodeAddConverter {
         }
 
         let nodes_map = txn.get_or_insert_map("nodes");
-        
+
         // 获取根节点ID
         let meta_map = txn.get_or_insert_map("meta");
         let root_id = meta_map.get(txn, "root_id");
-        
+
         // 如果不是根节点，需要更新父节点的content数组
         if let Some(root_id) = root_id {
             if root_id.to_string(txn) != step.parent_id {
                 let parent_node_data = Utils::get_or_create_node_data_map(
-                    &nodes_map, txn, &step.parent_id
+                    &nodes_map,
+                    txn,
+                    &step.parent_id,
                 );
-                let content_array = Utils::get_or_create_content_array(&parent_node_data, txn);
-                
+                let content_array =
+                    Utils::get_or_create_content_array(&parent_node_data, txn);
+
                 for node_enum in &step.nodes {
-                    content_array.push_back(txn, yrs::Any::String(node_enum.0.id.clone().into()));
+                    content_array.push_back(
+                        txn,
+                        yrs::Any::String(node_enum.0.id.clone().into()),
+                    );
                 }
             }
         }
@@ -68,13 +73,20 @@ impl TypedStepConverter<AddNodeStep> for SimpleNodeAddConverter {
         Ok(StepResult {
             step_id: uuid::Uuid::new_v4().to_string(),
             step_name: step.name().to_string(),
-            description: format!("成功添加 {} 个节点到父节点 {}", inserted_count, step.parent_id),
+            description: format!(
+                "成功添加 {} 个节点到父节点 {}",
+                inserted_count, step.parent_id
+            ),
             timestamp: context.timestamp,
             client_id: context.client_id.clone(),
         })
     }
 
-    fn validate_step(&self, step: &AddNodeStep, _context: &ConversionContext) -> ConversionResult<()> {
+    fn validate_step(
+        &self,
+        step: &AddNodeStep,
+        _context: &ConversionContext,
+    ) -> ConversionResult<()> {
         if step.nodes.is_empty() {
             return Err(ConversionError::validation_failed(
                 "AddNodeStep",
@@ -135,7 +147,11 @@ impl TypedStepConverter<RemoveNodeStep> for SimpleNodeRemoveConverter {
         })
     }
 
-    fn validate_step(&self, step: &RemoveNodeStep, _context: &ConversionContext) -> ConversionResult<()> {
+    fn validate_step(
+        &self,
+        step: &RemoveNodeStep,
+        _context: &ConversionContext,
+    ) -> ConversionResult<()> {
         if step.node_ids.is_empty() {
             return Err(ConversionError::validation_failed(
                 "RemoveNodeStep",
@@ -185,23 +201,37 @@ impl TypedStepConverter<AttrStep> for SimpleAttrConverter {
         }
 
         let nodes_map = txn.get_or_insert_map("nodes");
-        let node_data_map = Utils::get_or_create_node_data_map(&nodes_map, txn, &step.id);
-        let attrs_map = Utils::get_or_create_node_attrs_map(&node_data_map, txn);
+        let node_data_map =
+            Utils::get_or_create_node_data_map(&nodes_map, txn, &step.id);
+        let attrs_map =
+            Utils::get_or_create_node_attrs_map(&node_data_map, txn);
 
         for (key, value) in &step.values {
-            attrs_map.insert(txn, key.clone(), Utils::json_value_to_yrs_any(value));
+            attrs_map.insert(
+                txn,
+                key.clone(),
+                Utils::json_value_to_yrs_any(value),
+            );
         }
 
         Ok(StepResult {
             step_id: uuid::Uuid::new_v4().to_string(),
             step_name: step.name().to_string(),
-            description: format!("更新节点 {} 的 {} 个属性", step.id, step.values.len()),
+            description: format!(
+                "更新节点 {} 的 {} 个属性",
+                step.id,
+                step.values.len()
+            ),
             timestamp: context.timestamp,
             client_id: context.client_id.clone(),
         })
     }
 
-    fn validate_step(&self, step: &AttrStep, _context: &ConversionContext) -> ConversionResult<()> {
+    fn validate_step(
+        &self,
+        step: &AttrStep,
+        _context: &ConversionContext,
+    ) -> ConversionResult<()> {
         if step.values.is_empty() {
             return Err(ConversionError::validation_failed(
                 "AttrStep",
@@ -244,7 +274,8 @@ impl TypedStepConverter<AddMarkStep> for SimpleMarkAddConverter {
         context: &ConversionContext,
     ) -> ConversionResult<StepResult> {
         let nodes_map = txn.get_or_insert_map("nodes");
-        let node_data_map = Utils::get_or_create_node_data_map(&nodes_map, txn, &step.id);
+        let node_data_map =
+            Utils::get_or_create_node_data_map(&nodes_map, txn, &step.id);
         let marks_array = Utils::get_or_create_marks_array(&node_data_map, txn);
 
         for mark in &step.marks {
@@ -254,13 +285,21 @@ impl TypedStepConverter<AddMarkStep> for SimpleMarkAddConverter {
         Ok(StepResult {
             step_id: uuid::Uuid::new_v4().to_string(),
             step_name: step.name().to_string(),
-            description: format!("为节点 {} 添加 {} 个标记", step.id, step.marks.len()),
+            description: format!(
+                "为节点 {} 添加 {} 个标记",
+                step.id,
+                step.marks.len()
+            ),
             timestamp: context.timestamp,
             client_id: context.client_id.clone(),
         })
     }
 
-    fn validate_step(&self, step: &AddMarkStep, _context: &ConversionContext) -> ConversionResult<()> {
+    fn validate_step(
+        &self,
+        step: &AddMarkStep,
+        _context: &ConversionContext,
+    ) -> ConversionResult<()> {
         if step.marks.is_empty() {
             return Err(ConversionError::validation_failed(
                 "AddMarkStep",
@@ -303,7 +342,8 @@ impl TypedStepConverter<RemoveMarkStep> for SimpleMarkRemoveConverter {
         context: &ConversionContext,
     ) -> ConversionResult<StepResult> {
         let nodes_map = txn.get_or_insert_map("nodes");
-        let node_data_map = Utils::get_or_create_node_data_map(&nodes_map, txn, &step.id);
+        let node_data_map =
+            Utils::get_or_create_node_data_map(&nodes_map, txn, &step.id);
         let marks_array = Utils::get_or_create_marks_array(&node_data_map, txn);
 
         let mut removed_count = 0;
@@ -316,13 +356,20 @@ impl TypedStepConverter<RemoveMarkStep> for SimpleMarkRemoveConverter {
         Ok(StepResult {
             step_id: uuid::Uuid::new_v4().to_string(),
             step_name: step.name().to_string(),
-            description: format!("从节点 {} 删除 {} 个标记", step.id, removed_count),
+            description: format!(
+                "从节点 {} 删除 {} 个标记",
+                step.id, removed_count
+            ),
             timestamp: context.timestamp,
             client_id: context.client_id.clone(),
         })
     }
 
-    fn validate_step(&self, step: &RemoveMarkStep, _context: &ConversionContext) -> ConversionResult<()> {
+    fn validate_step(
+        &self,
+        step: &RemoveMarkStep,
+        _context: &ConversionContext,
+    ) -> ConversionResult<()> {
         if step.mark_types.is_empty() {
             return Err(ConversionError::validation_failed(
                 "RemoveMarkStep",
@@ -377,13 +424,15 @@ fn insert_single_node(
     txn: &mut TransactionMut,
     node: &Node,
 ) -> ConversionResult<()> {
-    let node_data_map = Utils::get_or_create_node_data_map(nodes_map, txn, &node.id);
+    let node_data_map =
+        Utils::get_or_create_node_data_map(nodes_map, txn, &node.id);
 
     // 设置节点类型
     node_data_map.insert(txn, "type", node.r#type.clone());
 
     // 设置属性
-    let attrs_map = node_data_map.insert(txn, "attrs", MapPrelim::<yrs::Any>::new());
+    let attrs_map =
+        node_data_map.insert(txn, "attrs", MapPrelim::<yrs::Any>::new());
     for (key, value) in node.attrs.iter() {
         attrs_map.insert(txn, key.clone(), Utils::json_value_to_yrs_any(value));
     }
@@ -418,15 +467,16 @@ fn remove_mark_by_type(
     mark_type: &str,
 ) -> ConversionResult<bool> {
     let len = marks_array.len(txn);
-    
+
     for i in (0..len).rev() {
-        if let Some(yrs::types::Value::YMap(mark_map)) = marks_array.get(txn, i) {
+        if let Some(yrs::types::Value::YMap(mark_map)) = marks_array.get(txn, i)
+        {
             if let Some(type_value) = mark_map.get(txn, "type") {
                 let current_mark_type = match type_value {
                     yrs::types::Value::Any(any) => any.to_string(),
                     _ => continue,
                 };
-                
+
                 if current_mark_type == mark_type {
                     marks_array.remove(txn, i);
                     return Ok(true);
@@ -442,12 +492,12 @@ fn remove_mark_by_type(
 #[ctor::ctor]
 fn register_simple_converters() {
     use crate::mapping_v2::converter_registry::register_global_converter;
-    
+
     register_global_converter::<AddNodeStep, SimpleNodeAddConverter>();
     register_global_converter::<RemoveNodeStep, SimpleNodeRemoveConverter>();
     register_global_converter::<AttrStep, SimpleAttrConverter>();
     register_global_converter::<AddMarkStep, SimpleMarkAddConverter>();
     register_global_converter::<RemoveMarkStep, SimpleMarkRemoveConverter>();
-    
+
     tracing::info!("✅ 已注册所有简化版转换器");
 }

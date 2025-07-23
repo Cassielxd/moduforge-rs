@@ -189,11 +189,8 @@ impl MfFunctionRegistry {
                 return Err(format!("函数 '{}' 已经存在", name));
             }
 
-            let definition = MfFunctionDefinition::new(
-                name.clone(),
-                signature,
-                executor,
-            );
+            let definition =
+                MfFunctionDefinition::new(name.clone(), signature, executor);
             reg.functions.insert(name, Rc::new(definition));
             Ok(())
         })
@@ -301,19 +298,17 @@ impl<S: Send + Sync + 'static> Default for MfFunctionHelper<S> {
 
 impl From<&MfFunction> for Rc<dyn FunctionDefinition> {
     fn from(custom: &MfFunction) -> Self {
-        MfFunctionRegistry::get_definition(&custom.name).unwrap_or_else(
-            || {
-                // 如果函数不存在，返回一个错误函数
-                Rc::new(StaticFunction {
-                    signature: FunctionSignature {
-                        parameters: vec![],
-                        return_type: VariableType::Null,
-                    },
-                    implementation: Rc::new(|_| {
-                        Err(anyhow::anyhow!("自定义函数未找到"))
-                    }),
-                })
-            },
-        )
+        MfFunctionRegistry::get_definition(&custom.name).unwrap_or_else(|| {
+            // 如果函数不存在，返回一个错误函数
+            Rc::new(StaticFunction {
+                signature: FunctionSignature {
+                    parameters: vec![],
+                    return_type: VariableType::Null,
+                },
+                implementation: Rc::new(|_| {
+                    Err(anyhow::anyhow!("自定义函数未找到"))
+                }),
+            })
+        })
     }
 }

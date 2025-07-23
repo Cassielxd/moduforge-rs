@@ -113,10 +113,8 @@ impl Schema {
             let mark_set = match mark_expr {
                 Some("_") => None,
                 Some(expr) => {
-                    let marks_result = gather_marks(
-                        &marks,
-                        expr.split_whitespace().collect(),
-                    );
+                    let marks_result =
+                        gather_marks(&marks, expr.split_whitespace().collect());
                     match marks_result {
                         Ok(marks) => Some(marks.into_iter().cloned().collect()), // Convert Vec<&MarkType> to Vec<MarkType>
                         Err(e) => return Err(schema_error(&e)),

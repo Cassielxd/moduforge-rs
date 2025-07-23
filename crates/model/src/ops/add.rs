@@ -104,8 +104,10 @@ impl<'a> Add<(String, Value)> for AttrsRef<'a> {
         self,
         (key, value): (String, Value),
     ) -> Self::Output {
-        self.tree
-            .update_attr(&self.key.clone().into(), imbl::hashmap! {key=>value})?;
+        self.tree.update_attr(
+            &self.key.clone().into(),
+            imbl::hashmap! {key=>value},
+        )?;
         Ok(AttrsRef::new(self.tree, self.key.clone()))
     }
 }

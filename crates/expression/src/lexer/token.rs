@@ -26,7 +26,9 @@ pub enum TokenKind {
     TemplateString(TemplateString),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Display, EnumString, IntoStaticStr)]
+#[derive(
+    Debug, PartialEq, Eq, Clone, Copy, Display, EnumString, IntoStaticStr,
+)]
 pub enum Identifier {
     #[strum(serialize = "$")]
     ContextReference,
@@ -38,7 +40,9 @@ pub enum Identifier {
     Null,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Display, EnumString, IntoStaticStr)]
+#[derive(
+    Debug, PartialEq, Eq, Clone, Copy, Display, EnumString, IntoStaticStr,
+)]
 pub enum QuotationMark {
     #[strum(serialize = "'")]
     SingleQuote,
@@ -57,9 +61,14 @@ pub enum TemplateString {
 }
 
 impl Display for TemplateString {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut Formatter<'_>,
+    ) -> std::fmt::Result {
         match *self {
-            TemplateString::ExpressionStart => ::core::fmt::Display::fmt("${", f),
+            TemplateString::ExpressionStart => {
+                ::core::fmt::Display::fmt("${", f)
+            },
             TemplateString::ExpressionEnd => ::core::fmt::Display::fmt("}}", f),
         }
     }
@@ -80,7 +89,10 @@ pub enum Operator {
 }
 
 impl Display for Operator {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut Formatter<'_>,
+    ) -> std::fmt::Result {
         match self {
             Operator::Arithmetic(a) => write!(f, "{a}"),
             Operator::Logical(l) => write!(f, "{l}"),
@@ -108,8 +120,13 @@ impl FromStr for Operator {
             "?" => Ok(Operator::QuestionMark),
             _ => ArithmeticOperator::try_from(operator)
                 .map(Operator::Arithmetic)
-                .or_else(|_| LogicalOperator::try_from(operator).map(Operator::Logical))
-                .or_else(|_| ComparisonOperator::try_from(operator).map(Operator::Comparison)),
+                .or_else(|_| {
+                    LogicalOperator::try_from(operator).map(Operator::Logical)
+                })
+                .or_else(|_| {
+                    ComparisonOperator::try_from(operator)
+                        .map(Operator::Comparison)
+                }),
         }
     }
 }
@@ -162,7 +179,17 @@ pub enum ComparisonOperator {
     NotIn,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, EnumString, IntoStaticStr, EnumIter, FromRepr)]
+#[derive(
+    Debug,
+    PartialEq,
+    Eq,
+    Clone,
+    Copy,
+    EnumString,
+    IntoStaticStr,
+    EnumIter,
+    FromRepr,
+)]
 pub enum Bracket {
     #[strum(serialize = "(")]
     LeftParenthesis,
@@ -179,7 +206,10 @@ pub enum Bracket {
 }
 
 impl Display for Bracket {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut Formatter<'_>,
+    ) -> std::fmt::Result {
         match *self {
             Bracket::LeftParenthesis => ::core::fmt::Display::fmt("(", f),
             Bracket::RightParenthesis => ::core::fmt::Display::fmt(")", f),
@@ -230,7 +260,10 @@ impl Operator {
 }
 
 impl Hash for Operator {
-    fn hash<H: Hasher>(&self, state: &mut H) {
+    fn hash<H: Hasher>(
+        &self,
+        state: &mut H,
+    ) {
         state.write_u8(self.variant());
     }
 }

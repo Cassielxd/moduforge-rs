@@ -1,9 +1,7 @@
 use crate::support::{
     create_fs_loader, load_raw_test_data, load_test_data, test_data_root,
 };
-use mf_expression::functions::mf_function::{
-    MfFunctionHelper, MfFunctionRegistry,
-};
+use mf_expression::functions::mf_function::{MfFunctionHelper, MfFunctionRegistry};
 use mf_expression::variable::VariableType;
 use serde::Deserialize;
 use serde_json::json;

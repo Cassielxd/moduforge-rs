@@ -18,25 +18,25 @@ use std::collections::HashMap;
 
 /// 获取当前时间戳（毫秒）
 
-
 pub struct Utils;
 impl Utils {
     pub fn get_unix_time() -> u64 {
-        SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis()
-            as u64
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as u64
     }
     /// 将 Yrs 文档转换为 ModuForge Tree
     /// 这是从协作状态重建文档树的关键方法
-    pub fn apply_yrs_to_tree(
-        doc: &yrs::Doc
-    ) -> ClientResult<Tree> {
+    pub fn apply_yrs_to_tree(doc: &yrs::Doc) -> ClientResult<Tree> {
         use mf_model::types::NodeId;
         use std::collections::HashMap;
 
         let root_id = Utils::get_root_id_from_yrs_doc(doc)?;
         let txn = doc.transact();
-        let nodes_map =
-            txn.get_map("nodes").ok_or(anyhow::anyhow!("Yrs 文档中没有找到 nodes 映射"))?;
+        let nodes_map = txn
+            .get_map("nodes")
+            .ok_or(anyhow::anyhow!("Yrs 文档中没有找到 nodes 映射"))?;
         let mut tree_nodes = HashMap::new();
         let mut parent_map = HashMap::new();
 
@@ -66,7 +66,8 @@ impl Utils {
     ) -> ClientResult<()> {
         let mut awareness = awareness_ref.write().await;
         let doc = awareness.doc_mut();
-        let mut txn = doc.transact_mut_with(doc.client_id().clone().to_string());
+        let mut txn =
+            doc.transact_mut_with(doc.client_id().clone().to_string());
 
         // 清空现有数据（如果有的话）
         let nodes_map = txn.get_or_insert_map("nodes");
@@ -109,14 +110,16 @@ impl Utils {
                 parent_id: tree.root_id.clone(),
                 nodes: vec![root_tree],
             };
-            
+
             // 使用新版本的转换器API
             let context = crate::mapping::create_context(
                 "tree_sync_client".to_string(),
                 "tree_sync_user".to_string(),
             );
-            
-            if let Err(e) = crate::mapping::convert_step(&add_step, txn, &context) {
+
+            if let Err(e) =
+                crate::mapping::convert_step(&add_step, txn, &context)
+            {
                 tracing::error!("🔄 同步树节点到 Yrs 失败: {}", e);
                 return Err(anyhow::anyhow!(format!(
                     "Failed to sync tree: {}",
@@ -136,7 +139,8 @@ impl Utils {
 
         let mut awareness = awareness_ref.write().await;
         let doc = awareness.doc_mut();
-        let mut txn = doc.transact_mut_with(doc.client_id().clone().to_string());
+        let mut txn =
+            doc.transact_mut_with(doc.client_id().clone().to_string());
         // 使用新版本的转换API应用所有事务中的步骤
         let context = crate::mapping::create_context(
             "transaction_client".to_string(),
@@ -145,7 +149,9 @@ impl Utils {
 
         let steps = &transaction.steps;
         for step in steps {
-            if let Err(e) = crate::mapping::convert_step(step.as_ref(), &mut txn, &context) {
+            if let Err(e) =
+                crate::mapping::convert_step(step.as_ref(), &mut txn, &context)
+            {
                 tracing::error!("🔄 应用步骤到 Yrs 事务失败: {}", e);
             }
         }
@@ -169,7 +175,8 @@ impl Utils {
 
         let mut awareness = awareness_ref.write().await;
         let doc = awareness.doc_mut();
-        let mut txn = doc.transact_mut_with(doc.client_id().clone().to_string());
+        let mut txn =
+            doc.transact_mut_with(doc.client_id().clone().to_string());
 
         // 使用新版本的转换API应用所有事务中的步骤
         let context = crate::mapping::create_context(
@@ -180,7 +187,11 @@ impl Utils {
         for tr in transactions {
             let steps = &tr.steps;
             for step in steps {
-                if let Err(e) = crate::mapping::convert_step(step.as_ref(), &mut txn, &context) {
+                if let Err(e) = crate::mapping::convert_step(
+                    step.as_ref(),
+                    &mut txn,
+                    &context,
+                ) {
                     tracing::error!("🔄 应用步骤到 Yrs 事务失败: {}", e);
                 }
             }
@@ -344,9 +355,7 @@ impl Utils {
     }
 
     /// 从 Yrs 文档中获取根节点ID
-    pub fn get_root_id_from_yrs_doc(
-        doc: &yrs::Doc
-    ) -> ClientResult<String> {
+    pub fn get_root_id_from_yrs_doc(doc: &yrs::Doc) -> ClientResult<String> {
         let txn = doc.transact();
         // 优先从 meta 区域读取
         if let Some(meta_map) = txn.get_map("meta") {
@@ -357,8 +366,9 @@ impl Utils {
             }
         }
         // fallback: 兼容老数据，取 nodes_map 第一个节点
-        let nodes_map =
-            txn.get_map("nodes").ok_or(anyhow::anyhow!("Yrs 文档中没有找到 nodes 映射"))?;
+        let nodes_map = txn
+            .get_map("nodes")
+            .ok_or(anyhow::anyhow!("Yrs 文档中没有找到 nodes 映射"))?;
         for (key, _) in nodes_map.iter(&txn) {
             return Ok(key.to_string());
         }
@@ -376,7 +386,10 @@ impl Utils {
     ) -> ClientResult<()> {
         let node_data = nodes_map.get(txn, node_id);
         if node_data.is_none() {
-            return Err(anyhow::anyhow!("节点 {} 在 Yrs 文档中不存在", node_id));
+            return Err(anyhow::anyhow!(
+                "节点 {} 在 Yrs 文档中不存在",
+                node_id
+            ));
         }
         let node_data = node_data.unwrap();
         if let yrs::types::Value::YMap(node_map) = node_data {

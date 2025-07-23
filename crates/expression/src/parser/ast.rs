@@ -69,8 +69,10 @@ pub enum Node<'a> {
 }
 
 impl<'a> Node<'a> {
-    pub fn walk<F>(&self, mut func: F)
-    where
+    pub fn walk<F>(
+        &self,
+        mut func: F,
+    ) where
         F: FnMut(&Self) + Clone,
     {
         {
@@ -78,20 +80,24 @@ impl<'a> Node<'a> {
         };
 
         match self {
-            Node::Null => {}
-            Node::Bool(_) => {}
-            Node::Number(_) => {}
-            Node::String(_) => {}
-            Node::Pointer => {}
-            Node::Identifier(_) => {}
-            Node::Root => {}
+            Node::Null => {},
+            Node::Bool(_) => {},
+            Node::Number(_) => {},
+            Node::String(_) => {},
+            Node::Pointer => {},
+            Node::Identifier(_) => {},
+            Node::Root => {},
             Node::Error { node, .. } => {
                 if let Some(n) = node {
                     n.walk(func.clone())
                 }
-            }
-            Node::TemplateString(parts) => parts.iter().for_each(|n| n.walk(func.clone())),
-            Node::Array(parts) => parts.iter().for_each(|n| n.walk(func.clone())),
+            },
+            Node::TemplateString(parts) => {
+                parts.iter().for_each(|n| n.walk(func.clone()))
+            },
+            Node::Array(parts) => {
+                parts.iter().for_each(|n| n.walk(func.clone()))
+            },
             Node::Object(obj) => obj.iter().for_each(|(k, v)| {
                 k.walk(func.clone());
                 v.walk(func.clone());
@@ -105,13 +111,13 @@ impl<'a> Node<'a> {
                 if let Some(output) = output {
                     output.walk(func.clone());
                 }
-            }
+            },
             Node::Closure(closure) => closure.walk(func.clone()),
             Node::Parenthesized(c) => c.walk(func.clone()),
             Node::Member { node, property } => {
                 node.walk(func.clone());
                 property.walk(func.clone());
-            }
+            },
             Node::Slice { node, to, from } => {
                 node.walk(func.clone());
                 if let Some(to) = to {
@@ -121,36 +127,30 @@ impl<'a> Node<'a> {
                 if let Some(from) = from {
                     from.walk(func.clone());
                 }
-            }
+            },
             Node::Interval { left, right, .. } => {
                 left.walk(func.clone());
                 right.walk(func.clone());
-            }
+            },
             Node::Unary { node, .. } => {
                 node.walk(func);
-            }
+            },
             Node::Binary { left, right, .. } => {
                 left.walk(func.clone());
                 right.walk(func.clone());
-            }
+            },
             Node::FunctionCall { arguments, .. } => {
                 arguments.iter().for_each(|n| n.walk(func.clone()));
-            }
-            Node::MethodCall {
-                this, arguments, ..
-            } => {
+            },
+            Node::MethodCall { this, arguments, .. } => {
                 this.walk(func.clone());
                 arguments.iter().for_each(|n| n.walk(func.clone()));
-            }
-            Node::Conditional {
-                on_true,
-                condition,
-                on_false,
-            } => {
+            },
+            Node::Conditional { on_true, condition, on_false } => {
                 condition.walk(func.clone());
                 on_true.walk(func.clone());
                 on_false.walk(func.clone());
-            }
+            },
         };
     }
 
@@ -174,21 +174,30 @@ impl<'a> Node<'a> {
             Node::Error { error, .. } => match error {
                 AstNodeError::UnknownBuiltIn { span, .. } => Some(span.clone()),
                 AstNodeError::UnknownMethod { span, .. } => Some(span.clone()),
-                AstNodeError::UnexpectedIdentifier { span, .. } => Some(span.clone()),
-                AstNodeError::UnexpectedToken { span, .. } => Some(span.clone()),
+                AstNodeError::UnexpectedIdentifier { span, .. } => {
+                    Some(span.clone())
+                },
+                AstNodeError::UnexpectedToken { span, .. } => {
+                    Some(span.clone())
+                },
                 AstNodeError::InvalidNumber { span, .. } => Some(span.clone()),
                 AstNodeError::InvalidBoolean { span, .. } => Some(span.clone()),
-                AstNodeError::InvalidProperty { span, .. } => Some(span.clone()),
+                AstNodeError::InvalidProperty { span, .. } => {
+                    Some(span.clone())
+                },
                 AstNodeError::MissingToken { position, .. } => {
                     Some((*position as u32, *position as u32))
-                }
+                },
                 AstNodeError::Custom { span, .. } => Some(span.clone()),
             },
             _ => None,
         }
     }
 
-    pub(crate) fn member_key(&self, vec: &mut BumpVec<&'a str>) -> Option<()> {
+    pub(crate) fn member_key(
+        &self,
+        vec: &mut BumpVec<&'a str>,
+    ) -> Option<()> {
         match self {
             Node::Member { node, property } => {
                 node.member_key(vec)?;
@@ -201,15 +210,15 @@ impl<'a> Node<'a> {
 
                 vec.push(property_key);
                 Some(())
-            }
+            },
             Node::Identifier(name) => {
                 vec.push(name);
                 Some(())
-            }
+            },
             Node::Root => {
                 vec.push("$root");
                 Some(())
-            }
+            },
             _ => None,
         }
     }
@@ -231,11 +240,7 @@ pub enum AstNodeError<'a> {
     },
 
     #[error("Unexpected token: {received} at ({}, {}); Expected {expected}.", span.0, span.1)]
-    UnexpectedToken {
-        received: &'a str,
-        expected: &'a str,
-        span: (u32, u32),
-    },
+    UnexpectedToken { received: &'a str, expected: &'a str, span: (u32, u32) },
 
     #[error("Invalid number: {number} at ({}, {})", span.0, span.1)]
     InvalidNumber { number: &'a str, span: (u32, u32) },

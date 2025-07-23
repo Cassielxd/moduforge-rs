@@ -1,5 +1,5 @@
 //! XML Schema 与 Runtime 集成示例
-//! 
+//!
 //! 本示例展示如何将XML定义的Schema集成到ModuForge Runtime中使用。
 
 use mf_core::{XmlSchemaParser, XmlSchemaResult, EditorOptionsBuilder};
@@ -10,7 +10,7 @@ fn main() -> XmlSchemaResult<()> {
 
     // 1. 从XML创建Schema并集成到Runtime
     schema_runtime_integration()?;
-    
+
     // 2. 使用Extensions创建Runtime
     extensions_runtime_integration()?;
 
@@ -21,7 +21,7 @@ fn main() -> XmlSchemaResult<()> {
 /// Schema与Runtime集成示例
 fn schema_runtime_integration() -> XmlSchemaResult<()> {
     println!("1. Schema与Runtime集成:");
-    
+
     // 定义一个完整的文档Schema
     let xml = r#"
     <?xml version="1.0" encoding="UTF-8"?>
@@ -81,41 +81,47 @@ fn schema_runtime_integration() -> XmlSchemaResult<()> {
     // 解析XML为SchemaSpec
     let schema_spec = XmlSchemaParser::parse_from_str(xml)?;
     println!("   ✅ XML Schema解析成功");
-    
+
     // 编译为Schema
     let schema = Schema::compile(schema_spec).map_err(|e| {
-        mf_core::XmlSchemaError::InvalidNodeDefinition(format!("Schema编译失败: {}", e))
+        mf_core::XmlSchemaError::InvalidNodeDefinition(format!(
+            "Schema编译失败: {}",
+            e
+        ))
     })?;
     println!("   ✅ Schema编译成功");
-    
+
     // 验证Schema结构
     println!("   - 节点类型数量: {}", schema.nodes.len());
     println!("   - 标记类型数量: {}", schema.marks.len());
-    println!("   - 顶级节点: {:?}", schema.top_node_type.as_ref().map(|n| &n.name));
-    
+    println!(
+        "   - 顶级节点: {:?}",
+        schema.top_node_type.as_ref().map(|n| &n.name)
+    );
+
     // 显示节点详细信息
     for (name, node_type) in &schema.nodes {
-        println!("   - 节点 '{}': 组={:?}, 内容={:?}", 
-                 name, 
-                 node_type.spec.group,
-                 node_type.spec.content);
+        println!(
+            "   - 节点 '{}': 组={:?}, 内容={:?}",
+            name, node_type.spec.group, node_type.spec.content
+        );
     }
-    
+
     // 显示标记详细信息
     for (name, mark_type) in &schema.marks {
-        println!("   - 标记 '{}': 组={:?}, spanning={:?}", 
-                 name, 
-                 mark_type.spec.group,
-                 mark_type.spec.spanning);
+        println!(
+            "   - 标记 '{}': 组={:?}, spanning={:?}",
+            name, mark_type.spec.group, mark_type.spec.spanning
+        );
     }
-    
+
     Ok(())
 }
 
 /// Extensions与Runtime集成示例
 fn extensions_runtime_integration() -> XmlSchemaResult<()> {
     println!("\n2. Extensions与Runtime集成:");
-    
+
     let xml = r#"
     <?xml version="1.0" encoding="UTF-8"?>
     <schema top_node="doc">
@@ -145,22 +151,22 @@ fn extensions_runtime_integration() -> XmlSchemaResult<()> {
     // 解析为Extensions
     let extensions = XmlSchemaParser::parse_to_extensions(xml)?;
     println!("   ✅ Extensions解析成功，数量: {}", extensions.len());
-    
+
     // 创建RuntimeOptions并添加Extensions
     let options = EditorOptionsBuilder::new()
         .extensions(extensions)
         .history_limit(100)
         .build();
-    
+
     println!("   ✅ RuntimeOptions创建成功");
     println!("   - Extensions数量: {}", options.get_extensions().len());
     println!("   - 历史记录限制: {:?}", options.get_history_limit());
-    
+
     // 分析Extensions内容
     let extensions = options.get_extensions();
     let mut node_names = Vec::new();
     let mut mark_names = Vec::new();
-    
+
     for ext in &extensions {
         match ext {
             mf_core::types::Extensions::N(node) => {
@@ -174,10 +180,10 @@ fn extensions_runtime_integration() -> XmlSchemaResult<()> {
             },
         }
     }
-    
+
     println!("   - 节点类型: {:?}", node_names);
     println!("   - 标记类型: {:?}", mark_names);
-    
+
     Ok(())
 }
 
@@ -185,10 +191,10 @@ fn extensions_runtime_integration() -> XmlSchemaResult<()> {
 #[allow(dead_code)]
 fn multi_file_schema_composition() -> XmlSchemaResult<()> {
     println!("\n3. 多文件Schema组合:");
-    
+
     // 这个示例展示如何从多个XML文件组合Schema
     // 实际使用中，你可能有基础Schema和扩展Schema
-    
+
     let base_schema_xml = r#"
     <?xml version="1.0" encoding="UTF-8"?>
     <schema top_node="doc">
@@ -205,7 +211,7 @@ fn multi_file_schema_composition() -> XmlSchemaResult<()> {
       </nodes>
     </schema>
     "#;
-    
+
     let extension_schema_xml = r#"
     <?xml version="1.0" encoding="UTF-8"?>
     <schema>
@@ -226,15 +232,15 @@ fn multi_file_schema_composition() -> XmlSchemaResult<()> {
       </marks>
     </schema>
     "#;
-    
+
     // 解析基础Schema
     let mut base_spec = XmlSchemaParser::parse_from_str(base_schema_xml)?;
     println!("   ✅ 基础Schema解析成功");
-    
+
     // 解析扩展Schema
     let ext_spec = XmlSchemaParser::parse_from_str(extension_schema_xml)?;
     println!("   ✅ 扩展Schema解析成功");
-    
+
     // 合并Schema（简单的合并策略）
     for (name, node_spec) in ext_spec.nodes {
         base_spec.nodes.insert(name, node_spec);
@@ -242,17 +248,20 @@ fn multi_file_schema_composition() -> XmlSchemaResult<()> {
     for (name, mark_spec) in ext_spec.marks {
         base_spec.marks.insert(name, mark_spec);
     }
-    
+
     println!("   ✅ Schema合并完成");
     println!("   - 最终节点数量: {}", base_spec.nodes.len());
     println!("   - 最终标记数量: {}", base_spec.marks.len());
-    
+
     // 编译合并后的Schema
     let _schema = Schema::compile(base_spec).map_err(|e| {
-        mf_core::XmlSchemaError::InvalidNodeDefinition(format!("合并Schema编译失败: {}", e))
+        mf_core::XmlSchemaError::InvalidNodeDefinition(format!(
+            "合并Schema编译失败: {}",
+            e
+        ))
     })?;
     println!("   ✅ 合并Schema编译成功");
-    
+
     Ok(())
 }
 

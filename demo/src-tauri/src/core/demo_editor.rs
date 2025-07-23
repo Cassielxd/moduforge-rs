@@ -4,9 +4,17 @@ use std::{
 };
 
 use async_trait::async_trait;
-use mf_core::{runtime::async_runtime::ForgeAsyncRuntime, history_manager::HistoryManager, types::{HistoryEntryWithMeta, RuntimeOptions}, ForgeResult};
+use mf_core::{
+    runtime::async_runtime::ForgeAsyncRuntime,
+    history_manager::HistoryManager,
+    types::{HistoryEntryWithMeta, RuntimeOptions},
+    ForgeResult,
+};
 use mf_model::node_pool::NodePool;
-use mf_state::{resource::Resource, resource_table::ResourceId, transaction::Command, State, Transaction};
+use mf_state::{
+    resource::Resource, resource_table::ResourceId, transaction::Command,
+    State, Transaction,
+};
 
 use crate::types::EditorTrait;
 
@@ -27,7 +35,9 @@ pub struct DemoEditor {
 }
 #[async_trait]
 impl EditorTrait for DemoEditor {
-    async fn get_history_manager(&self) -> Option<&HistoryManager<HistoryEntryWithMeta>> {
+    async fn get_history_manager(
+        &self
+    ) -> Option<&HistoryManager<HistoryEntryWithMeta>> {
         Some(self.editor.get_history_manager())
     }
     async fn get_state(&self) -> Arc<State> {
@@ -39,11 +49,11 @@ impl EditorTrait for DemoEditor {
     async fn command(
         &mut self,
         command: Arc<dyn Command>,
-    ) -> ForgeResult<()>{
+    ) -> ForgeResult<()> {
         self.editor.command(command).await
     }
 
-     async fn command_with_meta(
+    async fn command_with_meta(
         &mut self,
         command: Arc<dyn Command>,
         description: String,
@@ -51,27 +61,29 @@ impl EditorTrait for DemoEditor {
     ) -> ForgeResult<()> {
         self.editor.command_with_meta(command, description, meta).await
     }
-     async fn dispatch_flow(
+    async fn dispatch_flow(
         &mut self,
         transaction: Transaction,
     ) -> ForgeResult<()> {
         self.editor.dispatch_flow(transaction).await
     }
-     async fn dispatch_flow_with_meta(
+    async fn dispatch_flow_with_meta(
         &mut self,
         transaction: Transaction,
         description: String,
         meta: serde_json::Value,
     ) -> ForgeResult<()> {
-        self.editor.dispatch_flow_with_meta(transaction, description, meta).await
+        self.editor
+            .dispatch_flow_with_meta(transaction, description, meta)
+            .await
     }
-    
 }
 
 impl DemoEditor {
     pub async fn create(options: DemoEditorOptions) -> ForgeResult<Self> {
         // 创建异步编辑器
-        let editor = ForgeAsyncRuntime::create(options.editor_options.clone()).await?;
+        let editor =
+            ForgeAsyncRuntime::create(options.editor_options.clone()).await?;
 
         Ok(Self { editor, options })
     }
@@ -79,7 +91,10 @@ impl DemoEditor {
         &self.options
     }
 
-    pub fn get_resource<T: Resource>(&self, rid: ResourceId) -> Option<Arc<T>> {
+    pub fn get_resource<T: Resource>(
+        &self,
+        rid: ResourceId,
+    ) -> Option<Arc<T>> {
         // 获取编辑器状态
         // 编辑器状态包含所有运行时资源和配置
         let state = self.editor.get_state();

@@ -44,7 +44,7 @@ pub mod ops;
 pub mod tree;
 pub mod types;
 
-pub mod imbl{
+pub mod imbl {
     pub use imbl::*;
 }
 

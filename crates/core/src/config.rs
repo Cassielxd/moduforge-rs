@@ -1,23 +1,23 @@
 //! 统一配置管理模块
 //!
 //! 该模块提供了 ModuForge 核心模块的统一配置管理，解决了以下问题：
-//! 
+//!
 //! ## 主要功能
-//! 
+//!
 //! 1. **统一配置结构**：将分散在各个模块中的配置统一管理
 //! 2. **环境适配**：提供开发、测试、生产环境的预设配置
 //! 3. **配置验证**：确保配置值的合理性和一致性
 //! 4. **配置继承**：支持配置的层级覆盖和继承
 //! 5. **运行时调整**：支持运行时动态调整部分配置
-//! 
+//!
 //! ## 使用示例
-//! 
+//!
 //! ```rust
 //! use mf_core::config::{ForgeConfig, Environment};
-//! 
+//!
 //! // 使用预设环境配置
 //! let config = ForgeConfig::for_environment(Environment::Production);
-//! 
+//!
 //! // 自定义配置
 //! let config = ForgeConfig::builder()
 //!     .processor_config(ProcessorConfig {
@@ -506,31 +506,41 @@ impl ForgeConfig {
         match self.environment {
             Environment::Development => {
                 if !self.performance.enable_detailed_logging {
-                    suggestions.push("开发环境建议启用详细日志记录".to_string());
+                    suggestions
+                        .push("开发环境建议启用详细日志记录".to_string());
                 }
                 if self.extension.enable_sandbox {
-                    suggestions.push("开发环境可以关闭扩展沙箱以便调试".to_string());
+                    suggestions
+                        .push("开发环境可以关闭扩展沙箱以便调试".to_string());
                 }
-            }
+            },
             Environment::Production => {
                 if self.performance.enable_detailed_logging {
-                    suggestions.push("生产环境建议关闭详细日志记录以提高性能".to_string());
+                    suggestions.push(
+                        "生产环境建议关闭详细日志记录以提高性能".to_string(),
+                    );
                 }
                 if self.performance.metrics_sampling_rate > 0.1 {
-                    suggestions.push("生产环境建议降低指标采样率以减少开销".to_string());
+                    suggestions.push(
+                        "生产环境建议降低指标采样率以减少开销".to_string(),
+                    );
                 }
                 if !self.extension.enable_sandbox {
-                    suggestions.push("生产环境建议启用扩展沙箱以提高安全性".to_string());
+                    suggestions.push(
+                        "生产环境建议启用扩展沙箱以提高安全性".to_string(),
+                    );
                 }
-            }
+            },
             Environment::Testing => {
                 if self.processor.task_timeout > Duration::from_secs(30) {
-                    suggestions.push("测试环境建议使用较短的任务超时时间".to_string());
+                    suggestions
+                        .push("测试环境建议使用较短的任务超时时间".to_string());
                 }
-            }
+            },
             Environment::Custom => {
-                suggestions.push("自定义环境，请根据实际需求调整配置".to_string());
-            }
+                suggestions
+                    .push("自定义环境，请根据实际需求调整配置".to_string());
+            },
         }
 
         suggestions
@@ -541,35 +551,36 @@ impl ForgeConfig {
 #[derive(Debug, Clone)]
 pub enum ConfigValidationError {
     /// 无效的配置值
-    InvalidValue {
-        field: String,
-        value: String,
-        reason: String,
-    },
+    InvalidValue { field: String, value: String, reason: String },
     /// 配置冲突
-    Conflict {
-        field1: String,
-        field2: String,
-        reason: String,
-    },
+    Conflict { field1: String, field2: String, reason: String },
     /// 缺少必需的配置
-    MissingRequired {
-        field: String,
-    },
+    MissingRequired { field: String },
 }
 
 impl std::fmt::Display for ConfigValidationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
         match self {
             ConfigValidationError::InvalidValue { field, value, reason } => {
-                write!(f, "配置字段 '{}' 的值 '{}' 无效: {}", field, value, reason)
-            }
+                write!(
+                    f,
+                    "配置字段 '{}' 的值 '{}' 无效: {}",
+                    field, value, reason
+                )
+            },
             ConfigValidationError::Conflict { field1, field2, reason } => {
-                write!(f, "配置字段 '{}' 和 '{}' 冲突: {}", field1, field2, reason)
-            }
+                write!(
+                    f,
+                    "配置字段 '{}' 和 '{}' 冲突: {}",
+                    field1, field2, reason
+                )
+            },
             ConfigValidationError::MissingRequired { field } => {
                 write!(f, "缺少必需的配置字段: {}", field)
-            }
+            },
         }
     }
 }
@@ -585,9 +596,7 @@ pub struct ForgeConfigBuilder {
 impl ForgeConfigBuilder {
     /// 创建新的配置构建器
     pub fn new() -> Self {
-        Self {
-            config: ForgeConfig::default(),
-        }
+        Self { config: ForgeConfig::default() }
     }
 
     /// 从现有配置创建构建器
@@ -596,79 +605,118 @@ impl ForgeConfigBuilder {
     }
 
     /// 设置运行环境
-    pub fn environment(mut self, env: Environment) -> Self {
+    pub fn environment(
+        mut self,
+        env: Environment,
+    ) -> Self {
         self.config.environment = env;
         self
     }
 
     /// 设置处理器配置
-    pub fn processor_config(mut self, config: ProcessorConfig) -> Self {
+    pub fn processor_config(
+        mut self,
+        config: ProcessorConfig,
+    ) -> Self {
         self.config.processor = config;
         self
     }
 
     /// 设置性能配置
-    pub fn performance_config(mut self, config: PerformanceConfig) -> Self {
+    pub fn performance_config(
+        mut self,
+        config: PerformanceConfig,
+    ) -> Self {
         self.config.performance = config;
         self
     }
 
     /// 设置事件配置
-    pub fn event_config(mut self, config: EventConfig) -> Self {
+    pub fn event_config(
+        mut self,
+        config: EventConfig,
+    ) -> Self {
         self.config.event = config;
         self
     }
 
     /// 设置历史记录配置
-    pub fn history_config(mut self, config: HistoryConfig) -> Self {
+    pub fn history_config(
+        mut self,
+        config: HistoryConfig,
+    ) -> Self {
         self.config.history = config;
         self
     }
 
     /// 设置扩展配置
-    pub fn extension_config(mut self, config: ExtensionConfig) -> Self {
+    pub fn extension_config(
+        mut self,
+        config: ExtensionConfig,
+    ) -> Self {
         self.config.extension = config;
         self
     }
 
     /// 设置缓存配置
-    pub fn cache_config(mut self, config: CacheConfig) -> Self {
+    pub fn cache_config(
+        mut self,
+        config: CacheConfig,
+    ) -> Self {
         self.config.cache = config;
         self
     }
 
     /// 设置任务队列大小
-    pub fn max_queue_size(mut self, size: usize) -> Self {
+    pub fn max_queue_size(
+        mut self,
+        size: usize,
+    ) -> Self {
         self.config.processor.max_queue_size = size;
         self
     }
 
     /// 设置最大并发任务数
-    pub fn max_concurrent_tasks(mut self, count: usize) -> Self {
+    pub fn max_concurrent_tasks(
+        mut self,
+        count: usize,
+    ) -> Self {
         self.config.processor.max_concurrent_tasks = count;
         self
     }
 
     /// 设置任务超时时间
-    pub fn task_timeout(mut self, timeout: Duration) -> Self {
+    pub fn task_timeout(
+        mut self,
+        timeout: Duration,
+    ) -> Self {
         self.config.processor.task_timeout = timeout;
         self
     }
 
     /// 设置中间件超时时间
-    pub fn middleware_timeout(mut self, timeout_ms: u64) -> Self {
+    pub fn middleware_timeout(
+        mut self,
+        timeout_ms: u64,
+    ) -> Self {
         self.config.performance.middleware_timeout_ms = timeout_ms;
         self
     }
 
     /// 启用/禁用性能监控
-    pub fn enable_monitoring(mut self, enable: bool) -> Self {
+    pub fn enable_monitoring(
+        mut self,
+        enable: bool,
+    ) -> Self {
         self.config.performance.enable_monitoring = enable;
         self
     }
 
     /// 设置历史记录最大条数
-    pub fn history_limit(mut self, limit: usize) -> Self {
+    pub fn history_limit(
+        mut self,
+        limit: usize,
+    ) -> Self {
         self.config.history.max_entries = limit;
         self
     }
@@ -717,11 +765,15 @@ impl ForgeConfig {
         // 环境类型
         if let Ok(env_str) = env::var("FORGE_ENVIRONMENT") {
             match env_str.to_lowercase().as_str() {
-                "development" | "dev" => self.environment = Environment::Development,
+                "development" | "dev" => {
+                    self.environment = Environment::Development
+                },
                 "testing" | "test" => self.environment = Environment::Testing,
-                "production" | "prod" => self.environment = Environment::Production,
+                "production" | "prod" => {
+                    self.environment = Environment::Production
+                },
                 "custom" => self.environment = Environment::Custom,
-                _ => {}
+                _ => {},
             }
         }
 
@@ -740,10 +792,12 @@ impl ForgeConfig {
 
         // 性能配置
         if let Ok(enable) = env::var("FORGE_PERFORMANCE_ENABLE_MONITORING") {
-            self.performance.enable_monitoring = enable.to_lowercase() == "true";
+            self.performance.enable_monitoring =
+                enable.to_lowercase() == "true";
         }
 
-        if let Ok(timeout) = env::var("FORGE_PERFORMANCE_MIDDLEWARE_TIMEOUT_MS") {
+        if let Ok(timeout) = env::var("FORGE_PERFORMANCE_MIDDLEWARE_TIMEOUT_MS")
+        {
             if let Ok(timeout) = timeout.parse::<u64>() {
                 self.performance.middleware_timeout_ms = timeout;
             }
@@ -753,7 +807,10 @@ impl ForgeConfig {
     }
 
     /// 合并另一个配置，优先使用 other 的非默认值
-    pub fn merge_with(mut self, other: &ForgeConfig) -> Self {
+    pub fn merge_with(
+        mut self,
+        other: &ForgeConfig,
+    ) -> Self {
         // 这里可以实现更复杂的合并逻辑
         // 目前简单地用 other 覆盖 self
         if other.environment != Environment::Development {

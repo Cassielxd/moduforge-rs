@@ -5,59 +5,44 @@ use std::any::TypeId;
 #[derive(Error, Debug, Clone)]
 pub enum ConversionError {
     #[error("不支持的步骤类型: {step_type} (TypeId: {type_id:?})")]
-    UnsupportedStepType { 
-        step_type: String, 
-        type_id: TypeId 
-    },
+    UnsupportedStepType { step_type: String, type_id: TypeId },
 
     #[error("步骤验证失败: {reason}, 步骤: {step_name}")]
-    ValidationFailed { 
-        step_name: String, 
-        reason: String 
-    },
+    ValidationFailed { step_name: String, reason: String },
 
     #[error("Yrs 事务操作失败: {operation}, 原因: {reason}")]
-    YrsTransactionFailed { 
-        operation: String, 
-        reason: String 
-    },
+    YrsTransactionFailed { operation: String, reason: String },
 
     #[error("节点操作失败: {node_id}, 操作: {operation}, 原因: {reason}")]
-    NodeOperationFailed { 
-        node_id: String, 
-        operation: String, 
-        reason: String 
-    },
+    NodeOperationFailed { node_id: String, operation: String, reason: String },
 
     #[error("属性操作失败: 节点 {node_id}, 属性 {attr_key}, 原因: {reason}")]
-    AttributeOperationFailed { 
-        node_id: String, 
-        attr_key: String, 
-        reason: String 
+    AttributeOperationFailed {
+        node_id: String,
+        attr_key: String,
+        reason: String,
     },
 
-    #[error("标记操作失败: 节点 {node_id}, 标记类型 {mark_type}, 原因: {reason}")]
-    MarkOperationFailed { 
-        node_id: String, 
-        mark_type: String, 
-        reason: String 
-    },
+    #[error(
+        "标记操作失败: 节点 {node_id}, 标记类型 {mark_type}, 原因: {reason}"
+    )]
+    MarkOperationFailed { node_id: String, mark_type: String, reason: String },
 
     #[error("序列化失败: {reason}")]
     SerializationFailed { reason: String },
 
-    #[error("权限不足: 用户 {user_id} 无法执行操作 {operation} 在节点 {node_id}")]
-    PermissionDenied { 
-        user_id: String, 
-        operation: String, 
-        node_id: String 
-    },
+    #[error(
+        "权限不足: 用户 {user_id} 无法执行操作 {operation} 在节点 {node_id}"
+    )]
+    PermissionDenied { user_id: String, operation: String, node_id: String },
 
-    #[error("并发冲突: 节点 {node_id} 在客户端 {local_client} 和 {remote_client} 之间存在冲突")]
-    ConcurrencyConflict { 
-        node_id: String, 
-        local_client: String, 
-        remote_client: String 
+    #[error(
+        "并发冲突: 节点 {node_id} 在客户端 {local_client} 和 {remote_client} 之间存在冲突"
+    )]
+    ConcurrencyConflict {
+        node_id: String,
+        local_client: String,
+        remote_client: String,
     },
 
     #[error("自定义错误: {message}")]
@@ -74,7 +59,10 @@ impl ConversionError {
     }
 
     /// 创建验证失败错误
-    pub fn validation_failed(step_name: &str, reason: &str) -> Self {
+    pub fn validation_failed(
+        step_name: &str,
+        reason: &str,
+    ) -> Self {
         Self::ValidationFailed {
             step_name: step_name.to_string(),
             reason: reason.to_string(),
@@ -82,7 +70,11 @@ impl ConversionError {
     }
 
     /// 创建节点操作失败错误
-    pub fn node_operation_failed(node_id: &str, operation: &str, reason: &str) -> Self {
+    pub fn node_operation_failed(
+        node_id: &str,
+        operation: &str,
+        reason: &str,
+    ) -> Self {
         Self::NodeOperationFailed {
             node_id: node_id.to_string(),
             operation: operation.to_string(),
@@ -91,7 +83,11 @@ impl ConversionError {
     }
 
     /// 创建权限不足错误
-    pub fn permission_denied(user_id: &str, operation: &str, node_id: &str) -> Self {
+    pub fn permission_denied(
+        user_id: &str,
+        operation: &str,
+        node_id: &str,
+    ) -> Self {
         Self::PermissionDenied {
             user_id: user_id.to_string(),
             operation: operation.to_string(),

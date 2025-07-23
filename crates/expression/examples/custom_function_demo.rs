@@ -1,7 +1,5 @@
 use mf_expression::{Isolate, Variable};
-use mf_expression::functions::mf_function::{
-    MfFunctionHelper, MfFunctionRegistry,
-};
+use mf_expression::functions::mf_function::{MfFunctionHelper, MfFunctionRegistry};
 use mf_expression::variable::VariableType;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};

@@ -325,7 +325,9 @@ where
             processor: Arc::new(processor),
             shutdown_tx: None,
             handle: None,
-            state: Arc::new(tokio::sync::Mutex::new(ProcessorState::NotStarted)),
+            state: Arc::new(tokio::sync::Mutex::new(
+                ProcessorState::NotStarted,
+            )),
         }
     }
 
@@ -527,16 +529,16 @@ where
                     return Err(ProcessorError::InternalError(
                         "处理器尚未启动".to_string(),
                     ));
-                }
+                },
                 ProcessorState::Shutdown => {
                     return Ok(()); // 已经关闭
-                }
+                },
                 ProcessorState::Shutting => {
                     // 正在关闭，等待完成
-                }
+                },
                 ProcessorState::Running => {
                     *state = ProcessorState::Shutting;
-                }
+                },
             }
         }
 

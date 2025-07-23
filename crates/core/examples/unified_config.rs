@@ -1,5 +1,5 @@
 //! 统一配置管理示例
-//! 
+//!
 //! 这个示例展示了如何使用新的统一配置系统来配置 ModuForge 核心模块。
 
 use std::time::Duration;
@@ -17,24 +17,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 1. 使用预设环境配置
     println!("1. 预设环境配置:");
-    
+
     let dev_config = ForgeConfig::for_environment(Environment::Development);
     println!("开发环境配置:");
     println!("  - 队列大小: {}", dev_config.processor.max_queue_size);
     println!("  - 并发任务数: {}", dev_config.processor.max_concurrent_tasks);
-    println!("  - 中间件超时: {}ms", dev_config.performance.middleware_timeout_ms);
-    println!("  - 详细日志: {}", dev_config.performance.enable_detailed_logging);
-    
+    println!(
+        "  - 中间件超时: {}ms",
+        dev_config.performance.middleware_timeout_ms
+    );
+    println!(
+        "  - 详细日志: {}",
+        dev_config.performance.enable_detailed_logging
+    );
+
     let prod_config = ForgeConfig::for_environment(Environment::Production);
     println!("\n生产环境配置:");
     println!("  - 队列大小: {}", prod_config.processor.max_queue_size);
     println!("  - 并发任务数: {}", prod_config.processor.max_concurrent_tasks);
-    println!("  - 中间件超时: {}ms", prod_config.performance.middleware_timeout_ms);
-    println!("  - 详细日志: {}", prod_config.performance.enable_detailed_logging);
+    println!(
+        "  - 中间件超时: {}ms",
+        prod_config.performance.middleware_timeout_ms
+    );
+    println!(
+        "  - 详细日志: {}",
+        prod_config.performance.enable_detailed_logging
+    );
 
     // 2. 使用配置构建器
     println!("\n2. 自定义配置构建:");
-    
+
     let custom_config = ForgeConfig::builder()
         .environment(Environment::Custom)
         .processor_config(ProcessorConfig {
@@ -91,7 +103,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 3. 配置验证
     println!("\n3. 配置验证:");
-    
+
     match custom_config.validate() {
         Ok(()) => println!("✓ 配置验证通过"),
         Err(e) => println!("✗ 配置验证失败: {}", e),
@@ -99,7 +111,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 4. 配置调优建议
     println!("\n4. 配置调优建议:");
-    
+
     let suggestions = custom_config.get_tuning_suggestions();
     if suggestions.is_empty() {
         println!("  - 当前配置已优化");
@@ -111,7 +123,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 5. 配置序列化
     println!("\n5. 配置序列化:");
-    
+
     let json_config = custom_config.to_json()?;
     println!("配置已序列化为 JSON (前200字符):");
     println!("{}", &json_config[..json_config.len().min(200)]);
@@ -121,14 +133,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 6. 从环境变量覆盖配置
     println!("\n6. 环境变量覆盖:");
-    
+
     // 设置一些示例环境变量
     unsafe {
         std::env::set_var("FORGE_ENVIRONMENT", "production");
         std::env::set_var("FORGE_PROCESSOR_MAX_QUEUE_SIZE", "15000");
         std::env::set_var("FORGE_PERFORMANCE_ENABLE_MONITORING", "true");
     }
-    
+
     let env_config = ForgeConfig::default().from_env_override();
     println!("从环境变量覆盖后:");
     println!("  - 环境: {:?}", env_config.environment);
@@ -137,18 +149,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 7. 配置合并
     println!("\n7. 配置合并:");
-    
+
     let base_config = ForgeConfig::for_environment(Environment::Development);
     let override_config = ForgeConfig::for_environment(Environment::Production);
     let merged_config = base_config.merge_with(&override_config);
-    
+
     println!("合并后的配置:");
     println!("  - 环境: {:?}", merged_config.environment);
     println!("  - 队列大小: {}", merged_config.processor.max_queue_size);
 
     // 8. 便捷配置方法
     println!("\n8. 便捷配置方法:");
-    
+
     let quick_config = ForgeConfig::builder()
         .max_queue_size(3000)
         .max_concurrent_tasks(25)
@@ -157,7 +169,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .enable_monitoring(true)
         .history_limit(300)
         .build()?;
-    
+
     println!("快速配置:");
     println!("  - 队列大小: {}", quick_config.processor.max_queue_size);
     println!("  - 并发任务: {}", quick_config.processor.max_concurrent_tasks);
@@ -188,10 +200,13 @@ mod tests {
     fn test_environment_configs() {
         let dev = ForgeConfig::for_environment(Environment::Development);
         let prod = ForgeConfig::for_environment(Environment::Production);
-        
+
         // 开发环境应该有更长的超时时间
-        assert!(dev.performance.middleware_timeout_ms > prod.performance.middleware_timeout_ms);
-        
+        assert!(
+            dev.performance.middleware_timeout_ms
+                > prod.performance.middleware_timeout_ms
+        );
+
         // 生产环境应该有更大的队列
         assert!(prod.processor.max_queue_size > dev.processor.max_queue_size);
     }
@@ -203,7 +218,7 @@ mod tests {
             .enable_monitoring(true)
             .build()
             .unwrap();
-        
+
         assert_eq!(config.processor.max_queue_size, 1000);
         assert!(config.performance.enable_monitoring);
     }
@@ -213,7 +228,10 @@ mod tests {
         let config = ForgeConfig::default();
         let json = config.to_json().unwrap();
         let deserialized = ForgeConfig::from_json(&json).unwrap();
-        
-        assert_eq!(config.processor.max_queue_size, deserialized.processor.max_queue_size);
+
+        assert_eq!(
+            config.processor.max_queue_size,
+            deserialized.processor.max_queue_size
+        );
     }
 }

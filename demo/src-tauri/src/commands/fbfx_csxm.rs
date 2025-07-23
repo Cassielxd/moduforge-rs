@@ -13,7 +13,10 @@ pub struct InsertFbfxCsxmCommand {
 
 #[async_trait]
 impl Command for InsertFbfxCsxmCommand {
-    async fn execute(&self, tr: &mut Transaction) -> TransformResult<()> {
+    async fn execute(
+        &self,
+        tr: &mut Transaction,
+    ) -> TransformResult<()> {
         tr.set_meta("insert_fbfx_csxm", self.data.clone());
         self.add_node(tr, &self.data).await
     }
@@ -33,7 +36,10 @@ pub struct DeleteFbfxCsxmCommand {
 
 #[async_trait]
 impl Command for DeleteFbfxCsxmCommand {
-    async fn execute(&self, tr: &mut Transaction) -> TransformResult<()> {
+    async fn execute(
+        &self,
+        tr: &mut Transaction,
+    ) -> TransformResult<()> {
         // 设置 meta 高度后续删除 的是 措施项目节点 todo!()
         self.delete_node(tr, &self.data).await
     }

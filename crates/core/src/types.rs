@@ -61,7 +61,9 @@ impl RuntimeOptions {
     ///
     /// # 返回值
     /// * `Self` - 新的RuntimeOptions实例
-    pub fn from_extension_manager(extension_manager: crate::extension_manager::ExtensionManager) -> Self {
+    pub fn from_extension_manager(
+        extension_manager: crate::extension_manager::ExtensionManager
+    ) -> Self {
         // 从ExtensionManager获取schema并重建extensions
         let schema = extension_manager.get_schema();
         let mut extensions = Vec::new();
