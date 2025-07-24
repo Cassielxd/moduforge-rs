@@ -12,8 +12,8 @@ use crate::handler::function::module::http::HttpModule;
 use crate::handler::function::module::zen::ZenModule;
 
 pub mod console;
-pub mod mf;
 pub mod http;
+pub mod mf;
 pub mod zen;
 
 static JS_BUNDLE: Bundle = embed! {

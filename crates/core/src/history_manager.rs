@@ -68,13 +68,19 @@ impl<T: Clone> HistoryManager<T> {
     }
 
     /// 更新历史配置
-    pub fn update_config(&mut self, config: HistoryConfig) {
+    pub fn update_config(
+        &mut self,
+        config: HistoryConfig,
+    ) {
         self.config = config;
     }
     /// 插入新状态
     ///
     /// 当历史记录超出最大限制时，自动舍弃最旧的记录
-    pub fn insert(&mut self, state: T) {
+    pub fn insert(
+        &mut self,
+        state: T,
+    ) {
         let past = &self.history.past;
         let length = past.len() + 1;
 
@@ -98,7 +104,10 @@ impl<T: Clone> HistoryManager<T> {
     /// # 边界检查
     /// - 检查索引是否在有效范围内
     /// - 安全的数组切片操作
-    pub fn jump_to_future(&mut self, index: usize) {
+    pub fn jump_to_future(
+        &mut self,
+        index: usize,
+    ) {
         // 边界检查：确保索引有效
         if index >= self.history.future.len() {
             return;
@@ -130,7 +139,10 @@ impl<T: Clone> HistoryManager<T> {
     /// # 边界检查
     /// - 检查索引是否在有效范围内
     /// - 安全的数组切片操作
-    pub fn jump_to_past(&mut self, index: usize) {
+    pub fn jump_to_past(
+        &mut self,
+        index: usize,
+    ) {
         // 边界检查：确保索引有效
         if index >= self.history.past.len() {
             return;
@@ -173,7 +185,10 @@ impl<T: Clone> HistoryManager<T> {
     /// # 边界检查
     /// - 自动限制在有效范围内
     /// - 超出范围的跳转会被忽略
-    pub fn jump(&mut self, n: isize) {
+    pub fn jump(
+        &mut self,
+        n: isize,
+    ) {
         match n.cmp(&0) {
             std::cmp::Ordering::Less => {
                 // 向过去跳转
@@ -212,7 +227,10 @@ impl<T: Clone> HistoryManager<T> {
     ///
     /// # 边界检查
     /// - 返回 Option 以处理无效索引
-    pub fn get_past_state(&self, index: usize) -> Option<&T> {
+    pub fn get_past_state(
+        &self,
+        index: usize,
+    ) -> Option<&T> {
         self.history.past.get(index)
     }
 
@@ -220,7 +238,10 @@ impl<T: Clone> HistoryManager<T> {
     ///
     /// # 边界检查
     /// - 返回 Option 以处理无效索引
-    pub fn get_future_state(&self, index: usize) -> Option<&T> {
+    pub fn get_future_state(
+        &self,
+        index: usize,
+    ) -> Option<&T> {
         self.history.future.get(index)
     }
 
@@ -254,7 +275,8 @@ impl<T: Clone> HistoryManager<T> {
         }
 
         // 检查总长度是否超出限制
-        let total_length = self.history.past.len() + 1 + self.history.future.len();
+        let total_length =
+            self.history.past.len() + 1 + self.history.future.len();
         if total_length > self.config.max_entries {
             return false;
         }
@@ -271,10 +293,7 @@ mod tests {
     fn test_insert_with_limit() {
         let mut manager = HistoryManager::with_config(
             "initial".to_string(),
-            HistoryConfig {
-                max_entries: 3,
-                ..Default::default()
-            }
+            HistoryConfig { max_entries: 3, ..Default::default() },
         );
 
         // 插入状态，不应超出限制

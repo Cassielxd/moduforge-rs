@@ -1,20 +1,39 @@
 use std::{
-    ops::{Deref, DerefMut}, sync::Arc, time::Duration
+    ops::{Deref, DerefMut},
+    sync::Arc,
+    time::Duration,
 };
 use serde_json::Value;
 use tokio::sync::RwLock;
 
 use async_trait::async_trait;
-use mf_collab_client::{ provider::WebsocketProvider, types::SyncEvent, utils::Utils, yrs::{sync::{awareness::Event, Awareness}, types::{Change, EntryChange}, Doc}, AwarenessRef
+use mf_collab_client::{
+    provider::WebsocketProvider,
+    types::SyncEvent,
+    utils::Utils,
+    yrs::{
+        sync::{awareness::Event, Awareness},
+        types::{Change, EntryChange},
+        Doc,
+    },
+    AwarenessRef,
 };
 use mf_core::{
-    runtime::async_runtime::ForgeAsyncRuntime, error_utils, extension::Extension, history_manager::HistoryManager, types::{Content, Extensions, HistoryEntryWithMeta, RuntimeOptions}, ForgeError, ForgeResult
+    runtime::async_runtime::ForgeAsyncRuntime,
+    error_utils,
+    extension::Extension,
+    history_manager::HistoryManager,
+    types::{Content, Extensions, HistoryEntryWithMeta, RuntimeOptions},
+    ForgeError, ForgeResult,
 };
 use mf_model::node_pool::NodePool;
-use mf_state::{plugin::{Plugin, PluginSpec}, resource::Resource, resource_table::ResourceId, transaction::Command, State, Transaction};
-
-
-
+use mf_state::{
+    plugin::{Plugin, PluginSpec},
+    resource::Resource,
+    resource_table::ResourceId,
+    transaction::Command,
+    State, Transaction,
+};
 
 use crate::{plugins::collab::CollabStateField, types::EditorTrait};
 
@@ -24,7 +43,10 @@ pub struct CollabEditorOptions {
     pub room_name: String,
 }
 impl CollabEditorOptions {
-    pub fn new(server_url: String, room_name: String) -> Self {
+    pub fn new(
+        server_url: String,
+        room_name: String,
+    ) -> Self {
         Self {
             editor_options: RuntimeOptions::default(),
             server_url,
@@ -51,7 +73,6 @@ pub struct CollabEditor {
 
 #[async_trait]
 impl EditorTrait for CollabEditor {
-
     async fn get_state(&self) -> Arc<State> {
         // 同样的问题，需要异步访问
         panic!("get_state 需要异步访问，请使用 get_state_async")
@@ -65,7 +86,7 @@ impl EditorTrait for CollabEditor {
     async fn command(
         &mut self,
         command: Arc<dyn Command>,
-    ) -> ForgeResult<()>{
+    ) -> ForgeResult<()> {
         let mut editor = self.editor.write().await;
         editor.command(command).await
     }
@@ -97,21 +118,22 @@ impl EditorTrait for CollabEditor {
         let mut editor = self.editor.write().await;
         editor.dispatch_flow_with_meta(transaction, description, meta).await
     }
-    
 }
 impl CollabEditor {
     pub async fn create(options: CollabEditorOptions) -> ForgeResult<Self> {
         // 创建协作同步管理器
         let mut sync_manager = CollabSyncManager::new(&options).await?;
         // 订阅同步事件
-        let mut event_rx = sync_manager.provider.subscribe_sync_events().unwrap();
+        let mut event_rx =
+            sync_manager.provider.subscribe_sync_events().unwrap();
         // 启动协作同步
         sync_manager.start().await;
         // 等待初始化完成
         // 设置超时 10 秒
         let timeout = tokio::time::timeout(Duration::from_secs(10), async {
             while let Ok(event) = event_rx.recv().await {
-                if let SyncEvent::InitialSyncCompleted { has_data, .. } = event {
+                if let SyncEvent::InitialSyncCompleted { has_data, .. } = event
+                {
                     return Ok(has_data);
                 }
             }
@@ -120,23 +142,27 @@ impl CollabEditor {
                 location: None,
             })
         })
-        .await.map_err(|e| ForgeError::Internal {
+        .await
+        .map_err(|e| ForgeError::Internal {
             message: "服务器异常，请检查服务器是否启动".to_string(),
             location: None,
         })?;
         // 创建协作扩展
-        let mut ext =Extension::new();
+        let mut ext = Extension::new();
         ext.add_plugin({
-            Arc::new(Plugin::new(PluginSpec{
-                state_field: Some(Arc::new(CollabStateField::new(sync_manager.awareness.clone()))),
-                key:("collab".to_string(),"协作".to_string()),
+            Arc::new(Plugin::new(PluginSpec {
+                state_field: Some(Arc::new(CollabStateField::new(
+                    sync_manager.awareness.clone(),
+                ))),
+                key: ("collab".to_string(), "协作".to_string()),
                 tr: None,
                 priority: 0,
             }))
         });
         // 添加协作扩展
         let mut options = options;
-        options.editor_options = options.editor_options.add_extension(Extensions::E(ext));
+        options.editor_options =
+            options.editor_options.add_extension(Extensions::E(ext));
         // 创建编辑器
         let editor = match timeout {
             Ok(true) => {
@@ -147,33 +173,43 @@ impl CollabEditor {
                     Ok(tree) => {
                         println!("有数据 反向同步数据 并创建 编辑器");
                         //转换成功
-                        let pool = NodePool::new(Arc::new(tree)).as_ref().clone();
+                        let pool =
+                            NodePool::new(Arc::new(tree)).as_ref().clone();
                         let options = options
                             .editor_options
                             .clone()
                             .set_content(Content::NodePool(pool));
                         ForgeAsyncRuntime::create(options).await?
-                    }
+                    },
                     Err(_) => {
-                        println!("转换失败 创建一个本地编辑器 并同步数据到远程1");
+                        println!(
+                            "转换失败 创建一个本地编辑器 并同步数据到远程1"
+                        );
                         //转换失败 创建一个本地编辑器 并同步数据到远程
-                        let ed = ForgeAsyncRuntime::create(options.editor_options.clone()).await?;
+                        let ed = ForgeAsyncRuntime::create(
+                            options.editor_options.clone(),
+                        )
+                        .await?;
                         sync_manager.sync_to_remote(&ed).await?;
                         ed
-                    }
+                    },
                 }
-            }
-            
+            },
+
             Ok(false) => {
                 println!("没有数据 创建一个本地编辑器 并同步数据到远程2");
                 //没有数据 创建一个本地编辑器 并同步数据到远程
-                let ed = ForgeAsyncRuntime::create(options.editor_options.clone()).await?;
+                let ed =
+                    ForgeAsyncRuntime::create(options.editor_options.clone())
+                        .await?;
                 sync_manager.sync_to_remote(&ed).await?;
                 ed
-            }
+            },
             _ => {
-                return Err(ForgeError::Other(anyhow::anyhow!("服务器异常，请检查服务器是否启动")));
-            }
+                return Err(ForgeError::Other(anyhow::anyhow!(
+                    "服务器异常，请检查服务器是否启动"
+                )));
+            },
         };
 
         let editor_arc = Arc::new(RwLock::new(editor));
@@ -200,13 +236,19 @@ impl CollabEditor {
         &self.options
     }
 
-    pub fn get_resource<T: Resource>(&self, rid: ResourceId) -> Option<Arc<T>> {
+    pub fn get_resource<T: Resource>(
+        &self,
+        rid: ResourceId,
+    ) -> Option<Arc<T>> {
         // 注意：这里需要异步访问 editor，但为了保持接口兼容性，暂时 panic
         panic!("get_resource 需要异步访问，请使用 get_resource_async")
     }
 
     /// 异步获取资源
-    pub async fn get_resource_async<T: Resource>(&self, rid: ResourceId) -> Option<Arc<T>> {
+    pub async fn get_resource_async<T: Resource>(
+        &self,
+        rid: ResourceId,
+    ) -> Option<Arc<T>> {
         // 获取编辑器状态
         let editor = self.editor.read().await;
         let state = editor.get_state();
@@ -219,17 +261,23 @@ impl CollabEditor {
     }
 
     /// 异步获取编辑器的只读访问
-    pub async fn get_editor(&self) -> tokio::sync::RwLockReadGuard<'_, ForgeAsyncRuntime> {
+    pub async fn get_editor(
+        &self
+    ) -> tokio::sync::RwLockReadGuard<'_, ForgeAsyncRuntime> {
         self.editor.read().await
     }
 
     /// 异步获取编辑器的可写访问
-    pub async fn get_editor_mut(&self) -> tokio::sync::RwLockWriteGuard<'_, ForgeAsyncRuntime> {
+    pub async fn get_editor_mut(
+        &self
+    ) -> tokio::sync::RwLockWriteGuard<'_, ForgeAsyncRuntime> {
         self.editor.write().await
     }
 
     /// 异步获取历史管理器
-    pub async fn get_history_manager_async(&self) -> &HistoryManager<HistoryEntryWithMeta> {
+    pub async fn get_history_manager_async(
+        &self
+    ) -> &HistoryManager<HistoryEntryWithMeta> {
         // 注意：这里仍然有生命周期问题，需要重新设计
         // 暂时返回一个错误提示
         panic!("需要重新设计异步访问模式")
@@ -300,7 +348,8 @@ impl CollabSyncManager {
     /// * `options` - 协作编辑器选项
     pub async fn new(options: &CollabEditorOptions) -> ForgeResult<Self> {
         let doc = Doc::new();
-        let awareness: AwarenessRef = Arc::new(tokio::sync::RwLock::new(Awareness::new(doc)));
+        let awareness: AwarenessRef =
+            Arc::new(tokio::sync::RwLock::new(Awareness::new(doc)));
 
         Ok(Self {
             provider: WebsocketProvider::new(
@@ -310,12 +359,15 @@ impl CollabSyncManager {
             )
             .await,
             awareness,
-            event_sender: None
+            event_sender: None,
         })
     }
 
     /// 启动同步管理器，设置监听器和事件处理
-    pub async fn start_with_editor(&mut self, editor: Arc<RwLock<ForgeAsyncRuntime>>) -> ForgeResult<()> {
+    pub async fn start_with_editor(
+        &mut self,
+        editor: Arc<RwLock<ForgeAsyncRuntime>>,
+    ) -> ForgeResult<()> {
         // 连接到服务器
         self.provider.connect().await;
 
@@ -331,7 +383,13 @@ impl CollabSyncManager {
         let editor_clone = editor.clone();
         tokio::spawn(async move {
             while let Some(event) = receiver.recv().await {
-                if let Err(e) = Self::handle_sync_event(event, editor_clone.clone(), awareness_clone.clone()).await {
+                if let Err(e) = Self::handle_sync_event(
+                    event,
+                    editor_clone.clone(),
+                    awareness_clone.clone(),
+                )
+                .await
+                {
                     eprintln!("处理同步事件时出错: {}", e);
                 }
             }
@@ -362,13 +420,10 @@ impl CollabSyncManager {
             let event_count = events.iter().count();
             for event in events.iter() {
                 //path 转换成数组
-                
-
                 match event {
                     mf_collab_client::yrs::types::Event::Array(array_event) => {
                         let path = array_event.path().iter().map(|path| serde_json::to_value(path).unwrap()).collect::<Vec<serde_json::Value>>();
                         array_event.delta(_txn).iter().for_each(|delta| {
-                            
                             // 将 delta 转换为 ChangeType
                             let change_type = match delta {
                                 Change::Added(values) => ChangeType::Added(values.iter()
@@ -384,7 +439,6 @@ impl CollabSyncManager {
                                 Change::Retain(count) => ChangeType::Retain(*count),
                             };
                             event_vec.push(SyncEventType::ArrayChange(path.clone(), vec![change_type]));
-                            
                         });
                     }
                     mf_collab_client::yrs::types::Event::Map(map_event) => {
@@ -418,14 +472,12 @@ impl CollabSyncManager {
                                 }
                             };
                             event_vec.push(SyncEventType::MapChange(path, vec![change_type]));
-                            
                         });
                     }
                     _ => {
                     }
                 }
             }
-            
             if event_vec.len() > 0 {
                 println!("检测到 nodes 深度变化: {} 个事件", event_count);
 
@@ -435,7 +487,6 @@ impl CollabSyncManager {
                 }
             }
         }));
-
 
         println!("yrs nodes 监听器已设置");
         Ok(())
@@ -447,7 +498,7 @@ impl CollabSyncManager {
         editor: Arc<RwLock<ForgeAsyncRuntime>>,
         awareness: AwarenessRef,
     ) -> ForgeResult<()> {
-        for event in events {   
+        for event in events {
             match event {
                 SyncEventType::ArrayChange(path, changes) => {
                     // path 数组第一个对应的 是 节点id
@@ -456,38 +507,36 @@ impl CollabSyncManager {
                             ChangeType::Added(values) => {
                                 println!("处理 Added 事件: {:?}", values);
                                 // 转换成mark
-                            }
+                            },
                             ChangeType::Removed(index) => {
                                 println!("处理 Removed 事件: {:?}", index);
-                            }
+                            },
                             ChangeType::Retain(index) => {
                                 println!("处理 Retain 事件: {:?}", index);
-                            }
+                            },
                         }
                     }
-                }
+                },
                 SyncEventType::MapChange(path, changes) => {
                     for change in changes {
                         match change {
                             EntryChangeType::Inserted(value) => {
                                 println!("处理 Inserted 事件: {:?}", value);
-                            }
+                            },
                             EntryChangeType::Updated(value, value1) => {
                                 println!("处理 Updated 事件: {:?}", value);
-                            }
+                            },
                             EntryChangeType::Removed(value) => {
                                 println!("处理 Removed 事件: {:?}", value);
-                            }
+                            },
                         }
                     }
-                }
+                },
             }
         }
 
         Ok(())
     }
-
-
 
     /// 同步数据到远程
     ///
@@ -496,7 +545,10 @@ impl CollabSyncManager {
     /// # 参数
     ///
     /// * `editor` - 编辑器实例
-    pub async fn sync_to_remote(&self, editor: &ForgeAsyncRuntime) -> ForgeResult<()> {
+    pub async fn sync_to_remote(
+        &self,
+        editor: &ForgeAsyncRuntime,
+    ) -> ForgeResult<()> {
         let doc = editor.get_state().doc();
         let tree = doc.get_inner().as_ref();
         Utils::apply_tree_to_yrs(self.awareness.clone(), tree).await?;

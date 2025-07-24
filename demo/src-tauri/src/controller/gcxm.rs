@@ -32,6 +32,7 @@ use crate::{
 pub struct GcxmPost {
     pub name: String,
     pub id: Option<String>,
+    pub collab: bool,
 }
 
 impl GcxmPost {
@@ -103,7 +104,12 @@ pub async fn new_project(
 ) -> ResponseResult<GcxmTreeItem> {
     let id: String = IdGenerator::get_id();
     param.id = Some(id.clone());
-    create_collab_editor(Arc::new(param.clone())).await?;
+    if param.collab {
+        create_collab_editor(Arc::new(param.clone())).await?;
+    } else {
+        create_editor(Arc::new(param.clone())).await?;
+    }
+
     let editor = ContextHelper::get_editor(&id).unwrap();
     let doc = editor.doc().await;
     let nodes: Vec<Arc<Node>> = doc.parallel_query(Box::new(|node: &Node| {

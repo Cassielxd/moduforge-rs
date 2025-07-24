@@ -39,7 +39,7 @@ impl StaticConverterRegistry {
     {
         let type_id = TypeId::of::<T>();
         let converter = Arc::new(ErasedConverter::new::<T, C>());
-        
+
         // 检查重复注册
         if self.converters.contains_key(&type_id) {
             tracing::warn!(
@@ -61,13 +61,14 @@ impl StaticConverterRegistry {
 
         self.converter_info.insert(type_id, info);
         self.converters.insert(type_id, converter.clone());
-        
+
         // 按优先级插入有序列表
-        let insert_pos = self.ordered_converters
+        let insert_pos = self
+            .ordered_converters
             .iter()
             .position(|c| c.priority() > converter.priority())
             .unwrap_or(self.ordered_converters.len());
-        
+
         self.ordered_converters.insert(insert_pos, converter);
 
         tracing::info!(
@@ -93,14 +94,14 @@ impl StaticConverterRegistry {
         // O(1) 精确匹配查找
         if let Some(converter) = self.converters.get(&step_type_id) {
             let result = converter.try_convert(step, txn, context);
-            
+
             // 更新性能统计
             self.performance_stats.record_conversion(
                 step_type_id,
                 start_time.elapsed(),
                 result.is_ok(),
             );
-            
+
             return result;
         }
 
@@ -138,7 +139,7 @@ impl StaticConverterRegistry {
         context: &ConversionContext,
     ) -> Vec<ConversionResult<StepResult>> {
         let mut results = Vec::with_capacity(steps.len());
-        
+
         // 按类型对步骤进行分组以提高缓存效率
         let mut grouped_steps: HashMap<TypeId, Vec<&dyn Step>> = HashMap::new();
         for step in steps {
@@ -176,7 +177,7 @@ impl StaticConverterRegistry {
         _context: &ConversionContext,
     ) -> ConversionResult<()> {
         let step_type_id = step.type_id();
-        
+
         if let Some(_converter) = self.converters.get(&step_type_id) {
             // TODO: 实现验证逻辑
             Ok(())
@@ -189,7 +190,10 @@ impl StaticConverterRegistry {
     }
 
     /// 检查是否支持某个步骤类型
-    pub fn supports_step_type(&self, type_id: TypeId) -> bool {
+    pub fn supports_step_type(
+        &self,
+        type_id: TypeId,
+    ) -> bool {
         self.converters.contains_key(&type_id)
     }
 
@@ -199,7 +203,10 @@ impl StaticConverterRegistry {
     }
 
     /// 获取特定类型的转换器信息
-    pub fn get_converter_info(&self, type_id: TypeId) -> Option<&ConverterInfo> {
+    pub fn get_converter_info(
+        &self,
+        type_id: TypeId,
+    ) -> Option<&ConverterInfo> {
         self.converter_info.get(&type_id)
     }
 
@@ -277,20 +284,21 @@ impl PerformanceStats {
 
         // 更新类型特定统计
         let mut type_stats = self.type_stats.write().unwrap();
-        let stats = type_stats.entry(type_id).or_insert_with(|| TypeConversionStats {
-            total_count: 0,
-            success_count: 0,
-            total_duration: std::time::Duration::ZERO,
-            avg_duration: std::time::Duration::ZERO,
-            min_duration: std::time::Duration::MAX,
-            max_duration: std::time::Duration::ZERO,
-        });
+        let stats =
+            type_stats.entry(type_id).or_insert_with(|| TypeConversionStats {
+                total_count: 0,
+                success_count: 0,
+                total_duration: std::time::Duration::ZERO,
+                avg_duration: std::time::Duration::ZERO,
+                min_duration: std::time::Duration::MAX,
+                max_duration: std::time::Duration::ZERO,
+            });
 
         stats.total_count += 1;
         if success {
             stats.success_count += 1;
         }
-        
+
         stats.total_duration += duration;
         stats.avg_duration = stats.total_duration / stats.total_count as u32;
         stats.min_duration = stats.min_duration.min(duration);
@@ -306,12 +314,17 @@ impl PerformanceStats {
         if total == 0 {
             0.0
         } else {
-            let successful = self.successful_conversions.load(std::sync::atomic::Ordering::Relaxed);
+            let successful = self
+                .successful_conversions
+                .load(std::sync::atomic::Ordering::Relaxed);
             successful as f64 / total as f64
         }
     }
 
-    pub fn get_type_stats(&self, type_id: TypeId) -> Option<TypeConversionStats> {
+    pub fn get_type_stats(
+        &self,
+        type_id: TypeId,
+    ) -> Option<TypeConversionStats> {
         self.type_stats.read().unwrap().get(&type_id).cloned()
     }
 
@@ -321,7 +334,8 @@ impl PerformanceStats {
 }
 
 /// 全局注册表单例
-static GLOBAL_REGISTRY: OnceLock<RwLock<StaticConverterRegistry>> = OnceLock::new();
+static GLOBAL_REGISTRY: OnceLock<RwLock<StaticConverterRegistry>> =
+    OnceLock::new();
 
 /// 获取全局转换器注册表
 pub fn global_registry() -> &'static RwLock<StaticConverterRegistry> {
@@ -349,6 +363,7 @@ pub fn convert_step_global(
 }
 
 /// 获取全局注册表的性能统计
-pub fn get_global_performance_stats() -> std::sync::RwLockReadGuard<'static, StaticConverterRegistry> {
+pub fn get_global_performance_stats()
+-> std::sync::RwLockReadGuard<'static, StaticConverterRegistry> {
     global_registry().read().unwrap()
 }

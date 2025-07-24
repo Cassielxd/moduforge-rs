@@ -18,34 +18,28 @@ impl Deref for TypeInfo {
 }
 
 impl Display for TypeInfo {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut Formatter<'_>,
+    ) -> std::fmt::Result {
         write!(f, "{}", self.kind)
     }
 }
 
 impl Default for TypeInfo {
     fn default() -> Self {
-        Self {
-            kind: VariableType::Any,
-            error: None,
-        }
+        Self { kind: VariableType::Any, error: None }
     }
 }
 
 impl From<VariableType> for TypeInfo {
     fn from(value: VariableType) -> Self {
-        Self {
-            kind: value,
-            error: None,
-        }
+        Self { kind: value, error: None }
     }
 }
 
 impl From<Rc<VariableType>> for TypeInfo {
     fn from(value: Rc<VariableType>) -> Self {
-        Self {
-            kind: value.deref().clone(),
-            error: None,
-        }
+        Self { kind: value.deref().clone(), error: None }
     }
 }

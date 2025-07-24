@@ -1,5 +1,5 @@
 //! 异步工具模块
-//! 
+//!
 //! 提供异步/同步边界处理工具，帮助避免在异步上下文中使用阻塞调用
 
 use std::{future::Future, time::Duration};
@@ -11,11 +11,11 @@ pub struct AsyncBridge;
 
 impl AsyncBridge {
     /// 在同步上下文中安全地执行异步操作
-    /// 
+    ///
     /// 此方法会检查当前是否在 Tokio 运行时中：
     /// - 如果在运行时中，使用 spawn_blocking 避免阻塞
     /// - 如果不在运行时中，创建临时运行时执行
-    /// 
+    ///
     /// # 警告
     /// 此方法应该谨慎使用，主要用于：
     /// - Drop 实现
@@ -30,17 +30,17 @@ impl AsyncBridge {
         if let Ok(handle) = Handle::try_current() {
             // 在运行时中，使用 spawn_blocking 避免阻塞
             let (tx, rx) = std::sync::mpsc::channel();
-            
+
             handle.spawn(async move {
                 let result = future.await;
                 let _ = tx.send(result);
             });
-            
+
             // 等待结果，设置合理的超时
             match rx.recv_timeout(Duration::from_secs(30)) {
                 Ok(result) => result,
                 Err(_) => Err(error_utils::timeout_error(
-                    "异步操作在同步上下文中超时".to_string()
+                    "异步操作在同步上下文中超时".to_string(),
                 )),
             }
         } else {
@@ -48,7 +48,7 @@ impl AsyncBridge {
             let rt = tokio::runtime::Runtime::new().map_err(|e| {
                 error_utils::runtime_error(format!("创建临时运行时失败: {}", e))
             })?;
-            
+
             rt.block_on(future)
         }
     }
@@ -63,9 +63,9 @@ impl AsyncBridge {
         T: Send + 'static,
     {
         Self::run_async_in_sync(async move {
-            tokio::time::timeout(timeout, future)
-                .await
-                .map_err(|_| error_utils::timeout_error("异步操作超时".to_string()))?
+            tokio::time::timeout(timeout, future).await.map_err(|_| {
+                error_utils::timeout_error("异步操作超时".to_string())
+            })?
         })
     }
 
@@ -75,16 +75,16 @@ impl AsyncBridge {
     }
 
     /// 安全地在异步上下文中执行可能阻塞的操作
-    /// 
+    ///
     /// 此方法会将阻塞操作移到专用的阻塞线程池中执行
     pub async fn run_blocking_in_async<F, T>(blocking_op: F) -> ForgeResult<T>
     where
         F: FnOnce() -> ForgeResult<T> + Send + 'static,
         T: Send + 'static,
     {
-        tokio::task::spawn_blocking(blocking_op)
-            .await
-            .map_err(|e| error_utils::runtime_error(format!("阻塞任务执行失败: {}", e)))?
+        tokio::task::spawn_blocking(blocking_op).await.map_err(|e| {
+            error_utils::runtime_error(format!("阻塞任务执行失败: {}", e))
+        })?
     }
 }
 
@@ -104,7 +104,10 @@ where
     T: Send + 'static,
 {
     /// 创建新的异步清理器
-    pub fn new<F>(resource: T, cleanup_fn: F) -> Self
+    pub fn new<F>(
+        resource: T,
+        cleanup_fn: F,
+    ) -> Self
     where
         F: FnOnce(T) -> ForgeResult<()> + Send + 'static,
     {
@@ -116,7 +119,9 @@ where
 
     /// 手动执行清理（异步版本）
     pub async fn cleanup_async(mut self) -> ForgeResult<()> {
-        if let (Some(resource), Some(cleanup_fn)) = (self.resource.take(), self.cleanup_fn.take()) {
+        if let (Some(resource), Some(cleanup_fn)) =
+            (self.resource.take(), self.cleanup_fn.take())
+        {
             cleanup_fn(resource)
         } else {
             Ok(())
@@ -125,7 +130,9 @@ where
 
     /// 手动执行清理（同步版本）
     pub fn cleanup_sync(mut self) -> ForgeResult<()> {
-        if let (Some(resource), Some(cleanup_fn)) = (self.resource.take(), self.cleanup_fn.take()) {
+        if let (Some(resource), Some(cleanup_fn)) =
+            (self.resource.take(), self.cleanup_fn.take())
+        {
             cleanup_fn(resource)
         } else {
             Ok(())
@@ -138,7 +145,9 @@ where
     T: Send + 'static,
 {
     fn drop(&mut self) {
-        if let (Some(resource), Some(cleanup_fn)) = (self.resource.take(), self.cleanup_fn.take()) {
+        if let (Some(resource), Some(cleanup_fn)) =
+            (self.resource.take(), self.cleanup_fn.take())
+        {
             // 在 Drop 中只能使用同步清理
             if let Err(e) = cleanup_fn(resource) {
                 eprintln!("异步资源清理失败: {}", e);
@@ -148,7 +157,7 @@ where
 }
 
 /// 异步操作的同步包装器
-/// 
+///
 /// 提供一个安全的方式在同步代码中调用异步操作
 pub struct SyncWrapper<T> {
     inner: T,
@@ -175,7 +184,10 @@ impl<T> SyncWrapper<T> {
 /// 为事件总线提供同步包装
 impl<T: Send + 'static> SyncWrapper<crate::event::EventBus<T>> {
     /// 同步广播事件（自动选择最佳方法）
-    pub fn broadcast_auto(&self, event: T) -> ForgeResult<()> {
+    pub fn broadcast_auto(
+        &self,
+        event: T,
+    ) -> ForgeResult<()> {
         if AsyncBridge::is_in_async_context() {
             // 在异步上下文中，使用 spawn 避免阻塞
             let bus = self.inner.clone();
@@ -196,9 +208,7 @@ impl<T: Send + 'static> SyncWrapper<crate::event::EventBus<T>> {
         if AsyncBridge::is_in_async_context() {
             // 在异步上下文中，使用异步版本
             let bus = self.inner.clone();
-            AsyncBridge::run_async_in_sync(async move {
-                bus.destroy().await
-            })
+            AsyncBridge::run_async_in_sync(async move { bus.destroy().await })
         } else {
             // 在同步上下文中，使用阻塞版本
             self.inner.destroy_blocking();
@@ -230,7 +240,8 @@ mod tests {
             // 模拟阻塞操作
             std::thread::sleep(Duration::from_millis(10));
             Ok(42)
-        }).await;
+        })
+        .await;
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 42);

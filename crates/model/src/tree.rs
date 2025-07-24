@@ -36,7 +36,6 @@ impl Debug for Tree {
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        
         //输出的时候 过滤掉空的 nodes 节点
         let nodes = self
             .nodes
@@ -339,7 +338,8 @@ impl Tree {
         let parent = self.nodes[parent_shard_index]
             .get(parent_id)
             .ok_or(error_helpers::parent_not_found(parent_id.clone()))?;
-        let  new_parent = parent.as_ref().insert_content_at_index(index, &node.id);
+        let new_parent =
+            parent.as_ref().insert_content_at_index(index, &node.id);
         //更新父节点
         self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
             .update(parent_id.clone(), Arc::new(new_parent));
@@ -363,21 +363,21 @@ impl Tree {
         let node_ids = nodes.iter().map(|n| n.id.clone()).collect();
         // 更新父节点 - 添加所有节点的ID到content中
         let new_parent = parent.as_ref().insert_contents(&node_ids);
-        
+
         // 更新父节点到分片中
         self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
             .update(parent_id.clone(), Arc::new(new_parent));
-        
+
         // 更新所有子节点
         for node in nodes {
             // 设置当前节点的父子关系映射
             self.parent_map.insert(node.id.clone(), parent_id.clone());
-            
+
             // 设置当前节点的子节点的父子关系映射
             for child_id in &node.content {
                 self.parent_map.insert(child_id.clone(), node.id.clone());
             }
-            
+
             // 将节点添加到对应的分片中
             let shard_index = self.get_shard_index(&node.id);
             self.nodes[shard_index] = self.nodes[shard_index]
@@ -579,7 +579,7 @@ impl Tree {
         }
         let nodes_to_remove: std::collections::HashSet<_> =
             nodes.iter().collect();
-        let filtered_children: imbl ::Vector<NodeId> = parent
+        let filtered_children: imbl::Vector<NodeId> = parent
             .as_ref()
             .content
             .iter()

@@ -28,7 +28,10 @@ use thiserror::Error;
 use mf_expression::variable::Variable;
 use crate::handler::function::module::mf::ModuforgeListener;
 
-pub struct DecisionGraph<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> {
+pub struct DecisionGraph<
+    L: DecisionLoader + 'static,
+    A: CustomNodeAdapter + 'static,
+> {
     initial_graph: StableDiDecisionGraph,
     graph: StableDiDecisionGraph,
     adapter: Arc<A>,
@@ -40,7 +43,10 @@ pub struct DecisionGraph<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'st
     validator_cache: ValidatorCache,
 }
 
-pub struct DecisionGraphConfig<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> {
+pub struct DecisionGraphConfig<
+    L: DecisionLoader + 'static,
+    A: CustomNodeAdapter + 'static,
+> {
     pub loader: Arc<L>,
     pub adapter: Arc<A>,
     pub content: Arc<DecisionContent>,
@@ -50,9 +56,11 @@ pub struct DecisionGraphConfig<L: DecisionLoader + 'static, A: CustomNodeAdapter
     pub validator_cache: Option<ValidatorCache>,
 }
 
-impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<L, A> {
+impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static>
+    DecisionGraph<L, A>
+{
     pub fn try_new(
-        config: DecisionGraphConfig<L, A>,
+        config: DecisionGraphConfig<L, A>
     ) -> Result<Self, DecisionGraphValidationError> {
         let content = config.content;
         let mut graph = StableDiDecisionGraph::new();
@@ -66,15 +74,25 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
         }
 
         for (_, edge) in content.edges.iter().enumerate() {
-            let source_index = index_map.get(&edge.source_id).ok_or_else(|| {
-                DecisionGraphValidationError::MissingNode(edge.source_id.to_string())
-            })?;
+            let source_index =
+                index_map.get(&edge.source_id).ok_or_else(|| {
+                    DecisionGraphValidationError::MissingNode(
+                        edge.source_id.to_string(),
+                    )
+                })?;
 
-            let target_index = index_map.get(&edge.target_id).ok_or_else(|| {
-                DecisionGraphValidationError::MissingNode(edge.target_id.to_string())
-            })?;
+            let target_index =
+                index_map.get(&edge.target_id).ok_or_else(|| {
+                    DecisionGraphValidationError::MissingNode(
+                        edge.target_id.to_string(),
+                    )
+                })?;
 
-            graph.add_edge(source_index.clone(), target_index.clone(), edge.clone());
+            graph.add_edge(
+                source_index.clone(),
+                target_index.clone(),
+                edge.clone(),
+            );
         }
 
         Ok(Self {
@@ -90,7 +108,10 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
         })
     }
 
-    pub(crate) fn with_function(mut self, runtime: Option<Rc<Function>>) -> Self {
+    pub(crate) fn with_function(
+        mut self,
+        runtime: Option<Rc<Function>>,
+    ) -> Self {
         self.runtime = runtime;
         self
     }
@@ -111,7 +132,7 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
                     loader: self.loader.clone(),
                     adapter: self.adapter.clone(),
                 }),
-                Box::new(ModuforgeListener{})
+                Box::new(ModuforgeListener {}),
             ]),
         })
         .await
@@ -140,7 +161,12 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
     fn input_node_count(&self) -> usize {
         self.graph
             .node_weights()
-            .filter(|weight| matches!(weight.kind, DecisionNodeKind::InputNode { content: _ }))
+            .filter(|weight| {
+                matches!(
+                    weight.kind,
+                    DecisionNodeKind::InputNode { content: _ }
+                )
+            })
             .count()
     }
 
@@ -214,7 +240,8 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
                         .map(|s| serde_json::from_str::<Value>(&s).ok())
                         .flatten()
                     {
-                        let validator_key = create_validator_cache_key(&json_schema);
+                        let validator_key =
+                            create_validator_cache_key(&json_schema);
                         let validator = self
                             .validator_cache
                             .get_or_insert(validator_key, &json_schema)
@@ -226,20 +253,27 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
                             })?;
 
                         let context_json = context.to_value();
-                        validator.validate(&context_json).map_err(|e| NodeError {
-                            source: anyhow!(serde_json::to_value(
-                                Into::<Box<EvaluationError>>::into(e)
-                            )
-                            .unwrap_or_default()),
-                            node_id: node.id.clone(),
-                            trace: error_trace(&node_traces),
+                        validator.validate(&context_json).map_err(|e| {
+                            NodeError {
+                                source: anyhow!(
+                                    serde_json::to_value(Into::<
+                                        Box<EvaluationError>,
+                                    >::into(
+                                        e
+                                    ))
+                                    .unwrap_or_default()
+                                ),
+                                node_id: node.id.clone(),
+                                trace: error_trace(&node_traces),
+                            }
                         })?;
                     }
 
                     walker.set_node_data(nid, context.clone());
-                }
+                },
                 DecisionNodeKind::OutputNode { content } => {
-                    let incoming_data = walker.incoming_node_data(&self.graph, nid, false);
+                    let incoming_data =
+                        walker.incoming_node_data(&self.graph, nid, false);
 
                     trace!({
                         input: incoming_data.clone(),
@@ -253,7 +287,8 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
                         .map(|s| serde_json::from_str::<Value>(&s).ok())
                         .flatten()
                     {
-                        let validator_key = create_validator_cache_key(&json_schema);
+                        let validator_key =
+                            create_validator_cache_key(&json_schema);
                         let validator = self
                             .validator_cache
                             .get_or_insert(validator_key, &json_schema)
@@ -265,16 +300,20 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
                             })?;
 
                         let incoming_data_json = incoming_data.to_value();
-                        validator
-                            .validate(&incoming_data_json)
-                            .map_err(|e| NodeError {
-                                source: anyhow!(serde_json::to_value(
-                                    Into::<Box<EvaluationError>>::into(e)
-                                )
-                                .unwrap_or_default()),
+                        validator.validate(&incoming_data_json).map_err(
+                            |e| NodeError {
+                                source: anyhow!(
+                                    serde_json::to_value(Into::<
+                                        Box<EvaluationError>,
+                                    >::into(
+                                        e
+                                    ))
+                                    .unwrap_or_default()
+                                ),
                                 node_id: node.id.clone(),
                                 trace: error_trace(&node_traces),
-                            })?;
+                            },
+                        )?;
                     }
 
                     return Ok(DecisionGraphResponse {
@@ -282,64 +321,81 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
                         performance: format!("{:.1?}", root_start.elapsed()),
                         trace: node_traces,
                     });
-                }
+                },
                 DecisionNodeKind::SwitchNode { .. } => {
-                    let input_data = walker.incoming_node_data(&self.graph, nid, false);
+                    let input_data =
+                        walker.incoming_node_data(&self.graph, nid, false);
 
                     walker.set_node_data(nid, input_data);
-                }
+                },
                 DecisionNodeKind::FunctionNode { content } => {
-                    let function = self.get_or_insert_function().await.map_err(|e| NodeError {
-                        source: e.into(),
-                        node_id: node.id.clone(),
-                        trace: error_trace(&node_traces),
-                    })?;
+                    let function = self
+                        .get_or_insert_function()
+                        .await
+                        .map_err(|e| NodeError {
+                            source: e.into(),
+                            node_id: node.id.clone(),
+                            trace: error_trace(&node_traces),
+                        })?;
 
                     let node_request = NodeRequest {
                         node: node.clone(),
                         iteration: self.iteration,
-                        input: walker.incoming_node_data(&self.graph, nid, true),
+                        input: walker.incoming_node_data(
+                            &self.graph,
+                            nid,
+                            true,
+                        ),
                     };
                     let res = match content {
-                        FunctionNodeContent::Version2(_) => FunctionHandler::new(
-                            function,
-                            self.trace,
-                            self.iteration,
-                            self.max_depth,
-                        )
-                        .handle(node_request.clone())
-                        .await
-                        .map_err(|e| {
-                            if let Some(detailed_err) = e.downcast_ref::<PartialTraceError>() {
-                                trace!({
-                                    input: node_request.input.clone(),
-                                    output: Variable::Null,
-                                    trace_data: detailed_err.trace.clone(),
-                                });
-                            }
+                        FunctionNodeContent::Version2(_) => {
+                            FunctionHandler::new(
+                                function,
+                                self.trace,
+                                self.iteration,
+                                self.max_depth,
+                            )
+                            .handle(node_request.clone())
+                            .await
+                            .map_err(|e| {
+                                if let Some(detailed_err) =
+                                    e.downcast_ref::<PartialTraceError>()
+                                {
+                                    trace!({
+                                        input: node_request.input.clone(),
+                                        output: Variable::Null,
+                                        trace_data: detailed_err.trace.clone(),
+                                    });
+                                }
 
-                            NodeError {
-                                source: e.into(),
-                                node_id: node.id.clone(),
-                                trace: error_trace(&node_traces),
-                            }
-                        })?,
-                        FunctionNodeContent::Version1(_) => {
-                            let runtime = create_runtime().map_err(|e| NodeError {
-                                source: e.into(),
-                                node_id: node.id.clone(),
-                                trace: error_trace(&node_traces),
-                            })?;
-
-                            function_v1::FunctionHandler::new(self.trace, runtime)
-                                .handle(node_request.clone())
-                                .await
-                                .map_err(|e| NodeError {
+                                NodeError {
                                     source: e.into(),
                                     node_id: node.id.clone(),
                                     trace: error_trace(&node_traces),
-                                })?
-                        }
+                                }
+                            })?
+                        },
+                        FunctionNodeContent::Version1(_) => {
+                            let runtime =
+                                create_runtime().map_err(|e| NodeError {
+                                    source: e.into(),
+                                    node_id: node.id.clone(),
+                                    trace: error_trace(&node_traces),
+                                })?;
+
+                            function_v1::FunctionHandler::new(
+                                self.trace, runtime,
+                            )
+                            .handle(node_request.clone())
+                            .await
+                            .map_err(|e| {
+                                NodeError {
+                                    source: e.into(),
+                                    node_id: node.id.clone(),
+                                    trace: error_trace(&node_traces),
+                                }
+                            })?
+                        },
                     };
 
                     node_request.input.dot_remove("$nodes");
@@ -351,12 +407,16 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
                         trace_data: res.trace_data,
                     });
                     walker.set_node_data(nid, res.output);
-                }
+                },
                 DecisionNodeKind::DecisionNode { .. } => {
                     let node_request = NodeRequest {
                         node: node.clone(),
                         iteration: self.iteration,
-                        input: walker.incoming_node_data(&self.graph, nid, true),
+                        input: walker.incoming_node_data(
+                            &self.graph,
+                            nid,
+                            true,
+                        ),
                     };
 
                     let res = DecisionHandler::new(
@@ -384,12 +444,16 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
                         trace_data: res.trace_data,
                     });
                     walker.set_node_data(nid, res.output);
-                }
+                },
                 DecisionNodeKind::DecisionTableNode { .. } => {
                     let node_request = NodeRequest {
                         node: node.clone(),
                         iteration: self.iteration,
-                        input: walker.incoming_node_data(&self.graph, nid, true),
+                        input: walker.incoming_node_data(
+                            &self.graph,
+                            nid,
+                            true,
+                        ),
                     };
 
                     let res = DecisionTableHandler::new(self.trace)
@@ -410,19 +474,25 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
                         trace_data: res.trace_data,
                     });
                     walker.set_node_data(nid, res.output);
-                }
+                },
                 DecisionNodeKind::ExpressionNode { .. } => {
                     let node_request = NodeRequest {
                         node: node.clone(),
                         iteration: self.iteration,
-                        input: walker.incoming_node_data(&self.graph, nid, true),
+                        input: walker.incoming_node_data(
+                            &self.graph,
+                            nid,
+                            true,
+                        ),
                     };
 
                     let res = ExpressionHandler::new(self.trace)
                         .handle(node_request.clone())
                         .await
                         .map_err(|e| {
-                            if let Some(detailed_err) = e.downcast_ref::<PartialTraceError>() {
+                            if let Some(detailed_err) =
+                                e.downcast_ref::<PartialTraceError>()
+                            {
                                 trace!({
                                     input: node_request.input.clone(),
                                     output: Variable::Null,
@@ -446,17 +516,24 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
                         trace_data: res.trace_data,
                     });
                     walker.set_node_data(nid, res.output);
-                }
+                },
                 DecisionNodeKind::CustomNode { .. } => {
                     let node_request = NodeRequest {
                         node: node.clone(),
                         iteration: self.iteration,
-                        input: walker.incoming_node_data(&self.graph, nid, true),
+                        input: walker.incoming_node_data(
+                            &self.graph,
+                            nid,
+                            true,
+                        ),
                     };
 
                     let res = self
                         .adapter
-                        .handle(CustomNodeRequest::try_from(node_request.clone()).unwrap())
+                        .handle(
+                            CustomNodeRequest::try_from(node_request.clone())
+                                .unwrap(),
+                        )
                         .await
                         .map_err(|e| NodeError {
                             node_id: node.id.clone(),
@@ -473,7 +550,7 @@ impl<L: DecisionLoader + 'static, A: CustomNodeAdapter + 'static> DecisionGraph<
                         trace_data: res.trace_data,
                     });
                     walker.set_node_data(nid, res.output);
-                }
+                },
             }
         }
 
@@ -501,7 +578,10 @@ pub enum DecisionGraphValidationError {
 }
 
 impl Serialize for DecisionGraphValidationError {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<S>(
+        &self,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -511,18 +591,18 @@ impl Serialize for DecisionGraphValidationError {
             DecisionGraphValidationError::InvalidInputCount(count) => {
                 map.serialize_entry("type", "invalidInputCount")?;
                 map.serialize_entry("nodeCount", count)?;
-            }
+            },
             DecisionGraphValidationError::InvalidOutputCount(count) => {
                 map.serialize_entry("type", "invalidOutputCount")?;
                 map.serialize_entry("nodeCount", count)?;
-            }
+            },
             DecisionGraphValidationError::MissingNode(node_id) => {
                 map.serialize_entry("type", "missingNode")?;
                 map.serialize_entry("nodeId", node_id)?;
-            }
+            },
             DecisionGraphValidationError::CyclicGraph => {
                 map.serialize_entry("type", "cyclicGraph")?;
-            }
+            },
         }
 
         map.end()
@@ -550,11 +630,10 @@ pub struct DecisionGraphTrace {
     pub order: u32,
 }
 
-pub(crate) fn error_trace(trace: &Option<HashMap<String, DecisionGraphTrace>>) -> Option<Value> {
-    trace
-        .as_ref()
-        .map(|s| serde_json::to_value(s).ok())
-        .flatten()
+pub(crate) fn error_trace(
+    trace: &Option<HashMap<String, DecisionGraphTrace>>
+) -> Option<Value> {
+    trace.as_ref().map(|s| serde_json::to_value(s).ok()).flatten()
 }
 
 fn create_validator_cache_key(content: &Value) -> u64 {

@@ -7,10 +7,22 @@ use std::rc::Rc;
 pub trait FunctionDefinition {
     fn required_parameters(&self) -> usize;
     fn optional_parameters(&self) -> usize;
-    fn check_types(&self, args: &[VariableType]) -> FunctionTypecheck;
-    fn call(&self, args: Arguments) -> anyhow::Result<Variable>;
-    fn param_type(&self, index: usize) -> Option<VariableType>;
-    fn param_type_str(&self, index: usize) -> String;
+    fn check_types(
+        &self,
+        args: &[VariableType],
+    ) -> FunctionTypecheck;
+    fn call(
+        &self,
+        args: Arguments,
+    ) -> anyhow::Result<Variable>;
+    fn param_type(
+        &self,
+        index: usize,
+    ) -> Option<VariableType>;
+    fn param_type_str(
+        &self,
+        index: usize,
+    ) -> String;
     fn return_type(&self) -> VariableType;
     fn return_type_str(&self) -> String;
 }
@@ -29,11 +41,11 @@ pub struct FunctionSignature {
 }
 
 impl FunctionSignature {
-    pub fn single(parameter: VariableType, return_type: VariableType) -> Self {
-        Self {
-            parameters: vec![parameter],
-            return_type,
-        }
+    pub fn single(
+        parameter: VariableType,
+        return_type: VariableType,
+    ) -> Self {
+        Self { parameters: vec![parameter], return_type }
     }
 }
 
@@ -52,7 +64,10 @@ impl FunctionDefinition for StaticFunction {
         0
     }
 
-    fn check_types(&self, args: &[VariableType]) -> FunctionTypecheck {
+    fn check_types(
+        &self,
+        args: &[VariableType],
+    ) -> FunctionTypecheck {
         let mut typecheck = FunctionTypecheck::default();
         typecheck.return_type = self.signature.return_type.clone();
 
@@ -65,10 +80,8 @@ impl FunctionDefinition for StaticFunction {
         }
 
         // Check each parameter type
-        for (i, (arg, expected_type)) in args
-            .iter()
-            .zip(self.signature.parameters.iter())
-            .enumerate()
+        for (i, (arg, expected_type)) in
+            args.iter().zip(self.signature.parameters.iter()).enumerate()
         {
             if !arg.satisfies(expected_type) {
                 typecheck.arguments.push((
@@ -83,15 +96,24 @@ impl FunctionDefinition for StaticFunction {
         typecheck
     }
 
-    fn call(&self, args: Arguments) -> anyhow::Result<Variable> {
+    fn call(
+        &self,
+        args: Arguments,
+    ) -> anyhow::Result<Variable> {
         (&self.implementation)(args)
     }
 
-    fn param_type(&self, index: usize) -> Option<VariableType> {
+    fn param_type(
+        &self,
+        index: usize,
+    ) -> Option<VariableType> {
         self.signature.parameters.get(index).cloned()
     }
 
-    fn param_type_str(&self, index: usize) -> String {
+    fn param_type_str(
+        &self,
+        index: usize,
+    ) -> String {
         self.signature
             .parameters
             .get(index)
@@ -116,11 +138,7 @@ pub struct CompositeFunction {
 
 impl FunctionDefinition for CompositeFunction {
     fn required_parameters(&self) -> usize {
-        self.signatures
-            .iter()
-            .map(|x| x.parameters.len())
-            .min()
-            .unwrap_or(0)
+        self.signatures.iter().map(|x| x.parameters.len()).min().unwrap_or(0)
     }
 
     fn optional_parameters(&self) -> usize {
@@ -135,7 +153,10 @@ impl FunctionDefinition for CompositeFunction {
         max - required_params
     }
 
-    fn check_types(&self, args: &[VariableType]) -> FunctionTypecheck {
+    fn check_types(
+        &self,
+        args: &[VariableType],
+    ) -> FunctionTypecheck {
         let mut typecheck = FunctionTypecheck::default();
         if self.signatures.is_empty() {
             typecheck.general = Some("No implementation".to_string());
@@ -196,16 +217,24 @@ impl FunctionDefinition for CompositeFunction {
             })
             .collect::<Vec<_>>()
             .join("\n");
-        typecheck.general = Some(format!("No function overload matches provided arguments. Available overloads:\n{available_signatures}"));
+        typecheck.general = Some(format!(
+            "No function overload matches provided arguments. Available overloads:\n{available_signatures}"
+        ));
 
         typecheck
     }
 
-    fn call(&self, args: Arguments) -> anyhow::Result<Variable> {
+    fn call(
+        &self,
+        args: Arguments,
+    ) -> anyhow::Result<Variable> {
         (&self.implementation)(args)
     }
 
-    fn param_type(&self, index: usize) -> Option<VariableType> {
+    fn param_type(
+        &self,
+        index: usize,
+    ) -> Option<VariableType> {
         self.signatures
             .iter()
             .filter_map(|sig| sig.parameters.get(index))
@@ -213,7 +242,10 @@ impl FunctionDefinition for CompositeFunction {
             .reduce(|a, b| a.merge(&b))
     }
 
-    fn param_type_str(&self, index: usize) -> String {
+    fn param_type_str(
+        &self,
+        index: usize,
+    ) -> String {
         let possible_types: Vec<String> = self
             .signatures
             .iter()

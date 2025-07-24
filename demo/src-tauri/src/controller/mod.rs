@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::{extract::Path, Json};
 use chrono::{DateTime, Local};
 use mf_core::types::HistoryEntryWithMeta;
-use mf_model::{imbl as im,attrs::Attrs, mark::Mark, node::Node, types::NodeId};
+use mf_model::{imbl as im, attrs::Attrs, mark::Mark, node::Node, types::NodeId};
 use mf_template::render;
 use serde::{Deserialize, Serialize};
 
@@ -26,7 +26,7 @@ pub struct GetDataTreeRequest {
 }
 
 pub async fn get_inc_data(
-    Path(editor_name): Path<String>,
+    Path(editor_name): Path<String>
 ) -> ResponseResult<Option<Arc<Operations>>> {
     let editor = ContextHelper::get_editor(&editor_name);
     if editor.is_none() {
@@ -34,14 +34,15 @@ pub async fn get_inc_data(
     }
     let editor = editor.unwrap();
     let manager = editor.get_state().await.resource_manager();
-    let operations = manager
-        .resource_table
-        .take::<Operations>("inc_data".to_string());
+    let operations =
+        manager.resource_table.take::<Operations>("inc_data".to_string());
     res!(operations)
 }
 
 /// 获取数据树
-pub async fn get_data_tree(Json(param): Json<GetDataTreeRequest>) -> ResponseResult<GcxmTreeItem> {
+pub async fn get_data_tree(
+    Json(param): Json<GetDataTreeRequest>
+) -> ResponseResult<GcxmTreeItem> {
     let editor = ContextHelper::get_editor(&param.editor_name);
     if editor.is_none() {
         return Err(AppError(anyhow::anyhow!("工程项目不存在".to_string())));
@@ -56,7 +57,9 @@ pub async fn get_data_tree(Json(param): Json<GetDataTreeRequest>) -> ResponseRes
     let mut nodes: Vec<Arc<Node>> = doc.descendants(&param.id);
     nodes.push(node);
     let parent_map = &doc.get_inner().parent_map;
-    if let Some(root_item) = GcxmTreeItem::from_nodes(param.id.clone(), nodes, parent_map) {
+    if let Some(root_item) =
+        GcxmTreeItem::from_nodes(param.id.clone(), nodes, parent_map)
+    {
         res!(root_item)
     } else {
         Err(AppError(anyhow::anyhow!("无法构建工程树,未找到根节点")))
@@ -70,7 +73,7 @@ pub struct GetHistoryVersionCammand {
 
 /// 获取历史记录
 pub async fn get_history(
-    Json(param): Json<GetHistoryVersionCammand>,
+    Json(param): Json<GetHistoryVersionCammand>
 ) -> ResponseResult<Vec<HistoryEntry>> {
     let editor = ContextHelper::get_editor(&param.editor_name);
     if editor.is_none() {
@@ -101,7 +104,8 @@ pub async fn get_history(
 
 /// 渲染历史记录描述
 fn render_history_entry(item: &HistoryEntryWithMeta) -> HistoryEntry {
-    let description = render(&item.description, item.meta.clone().into()).unwrap();
+    let description =
+        render(&item.description, item.meta.clone().into()).unwrap();
     // 日期格式化成yyyy-MM-dd HH:mm:ss
     let timestamp = DateTime::<Local>::from(item.timestamp)
         .format("%Y-%m-%d %H:%M:%S")

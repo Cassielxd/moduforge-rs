@@ -1,6 +1,9 @@
 use std::{
     fmt::Debug,
-    sync::{Arc, atomic::{AtomicU64, Ordering}},
+    sync::{
+        Arc,
+        atomic::{AtomicU64, Ordering},
+    },
 };
 
 use async_channel::{Receiver, Sender};
@@ -132,7 +135,8 @@ impl<T: Send + 'static> EventBus<T> {
         let mut handler_ids = Vec::with_capacity(event_handlers.len());
 
         for handler in event_handlers {
-            let handler_id = self.next_handler_id.fetch_add(1, Ordering::Relaxed);
+            let handler_id =
+                self.next_handler_id.fetch_add(1, Ordering::Relaxed);
             self.handler_registry.insert(handler_id, handler);
             handler_ids.push(handler_id);
         }
@@ -141,13 +145,18 @@ impl<T: Send + 'static> EventBus<T> {
         self.update_handler_list();
 
         // 更新统计
-        self.stats.active_handlers.fetch_add(handler_ids.len() as u64, Ordering::Relaxed);
+        self.stats
+            .active_handlers
+            .fetch_add(handler_ids.len() as u64, Ordering::Relaxed);
 
         Ok(handler_ids)
     }
 
     /// 移除事件处理器
-    pub fn remove_event_handler(&self, handler_id: HandlerId) -> ForgeResult<bool> {
+    pub fn remove_event_handler(
+        &self,
+        handler_id: HandlerId,
+    ) -> ForgeResult<bool> {
         let removed = self.handler_registry.remove(&handler_id).is_some();
 
         if removed {
@@ -159,7 +168,10 @@ impl<T: Send + 'static> EventBus<T> {
     }
 
     /// 批量移除事件处理器
-    pub fn remove_event_handlers(&self, handler_ids: &[HandlerId]) -> ForgeResult<usize> {
+    pub fn remove_event_handlers(
+        &self,
+        handler_ids: &[HandlerId],
+    ) -> ForgeResult<usize> {
         let mut removed_count = 0;
 
         for &handler_id in handler_ids {
@@ -170,7 +182,9 @@ impl<T: Send + 'static> EventBus<T> {
 
         if removed_count > 0 {
             self.update_handler_list();
-            self.stats.active_handlers.fetch_sub(removed_count as u64, Ordering::Relaxed);
+            self.stats
+                .active_handlers
+                .fetch_sub(removed_count as u64, Ordering::Relaxed);
         }
 
         Ok(removed_count)
@@ -178,7 +192,8 @@ impl<T: Send + 'static> EventBus<T> {
 
     /// 更新处理器列表（内部方法）
     fn update_handler_list(&self) {
-        let handlers: Vec<Arc<dyn EventHandler<T>>> = self.handler_registry
+        let handlers: Vec<Arc<dyn EventHandler<T>>> = self
+            .handler_registry
             .iter()
             .map(|entry| entry.value().clone())
             .collect();
@@ -403,7 +418,10 @@ impl<T: Send + 'static> EventBus<T> {
     }
 
     /// 更新事件配置（注意：某些配置更改需要重启事件循环才能生效）
-    pub fn update_config(&mut self, config: EventConfig) {
+    pub fn update_config(
+        &mut self,
+        config: EventConfig,
+    ) {
         self.config = config;
     }
 
@@ -424,14 +442,23 @@ impl<T: Send + 'static> EventBus<T> {
     pub fn get_performance_report(&self) -> EventBusPerformanceReport {
         let stats = &self.stats;
         EventBusPerformanceReport {
-            total_events_processed: stats.events_processed.load(Ordering::Relaxed),
-            active_handlers_count: stats.active_handlers.load(Ordering::Relaxed),
-            total_processing_failures: stats.processing_failures.load(Ordering::Relaxed),
-            total_processing_timeouts: stats.processing_timeouts.load(Ordering::Relaxed),
+            total_events_processed: stats
+                .events_processed
+                .load(Ordering::Relaxed),
+            active_handlers_count: stats
+                .active_handlers
+                .load(Ordering::Relaxed),
+            total_processing_failures: stats
+                .processing_failures
+                .load(Ordering::Relaxed),
+            total_processing_timeouts: stats
+                .processing_timeouts
+                .load(Ordering::Relaxed),
             handler_registry_size: self.handler_registry.len(),
             success_rate: {
                 let total = stats.events_processed.load(Ordering::Relaxed);
-                let failures = stats.processing_failures.load(Ordering::Relaxed);
+                let failures =
+                    stats.processing_failures.load(Ordering::Relaxed);
                 if total > 0 {
                     ((total - failures) as f64 / total as f64) * 100.0
                 } else {

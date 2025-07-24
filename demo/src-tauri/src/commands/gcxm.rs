@@ -17,7 +17,10 @@ pub struct InsertChildCammand {
 
 #[async_trait]
 impl Command for InsertChildCammand {
-    async fn execute(&self, tr: &mut Transaction) -> TransformResult<()> {
+    async fn execute(
+        &self,
+        tr: &mut Transaction,
+    ) -> TransformResult<()> {
         self.add_node(tr, &self.data).await
     }
     fn name(&self) -> String {
@@ -36,16 +39,16 @@ pub struct AddFootNoteCammand {
 
 #[async_trait]
 impl Command for AddFootNoteCammand {
-    async fn execute(&self, tr: &mut Transaction) -> TransformResult<()> {
-        let mark = tr
-            .schema
-            .marks
-            .get(FOOTNOTE_STR)
-            .unwrap()
-            .create(Some(&HashMap::from_iter(vec![(
+    async fn execute(
+        &self,
+        tr: &mut Transaction,
+    ) -> TransformResult<()> {
+        let mark = tr.schema.marks.get(FOOTNOTE_STR).unwrap().create(Some(
+            &HashMap::from_iter(vec![(
                 "value".to_string(),
                 self.footnote.clone().into(),
-            )])));
+            )]),
+        ));
         self.add_mark(
             tr,
             &AddMarkRequest {
@@ -70,7 +73,10 @@ pub struct DeleteGcxmCammand {
 
 #[async_trait]
 impl Command for DeleteGcxmCammand {
-    async fn execute(&self, tr: &mut Transaction) -> TransformResult<()> {
+    async fn execute(
+        &self,
+        tr: &mut Transaction,
+    ) -> TransformResult<()> {
         self.delete_node(tr, &self.data).await
     }
     fn name(&self) -> String {

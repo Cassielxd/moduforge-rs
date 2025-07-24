@@ -8,9 +8,7 @@ use tracing::info;
 
 async fn shutdown_signal() {
     let ctrl_c = async {
-        signal::ctrl_c()
-            .await
-            .expect("failed to install Ctrl+C handler");
+        signal::ctrl_c().await.expect("failed to install Ctrl+C handler");
     };
 
     #[cfg(unix)]
@@ -37,11 +35,16 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(app: Router, addr: String) -> Self {
+    pub fn new(
+        app: Router,
+        addr: String,
+    ) -> Self {
         Self { app, addr }
     }
-    pub async fn run_with_graceful_shutdown<F>(self, signal: F)
-    where
+    pub async fn run_with_graceful_shutdown<F>(
+        self,
+        signal: F,
+    ) where
         F: Future<Output = ()> + Send + 'static,
     {
         info!("listen:{}", self.addr.clone());
@@ -86,23 +89,31 @@ pub struct AppBuilder {
 
 impl AppBuilder {
     pub fn new() -> Self {
-        Self {
-            root: Router::new(),
-            addr: "127.0.0.1:20008".to_string(),
-        }
+        Self { root: Router::new(), addr: "127.0.0.1:20008".to_string() }
     }
     pub fn build(self) -> App {
         App::new(self.root, self.addr)
     }
-    pub fn next(mut self, path: &str, router: Router) -> Self {
+    pub fn next(
+        mut self,
+        path: &str,
+        router: Router,
+    ) -> Self {
         self.root = self.root.nest(path, router);
         self
     }
-    pub fn route(mut self, path: &str, method: MethodRouter) -> Self {
+    pub fn route(
+        mut self,
+        path: &str,
+        method: MethodRouter,
+    ) -> Self {
         self.root = self.root.route(path, method);
         self
     }
-    pub fn addr(mut self, addr: String) -> Self {
+    pub fn addr(
+        mut self,
+        addr: String,
+    ) -> Self {
         self.addr = addr;
         self
     }

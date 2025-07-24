@@ -18,39 +18,38 @@ use axum::{routing::post, Json, Router};
 use serde::Deserialize;
 
 /// 添加分部分项 措施项目
-pub async fn add_fbfx_csxm(Json(mut param): Json<AddRequest>) -> ResponseResult<String> {
+pub async fn add_fbfx_csxm(
+    Json(mut param): Json<AddRequest>
+) -> ResponseResult<String> {
     let id: String = IdGenerator::get_id();
     param.id = Some(id.clone());
     let mut demo_editor = ContextHelper::get_editor(&id).unwrap();
     let meta = serde_json::to_value(param.clone()).unwrap();
     demo_editor
-            .command_with_meta(
-                Arc::new(InsertFbfxCsxmCommand {
-                    data: param.clone(),
-                }),
-                "插入 分部分项 节点".to_string(),
-                meta,
-            )
-            .await?;
-   
+        .command_with_meta(
+            Arc::new(InsertFbfxCsxmCommand { data: param.clone() }),
+            "插入 分部分项 节点".to_string(),
+            meta,
+        )
+        .await?;
+
     res!("success".to_string())
 }
 /// 删除分部分项 措施项目 节点
-pub async fn delete_fbfx_csxm(Json(param): Json<DeleteNodeRequest>) -> ResponseResult<String> {
+pub async fn delete_fbfx_csxm(
+    Json(param): Json<DeleteNodeRequest>
+) -> ResponseResult<String> {
     let mut editor = ContextHelper::get_editor(&param.editor_name).unwrap();
     let node = editor.doc().await.get_node(&param.id).unwrap();
     let meta = serde_json::to_value(node)?;
     editor
-.command_with_meta(
-    Arc::new(DeleteFbfxCsxmCommand {
-        data: param.clone(),
-    }),
-    "删除 分部分项 节点".to_string(),
-    meta,
-)
-.await?;
-  
-    
+        .command_with_meta(
+            Arc::new(DeleteFbfxCsxmCommand { data: param.clone() }),
+            "删除 分部分项 节点".to_string(),
+            meta,
+        )
+        .await?;
+
     res!("success".to_string())
 }
 
@@ -61,12 +60,14 @@ pub struct FbfxCsxmPost {
 }
 
 /// 获取分部分项 措施项目树
-pub async fn get_fbfx_csxm_tree(Json(param): Json<FbfxCsxmPost>) -> ResponseResult<GcxmTreeItem> {
+pub async fn get_fbfx_csxm_tree(
+    Json(param): Json<FbfxCsxmPost>
+) -> ResponseResult<GcxmTreeItem> {
     let editor = ContextHelper::get_editor(&param.editor_name);
     if editor.is_none() {
         return Err(AppError(anyhow::anyhow!("工程项目不存在".to_string())));
     }
-    let  editor = editor.unwrap();
+    let editor = editor.unwrap();
     let doc = editor.doc().await;
     let node: Option<Arc<Node>> = doc.get_node(&param.id);
     if node.is_none() {
@@ -79,13 +80,18 @@ pub async fn get_fbfx_csxm_tree(Json(param): Json<FbfxCsxmPost>) -> ResponseResu
         .descendants(&param.id)
         .iter()
         .filter(|n| {
-            n.r#type == FB_STR || n.r#type == QD_STR || n.r#type == DE_STR || n.r#type == DE_RCJ_STR
+            n.r#type == FB_STR
+                || n.r#type == QD_STR
+                || n.r#type == DE_STR
+                || n.r#type == DE_RCJ_STR
         })
         .cloned()
         .collect();
     nodes.push(node);
     let parent_map = &doc.get_inner().parent_map;
-    if let Some(root_item) = GcxmTreeItem::from_nodes(param.id, nodes, parent_map) {
+    if let Some(root_item) =
+        GcxmTreeItem::from_nodes(param.id, nodes, parent_map)
+    {
         res!(root_item)
     } else {
         Err(AppError(anyhow::anyhow!(

@@ -1,28 +1,27 @@
 /// 静态分发 StepConverter 实现
 /// 使用静态分发替代动态分发，提供更好的性能和类型安全性
-
 use yrs::{Transact, ReadTxn, Map};
 
 // 重新导出所有核心组件
 pub use crate::mapping_v2::{
     // 核心 traits 和类型
-    TypedStepConverter, 
-    ConversionContext, 
+    TypedStepConverter,
+    ConversionContext,
     ErasedConverter,
-    
+
     // 注册表和全局函数
-    StaticConverterRegistry, 
-    global_registry, 
+    StaticConverterRegistry,
+    global_registry,
     convert_step_global as convert_step,
-    register_global_converter, 
+    register_global_converter,
     get_global_performance_stats,
     PerformanceStats,
     TypeConversionStats,
-    
+
     // 错误处理
-    ConversionError, 
-    ConversionResult, 
-    
+    ConversionError,
+    ConversionResult,
+
     // 转换器实现
     SimpleNodeAddConverter,
     SimpleNodeRemoveConverter,
@@ -42,7 +41,10 @@ pub fn convert_steps_batch(
 }
 
 /// 便捷函数：创建转换上下文
-pub fn create_context(client_id: String, user_id: String) -> ConversionContext {
+pub fn create_context(
+    client_id: String,
+    user_id: String,
+) -> ConversionContext {
     ConversionContext::new(client_id, user_id)
 }
 
@@ -61,7 +63,8 @@ pub struct Mapper;
 
 impl Mapper {
     /// 获取全局注册表
-    pub fn global_registry() -> &'static std::sync::RwLock<StaticConverterRegistry> {
+    pub fn global_registry()
+    -> &'static std::sync::RwLock<StaticConverterRegistry> {
         global_registry()
     }
 
@@ -108,11 +111,9 @@ mod tests {
 
     #[test]
     fn test_api_simplicity() {
-        let context = create_context(
-            "test_client".to_string(),
-            "test_user".to_string(),
-        );
-        
+        let context =
+            create_context("test_client".to_string(), "test_user".to_string());
+
         assert_eq!(context.client_id, "test_client");
         assert_eq!(context.user_id, "test_user");
     }
@@ -126,28 +127,23 @@ mod tests {
     #[tokio::test]
     async fn test_performance_tracking() {
         let start = Instant::now();
-        
+
         let doc = yrs::Doc::new();
         let mut txn = doc.transact_mut();
-        
-        let context = create_context(
-            "perf_client".to_string(),
-            "perf_user".to_string(),
-        );
+
+        let context =
+            create_context("perf_client".to_string(), "perf_user".to_string());
 
         let mut attrs = imbl::HashMap::new();
         attrs.insert("test_attr".to_string(), serde_json::json!("test_value"));
-        
-        let step = AttrStep {
-            id: "test_node".to_string(),
-            values: attrs,
-        };
+
+        let step = AttrStep { id: "test_node".to_string(), values: attrs };
 
         let result = convert_step(&step, &mut txn, &context);
         let duration = start.elapsed();
-        
+
         println!("静态分发转换耗时: {:?}", duration);
-        
+
         // 验证结果格式
         match result {
             Ok(step_result) => {
@@ -156,7 +152,7 @@ mod tests {
             },
             Err(e) => {
                 println!("转换失败（测试环境预期）: {}", e);
-            }
+            },
         }
     }
 

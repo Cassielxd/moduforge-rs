@@ -9,12 +9,10 @@ pub const DXGC_STR: &str = "DXGC";
 pub const GCXM_STR: &str = "GCXM";
 
 lazy_static! {
-    pub static ref GCXM: Node = node!(GCXM_STR, "工程项目", &format!("{}+", DXGC_STR));
-    pub static ref DXGC: Node = node!(
-        DXGC_STR,
-        "单项工程",
-        &format!("({}|{})+", DWGC_STR, DXGC_STR)
-    );
+    pub static ref GCXM: Node =
+        node!(GCXM_STR, "工程项目", &format!("{}+", DXGC_STR));
+    pub static ref DXGC: Node =
+        node!(DXGC_STR, "单项工程", &format!("({}|{})+", DWGC_STR, DXGC_STR));
     pub static ref DWGC: Node = node!(DWGC_STR, "单位工程");
 }
 
@@ -40,15 +38,12 @@ pub fn init_project_structure() -> Vec<Node> {
     vec![gcxm, dxgc, dwgc]
 }
 
-pub fn init_project_structure_field(name: &str) -> HashMap<String, AttributeSpec> {
+pub fn init_project_structure_field(
+    name: &str
+) -> HashMap<String, AttributeSpec> {
     HashMap::from_iter(vec![
         // 工程名称
-        (
-            "name".to_string(),
-            AttributeSpec {
-                default: Some(name.into()),
-            },
-        ),
+        ("name".to_string(), AttributeSpec { default: Some(name.into()) }),
         // 项目编码
         ("code".to_string(), AttributeSpec { default: None }),
     ])
@@ -61,9 +56,7 @@ pub fn init_unit_structure_field() -> HashMap<String, AttributeSpec> {
         // 单位工程名称
         (
             "name".to_string(),
-            AttributeSpec {
-                default: Some("单位工程".into()),
-            },
+            AttributeSpec { default: Some("单位工程".into()) },
         ),
         // 合计金额（元）
         ("total".to_string(), AttributeSpec { default: None }),

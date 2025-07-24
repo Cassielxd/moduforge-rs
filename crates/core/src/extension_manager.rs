@@ -47,7 +47,10 @@ impl ExtensionManagerBuilder {
     ///     .add_extension(Extensions::N(node))
     ///     .build()?;
     /// ```
-    pub fn add_extension(mut self, extension: Extensions) -> Self {
+    pub fn add_extension(
+        mut self,
+        extension: Extensions,
+    ) -> Self {
         self.extensions.push(extension);
         self
     }
@@ -56,7 +59,10 @@ impl ExtensionManagerBuilder {
     ///
     /// # 参数
     /// * `extensions` - 要添加的扩展列表
-    pub fn add_extensions(mut self, extensions: Vec<Extensions>) -> Self {
+    pub fn add_extensions(
+        mut self,
+        extensions: Vec<Extensions>,
+    ) -> Self {
         self.extensions.extend(extensions);
         self
     }
@@ -75,7 +81,10 @@ impl ExtensionManagerBuilder {
     ///     .add_xml_file("./schemas/custom-marks.xml")
     ///     .build()?;
     /// ```
-    pub fn add_xml_file<P: AsRef<str>>(mut self, xml_file_path: P) -> Self {
+    pub fn add_xml_file<P: AsRef<str>>(
+        mut self,
+        xml_file_path: P,
+    ) -> Self {
         self.xml_files.push(xml_file_path.as_ref().to_string());
         self
     }
@@ -84,7 +93,10 @@ impl ExtensionManagerBuilder {
     ///
     /// # 参数
     /// * `xml_file_paths` - XML schema文件路径列表
-    pub fn add_xml_files<P: AsRef<str>>(mut self, xml_file_paths: &[P]) -> Self {
+    pub fn add_xml_files<P: AsRef<str>>(
+        mut self,
+        xml_file_paths: &[P],
+    ) -> Self {
         for path in xml_file_paths {
             self.xml_files.push(path.as_ref().to_string());
         }
@@ -115,7 +127,10 @@ impl ExtensionManagerBuilder {
     ///     .add_xml_content(xml)
     ///     .build()?;
     /// ```
-    pub fn add_xml_content<S: AsRef<str>>(mut self, xml_content: S) -> Self {
+    pub fn add_xml_content<S: AsRef<str>>(
+        mut self,
+        xml_content: S,
+    ) -> Self {
         self.xml_contents.push(xml_content.as_ref().to_string());
         self
     }
@@ -124,7 +139,10 @@ impl ExtensionManagerBuilder {
     ///
     /// # 参数
     /// * `xml_contents` - XML schema内容列表
-    pub fn add_xml_contents<S: AsRef<str>>(mut self, xml_contents: &[S]) -> Self {
+    pub fn add_xml_contents<S: AsRef<str>>(
+        mut self,
+        xml_contents: &[S],
+    ) -> Self {
         for content in xml_contents {
             self.xml_contents.push(content.as_ref().to_string());
         }
@@ -141,19 +159,26 @@ impl ExtensionManagerBuilder {
 
         // 解析XML文件
         for xml_file in &self.xml_files {
-            let extensions = XmlSchemaParser::parse_multi_file_to_extensions(xml_file)
-                .map_err(|e| crate::error::error_utils::config_error(
-                    format!("解析XML文件 {} 失败: {}", xml_file, e)
-                ))?;
+            let extensions =
+                XmlSchemaParser::parse_multi_file_to_extensions(xml_file)
+                    .map_err(|e| {
+                        crate::error::error_utils::config_error(format!(
+                            "解析XML文件 {} 失败: {}",
+                            xml_file, e
+                        ))
+                    })?;
             all_extensions.extend(extensions);
         }
 
         // 解析XML内容
         for xml_content in &self.xml_contents {
             let extensions = XmlSchemaParser::parse_to_extensions(xml_content)
-                .map_err(|e| crate::error::error_utils::config_error(
-                    format!("解析XML内容失败: {}", e)
-                ))?;
+                .map_err(|e| {
+                    crate::error::error_utils::config_error(format!(
+                        "解析XML内容失败: {}",
+                        e
+                    ))
+                })?;
             all_extensions.extend(extensions);
         }
 
@@ -221,9 +246,7 @@ impl ExtensionManager {
     /// let manager = ExtensionManager::from_xml_file("./schemas/main.xml")?;
     /// ```
     pub fn from_xml_file(xml_file_path: &str) -> ForgeResult<Self> {
-        Self::builder()
-            .add_xml_file(xml_file_path)
-            .build()
+        Self::builder().add_xml_file(xml_file_path).build()
     }
 
     /// 从XML字符串创建ExtensionManager（便捷方法）
@@ -252,9 +275,7 @@ impl ExtensionManager {
     /// let manager = ExtensionManager::from_xml_string(xml)?;
     /// ```
     pub fn from_xml_string(xml_content: &str) -> ForgeResult<Self> {
-        Self::builder()
-            .add_xml_content(xml_content)
-            .build()
+        Self::builder().add_xml_content(xml_content).build()
     }
 
     /// 从多个XML文件创建ExtensionManager（便捷方法）
@@ -278,9 +299,7 @@ impl ExtensionManager {
     /// let manager = ExtensionManager::from_xml_files(&files)?;
     /// ```
     pub fn from_xml_files(xml_file_paths: &[&str]) -> ForgeResult<Self> {
-        Self::builder()
-            .add_xml_files(xml_file_paths)
-            .build()
+        Self::builder().add_xml_files(xml_file_paths).build()
     }
 
     /// 从Extensions和XML文件混合创建ExtensionManager（便捷方法）
@@ -306,7 +325,7 @@ impl ExtensionManager {
     /// ```
     pub fn from_mixed_sources(
         extensions: &[Extensions],
-        xml_file_paths: &[&str]
+        xml_file_paths: &[&str],
     ) -> ForgeResult<Self> {
         Self::builder()
             .add_extensions(extensions.to_vec())
@@ -346,7 +365,10 @@ impl ExtensionManager {
     /// let new_node = Node::create("dynamic_node", NodeSpec::default());
     /// manager.add_extensions(vec![Extensions::N(new_node)])?;
     /// ```
-    pub fn add_extensions(&mut self, new_extensions: Vec<Extensions>) -> ForgeResult<()> {
+    pub fn add_extensions(
+        &mut self,
+        new_extensions: Vec<Extensions>,
+    ) -> ForgeResult<()> {
         // 获取当前所有扩展
         let mut all_extensions = Vec::new();
 
@@ -383,11 +405,18 @@ impl ExtensionManager {
     ///
     /// # 返回值
     /// * `ForgeResult<()>` - 成功或错误
-    pub fn add_xml_file(&mut self, xml_file_path: &str) -> ForgeResult<()> {
-        let extensions = XmlSchemaParser::parse_multi_file_to_extensions(xml_file_path)
-            .map_err(|e| crate::error::error_utils::config_error(
-                format!("解析XML文件 {} 失败: {}", xml_file_path, e)
-            ))?;
+    pub fn add_xml_file(
+        &mut self,
+        xml_file_path: &str,
+    ) -> ForgeResult<()> {
+        let extensions =
+            XmlSchemaParser::parse_multi_file_to_extensions(xml_file_path)
+                .map_err(|e| {
+                    crate::error::error_utils::config_error(format!(
+                        "解析XML文件 {} 失败: {}",
+                        xml_file_path, e
+                    ))
+                })?;
 
         self.add_extensions(extensions)
     }
@@ -399,11 +428,17 @@ impl ExtensionManager {
     ///
     /// # 返回值
     /// * `ForgeResult<()>` - 成功或错误
-    pub fn add_xml_content(&mut self, xml_content: &str) -> ForgeResult<()> {
+    pub fn add_xml_content(
+        &mut self,
+        xml_content: &str,
+    ) -> ForgeResult<()> {
         let extensions = XmlSchemaParser::parse_to_extensions(xml_content)
-            .map_err(|e| crate::error::error_utils::config_error(
-                format!("解析XML内容失败: {}", e)
-            ))?;
+            .map_err(|e| {
+                crate::error::error_utils::config_error(format!(
+                    "解析XML内容失败: {}",
+                    e
+                ))
+            })?;
 
         self.add_extensions(extensions)
     }
@@ -594,7 +629,8 @@ mod tests {
         </schema>
         "#;
 
-        let mut manager = ExtensionManager::from_xml_string(xml_content).unwrap();
+        let mut manager =
+            ExtensionManager::from_xml_string(xml_content).unwrap();
 
         // 验证初始状态
         assert_eq!(manager.get_schema().nodes.len(), 1);

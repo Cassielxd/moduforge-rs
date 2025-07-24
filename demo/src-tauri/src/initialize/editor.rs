@@ -7,7 +7,10 @@ use mf_core::{
 use mf_state::plugin::{Plugin, PluginSpec};
 
 use crate::{
-    core::{collab_editor::{CollabEditor, CollabEditorOptions}, demo_editor::{DemoEditor, DemoEditorOptions}},
+    core::{
+        collab_editor::{CollabEditor, CollabEditorOptions},
+        demo_editor::{DemoEditor, DemoEditorOptions},
+    },
     marks, middleware,
     nodes::{
         fbfx_csxm::{init_fbfx_csxm_fields, CSXM_STR, DE_STR, FBFX_STR},
@@ -28,12 +31,15 @@ pub async fn init_collab_editor(options: CollabEditorOptions) -> CollabEditor {
         Err(e) => {
             println!("创建编辑器失败: {}", e);
             panic!("创建编辑器失败: {}", e);
-        }
+        },
     }
 }
 
 //获取编辑器配置
-pub async fn init_collab_options(create_callback: Arc<dyn NodePoolFnTrait>,room_name:String) -> CollabEditorOptions {
+pub async fn init_collab_options(
+    create_callback: Arc<dyn NodePoolFnTrait>,
+    room_name: String,
+) -> CollabEditorOptions {
     let mut builder = EditorOptionsBuilder::new();
     builder = builder
         .content(Content::NodePoolFn(create_callback))
@@ -42,7 +48,9 @@ pub async fn init_collab_options(create_callback: Arc<dyn NodePoolFnTrait>,room_
         // 添加扩展
         .extensions(init_extension())
         // 添加中间件
-        .add_middleware(middleware::collect_fbfx_csxm::CollectFbfxCsxmMiddleware);
+        .add_middleware(
+            middleware::collect_fbfx_csxm::CollectFbfxCsxmMiddleware,
+        );
     let options = builder.build();
     CollabEditorOptions {
         editor_options: options,
@@ -52,7 +60,9 @@ pub async fn init_collab_options(create_callback: Arc<dyn NodePoolFnTrait>,room_
 }
 
 //获取编辑器配置
-pub async fn init_options(create_callback: Arc<dyn NodePoolFnTrait>) -> DemoEditorOptions {
+pub async fn init_options(
+    create_callback: Arc<dyn NodePoolFnTrait>
+) -> DemoEditorOptions {
     let mut builder = EditorOptionsBuilder::new();
     builder = builder
         .content(Content::NodePoolFn(create_callback))
@@ -61,11 +71,11 @@ pub async fn init_options(create_callback: Arc<dyn NodePoolFnTrait>) -> DemoEdit
         // 添加扩展
         .extensions(init_extension())
         // 添加中间件
-        .add_middleware(middleware::collect_fbfx_csxm::CollectFbfxCsxmMiddleware);
+        .add_middleware(
+            middleware::collect_fbfx_csxm::CollectFbfxCsxmMiddleware,
+        );
     let options = builder.build();
-    DemoEditorOptions {
-        editor_options: options,
-    }
+    DemoEditorOptions { editor_options: options }
 }
 //获取扩展
 pub fn init_extension() -> Vec<Extensions> {

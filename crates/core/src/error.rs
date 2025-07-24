@@ -92,10 +92,7 @@ pub enum ForgeError {
 
     /// 超时错误
     #[error("操作超时: {operation} (超时时间: {timeout_ms}ms)")]
-    Timeout {
-        operation: String,
-        timeout_ms: u64,
-    },
+    Timeout { operation: String, timeout_ms: u64 },
 
     /// 资源不足错误
     #[error("资源不足: {resource_type}")]
@@ -115,10 +112,7 @@ pub enum ForgeError {
 
     /// 验证错误
     #[error("验证失败: {message}")]
-    Validation {
-        message: String,
-        field: Option<String>,
-    },
+    Validation { message: String, field: Option<String> },
 
     /// 外部依赖错误
     #[error("外部依赖错误: {dependency}")]
@@ -130,10 +124,7 @@ pub enum ForgeError {
 
     /// 内部错误（不应该发生的错误）
     #[error("内部错误: {message}")]
-    Internal {
-        message: String,
-        location: Option<String>,
-    },
+    Internal { message: String, location: Option<String> },
 
     /// 兼容性错误，用于包装其他错误类型
     #[error("其他错误: {0}")]
@@ -161,7 +152,9 @@ impl ForgeError {
             ForgeError::ResourceExhausted { .. } => "RESOURCE_EXHAUSTED",
             ForgeError::Concurrency { .. } => "CONCURRENCY_ERROR",
             ForgeError::Validation { .. } => "VALIDATION_ERROR",
-            ForgeError::ExternalDependency { .. } => "EXTERNAL_DEPENDENCY_ERROR",
+            ForgeError::ExternalDependency { .. } => {
+                "EXTERNAL_DEPENDENCY_ERROR"
+            },
             ForgeError::Internal { .. } => "INTERNAL_ERROR",
             ForgeError::Other(_) => "OTHER_ERROR",
         }
@@ -201,15 +194,14 @@ pub mod error_utils {
         result: Result<T, E>,
         context: &str,
     ) -> ForgeResult<T> {
-        result.map_err(|e| ForgeError::Other(anyhow::anyhow!("{}: {}", context, e)))
+        result.map_err(|e| {
+            ForgeError::Other(anyhow::anyhow!("{}: {}", context, e))
+        })
     }
 
     /// 创建状态错误
     pub fn state_error(msg: impl Into<String>) -> ForgeError {
-        ForgeError::State {
-            message: msg.into(),
-            source: None,
-        }
+        ForgeError::State { message: msg.into(), source: None }
     }
 
     /// 创建带源错误的状态错误
@@ -225,10 +217,7 @@ pub mod error_utils {
 
     /// 创建事件错误
     pub fn event_error(msg: impl Into<String>) -> ForgeError {
-        ForgeError::Event {
-            message: msg.into(),
-            source: None,
-        }
+        ForgeError::Event { message: msg.into(), source: None }
     }
 
     /// 创建带源错误的事件错误
@@ -325,10 +314,7 @@ pub mod error_utils {
 
     /// 创建历史记录错误
     pub fn history_error(msg: impl Into<String>) -> ForgeError {
-        ForgeError::History {
-            message: msg.into(),
-            source: None,
-        }
+        ForgeError::History { message: msg.into(), source: None }
     }
 
     /// 创建配置错误
@@ -354,26 +340,17 @@ pub mod error_utils {
 
     /// 创建存储错误
     pub fn storage_error(msg: impl Into<String>) -> ForgeError {
-        ForgeError::Storage {
-            message: msg.into(),
-            source: None,
-        }
+        ForgeError::Storage { message: msg.into(), source: None }
     }
 
     /// 创建缓存错误
     pub fn cache_error(msg: impl Into<String>) -> ForgeError {
-        ForgeError::Cache {
-            message: msg.into(),
-            source: None,
-        }
+        ForgeError::Cache { message: msg.into(), source: None }
     }
 
     /// 创建引擎错误
     pub fn engine_error(msg: impl Into<String>) -> ForgeError {
-        ForgeError::Engine {
-            message: msg.into(),
-            source: None,
-        }
+        ForgeError::Engine { message: msg.into(), source: None }
     }
 
     /// 创建超时错误
@@ -385,23 +362,22 @@ pub mod error_utils {
     }
 
     /// 创建带超时时间的超时错误
-    pub fn timeout_error_with_duration(operation: impl Into<String>, timeout_ms: u64) -> ForgeError {
-        ForgeError::Timeout {
-            operation: operation.into(),
-            timeout_ms,
-        }
+    pub fn timeout_error_with_duration(
+        operation: impl Into<String>,
+        timeout_ms: u64,
+    ) -> ForgeError {
+        ForgeError::Timeout { operation: operation.into(), timeout_ms }
     }
 
     /// 创建运行时错误
     pub fn runtime_error(msg: impl Into<String>) -> ForgeError {
-        ForgeError::Engine {
-            message: msg.into(),
-            source: None,
-        }
+        ForgeError::Engine { message: msg.into(), source: None }
     }
 
     /// 创建资源不足错误
-    pub fn resource_exhausted_error(resource_type: impl Into<String>) -> ForgeError {
+    pub fn resource_exhausted_error(
+        resource_type: impl Into<String>
+    ) -> ForgeError {
         ForgeError::ResourceExhausted {
             resource_type: resource_type.into(),
             current_usage: None,
@@ -424,18 +400,12 @@ pub mod error_utils {
 
     /// 创建并发错误
     pub fn concurrency_error(msg: impl Into<String>) -> ForgeError {
-        ForgeError::Concurrency {
-            message: msg.into(),
-            source: None,
-        }
+        ForgeError::Concurrency { message: msg.into(), source: None }
     }
 
     /// 创建验证错误
     pub fn validation_error(msg: impl Into<String>) -> ForgeError {
-        ForgeError::Validation {
-            message: msg.into(),
-            field: None,
-        }
+        ForgeError::Validation { message: msg.into(), field: None }
     }
 
     /// 创建带字段信息的验证错误
@@ -462,10 +432,7 @@ pub mod error_utils {
 
     /// 创建内部错误
     pub fn internal_error(msg: impl Into<String>) -> ForgeError {
-        ForgeError::Internal {
-            message: msg.into(),
-            location: None,
-        }
+        ForgeError::Internal { message: msg.into(), location: None }
     }
 
     /// 创建带位置信息的内部错误

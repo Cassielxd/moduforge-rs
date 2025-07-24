@@ -80,31 +80,31 @@ use std::collections::HashMap;
 use thiserror::Error;
 
 /// XML Schema 解析错误类型
-/// 
+///
 /// 定义了在XML Schema解析过程中可能出现的各种错误情况
 #[derive(Error, Debug)]
 pub enum XmlSchemaError {
     #[error("XML 解析错误: {0}")]
     XmlParseError(#[from] quick_xml::Error),
-    
+
     #[error("XML 反序列化错误: {0}")]
     DeserializeError(#[from] quick_xml::DeError),
-    
+
     #[error("JSON 值解析错误: {0}")]
     JsonError(#[from] serde_json::Error),
-    
+
     #[error("缺少必需的属性: {0}")]
     MissingAttribute(String),
-    
+
     #[error("无效的节点定义: {0}")]
     InvalidNodeDefinition(String),
-    
+
     #[error("无效的标记定义: {0}")]
     InvalidMarkDefinition(String),
-    
+
     #[error("重复的节点名称: {0}")]
     DuplicateNodeName(String),
-    
+
     #[error("重复的标记名称: {0}")]
     DuplicateMarkName(String),
 
@@ -125,7 +125,7 @@ pub enum XmlSchemaError {
 pub type XmlSchemaResult<T> = Result<T, XmlSchemaError>;
 
 /// XML Schema 解析器
-/// 
+///
 /// 提供完整的XML Schema解析功能，包括：
 /// - 基础XML解析
 /// - 多文件引用解析
@@ -134,7 +134,7 @@ pub type XmlSchemaResult<T> = Result<T, XmlSchemaError>;
 pub struct XmlSchemaParser;
 
 /// 多文件解析上下文
-/// 
+///
 /// 在解析包含多个文件引用的XML Schema时使用，
 /// 用于跟踪解析状态和防止循环引用
 #[derive(Debug, Clone)]
@@ -163,7 +163,7 @@ impl XmlSchemaParser {
     /// # 示例
     /// ```rust
     /// use mf_core::schema_parser::XmlSchemaParser;
-    /// 
+    ///
     /// let xml = r#"
     /// <?xml version="1.0" encoding="UTF-8"?>
     /// <schema top_node="doc">
@@ -174,7 +174,7 @@ impl XmlSchemaParser {
     ///   </nodes>
     /// </schema>
     /// "#;
-    /// 
+    ///
     /// let schema_spec = XmlSchemaParser::parse_from_str(xml)?;
     /// ```
     pub fn parse_from_str(xml_content: &str) -> XmlSchemaResult<SchemaSpec> {
@@ -192,8 +192,9 @@ impl XmlSchemaParser {
     /// # 返回值
     /// * `XmlSchemaResult<SchemaSpec>` - 解析后的SchemaSpec或错误
     pub fn parse_from_file(file_path: &str) -> XmlSchemaResult<SchemaSpec> {
-        let xml_content = std::fs::read_to_string(file_path)
-            .map_err(|e| XmlSchemaError::XmlParseError(quick_xml::Error::Io(e.into())))?;
+        let xml_content = std::fs::read_to_string(file_path).map_err(|e| {
+            XmlSchemaError::XmlParseError(quick_xml::Error::Io(e.into()))
+        })?;
         Self::parse_from_str(&xml_content)
     }
 
@@ -225,10 +226,16 @@ impl XmlSchemaParser {
     ///
     /// let extensions = XmlSchemaParser::parse_to_extensions(xml)?;
     /// ```
-    pub fn parse_to_extensions(xml_content: &str) -> XmlSchemaResult<Vec<Extensions>> {
+    pub fn parse_to_extensions(
+        xml_content: &str
+    ) -> XmlSchemaResult<Vec<Extensions>> {
         // 尝试解析为支持引用的完整格式
-        if let Ok(xml_schema_with_refs) = quick_xml::de::from_str::<XmlSchemaWithReferences>(xml_content) {
-            Self::convert_xml_schema_with_refs_to_extensions(xml_schema_with_refs)
+        if let Ok(xml_schema_with_refs) =
+            quick_xml::de::from_str::<XmlSchemaWithReferences>(xml_content)
+        {
+            Self::convert_xml_schema_with_refs_to_extensions(
+                xml_schema_with_refs,
+            )
         } else {
             // 回退到基础格式
             let xml_schema: XmlSchema = quick_xml::de::from_str(xml_content)?;
@@ -245,9 +252,12 @@ impl XmlSchemaParser {
     ///
     /// # 返回值
     /// * `XmlSchemaResult<Vec<Extensions>>` - 解析后的Extensions列表或错误
-    pub fn parse_extensions_from_file(file_path: &str) -> XmlSchemaResult<Vec<Extensions>> {
-        let xml_content = std::fs::read_to_string(file_path)
-            .map_err(|e| XmlSchemaError::XmlParseError(quick_xml::Error::Io(e.into())))?;
+    pub fn parse_extensions_from_file(
+        file_path: &str
+    ) -> XmlSchemaResult<Vec<Extensions>> {
+        let xml_content = std::fs::read_to_string(file_path).map_err(|e| {
+            XmlSchemaError::XmlParseError(quick_xml::Error::Io(e.into()))
+        })?;
         Self::parse_to_extensions(&xml_content)
     }
 
@@ -275,11 +285,13 @@ impl XmlSchemaParser {
     /// ```
     pub fn parse_multi_file(file_path: &str) -> XmlSchemaResult<SchemaSpec> {
         // 规范化输入路径，提前检查文件是否存在
-        let root_path = std::path::Path::new(file_path)
-            .canonicalize()
-            .map_err(|e| XmlSchemaError::FileNotFound(
-                format!("无法找到文件 {}: {}", file_path, e)
-            ))?;
+        let root_path =
+            std::path::Path::new(file_path).canonicalize().map_err(|e| {
+                XmlSchemaError::FileNotFound(format!(
+                    "无法找到文件 {}: {}",
+                    file_path, e
+                ))
+            })?;
 
         // 创建解析上下文，使用文件所在目录作为基础路径
         let mut context = MultiFileParseContext {
@@ -296,43 +308,47 @@ impl XmlSchemaParser {
     }
 
     /// 改进的文件解析方法（接受 PathBuf 而不是字符串）
-    /// 
+    ///
     /// 新版本的多文件解析核心实现，使用PathBuf提供更好的路径处理
-    /// 
+    ///
     /// # 核心改进
     /// - 使用规范化路径避免路径歧义
     /// - 提前检查文件存在性
     /// - 更清晰的错误信息
     /// - 统一的路径处理逻辑
-    /// 
+    ///
     /// # 参数
     /// * `file_path` - 已规范化的文件路径
     /// * `context` - 多文件解析上下文
-    /// 
+    ///
     /// # 返回值
     /// * `XmlSchemaResult<SchemaSpec>` - 解析后的SchemaSpec或错误
     fn parse_file_with_context_new(
         file_path: &std::path::Path,
-        context: &mut MultiFileParseContext
+        context: &mut MultiFileParseContext,
     ) -> XmlSchemaResult<SchemaSpec> {
         // 检查解析深度，防止无限递归
         if context.current_depth >= context.max_depth {
-            return Err(XmlSchemaError::CircularReference(
-                format!("解析深度超过限制: {}", context.max_depth)
-            ));
+            return Err(XmlSchemaError::CircularReference(format!(
+                "解析深度超过限制: {}",
+                context.max_depth
+            )));
         }
 
         // 使用标准化路径，确保路径唯一性
-        let canonical_path = file_path.canonicalize()
-            .map_err(|e| XmlSchemaError::FileNotFound(
-                format!("无法解析文件路径 {:?}: {}", file_path, e)
-            ))?;
+        let canonical_path = file_path.canonicalize().map_err(|e| {
+            XmlSchemaError::FileNotFound(format!(
+                "无法解析文件路径 {:?}: {}",
+                file_path, e
+            ))
+        })?;
 
         // 检查循环引用，防止无限循环
         if context.parsed_files.contains(&canonical_path) {
-            return Err(XmlSchemaError::CircularReference(
-                format!("检测到循环引用: {:?}", canonical_path)
-            ));
+            return Err(XmlSchemaError::CircularReference(format!(
+                "检测到循环引用: {:?}",
+                canonical_path
+            )));
         }
 
         // 标记文件为已解析，用于循环引用检测
@@ -340,12 +356,16 @@ impl XmlSchemaParser {
         context.current_depth += 1;
 
         // 读取并解析文件内容
-        let xml_content = std::fs::read_to_string(&canonical_path)
-            .map_err(|e| XmlSchemaError::FileNotFound(
-                format!("无法读取文件 {:?}: {}", canonical_path, e)
-            ))?;
+        let xml_content =
+            std::fs::read_to_string(&canonical_path).map_err(|e| {
+                XmlSchemaError::FileNotFound(format!(
+                    "无法读取文件 {:?}: {}",
+                    canonical_path, e
+                ))
+            })?;
 
-        let xml_schema: XmlSchemaWithReferences = quick_xml::de::from_str(&xml_content)?;
+        let xml_schema: XmlSchemaWithReferences =
+            quick_xml::de::from_str(&xml_content)?;
 
         // 初始化合并结果，用于收集所有引用文件的内容
         let mut merged_spec = SchemaSpec {
@@ -363,17 +383,29 @@ impl XmlSchemaParser {
         // 处理imports（导入其他schema，不允许覆盖现有定义）
         if let Some(imports) = xml_schema.imports {
             for import in imports.imports {
-                let import_path = Self::resolve_relative_path(&context.base_path, &import.src)?;
-                let imported_spec = Self::parse_file_with_context_new(&import_path, context)?;
-                Self::merge_schema_spec(&mut merged_spec, imported_spec, false)?;
+                let import_path = Self::resolve_relative_path(
+                    &context.base_path,
+                    &import.src,
+                )?;
+                let imported_spec =
+                    Self::parse_file_with_context_new(&import_path, context)?;
+                Self::merge_schema_spec(
+                    &mut merged_spec,
+                    imported_spec,
+                    false,
+                )?;
             }
         }
 
         // 处理includes（包含其他schema内容，允许覆盖现有定义）
         if let Some(includes) = xml_schema.includes {
             for include in includes.includes {
-                let include_path = Self::resolve_relative_path(&context.base_path, &include.src)?;
-                let included_spec = Self::parse_file_with_context_new(&include_path, context)?;
+                let include_path = Self::resolve_relative_path(
+                    &context.base_path,
+                    &include.src,
+                )?;
+                let included_spec =
+                    Self::parse_file_with_context_new(&include_path, context)?;
                 Self::merge_schema_spec(&mut merged_spec, included_spec, true)?;
             }
         }
@@ -397,19 +429,22 @@ impl XmlSchemaParser {
     }
 
     /// 解析相对路径
-    /// 
+    ///
     /// 将相对路径转换为绝对路径，支持：
     /// - 相对路径解析（基于当前文件目录）
     /// - 绝对路径直接使用
     /// - 路径规范化（去除..和.）
-    /// 
+    ///
     /// # 参数
     /// * `base_path` - 基础路径（当前文件所在目录）
     /// * `relative_path` - 要解析的路径（可能是相对路径或绝对路径）
-    /// 
+    ///
     /// # 返回值
     /// * `XmlSchemaResult<std::path::PathBuf>` - 解析后的绝对路径或错误
-    fn resolve_relative_path(base_path: &std::path::Path, relative_path: &str) -> XmlSchemaResult<std::path::PathBuf> {
+    fn resolve_relative_path(
+        base_path: &std::path::Path,
+        relative_path: &str,
+    ) -> XmlSchemaResult<std::path::PathBuf> {
         let path = if std::path::Path::new(relative_path).is_absolute() {
             // 绝对路径直接使用
             std::path::PathBuf::from(relative_path)
@@ -419,9 +454,12 @@ impl XmlSchemaParser {
         };
 
         // 规范化路径，确保路径存在且唯一
-        path.canonicalize().map_err(|e| XmlSchemaError::PathResolutionError(
-            format!("无法解析路径 {} (基于 {:?}): {}", relative_path, base_path, e)
-        ))
+        path.canonicalize().map_err(|e| {
+            XmlSchemaError::PathResolutionError(format!(
+                "无法解析路径 {} (基于 {:?}): {}",
+                relative_path, base_path, e
+            ))
+        })
     }
 
     /// 从XML文件解析为Extensions列表（支持多文件引用）
@@ -431,13 +469,17 @@ impl XmlSchemaParser {
     ///
     /// # 返回值
     /// * `XmlSchemaResult<Vec<Extensions>>` - 解析后的Extensions列表或错误
-    pub fn parse_multi_file_to_extensions(file_path: &str) -> XmlSchemaResult<Vec<Extensions>> {
+    pub fn parse_multi_file_to_extensions(
+        file_path: &str
+    ) -> XmlSchemaResult<Vec<Extensions>> {
         // 规范化输入路径，提前检查文件是否存在
-        let root_path = std::path::Path::new(file_path)
-            .canonicalize()
-            .map_err(|e| XmlSchemaError::FileNotFound(
-                format!("无法找到文件 {}: {}", file_path, e)
-            ))?;
+        let root_path =
+            std::path::Path::new(file_path).canonicalize().map_err(|e| {
+                XmlSchemaError::FileNotFound(format!(
+                    "无法找到文件 {}: {}",
+                    file_path, e
+                ))
+            })?;
 
         // 创建解析上下文，使用文件所在目录作为基础路径
         let mut context = MultiFileParseContext {
@@ -450,32 +492,39 @@ impl XmlSchemaParser {
             current_depth: 0,
         };
 
-        Self::parse_file_to_extensions_with_context_new(&root_path, &mut context)
+        Self::parse_file_to_extensions_with_context_new(
+            &root_path,
+            &mut context,
+        )
     }
 
     /// 改进的扩展解析方法
     fn parse_file_to_extensions_with_context_new(
         file_path: &std::path::Path,
-        context: &mut MultiFileParseContext
+        context: &mut MultiFileParseContext,
     ) -> XmlSchemaResult<Vec<Extensions>> {
         // 检查解析深度
         if context.current_depth >= context.max_depth {
-            return Err(XmlSchemaError::CircularReference(
-                format!("解析深度超过限制: {}", context.max_depth)
-            ));
+            return Err(XmlSchemaError::CircularReference(format!(
+                "解析深度超过限制: {}",
+                context.max_depth
+            )));
         }
 
         // 使用标准化路径
-        let canonical_path = file_path.canonicalize()
-            .map_err(|e| XmlSchemaError::FileNotFound(
-                format!("无法解析文件路径 {:?}: {}", file_path, e)
-            ))?;
+        let canonical_path = file_path.canonicalize().map_err(|e| {
+            XmlSchemaError::FileNotFound(format!(
+                "无法解析文件路径 {:?}: {}",
+                file_path, e
+            ))
+        })?;
 
         // 检查循环引用
         if context.parsed_files.contains(&canonical_path) {
-            return Err(XmlSchemaError::CircularReference(
-                format!("检测到循环引用: {:?}", canonical_path)
-            ));
+            return Err(XmlSchemaError::CircularReference(format!(
+                "检测到循环引用: {:?}",
+                canonical_path
+            )));
         }
 
         // 标记文件为已解析
@@ -483,12 +532,16 @@ impl XmlSchemaParser {
         context.current_depth += 1;
 
         // 读取并解析文件
-        let xml_content = std::fs::read_to_string(&canonical_path)
-            .map_err(|e| XmlSchemaError::FileNotFound(
-                format!("无法读取文件 {:?}: {}", canonical_path, e)
-            ))?;
+        let xml_content =
+            std::fs::read_to_string(&canonical_path).map_err(|e| {
+                XmlSchemaError::FileNotFound(format!(
+                    "无法读取文件 {:?}: {}",
+                    canonical_path, e
+                ))
+            })?;
 
-        let xml_schema: XmlSchemaWithReferences = quick_xml::de::from_str(&xml_content)?;
+        let xml_schema: XmlSchemaWithReferences =
+            quick_xml::de::from_str(&xml_content)?;
 
         let mut all_extensions = Vec::new();
 
@@ -501,8 +554,15 @@ impl XmlSchemaParser {
         // 处理imports（导入其他schema）
         if let Some(imports) = &xml_schema.imports {
             for import in &imports.imports {
-                let import_path = Self::resolve_relative_path(&context.base_path, &import.src)?;
-                let imported_extensions = Self::parse_file_to_extensions_with_context_new(&import_path, context)?;
+                let import_path = Self::resolve_relative_path(
+                    &context.base_path,
+                    &import.src,
+                )?;
+                let imported_extensions =
+                    Self::parse_file_to_extensions_with_context_new(
+                        &import_path,
+                        context,
+                    )?;
                 all_extensions.extend(imported_extensions);
             }
         }
@@ -510,8 +570,15 @@ impl XmlSchemaParser {
         // 处理includes（包含其他schema内容）
         if let Some(includes) = &xml_schema.includes {
             for include in &includes.includes {
-                let include_path = Self::resolve_relative_path(&context.base_path, &include.src)?;
-                let included_extensions = Self::parse_file_to_extensions_with_context_new(&include_path, context)?;
+                let include_path = Self::resolve_relative_path(
+                    &context.base_path,
+                    &include.src,
+                )?;
+                let included_extensions =
+                    Self::parse_file_to_extensions_with_context_new(
+                        &include_path,
+                        context,
+                    )?;
                 all_extensions.extend(included_extensions);
             }
         }
@@ -532,7 +599,10 @@ impl XmlSchemaParser {
         if let Some(xml_global_attrs) = &xml_schema.global_attributes {
             let mut extension = Extension::new();
             for xml_global_attr in &xml_global_attrs.global_attributes {
-                let global_attr_item = Self::convert_xml_global_attribute_to_item(xml_global_attr.clone())?;
+                let global_attr_item =
+                    Self::convert_xml_global_attribute_to_item(
+                        xml_global_attr.clone(),
+                    )?;
                 extension.add_global_attribute(global_attr_item);
             }
             all_extensions.push(Extensions::E(extension));
@@ -547,13 +617,14 @@ impl XmlSchemaParser {
     /// 使用上下文解析文件为Extensions（支持global_attributes）
     pub fn parse_file_to_extensions_with_context(
         file_path: &str,
-        context: &mut MultiFileParseContext
+        context: &mut MultiFileParseContext,
     ) -> XmlSchemaResult<Vec<Extensions>> {
         // 检查解析深度
         if context.current_depth >= context.max_depth {
-            return Err(XmlSchemaError::CircularReference(
-                format!("解析深度超过限制: {}", context.max_depth)
-            ));
+            return Err(XmlSchemaError::CircularReference(format!(
+                "解析深度超过限制: {}",
+                context.max_depth
+            )));
         }
 
         // 解析文件路径
@@ -563,16 +634,19 @@ impl XmlSchemaParser {
             context.base_path.join(file_path)
         };
 
-        let canonical_path = file_path_buf.canonicalize()
-            .map_err(|e| XmlSchemaError::FileNotFound(
-                format!("无法解析文件路径 {}: {}", file_path, e)
-            ))?;
+        let canonical_path = file_path_buf.canonicalize().map_err(|e| {
+            XmlSchemaError::FileNotFound(format!(
+                "无法解析文件路径 {}: {}",
+                file_path, e
+            ))
+        })?;
 
         // 检查循环引用
         if context.parsed_files.contains(&canonical_path) {
-            return Err(XmlSchemaError::CircularReference(
-                format!("检测到循环引用: {:?}", canonical_path)
-            ));
+            return Err(XmlSchemaError::CircularReference(format!(
+                "检测到循环引用: {:?}",
+                canonical_path
+            )));
         }
 
         // 标记文件为已解析
@@ -580,12 +654,16 @@ impl XmlSchemaParser {
         context.current_depth += 1;
 
         // 读取并解析文件
-        let xml_content = std::fs::read_to_string(&canonical_path)
-            .map_err(|e| XmlSchemaError::FileNotFound(
-                format!("无法读取文件 {:?}: {}", canonical_path, e)
-            ))?;
+        let xml_content =
+            std::fs::read_to_string(&canonical_path).map_err(|e| {
+                XmlSchemaError::FileNotFound(format!(
+                    "无法读取文件 {:?}: {}",
+                    canonical_path, e
+                ))
+            })?;
 
-        let xml_schema: XmlSchemaWithReferences = quick_xml::de::from_str(&xml_content)?;
+        let xml_schema: XmlSchemaWithReferences =
+            quick_xml::de::from_str(&xml_content)?;
 
         let mut all_extensions = Vec::new();
 
@@ -598,7 +676,11 @@ impl XmlSchemaParser {
         // 处理imports（导入其他schema）
         if let Some(imports) = &xml_schema.imports {
             for import in &imports.imports {
-                let imported_extensions = Self::parse_file_to_extensions_with_context(&import.src, context)?;
+                let imported_extensions =
+                    Self::parse_file_to_extensions_with_context(
+                        &import.src,
+                        context,
+                    )?;
                 all_extensions.extend(imported_extensions);
             }
         }
@@ -606,7 +688,11 @@ impl XmlSchemaParser {
         // 处理includes（包含其他schema内容）
         if let Some(includes) = &xml_schema.includes {
             for include in &includes.includes {
-                let included_extensions = Self::parse_file_to_extensions_with_context(&include.src, context)?;
+                let included_extensions =
+                    Self::parse_file_to_extensions_with_context(
+                        &include.src,
+                        context,
+                    )?;
                 all_extensions.extend(included_extensions);
             }
         }
@@ -627,7 +713,10 @@ impl XmlSchemaParser {
         if let Some(xml_global_attrs) = &xml_schema.global_attributes {
             let mut extension = Extension::new();
             for xml_global_attr in &xml_global_attrs.global_attributes {
-                let global_attr_item = Self::convert_xml_global_attribute_to_item(xml_global_attr.clone())?;
+                let global_attr_item =
+                    Self::convert_xml_global_attribute_to_item(
+                        xml_global_attr.clone(),
+                    )?;
                 extension.add_global_attribute(global_attr_item);
             }
             all_extensions.push(Extensions::E(extension));
@@ -642,13 +731,14 @@ impl XmlSchemaParser {
     /// 使用上下文解析文件（支持引用）
     pub fn parse_file_with_context(
         file_path: &str,
-        context: &mut MultiFileParseContext
+        context: &mut MultiFileParseContext,
     ) -> XmlSchemaResult<SchemaSpec> {
         // 检查解析深度
         if context.current_depth >= context.max_depth {
-            return Err(XmlSchemaError::CircularReference(
-                format!("解析深度超过限制: {}", context.max_depth)
-            ));
+            return Err(XmlSchemaError::CircularReference(format!(
+                "解析深度超过限制: {}",
+                context.max_depth
+            )));
         }
 
         // 解析文件路径
@@ -658,16 +748,19 @@ impl XmlSchemaParser {
             context.base_path.join(file_path)
         };
 
-        let canonical_path = file_path_buf.canonicalize()
-            .map_err(|e| XmlSchemaError::FileNotFound(
-                format!("无法解析文件路径 {}: {}", file_path, e)
-            ))?;
+        let canonical_path = file_path_buf.canonicalize().map_err(|e| {
+            XmlSchemaError::FileNotFound(format!(
+                "无法解析文件路径 {}: {}",
+                file_path, e
+            ))
+        })?;
 
         // 检查循环引用
         if context.parsed_files.contains(&canonical_path) {
-            return Err(XmlSchemaError::CircularReference(
-                format!("检测到循环引用: {:?}", canonical_path)
-            ));
+            return Err(XmlSchemaError::CircularReference(format!(
+                "检测到循环引用: {:?}",
+                canonical_path
+            )));
         }
 
         // 标记文件为已解析
@@ -675,12 +768,16 @@ impl XmlSchemaParser {
         context.current_depth += 1;
 
         // 读取并解析文件
-        let xml_content = std::fs::read_to_string(&canonical_path)
-            .map_err(|e| XmlSchemaError::FileNotFound(
-                format!("无法读取文件 {:?}: {}", canonical_path, e)
-            ))?;
+        let xml_content =
+            std::fs::read_to_string(&canonical_path).map_err(|e| {
+                XmlSchemaError::FileNotFound(format!(
+                    "无法读取文件 {:?}: {}",
+                    canonical_path, e
+                ))
+            })?;
 
-        let xml_schema: XmlSchemaWithReferences = quick_xml::de::from_str(&xml_content)?;
+        let xml_schema: XmlSchemaWithReferences =
+            quick_xml::de::from_str(&xml_content)?;
 
         // 处理引用文件
         let mut merged_spec = SchemaSpec {
@@ -695,7 +792,10 @@ impl XmlSchemaParser {
         // 处理当前文件的全局属性
         if let Some(xml_global_attrs) = &xml_schema.global_attributes {
             for xml_global_attr in &xml_global_attrs.global_attributes {
-                let global_attr_item = Self::convert_xml_global_attribute_to_item(xml_global_attr.clone())?;
+                let global_attr_item =
+                    Self::convert_xml_global_attribute_to_item(
+                        xml_global_attr.clone(),
+                    )?;
                 global_attributes.push(global_attr_item);
             }
         }
@@ -709,15 +809,21 @@ impl XmlSchemaParser {
         // 处理imports（导入其他schema）
         if let Some(imports) = xml_schema.imports {
             for import in imports.imports {
-                let imported_spec = Self::parse_file_with_context(&import.src, context)?;
-                Self::merge_schema_spec(&mut merged_spec, imported_spec, false)?;
+                let imported_spec =
+                    Self::parse_file_with_context(&import.src, context)?;
+                Self::merge_schema_spec(
+                    &mut merged_spec,
+                    imported_spec,
+                    false,
+                )?;
             }
         }
 
         // 处理includes（包含其他schema内容）
         if let Some(includes) = xml_schema.includes {
             for include in includes.includes {
-                let included_spec = Self::parse_file_with_context(&include.src, context)?;
+                let included_spec =
+                    Self::parse_file_with_context(&include.src, context)?;
                 Self::merge_schema_spec(&mut merged_spec, included_spec, true)?;
             }
         }
@@ -744,46 +850,54 @@ impl XmlSchemaParser {
     }
 
     /// 从SchemaSpec转换为Extensions
-    pub fn convert_to_extensions_from_spec(schema_spec: SchemaSpec) -> XmlSchemaResult<Vec<Extensions>> {
+    pub fn convert_to_extensions_from_spec(
+        schema_spec: SchemaSpec
+    ) -> XmlSchemaResult<Vec<Extensions>> {
         let xml_schema = XmlSchema {
             top_node: schema_spec.top_node,
             nodes: Some(XmlNodes {
-                nodes: schema_spec.nodes.into_iter().map(|(name, spec)| {
-                    XmlNode {
+                nodes: schema_spec
+                    .nodes
+                    .into_iter()
+                    .map(|(name, spec)| XmlNode {
                         name,
                         group: spec.group,
                         desc: spec.desc,
                         content: spec.content,
                         marks: spec.marks,
                         attrs: spec.attrs.map(|attrs| XmlAttrs {
-                            attrs: attrs.into_iter().map(|(name, attr_spec)| {
-                                XmlAttr {
+                            attrs: attrs
+                                .into_iter()
+                                .map(|(name, attr_spec)| XmlAttr {
                                     name,
                                     default: attr_spec.default,
-                                }
-                            }).collect(),
+                                })
+                                .collect(),
                         }),
-                    }
-                }).collect(),
+                    })
+                    .collect(),
             }),
             marks: Some(XmlMarks {
-                marks: schema_spec.marks.into_iter().map(|(name, spec)| {
-                    XmlMark {
+                marks: schema_spec
+                    .marks
+                    .into_iter()
+                    .map(|(name, spec)| XmlMark {
                         name,
                         group: spec.group,
                         desc: spec.desc,
                         excludes: spec.excludes,
                         spanning: spec.spanning,
                         attrs: spec.attrs.map(|attrs| XmlAttrs {
-                            attrs: attrs.into_iter().map(|(name, attr_spec)| {
-                                XmlAttr {
+                            attrs: attrs
+                                .into_iter()
+                                .map(|(name, attr_spec)| XmlAttr {
                                     name,
                                     default: attr_spec.default,
-                                }
-                            }).collect(),
+                                })
+                                .collect(),
                         }),
-                    }
-                }).collect(),
+                    })
+                    .collect(),
             }),
         };
 
@@ -791,16 +905,16 @@ impl XmlSchemaParser {
     }
 
     /// 合并两个SchemaSpec
-    /// 
+    ///
     /// 将源SchemaSpec合并到目标SchemaSpec中，支持两种合并模式：
     /// - 严格模式（allow_override=false）：不允许覆盖已存在的定义，用于import
     /// - 宽松模式（allow_override=true）：允许覆盖已存在的定义，用于include和主文件
-    /// 
+    ///
     /// # 参数
     /// * `target` - 目标SchemaSpec（会被修改）
     /// * `source` - 源SchemaSpec（合并来源）
     /// * `allow_override` - 是否允许覆盖现有定义
-    /// 
+    ///
     /// # 返回值
     /// * `XmlSchemaResult<()>` - 合并成功或重复定义错误
     fn merge_schema_spec(
@@ -811,9 +925,10 @@ impl XmlSchemaParser {
         // 合并节点定义
         for (name, node_spec) in source.nodes {
             if target.nodes.contains_key(&name) && !allow_override {
-                return Err(XmlSchemaError::DuplicateNodeName(
-                    format!("节点 '{}' 已存在，不允许覆盖", name)
-                ));
+                return Err(XmlSchemaError::DuplicateNodeName(format!(
+                    "节点 '{}' 已存在，不允许覆盖",
+                    name
+                )));
             }
             target.nodes.insert(name, node_spec);
         }
@@ -821,9 +936,10 @@ impl XmlSchemaParser {
         // 合并标记定义
         for (name, mark_spec) in source.marks {
             if target.marks.contains_key(&name) && !allow_override {
-                return Err(XmlSchemaError::DuplicateMarkName(
-                    format!("标记 '{}' 已存在，不允许覆盖", name)
-                ));
+                return Err(XmlSchemaError::DuplicateMarkName(format!(
+                    "标记 '{}' 已存在，不允许覆盖",
+                    name
+                )));
             }
             target.marks.insert(name, mark_spec);
         }
@@ -837,26 +953,31 @@ impl XmlSchemaParser {
     }
 
     /// 将XmlSchema转换为SchemaSpec（不处理引用）
-    /// 
+    ///
     /// 基础转换方法，用于将单个XML Schema结构转换为ModuForge内部格式
-    /// 
+    ///
     /// # 参数
     /// * `xml_schema` - 解析后的XML Schema结构
-    /// 
+    ///
     /// # 返回值
     /// * `XmlSchemaResult<SchemaSpec>` - 转换后的SchemaSpec或错误
-    fn convert_xml_schema_to_spec(xml_schema: XmlSchema) -> XmlSchemaResult<SchemaSpec> {
+    fn convert_xml_schema_to_spec(
+        xml_schema: XmlSchema
+    ) -> XmlSchemaResult<SchemaSpec> {
         Self::convert_to_schema_spec(xml_schema)
     }
 
     /// 将XML Schema结构转换为Extensions列表
-    fn convert_to_extensions(xml_schema: XmlSchema) -> XmlSchemaResult<Vec<Extensions>> {
+    fn convert_to_extensions(
+        xml_schema: XmlSchema
+    ) -> XmlSchemaResult<Vec<Extensions>> {
         let mut extensions = Vec::new();
 
         // 转换节点定义为Node Extensions
         if let Some(xml_nodes) = xml_schema.nodes {
             for xml_node in xml_nodes.nodes {
-                let mut node = Node::create(&xml_node.name, NodeSpec::default());
+                let mut node =
+                    Node::create(&xml_node.name, NodeSpec::default());
 
                 // 设置节点属性
                 if let Some(group) = xml_node.group {
@@ -874,7 +995,8 @@ impl XmlSchemaParser {
 
                 // 设置属性
                 if let Some(xml_attrs) = xml_node.attrs {
-                    let attrs = Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?;
+                    let attrs =
+                        Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?;
                     node.set_attrs(attrs);
                 }
 
@@ -903,7 +1025,8 @@ impl XmlSchemaParser {
 
                 // 设置属性
                 if let Some(xml_attrs) = xml_mark.attrs {
-                    let attrs = Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?;
+                    let attrs =
+                        Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?;
                     mark.set_attrs(attrs);
                 }
 
@@ -923,13 +1046,16 @@ impl XmlSchemaParser {
     }
 
     /// 将支持引用的XML Schema结构转换为Extensions列表
-    fn convert_xml_schema_with_refs_to_extensions(xml_schema: XmlSchemaWithReferences) -> XmlSchemaResult<Vec<Extensions>> {
+    fn convert_xml_schema_with_refs_to_extensions(
+        xml_schema: XmlSchemaWithReferences
+    ) -> XmlSchemaResult<Vec<Extensions>> {
         let mut extensions = Vec::new();
 
         // 转换节点定义为Node Extensions
         if let Some(xml_nodes) = xml_schema.nodes {
             for xml_node in xml_nodes.nodes {
-                let mut node = Node::create(&xml_node.name, NodeSpec::default());
+                let mut node =
+                    Node::create(&xml_node.name, NodeSpec::default());
 
                 // 设置节点属性
                 if let Some(group) = xml_node.group {
@@ -947,7 +1073,8 @@ impl XmlSchemaParser {
 
                 // 设置属性
                 if let Some(xml_attrs) = xml_node.attrs {
-                    let attrs = Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?;
+                    let attrs =
+                        Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?;
                     node.set_attrs(attrs);
                 }
 
@@ -976,7 +1103,8 @@ impl XmlSchemaParser {
 
                 // 设置属性
                 if let Some(xml_attrs) = xml_mark.attrs {
-                    let attrs = Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?;
+                    let attrs =
+                        Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?;
                     mark.set_attrs(attrs);
                 }
 
@@ -988,7 +1116,10 @@ impl XmlSchemaParser {
         if let Some(xml_global_attrs) = xml_schema.global_attributes {
             let mut extension = Extension::new();
             for xml_global_attr in xml_global_attrs.global_attributes {
-                let global_attr_item = Self::convert_xml_global_attribute_to_item(xml_global_attr)?;
+                let global_attr_item =
+                    Self::convert_xml_global_attribute_to_item(
+                        xml_global_attr,
+                    )?;
                 extension.add_global_attribute(global_attr_item);
             }
             extensions.push(Extensions::E(extension));
@@ -1002,7 +1133,9 @@ impl XmlSchemaParser {
     }
 
     /// 将XML Schema结构转换为SchemaSpec
-    fn convert_to_schema_spec(xml_schema: XmlSchema) -> XmlSchemaResult<SchemaSpec> {
+    fn convert_to_schema_spec(
+        xml_schema: XmlSchema
+    ) -> XmlSchemaResult<SchemaSpec> {
         let mut nodes = HashMap::new();
         let mut marks = HashMap::new();
 
@@ -1010,7 +1143,9 @@ impl XmlSchemaParser {
         if let Some(xml_nodes) = xml_schema.nodes {
             for xml_node in xml_nodes.nodes {
                 if nodes.contains_key(&xml_node.name) {
-                    return Err(XmlSchemaError::DuplicateNodeName(xml_node.name.clone()));
+                    return Err(XmlSchemaError::DuplicateNodeName(
+                        xml_node.name.clone(),
+                    ));
                 }
 
                 let node_name = xml_node.name.clone();
@@ -1023,7 +1158,9 @@ impl XmlSchemaParser {
         if let Some(xml_marks) = xml_schema.marks {
             for xml_mark in xml_marks.marks {
                 if marks.contains_key(&xml_mark.name) {
-                    return Err(XmlSchemaError::DuplicateMarkName(xml_mark.name.clone()));
+                    return Err(XmlSchemaError::DuplicateMarkName(
+                        xml_mark.name.clone(),
+                    ));
                 }
 
                 let mark_name = xml_mark.name.clone();
@@ -1032,15 +1169,13 @@ impl XmlSchemaParser {
             }
         }
 
-        Ok(SchemaSpec {
-            nodes,
-            marks,
-            top_node: xml_schema.top_node,
-        })
+        Ok(SchemaSpec { nodes, marks, top_node: xml_schema.top_node })
     }
 
     /// 将XML节点定义转换为NodeSpec
-    fn convert_xml_node_to_spec(xml_node: XmlNode) -> XmlSchemaResult<NodeSpec> {
+    fn convert_xml_node_to_spec(
+        xml_node: XmlNode
+    ) -> XmlSchemaResult<NodeSpec> {
         let attrs = if let Some(xml_attrs) = xml_node.attrs {
             Some(Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?)
         } else {
@@ -1057,7 +1192,9 @@ impl XmlSchemaParser {
     }
 
     /// 将XML标记定义转换为MarkSpec
-    fn convert_xml_mark_to_spec(xml_mark: XmlMark) -> XmlSchemaResult<MarkSpec> {
+    fn convert_xml_mark_to_spec(
+        xml_mark: XmlMark
+    ) -> XmlSchemaResult<MarkSpec> {
         let attrs = if let Some(xml_attrs) = xml_mark.attrs {
             Some(Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?)
         } else {
@@ -1078,7 +1215,7 @@ impl XmlSchemaParser {
         xml_attrs: Vec<XmlAttr>
     ) -> XmlSchemaResult<HashMap<String, AttributeSpec>> {
         let mut attrs = HashMap::new();
-        
+
         for xml_attr in xml_attrs {
             let default_value = if let Some(default_value) = xml_attr.default {
                 Some(default_value)
@@ -1088,9 +1225,7 @@ impl XmlSchemaParser {
 
             attrs.insert(
                 xml_attr.name.clone(),
-                AttributeSpec {
-                    default: default_value,
-                }
+                AttributeSpec { default: default_value },
             );
         }
 
@@ -1116,24 +1251,23 @@ impl XmlSchemaParser {
         let types = if xml_global_attr.types.trim() == "*" {
             vec!["*".to_string()]
         } else {
-            xml_global_attr.types
+            xml_global_attr
+                .types
                 .split_whitespace()
                 .map(|s| s.to_string())
                 .collect()
         };
 
         // 转换属性
-        let attributes = Self::convert_xml_attrs_to_spec(xml_global_attr.attrs)?;
+        let attributes =
+            Self::convert_xml_attrs_to_spec(xml_global_attr.attrs)?;
 
-        Ok(GlobalAttributeItem {
-            types,
-            attributes,
-        })
+        Ok(GlobalAttributeItem { types, attributes })
     }
 }
 
 /// XML Schema 根结构（基础版本）
-/// 
+///
 /// 基础的XML Schema结构，不支持文件引用和全局属性
 /// 适用于简单的单文件schema定义
 #[derive(Debug, Deserialize, Serialize)]
@@ -1150,7 +1284,7 @@ struct XmlSchema {
 }
 
 /// 支持引用的XML Schema 根结构（完整版本）
-/// 
+///
 /// 完整的XML Schema结构，支持：
 /// - 文件引用（import/include）
 /// - 全局属性定义
@@ -1175,7 +1309,7 @@ struct XmlSchemaWithReferences {
 }
 
 /// XML 导入集合
-/// 
+///
 /// 包含多个import引用，用于严格模式的schema合并
 #[derive(Debug, Deserialize, Serialize)]
 struct XmlImports {
@@ -1184,7 +1318,7 @@ struct XmlImports {
 }
 
 /// XML 包含集合
-/// 
+///
 /// 包含多个include引用，用于宽松模式的schema合并
 #[derive(Debug, Deserialize, Serialize)]
 struct XmlIncludes {
@@ -1193,7 +1327,7 @@ struct XmlIncludes {
 }
 
 /// XML 导入定义
-/// 
+///
 /// 单个import引用，指向另一个schema文件
 #[derive(Debug, Deserialize, Serialize)]
 struct XmlImport {
@@ -1203,7 +1337,7 @@ struct XmlImport {
 }
 
 /// XML 包含定义
-/// 
+///
 /// 单个include引用，指向另一个schema文件
 #[derive(Debug, Deserialize, Serialize)]
 struct XmlInclude {
@@ -1213,7 +1347,7 @@ struct XmlInclude {
 }
 
 /// XML 全局属性集合
-/// 
+///
 /// 定义适用于多种节点类型的全局属性
 #[derive(Debug, Deserialize, Serialize)]
 struct XmlGlobalAttributes {
@@ -1222,7 +1356,7 @@ struct XmlGlobalAttributes {
 }
 
 /// XML 全局属性定义
-/// 
+///
 /// 单个全局属性规则，指定哪些节点类型可以使用这些属性
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct XmlGlobalAttribute {
@@ -1236,7 +1370,7 @@ struct XmlGlobalAttribute {
 }
 
 /// XML 节点集合
-/// 
+///
 /// 包含多个节点类型定义
 #[derive(Debug, Deserialize, Serialize)]
 struct XmlNodes {
@@ -1245,7 +1379,7 @@ struct XmlNodes {
 }
 
 /// XML 标记集合
-/// 
+///
 /// 包含多个标记类型定义
 #[derive(Debug, Deserialize, Serialize)]
 struct XmlMarks {
@@ -1254,14 +1388,14 @@ struct XmlMarks {
 }
 
 /// XML 节点定义
-/// 
+///
 /// 单个节点类型的完整定义，包括内容规则、属性和支持的标记
 #[derive(Debug, Deserialize, Serialize)]
 struct XmlNode {
     /// 节点类型名称（唯一标识）
     #[serde(rename = "@name")]
     name: String,
-    
+
     /// 节点分组（如"block"、"inline"等）
     #[serde(rename = "@group")]
     group: Option<String>,
@@ -1279,34 +1413,38 @@ struct XmlNode {
 }
 
 /// XML 标记定义
-/// 
+///
 /// 单个标记类型的完整定义，包括样式规则和属性
 #[derive(Debug, Deserialize, Serialize)]
 struct XmlMark {
     /// 标记类型名称（唯一标识）
     #[serde(rename = "@name")]
     name: String,
-    
+
     /// 标记分组（如"formatting"、"link"等）
     #[serde(rename = "@group")]
     group: Option<String>,
-    
+
     /// 标记描述信息
     #[serde(rename = "@desc")]
     desc: Option<String>,
-    /// 
+    ///
     /// 排斥的标记列表（不能同时使用的标记）
     #[serde(rename = "@excludes")]
     excludes: Option<String>,
     /// 是否为跨度标记（true表示可以跨越多个节点）
-    #[serde(rename = "@spanning", deserialize_with = "deserialize_optional_bool", default)]
+    #[serde(
+        rename = "@spanning",
+        deserialize_with = "deserialize_optional_bool",
+        default
+    )]
     spanning: Option<bool>,
     /// 标记属性定义
     attrs: Option<XmlAttrs>,
 }
 
 /// XML 属性集合
-/// 
+///
 /// 包含多个属性定义
 #[derive(Debug, Deserialize, Serialize)]
 struct XmlAttrs {
@@ -1315,7 +1453,7 @@ struct XmlAttrs {
 }
 
 /// XML 属性定义
-/// 
+///
 /// 单个属性的定义，包括名称和默认值
 /// 默认值会自动转换为合适的JSON类型（布尔、数字、字符串等）
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -1323,37 +1461,43 @@ struct XmlAttr {
     /// 属性名称
     #[serde(rename = "@name")]
     name: String,
-    
+
     /// 属性默认值（自动类型转换）
     /// 支持：布尔值、数字、字符串、JSON对象
-    #[serde(rename = "@default", deserialize_with = "deserialize_optional_value", default)]
+    #[serde(
+        rename = "@default",
+        deserialize_with = "deserialize_optional_value",
+        default
+    )]
     default: Option<Value>,
 }
 
 /// 自定义反序列化器，将字符串自动转换为合适的Value类型
-/// 
+///
 /// 这个反序列化器自动将XML属性值转换为正确的JSON Value类型：
-/// 
+///
 /// # 支持的类型转换
 /// - `"true"` / `"false"` → `Value::Bool(true/false)`
 /// - `"42"` → `Value::Number(42)`
 /// - `"3.14"` → `Value::Number(3.14)`
 /// - `"hello"` → `Value::String("hello")`
 /// - `{"key": "value"}` → `Value::Object`（JSON格式字符串）
-/// 
+///
 /// # 转换优先级
 /// 1. 布尔值识别（true/false）
 /// 2. 整数解析
 /// 3. 浮点数解析
 /// 4. JSON字符串解析
 /// 5. 回退到普通字符串
-/// 
+///
 /// # 参数
 /// * `deserializer` - serde反序列化器
-/// 
+///
 /// # 返回值
 /// * `Result<Option<Value>, D::Error>` - 转换后的值或错误
-fn deserialize_optional_value<'de, D>(deserializer: D) -> Result<Option<Value>, D::Error>
+fn deserialize_optional_value<'de, D>(
+    deserializer: D
+) -> Result<Option<Value>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -1369,10 +1513,12 @@ where
                     // 尝试解析为整数
                     if let Ok(num) = s.parse::<i64>() {
                         Value::Number(serde_json::Number::from(num))
-                    } 
+                    }
                     // 尝试解析为浮点数
                     else if let Ok(num) = s.parse::<f64>() {
-                        if let Some(json_num) = serde_json::Number::from_f64(num) {
+                        if let Some(json_num) =
+                            serde_json::Number::from_f64(num)
+                        {
                             Value::Number(json_num)
                         } else {
                             // 无效的浮点数，回退到字符串
@@ -1385,15 +1531,17 @@ where
                             Err(_) => Value::String(s), // 回退到字符串
                         }
                     }
-                }
+                },
             };
             Ok(Some(value))
-        }
+        },
         // 没有提供default属性
         None => Ok(None),
     }
 }
-fn deserialize_optional_bool<'de, D>(deserializer: D) -> Result<Option<bool>, D::Error>
+fn deserialize_optional_bool<'de, D>(
+    deserializer: D
+) -> Result<Option<bool>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -1407,7 +1555,7 @@ where
             } else {
                 Ok(Some(false))
             }
-        }
+        },
         None => Ok(Some(false)),
     }
 }
@@ -1507,7 +1655,10 @@ mod tests {
 
         let result = XmlSchemaParser::parse_attribute_value("42");
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), Value::Number(serde_json::Number::from(42)));
+        assert_eq!(
+            result.unwrap(),
+            Value::Number(serde_json::Number::from(42))
+        );
 
         let result = XmlSchemaParser::parse_attribute_value("true");
         assert!(result.is_ok());
@@ -1632,26 +1783,52 @@ mod tests {
                     node_count += 1;
                     match node.get_name() {
                         "doc" => {
-                            assert_eq!(node.r#type.group, Some("block".to_string()));
-                            assert_eq!(node.r#type.content, Some("paragraph+".to_string()));
-                            assert_eq!(node.r#type.marks, Some("_".to_string()));
+                            assert_eq!(
+                                node.r#type.group,
+                                Some("block".to_string())
+                            );
+                            assert_eq!(
+                                node.r#type.content,
+                                Some("paragraph+".to_string())
+                            );
+                            assert_eq!(
+                                node.r#type.marks,
+                                Some("_".to_string())
+                            );
                             assert!(node.r#type.attrs.is_some());
                         },
                         "paragraph" => {
-                            assert_eq!(node.r#type.group, Some("block".to_string()));
-                            assert_eq!(node.r#type.content, Some("text*".to_string()));
-                            assert_eq!(node.r#type.marks, Some("strong".to_string()));
+                            assert_eq!(
+                                node.r#type.group,
+                                Some("block".to_string())
+                            );
+                            assert_eq!(
+                                node.r#type.content,
+                                Some("text*".to_string())
+                            );
+                            assert_eq!(
+                                node.r#type.marks,
+                                Some("strong".to_string())
+                            );
                         },
                         "text" => {
-                            assert_eq!(node.r#type.desc, Some("文本节点".to_string()));
+                            assert_eq!(
+                                node.r#type.desc,
+                                Some("文本节点".to_string())
+                            );
                         },
-                        _ => panic!("Unexpected node name: {}", node.get_name()),
+                        _ => {
+                            panic!("Unexpected node name: {}", node.get_name())
+                        },
                     }
                 },
                 Extensions::M(mark) => {
                     mark_count += 1;
                     assert_eq!(mark.get_name(), "strong");
-                    assert_eq!(mark.r#type.group, Some("formatting".to_string()));
+                    assert_eq!(
+                        mark.r#type.group,
+                        Some("formatting".to_string())
+                    );
                     assert_eq!(mark.r#type.spanning, Some(true));
                     assert!(mark.r#type.attrs.is_some());
                 },
@@ -1702,7 +1879,8 @@ mod tests {
         std::fs::write(&marks_path, marks_content).unwrap();
 
         // 创建主文件
-        let main_content = format!(r#"
+        let main_content = format!(
+            r#"
         <?xml version="1.0" encoding="UTF-8"?>
         <schema top_node="doc">
           <imports>
@@ -1714,14 +1892,16 @@ mod tests {
           </nodes>
         </schema>
         "#,
-        base_nodes_path.file_name().unwrap().to_str().unwrap(),
-        marks_path.file_name().unwrap().to_str().unwrap());
+            base_nodes_path.file_name().unwrap().to_str().unwrap(),
+            marks_path.file_name().unwrap().to_str().unwrap()
+        );
 
         let main_path = temp_dir.join("main.xml");
         std::fs::write(&main_path, main_content).unwrap();
 
         // 测试多文件解析
-        let result = XmlSchemaParser::parse_multi_file(main_path.to_str().unwrap());
+        let result =
+            XmlSchemaParser::parse_multi_file(main_path.to_str().unwrap());
         assert!(result.is_ok());
 
         let schema_spec = result.unwrap();
@@ -1748,7 +1928,8 @@ mod tests {
         std::fs::create_dir_all(&temp_dir).unwrap();
 
         // 创建循环引用的文件
-        let file_a_content = format!(r#"
+        let file_a_content = format!(
+            r#"
         <?xml version="1.0" encoding="UTF-8"?>
         <schema>
           <imports>
@@ -1758,9 +1939,12 @@ mod tests {
             <node name="node_a" desc="节点A"/>
           </nodes>
         </schema>
-        "#, "file-b.xml");
+        "#,
+            "file-b.xml"
+        );
 
-        let file_b_content = format!(r#"
+        let file_b_content = format!(
+            r#"
         <?xml version="1.0" encoding="UTF-8"?>
         <schema>
           <imports>
@@ -1770,7 +1954,9 @@ mod tests {
             <node name="node_b" desc="节点B"/>
           </nodes>
         </schema>
-        "#, "file-a.xml");
+        "#,
+            "file-a.xml"
+        );
 
         let file_a_path = temp_dir.join("file-a.xml");
         let file_b_path = temp_dir.join("file-b.xml");
@@ -1779,7 +1965,8 @@ mod tests {
         std::fs::write(&file_b_path, file_b_content).unwrap();
 
         // 测试循环引用检测
-        let result = XmlSchemaParser::parse_multi_file(file_a_path.to_str().unwrap());
+        let result =
+            XmlSchemaParser::parse_multi_file(file_a_path.to_str().unwrap());
         assert!(result.is_err());
 
         if let Err(XmlSchemaError::CircularReference(_)) = result {
@@ -1846,7 +2033,8 @@ mod tests {
                     assert!(second_attr.attributes.contains_key("data-custom"));
 
                     // 验证默认值
-                    let data_custom_attr = &second_attr.attributes["data-custom"];
+                    let data_custom_attr =
+                        &second_attr.attributes["data-custom"];
                     assert!(data_custom_attr.default.is_some());
                     break;
                 }

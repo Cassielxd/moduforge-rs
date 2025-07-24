@@ -88,7 +88,10 @@ impl Node {
     /// * `new_values` - 新的属性值
     ///
     /// # 返回值
-    pub fn update_attr(&self, new_values: imbl::HashMap<String, Value>) -> Self {
+    pub fn update_attr(
+        &self,
+        new_values: imbl::HashMap<String, Value>,
+    ) -> Self {
         let mut new_node = self.clone();
         let new_attrs = self.attrs.update(new_values);
         new_node.attrs = new_attrs;
@@ -101,7 +104,11 @@ impl Node {
     /// * `index` - 插入位置
     /// * `node_id` - 子节点ID
     ///
-    pub fn insert_content_at_index(&self, index: usize, node_id: &str) -> Self {
+    pub fn insert_content_at_index(
+        &self,
+        index: usize,
+        node_id: &str,
+    ) -> Self {
         let mut new_node = self.clone();
         new_node.content.insert(index, node_id.into());
         new_node
@@ -112,7 +119,10 @@ impl Node {
     ///
     /// * `node_ids` - 子节点ID列表
     ///
-    pub fn insert_contents(&self, node_ids: &Vec<String>) -> Self {
+    pub fn insert_contents(
+        &self,
+        node_ids: &Vec<String>,
+    ) -> Self {
         let mut new_node = self.clone();
         for node_id in node_ids {
             new_node.content.push_back(node_id.into());
@@ -125,7 +135,10 @@ impl Node {
     ///
     /// * `node_id` - 子节点ID
     ///
-    pub fn insert_content(&self, node_id: &str) -> Self {
+    pub fn insert_content(
+        &self,
+        node_id: &str,
+    ) -> Self {
         let mut new_node = self.clone();
         new_node.content.push_back(node_id.into());
         new_node
@@ -137,7 +150,10 @@ impl Node {
     ///
     /// * `mark_name` - 标记名称
     ///
-    pub fn remove_mark_by_name(&self, mark_name: &str) -> Self {
+    pub fn remove_mark_by_name(
+        &self,
+        mark_name: &str,
+    ) -> Self {
         let mut new_node = self.clone();
         new_node.marks = new_node
             .marks
@@ -153,7 +169,10 @@ impl Node {
     ///
     /// * `mark_types` - 标记类型列表
     ///
-    pub fn remove_mark(&self, mark_types: &[String]) -> Self {
+    pub fn remove_mark(
+        &self,
+        mark_types: &[String],
+    ) -> Self {
         let mut new_node = self.clone();
         new_node.marks = new_node
             .marks
@@ -169,7 +188,10 @@ impl Node {
     ///
     /// * `marks` - 标记列表
     ///
-    pub fn add_marks(&self, marks: &Vec<Mark>) -> Self {
+    pub fn add_marks(
+        &self,
+        marks: &Vec<Mark>,
+    ) -> Self {
         let mark_types =
             marks.iter().map(|m| m.r#type.clone()).collect::<Vec<String>>();
         let mut new_node = self.clone();

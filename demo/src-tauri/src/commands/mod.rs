@@ -51,7 +51,11 @@ pub struct RemoveMarkRequest {
 #[async_trait]
 pub trait ShareCommand: Command {
     /// 添加节点
-    async fn add_node(&self, tr: &mut Transaction, data: &AddRequest) -> TransformResult<()> {
+    async fn add_node(
+        &self,
+        tr: &mut Transaction,
+        data: &AddRequest,
+    ) -> TransformResult<()> {
         if tr.doc().get_node(&data.parent_id.to_string()).is_none() {
             return Err(anyhow::anyhow!("目标节点不存在".to_string()));
         }
@@ -97,7 +101,11 @@ pub trait ShareCommand: Command {
         Ok(())
     }
     /// 添加标记
-    async fn add_mark(&self, tr: &mut Transaction, data: &AddMarkRequest) -> TransformResult<()> {
+    async fn add_mark(
+        &self,
+        tr: &mut Transaction,
+        data: &AddMarkRequest,
+    ) -> TransformResult<()> {
         if tr.doc().get_node(&data.id.to_string()).is_none() {
             return Err(anyhow::anyhow!("目标节点不存在".to_string()));
         }

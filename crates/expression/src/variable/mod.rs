@@ -133,66 +133,80 @@ impl Variable {
         Value::from(self.shallow_clone())
     }
 
-    pub fn dot(&self, key: &str) -> Option<Variable> {
-        key.split('.')
-            .try_fold(self.shallow_clone(), |var, part| match var {
-                Variable::Object(obj) => {
-                    let reference = obj.borrow();
-                    reference.get(part).map(|v| v.shallow_clone())
-                }
-                _ => None,
-            })
+    pub fn dot(
+        &self,
+        key: &str,
+    ) -> Option<Variable> {
+        key.split('.').try_fold(self.shallow_clone(), |var, part| match var {
+            Variable::Object(obj) => {
+                let reference = obj.borrow();
+                reference.get(part).map(|v| v.shallow_clone())
+            },
+            _ => None,
+        })
     }
 
-    fn dot_head(&self, key: &str) -> Option<Variable> {
+    fn dot_head(
+        &self,
+        key: &str,
+    ) -> Option<Variable> {
         let mut parts = Vec::from_iter(key.split('.'));
         parts.pop();
 
-        parts
-            .iter()
-            .try_fold(self.shallow_clone(), |var, part| match var {
-                Variable::Object(obj) => {
-                    let mut obj_ref = obj.borrow_mut();
-                    Some(match obj_ref.entry(Rc::from(*part)) {
-                        Entry::Occupied(occ) => occ.get().shallow_clone(),
-                        Entry::Vacant(vac) => vac.insert(Self::empty_object()).shallow_clone(),
-                    })
-                }
-                _ => None,
-            })
+        parts.iter().try_fold(self.shallow_clone(), |var, part| match var {
+            Variable::Object(obj) => {
+                let mut obj_ref = obj.borrow_mut();
+                Some(match obj_ref.entry(Rc::from(*part)) {
+                    Entry::Occupied(occ) => occ.get().shallow_clone(),
+                    Entry::Vacant(vac) => {
+                        vac.insert(Self::empty_object()).shallow_clone()
+                    },
+                })
+            },
+            _ => None,
+        })
     }
 
-    fn dot_head_detach(&self, key: &str) -> (Variable, Option<Variable>) {
+    fn dot_head_detach(
+        &self,
+        key: &str,
+    ) -> (Variable, Option<Variable>) {
         let mut parts = Vec::from_iter(key.split('.'));
         parts.pop();
 
         let cloned_self = self.depth_clone(1);
-        let head = parts
-            .iter()
-            .try_fold(cloned_self.shallow_clone(), |var, part| match var {
-                Variable::Object(obj) => {
-                    let mut obj_ref = obj.borrow_mut();
-                    Some(match obj_ref.entry(Rc::from(*part)) {
-                        Entry::Occupied(mut occ) => {
-                            let var = occ.get();
-                            let new_obj = match var {
-                                Variable::Object(_) => var.depth_clone(1),
-                                _ => Variable::empty_object(),
-                            };
+        let head =
+            parts.iter().try_fold(cloned_self.shallow_clone(), |var, part| {
+                match var {
+                    Variable::Object(obj) => {
+                        let mut obj_ref = obj.borrow_mut();
+                        Some(match obj_ref.entry(Rc::from(*part)) {
+                            Entry::Occupied(mut occ) => {
+                                let var = occ.get();
+                                let new_obj = match var {
+                                    Variable::Object(_) => var.depth_clone(1),
+                                    _ => Variable::empty_object(),
+                                };
 
-                            occ.insert(new_obj.shallow_clone());
-                            new_obj
-                        }
-                        Entry::Vacant(vac) => vac.insert(Self::empty_object()).shallow_clone(),
-                    })
+                                occ.insert(new_obj.shallow_clone());
+                                new_obj
+                            },
+                            Entry::Vacant(vac) => {
+                                vac.insert(Self::empty_object()).shallow_clone()
+                            },
+                        })
+                    },
+                    _ => None,
                 }
-                _ => None,
             });
 
         (cloned_self, head)
     }
 
-    pub fn dot_remove(&self, key: &str) -> Option<Variable> {
+    pub fn dot_remove(
+        &self,
+        key: &str,
+    ) -> Option<Variable> {
         let last_part = key.split('.').last()?;
         let head = self.dot_head(key)?;
         let Variable::Object(object_ref) = head else {
@@ -203,7 +217,11 @@ impl Variable {
         object.remove(last_part)
     }
 
-    pub fn dot_insert(&self, key: &str, variable: Variable) -> Option<Variable> {
+    pub fn dot_insert(
+        &self,
+        key: &str,
+        variable: Variable,
+    ) -> Option<Variable> {
         let last_part = key.split('.').last()?;
         let head = self.dot_head(key)?;
         let Variable::Object(object_ref) = head else {
@@ -214,7 +232,11 @@ impl Variable {
         object.insert(Rc::from(last_part), variable)
     }
 
-    pub fn dot_insert_detached(&self, key: &str, variable: Variable) -> Option<Variable> {
+    pub fn dot_insert_detached(
+        &self,
+        key: &str,
+        variable: Variable,
+    ) -> Option<Variable> {
         let last_part = key.split('.').last()?;
         let (new_var, head_opt) = self.dot_head_detach(key);
         let head = head_opt?;
@@ -227,16 +249,27 @@ impl Variable {
         Some(new_var)
     }
 
-    pub fn merge(&mut self, patch: &Variable) -> Variable {
+    pub fn merge(
+        &mut self,
+        patch: &Variable,
+    ) -> Variable {
         let _ = merge_variables(self, patch, true, MergeStrategy::InPlace);
 
         self.shallow_clone()
     }
 
-    pub fn merge_clone(&mut self, patch: &Variable) -> Variable {
+    pub fn merge_clone(
+        &mut self,
+        patch: &Variable,
+    ) -> Variable {
         let mut new_self = self.shallow_clone();
 
-        let _ = merge_variables(&mut new_self, patch, true, MergeStrategy::CloneOnWrite);
+        let _ = merge_variables(
+            &mut new_self,
+            patch,
+            true,
+            MergeStrategy::CloneOnWrite,
+        );
         new_self
     }
 
@@ -256,8 +289,10 @@ impl Variable {
         match self {
             Variable::Array(a) => {
                 let arr = a.borrow();
-                Variable::from_array(arr.iter().map(|v| v.deep_clone()).collect())
-            }
+                Variable::from_array(
+                    arr.iter().map(|v| v.deep_clone()).collect(),
+                )
+            },
             Variable::Object(o) => {
                 let obj = o.borrow();
                 Variable::from_object(
@@ -265,19 +300,24 @@ impl Variable {
                         .map(|(k, v)| (k.clone(), v.deep_clone()))
                         .collect(),
                 )
-            }
+            },
             _ => self.shallow_clone(),
         }
     }
 
-    pub fn depth_clone(&self, depth: usize) -> Self {
+    pub fn depth_clone(
+        &self,
+        depth: usize,
+    ) -> Self {
         match depth.is_zero() {
             true => self.shallow_clone(),
             false => match self {
                 Variable::Array(a) => {
                     let arr = a.borrow();
-                    Variable::from_array(arr.iter().map(|v| v.depth_clone(depth - 1)).collect())
-                }
+                    Variable::from_array(
+                        arr.iter().map(|v| v.depth_clone(depth - 1)).collect(),
+                    )
+                },
                 Variable::Object(o) => {
                     let obj = o.borrow();
                     Variable::from_object(
@@ -285,7 +325,7 @@ impl Variable {
                             .map(|(k, v)| (k.clone(), v.depth_clone(depth - 1)))
                             .collect(),
                     )
-                }
+                },
                 _ => self.shallow_clone(),
             },
         }
@@ -334,13 +374,14 @@ fn merge_variables(
                     if value == &Variable::Null {
                         map.remove(key);
                     } else {
-                        let entry = map.entry(key.clone()).or_insert(Variable::Null);
+                        let entry =
+                            map.entry(key.clone()).or_insert(Variable::Null);
                         merge_variables(entry, value, false, strategy);
                     }
                 }
 
                 return true;
-            }
+            },
             MergeStrategy::CloneOnWrite => {
                 let mut changed = false;
                 let mut new_map = None;
@@ -362,7 +403,8 @@ fn merge_variables(
                         }
                     } else {
                         // Handle nested merging
-                        let entry = map.entry(key.clone()).or_insert(Variable::Null);
+                        let entry =
+                            map.entry(key.clone()).or_insert(Variable::Null);
                         if merge_variables(entry, value, false, strategy) {
                             changed = true;
                         }
@@ -378,7 +420,7 @@ fn merge_variables(
                 }
 
                 return false;
-            }
+            },
         }
     } else {
         let new_value = patch.shallow_clone();
@@ -392,7 +434,10 @@ fn merge_variables(
 }
 
 impl Display for Variable {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut Formatter<'_>,
+    ) -> std::fmt::Result {
         match self {
             Variable::Null => write!(f, "null"),
             Variable::Bool(b) => match *b {
@@ -409,7 +454,7 @@ impl Display for Variable {
                     .collect::<Vec<String>>()
                     .join(",");
                 write!(f, "[{s}]")
-            }
+            },
             Variable::Object(obj) => {
                 let obj = obj.borrow();
                 let s = obj
@@ -419,20 +464,26 @@ impl Display for Variable {
                     .join(",");
 
                 write!(f, "{{{s}}}")
-            }
+            },
             Variable::Dynamic(d) => write!(f, "{d}"),
         }
     }
 }
 
 impl Debug for Variable {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut Formatter<'_>,
+    ) -> std::fmt::Result {
         write!(f, "{}", self)
     }
 }
 
 impl PartialEq for Variable {
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(
+        &self,
+        other: &Self,
+    ) -> bool {
         match (&self, &other) {
             (Variable::Null, Variable::Null) => true,
             (Variable::Bool(b1), Variable::Bool(b2)) => b1 == b2,
@@ -440,7 +491,9 @@ impl PartialEq for Variable {
             (Variable::String(s1), Variable::String(s2)) => s1 == s2,
             (Variable::Array(a1), Variable::Array(a2)) => a1 == a2,
             (Variable::Object(obj1), Variable::Object(obj2)) => obj1 == obj2,
-            (Variable::Dynamic(d1), Variable::Dynamic(d2)) => Rc::ptr_eq(d1, d2),
+            (Variable::Dynamic(d1), Variable::Dynamic(d2)) => {
+                Rc::ptr_eq(d1, d2)
+            },
             _ => false,
         }
     }
@@ -456,17 +509,16 @@ mod tests {
 
     #[test]
     fn insert_detached() {
-        let some_data: Variable = json!({ "customer": { "firstName": "John" }}).into();
+        let some_data: Variable =
+            json!({ "customer": { "firstName": "John" }}).into();
 
         let a_a = some_data
             .dot_insert_detached("a.a", Variable::Number(dec!(1)))
             .unwrap();
-        let a_b = a_a
-            .dot_insert_detached("a.b", Variable::Number(dec!(2)))
-            .unwrap();
-        let a_c = a_b
-            .dot_insert_detached("a.c", Variable::Number(dec!(3)))
-            .unwrap();
+        let a_b =
+            a_a.dot_insert_detached("a.b", Variable::Number(dec!(2))).unwrap();
+        let a_c =
+            a_b.dot_insert_detached("a.c", Variable::Number(dec!(3))).unwrap();
 
         assert_eq!(a_a.dot("a"), Some(Variable::from(json!({ "a": 1 }))));
         assert_eq!(

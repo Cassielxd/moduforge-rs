@@ -26,10 +26,7 @@ pub struct IntelliSense<'arena> {
 
 impl<'arena> IntelliSense<'arena> {
     pub fn new() -> Self {
-        Self {
-            arena: UnsafeArena::new(),
-            lexer: Lexer::new(),
-        }
+        Self { arena: UnsafeArena::new(), lexer: Lexer::new() }
     }
 
     pub fn type_check(
@@ -40,7 +37,8 @@ impl<'arena> IntelliSense<'arena> {
         let arena = self.arena.get();
 
         let tokens = self.lexer.tokenize(source).ok()?;
-        let parser = Parser::try_new(tokens, &arena).map(|p| p.standard()).ok()?;
+        let parser =
+            Parser::try_new(tokens, &arena).map(|p| p.standard()).ok()?;
 
         let parser_result = parser.with_metadata().parse();
         let ast = parser_result.root;

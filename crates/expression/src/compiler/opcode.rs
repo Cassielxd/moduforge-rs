@@ -43,9 +43,7 @@ pub enum Opcode {
     Object,
     AssignedObjectBegin,
     AssignedObjectStep,
-    AssignedObjectEnd {
-        with_return: bool,
-    },
+    AssignedObjectEnd { with_return: bool },
     Len,
     IncrementIt,
     IncrementCount,
@@ -54,18 +52,9 @@ pub enum Opcode {
     Pointer,
     Begin,
     End,
-    CallFunction {
-        kind: FunctionKind,
-        arg_count: u32,
-    },
-    CallMethod {
-        kind: MethodKind,
-        arg_count: u32,
-    },
-    Interval {
-        left_bracket: Bracket,
-        right_bracket: Bracket,
-    },
+    CallFunction { kind: FunctionKind, arg_count: u32 },
+    CallMethod { kind: MethodKind, arg_count: u32 },
+    Interval { left_bracket: Bracket, right_bracket: Bracket },
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Display)]

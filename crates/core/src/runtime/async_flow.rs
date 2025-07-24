@@ -2,8 +2,7 @@ use std::{sync::Arc};
 
 use crate::{
     runtime::async_processor::{
-        AsyncProcessor, ProcessorError, TaskProcessor,
-        TaskResult,
+        AsyncProcessor, ProcessorError, TaskProcessor, TaskResult,
     },
     config::ProcessorConfig,
     types::{ProcessorResult, TaskParams, TransactionStatus},
