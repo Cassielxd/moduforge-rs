@@ -4,9 +4,7 @@
 use app_lib::{initialize::init_contex, router::build_app, serve::AppBuilder};
 use axum::{http::StatusCode, response::IntoResponse, Router};
 use mf_state::init_logging;
-use tauri::{
-    tray::TrayIconBuilder, tray::TrayIconEvent, AppHandle, Listener, Manager,
-};
+use tauri::{AppHandle, Manager};
 
 // 自定义事件处理函数
 fn handle_tauri_error(error: tauri::Error) {

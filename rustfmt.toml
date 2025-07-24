@@ -1,4 +1,4 @@
-edition="2021"
+edition="2024"
 # 最大行宽
 max_width = 80
 # 硬性限制行宽

@@ -66,5 +66,3 @@ impl GothamState {
         self.try_take::<T>()
     }
 }
-
-
