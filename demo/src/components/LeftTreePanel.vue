@@ -145,11 +145,17 @@ export default defineComponent({
             editor_name: rootStore.getRootId,
             parent_id: currentTreeItem.value.id,
             type: type,
-            attrs: { name: newNodeName.value.trim(), }
+            attrs: { 
+              name: newNodeName.value.trim(),
+              "collab": false // 默认先不连接在线协作 
+            }
           });
         } else {
           // 没有父节点，调用 addRootTree 添加根节点
-          newNode = await addRootTree({ name: newNodeName.value.trim() });
+          newNode = await addRootTree({ 
+            name: newNodeName.value.trim(), 
+            "collab": false // 默认先不连接在线协作
+          });
           rootStore.setRootId(newNode.id);
         }
         historyStore.refreshHistory(rootStore.getRootId || "");
