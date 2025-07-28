@@ -1,23 +1,37 @@
-//! ModuForge-RS 宏定义模块
+//! ModuForge-RS 声明式宏
 //!
-//! 该模块提供了用于简化代码编写的自定义宏，包括：
-//! - 命令宏
-//! - 扩展宏
-//! - 标记宏
-//! - 节点宏
-//! - 插件宏
+//! 该模块提供了ModuForge项目的声明式宏，包括：
+//! - impl_command!: 快速实现Command trait
+//! - impl_extension!: 创建Extension实例
+//! - impl_plugin!: 快速实现Plugin trait
+//! - mark!: 创建Mark实例
+//! - node!: 创建Node实例
 //!
-//! 主要组件：
-//! - `command`: 命令宏，用于定义命令
-//! - `extension`: 扩展宏，用于定义扩展
-//! - `mark`: 标记宏，用于定义标记
-//! - `node`: 节点宏，用于定义节点
-//! - `plugin`: 插件宏，用于定义插件
+//! ## 注意
+//! 
+//! 此crate现在是普通的库crate，不是proc-macro crate，
+//! 所以可以正常导出声明式宏。
 //!
-//! 这些宏可以帮助开发者更简洁地定义各种组件，减少样板代码。
+//! ## 使用方法
+//! 
+//! ```toml
+//! [dependencies]
+//! mf-macro = { path = "../macro" }
+//! ```
+//! 
+//! ```rust
+//! use mf_macro::{impl_command, mark, node, impl_plugin};
+//! ```
 
 pub mod command;
 pub mod extension;
 pub mod mark;
 pub mod node;
 pub mod plugin;
+
+// 重新导出所有宏
+pub use command::*;
+pub use extension::*;
+pub use mark::*;
+pub use node::*;
+pub use plugin::*;

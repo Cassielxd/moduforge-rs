@@ -12,11 +12,11 @@ repository = {workspace=true}
 name = "mf_macro"
 path="./src/lib.rs"
 
-
 [dependencies]
-anyhow = {workspace=true}
 moduforge-model = {version = "0.4.12", path = "../model"}
 moduforge-state = {version = "0.4.12", path = "../state"}
 moduforge-transform = {version = "0.4.12", path = "../transform"}
 moduforge-core = {version = "0.4.12", path = "../core"}
+anyhow = {workspace=true}
+async-trait = {workspace=true}
 

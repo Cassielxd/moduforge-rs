@@ -1,0 +1,48 @@
+[package]
+name = "moduforge-contex"
+version = {workspace=true}
+edition = {workspace=true}
+description = "moduforge 依赖注入容器"
+authors = {workspace=true}
+license = {workspace=true}
+documentation = {workspace=true}
+homepage = {workspace=true}
+repository = {workspace=true}
+[lib]
+name = "mf_contex"
+
+
+
+
+
+
+[dependencies]
+# 异步支持
+async-trait = {workspace=true}
+tokio = {workspace=true}
+# 错误处理
+anyhow = {workspace=true}
+thiserror = {workspace=true}
+# 并发容器
+dashmap = {workspace=true}
+# 锁
+parking_lot = {workspace=true}
+# 单次初始化
+once_cell = {workspace=true}
+# 序列化
+serde = {workspace=true}
+# 哈希
+ahash = {workspace=true}
+# 构造器调用
+ctor = {workspace=true}
+# UUID生成
+uuid = {workspace=true}
+# 日志系统
+tracing = {workspace=true}
+tracing-subscriber = {workspace=true}
+# 宏支持 - 使用derive crate而不是macro crate
+moduforge-macros-derive = {version = "0.4.12", path = "../derive"}
+# JSON支持
+serde_json = {workspace=true}
+# 时间处理
+chrono = {workspace=true}
