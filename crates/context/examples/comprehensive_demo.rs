@@ -10,7 +10,7 @@
 //! 7. Bean工厂 - 复杂对象创建
 //! 8. 循环依赖检测 - 安全的依赖图管理
 
-use mf_contex::*;
+use mf_context::*;
 use std::{
     fmt::Debug, 
     sync::Arc, 
@@ -722,7 +722,7 @@ async fn demo_bean_factories() -> ContainerResult<()> {
     println!("注意: Bean工厂在初始化时已被调用，创建了相应的实例");
     
     // 展示注册的Bean信息
-    let registry = mf_contex::registry::global_registry();
+    let registry = mf_context::registry::global_registry();
     let components = registry.get_all_components();
     
     println!("\n>> Bean工厂注册的组件:");
@@ -786,7 +786,7 @@ async fn demo_error_handling() -> ContainerResult<()> {
 async fn show_container_statistics() -> ContainerResult<()> {
     println!("\n=== 📊 容器统计信息 ===");
     
-    let registry = mf_contex::registry::global_registry();
+    let registry = mf_context::registry::global_registry();
     let components = registry.get_all_components();
     
     println!("\n>> 注册的组件总览:");

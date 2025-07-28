@@ -168,10 +168,10 @@ pub fn derive_component(input: TokenStream) -> TokenStream {
     
     let component_name = args.name.unwrap_or_else(|| format!("{}", name));
     let lifecycle = match args.lifecycle.as_deref() {
-        Some("singleton") => quote! { ::mf_contex::Lifecycle::Singleton },
-        Some("transient") => quote! { ::mf_contex::Lifecycle::Transient },
-        Some("scoped") => quote! { ::mf_contex::Lifecycle::Scoped },
-        _ => quote! { ::mf_contex::Lifecycle::Singleton },
+        Some("singleton") => quote! { ::mf_context::Lifecycle::Singleton },
+        Some("transient") => quote! { ::mf_context::Lifecycle::Transient },
+        Some("scoped") => quote! { ::mf_context::Lifecycle::Scoped },
+        _ => quote! { ::mf_context::Lifecycle::Singleton },
     };
     let supports_concurrent_read = args.concurrent_read;
     let requires_async_lock = args.async_lock;
@@ -183,7 +183,7 @@ pub fn derive_component(input: TokenStream) -> TokenStream {
         quote! {
             let profiles = vec![#(#profile_names),*];
             let profile_refs: Vec<&str> = profiles.iter().map(|s| s.as_str()).collect();
-            if !::mf_contex::profile::ProfileCondition::any_of(&profile_refs).matches() {
+            if !::mf_context::profile::ProfileCondition::any_of(&profile_refs).matches() {
                 return;
             }
         }
@@ -193,18 +193,18 @@ pub fn derive_component(input: TokenStream) -> TokenStream {
     
     let expanded = quote! {
         #[automatically_derived]
-        impl #impl_generics ::mf_contex::Component for #name #ty_generics #where_clause {
+        impl #impl_generics ::mf_context::Component for #name #ty_generics #where_clause {
             fn component_name() -> &'static str {
                 #component_name
             }
             
-            fn lifecycle() -> ::mf_contex::Lifecycle {
+            fn lifecycle() -> ::mf_context::Lifecycle {
                 #lifecycle
             }
         }
         
         #[automatically_derived]
-        impl #impl_generics ::mf_contex::MutableComponent for #name #ty_generics #where_clause {
+        impl #impl_generics ::mf_context::MutableComponent for #name #ty_generics #where_clause {
             fn supports_concurrent_read() -> bool {
                 #supports_concurrent_read
             }
@@ -214,10 +214,10 @@ pub fn derive_component(input: TokenStream) -> TokenStream {
             }
         }
         
-        #[::mf_contex::ctor::ctor]
+        #[::mf_context::ctor::ctor]
         fn #name() {
             #condition_check
-            ::mf_contex::registry::auto_register_component_with_auto_proxy::<#name>(#auto_proxy);
+            ::mf_context::registry::auto_register_component_with_auto_proxy::<#name>(#auto_proxy);
         }
     };
     
@@ -279,7 +279,7 @@ pub fn derive_injectable(input: TokenStream) -> TokenStream {
         impl #impl_generics #name #ty_generics #where_clause {
             pub async fn new_with_dependencies(
                 #(#constructor_params),*
-            ) -> ::mf_contex::ContainerResult<Self> {
+            ) -> ::mf_context::ContainerResult<Self> {
                 Ok(Self {
                     #(#constructor_assignments,)*
                     #(#other_fields,)*
@@ -303,10 +303,10 @@ pub fn service(args: TokenStream, input: TokenStream) -> TokenStream {
     let name = &input_struct.ident;
     let component_name = args.name.unwrap_or_else(|| format!("{}", name));
     let lifecycle = match args.lifecycle.as_deref() {
-        Some("singleton") => quote! { ::mf_contex::Lifecycle::Singleton },
-        Some("transient") => quote! { ::mf_contex::Lifecycle::Transient },
-        Some("scoped") => quote! { ::mf_contex::Lifecycle::Scoped },
-        _ => quote! { ::mf_contex::Lifecycle::Singleton },
+        Some("singleton") => quote! { ::mf_context::Lifecycle::Singleton },
+        Some("transient") => quote! { ::mf_context::Lifecycle::Transient },
+        Some("scoped") => quote! { ::mf_context::Lifecycle::Scoped },
+        _ => quote! { ::mf_context::Lifecycle::Singleton },
     };
     let supports_concurrent_read = args.concurrent_read;
     let requires_async_lock = args.async_lock;
@@ -318,7 +318,7 @@ pub fn service(args: TokenStream, input: TokenStream) -> TokenStream {
         quote! {
             let profiles = vec![#(#profile_names),*];
             let profile_refs: Vec<&str> = profiles.iter().map(|s| s.as_str()).collect();
-            if !::mf_contex::profile::ProfileCondition::any_of(&profile_refs).matches() {
+            if !::mf_context::profile::ProfileCondition::any_of(&profile_refs).matches() {
                 return;
             }
         }
@@ -329,17 +329,17 @@ pub fn service(args: TokenStream, input: TokenStream) -> TokenStream {
     let expanded = quote! {
         #input_struct
         
-        impl ::mf_contex::Component for #name {
+        impl ::mf_context::Component for #name {
             fn component_name() -> &'static str {
                 #component_name
             }
             
-            fn lifecycle() -> ::mf_contex::Lifecycle {
+            fn lifecycle() -> ::mf_context::Lifecycle {
                 #lifecycle
             }
         }
         
-        impl ::mf_contex::MutableComponent for #name {
+        impl ::mf_context::MutableComponent for #name {
             fn supports_concurrent_read() -> bool {
                 #supports_concurrent_read
             }
@@ -349,10 +349,10 @@ pub fn service(args: TokenStream, input: TokenStream) -> TokenStream {
             }
         }
         
-        #[::mf_contex::ctor::ctor]
+        #[::mf_context::ctor::ctor]
         fn #name() {
             #condition_check
-            ::mf_contex::registry::auto_register_component_with_auto_proxy::<#name>(#auto_proxy);
+            ::mf_context::registry::auto_register_component_with_auto_proxy::<#name>(#auto_proxy);
         }
     };
     
@@ -371,10 +371,10 @@ pub fn bean(args: TokenStream, input: TokenStream) -> TokenStream {
     let fn_name = &input_fn.sig.ident;
     let bean_name = args.name.unwrap_or_else(|| format!("{}", fn_name));
     let lifecycle = match args.lifecycle.as_deref() {
-        Some("singleton") => quote! { ::mf_contex::Lifecycle::Singleton },
-        Some("transient") => quote! { ::mf_contex::Lifecycle::Transient },
-        Some("scoped") => quote! { ::mf_contex::Lifecycle::Scoped },
-        _ => quote! { ::mf_contex::Lifecycle::Singleton },
+        Some("singleton") => quote! { ::mf_context::Lifecycle::Singleton },
+        Some("transient") => quote! { ::mf_context::Lifecycle::Transient },
+        Some("scoped") => quote! { ::mf_context::Lifecycle::Scoped },
+        _ => quote! { ::mf_context::Lifecycle::Singleton },
     };
     
     // 提取返回类型
@@ -391,9 +391,9 @@ pub fn bean(args: TokenStream, input: TokenStream) -> TokenStream {
     let expanded = quote! {
         #input_fn
         
-        #[::mf_contex::ctor::ctor]
+        #[::mf_context::ctor::ctor]
         fn #register_fn_name() {
-            ::mf_contex::registry::register_bean_factory::<_, _, #return_type>(
+            ::mf_context::registry::register_bean_factory::<_, _, #return_type>(
                 #bean_name,
                 || Box::pin(async move {
                     let result = #fn_name().await;
@@ -448,11 +448,11 @@ pub fn derive_before_aspect(input: TokenStream) -> TokenStream {
     );
     
     let expanded = quote! {
-        #[::mf_contex::ctor::ctor]
+        #[::mf_context::ctor::ctor]
         fn #register_fn_name() {
-            let pointcut = ::mf_contex::aop::Pointcut::new(#type_pattern, #method_pattern);
-            let aspect = Box::new(<#name>::default()) as Box<dyn ::mf_contex::aop::BeforeAspect>;
-            ::mf_contex::aop::add_before_aspect(pointcut, aspect);
+            let pointcut = ::mf_context::aop::Pointcut::new(#type_pattern, #method_pattern);
+            let aspect = Box::new(<#name>::default()) as Box<dyn ::mf_context::aop::BeforeAspect>;
+            ::mf_context::aop::add_before_aspect(pointcut, aspect);
         }
     };
     
@@ -500,11 +500,11 @@ pub fn derive_after_aspect(input: TokenStream) -> TokenStream {
     );
     
     let expanded = quote! {
-        #[::mf_contex::ctor::ctor]
+        #[::mf_context::ctor::ctor]
         fn #register_fn_name() {
-            let pointcut = ::mf_contex::aop::Pointcut::new(#type_pattern, #method_pattern);
-            let aspect = Box::new(<#name>::default()) as Box<dyn ::mf_contex::aop::AfterAspect>;
-            ::mf_contex::aop::add_after_aspect(pointcut, aspect);
+            let pointcut = ::mf_context::aop::Pointcut::new(#type_pattern, #method_pattern);
+            let aspect = Box::new(<#name>::default()) as Box<dyn ::mf_context::aop::AfterAspect>;
+            ::mf_context::aop::add_after_aspect(pointcut, aspect);
         }
     };
     
@@ -552,11 +552,11 @@ pub fn derive_after_returning_aspect(input: TokenStream) -> TokenStream {
     );
     
     let expanded = quote! {
-        #[::mf_contex::ctor::ctor]
+        #[::mf_context::ctor::ctor]
         fn #register_fn_name() {
-            let pointcut = ::mf_contex::aop::Pointcut::new(#type_pattern, #method_pattern);
-            let aspect = Box::new(<#name>::default()) as Box<dyn ::mf_contex::aop::AfterReturningAspect>;
-            ::mf_contex::aop::add_after_returning_aspect(pointcut, aspect);
+            let pointcut = ::mf_context::aop::Pointcut::new(#type_pattern, #method_pattern);
+            let aspect = Box::new(<#name>::default()) as Box<dyn ::mf_context::aop::AfterReturningAspect>;
+            ::mf_context::aop::add_after_returning_aspect(pointcut, aspect);
         }
     };
     
@@ -604,11 +604,11 @@ pub fn derive_after_throwing_aspect(input: TokenStream) -> TokenStream {
     );
     
     let expanded = quote! {
-        #[::mf_contex::ctor::ctor]
+        #[::mf_context::ctor::ctor]
         fn #register_fn_name() {
-            let pointcut = ::mf_contex::aop::Pointcut::new(#type_pattern, #method_pattern);
-            let aspect = Box::new(<#name>::default()) as Box<dyn ::mf_contex::aop::AfterThrowingAspect>;
-            ::mf_contex::aop::add_after_throwing_aspect(pointcut, aspect);
+            let pointcut = ::mf_context::aop::Pointcut::new(#type_pattern, #method_pattern);
+            let aspect = Box::new(<#name>::default()) as Box<dyn ::mf_context::aop::AfterThrowingAspect>;
+            ::mf_context::aop::add_after_throwing_aspect(pointcut, aspect);
         }
     };
     
@@ -650,7 +650,7 @@ pub fn auto_aop(_args: TokenStream, input: TokenStream) -> TokenStream {
         #(#fn_attrs)*
         #fn_vis #fn_sig {
             let args = #args_vec;
-            ::mf_contex::aop::apply_aspects(
+            ::mf_context::aop::apply_aspects(
                 std::any::type_name::<Self>(),
                 stringify!(#fn_name),
                 args,
@@ -720,11 +720,11 @@ pub fn derive_around_aspect(input: TokenStream) -> TokenStream {
     );
     
     let expanded = quote! {
-        #[::mf_contex::ctor::ctor]
+        #[::mf_context::ctor::ctor]
         fn #register_fn_name() {
-            let pointcut = ::mf_contex::aop::Pointcut::new(#type_pattern, #method_pattern);
-            let aspect = Box::new(<#name>::default()) as Box<dyn ::mf_contex::aop::AroundAspect>;
-            ::mf_contex::aop::add_around_aspect(pointcut, aspect);
+            let pointcut = ::mf_context::aop::Pointcut::new(#type_pattern, #method_pattern);
+            let aspect = Box::new(<#name>::default()) as Box<dyn ::mf_context::aop::AroundAspect>;
+            ::mf_context::aop::add_around_aspect(pointcut, aspect);
         }
     };
     

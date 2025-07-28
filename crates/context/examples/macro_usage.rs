@@ -1,4 +1,4 @@
-use mf_contex::*;
+use mf_context::*;
 use std::{fmt::Debug, sync::Arc, collections::HashMap};
 
 // 使用Component derive宏定义一个简单组件

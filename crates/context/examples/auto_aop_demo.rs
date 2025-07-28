@@ -3,7 +3,7 @@
 //! 展示如何使用AOP代理系统自动拦截服务方法调用，
 //! 无需手动调用apply_aspects
 
-use mf_contex::*;
+use mf_context::*;
 use std::{fmt::Debug, sync::Arc, collections::HashMap};
 use async_trait::async_trait;
 

@@ -1,4 +1,4 @@
-use mf_contex::*;
+use mf_context::*;
 use std::{fmt::Debug, sync::Arc};
 use async_trait::async_trait;
 
@@ -92,8 +92,8 @@ impl Component for AppConfig {
 
 // 手动注册组件
 fn register_components() -> ContainerResult<()> {
-    use mf_contex::registry::global_registry;
-    use mf_contex::component::ComponentFactory;
+    use mf_context::registry::global_registry;
+    use mf_context::component::ComponentFactory;
     
     // 注册数据库服务
     let db_factory: ComponentFactory = Box::new(|_resolver| {
