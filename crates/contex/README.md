@@ -820,3 +820,32 @@ pub enum ContainerError {
 ## 许可证
 
 MIT License
+
+## 自动代理机制说明
+
+> **自动代理机制说明**
+>
+> 当前 IoC 容器的 `auto_proxy` 配置项和 `create_aop_proxy_if_needed` 方法，主要用于兼容 Spring 风格的自动代理配置。由于 Rust 类型系统的限制，**无法像 Java/Spring 那样在运行时为任意类型自动生成动态代理**。因此，`create_aop_proxy_if_needed` 目前仅作为标记和日志用途，实际返回原始实例，不会自动包裹代理。
+>
+> **如何实现AOP拦截？**
+>
+> - 推荐使用 `aop_proxy!`、`proxy_method!` 等宏，或在服务方法中手动调用 `apply_aspects`，实现方法级别的切面拦截。
+> - 只有通过这些宏或手动调用，才能真正实现方法的AOP拦截。
+> - `auto_proxy` 仅作为配置兼容和未来扩展的钩子，不会自动生效。
+>
+> **示例：**
+>
+> ```rust
+> // 推荐用法：使用宏生成AOP代理
+> aop_proxy!(
+>     MyService,
+>     MyServiceProxy,
+>     {
+>         async fn do_something(&self, arg: i32) -> Result<()> {
+>             // 方法体
+>         }
+>     }
+> );
+> ```
+>
+> > ⚠️ 注意：如果你希望所有方法都自动被AOP拦截，必须在注册/实现服务时主动使用上述宏或手动调用切面逻辑。
