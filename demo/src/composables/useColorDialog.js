@@ -1,11 +1,10 @@
 // 颜色对话框管理组合式函数
 import { ref } from "vue";
 import { ElMessage } from "element-plus";
-import type { TreeTableData } from "./useFbfxData";
 
 export function useColorDialog(
-  currentTableItem: any,
-  handleColorChange: (id: string, color: string) => void
+  currentTableItem,
+  handleColorChange
 ) {
   const colorDialogVisible = ref(false);
   const colorValue = ref("#409EFF");

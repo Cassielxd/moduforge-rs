@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { ref, watch, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { House, Document, View, Minus, FullScreen, Close, Setting, Clock, User, SwitchButton, ArrowDown, Moon, Sunny } from "@element-plus/icons-vue";
@@ -15,7 +15,7 @@ const appWindow = new Window('main');
 const router = useRouter();
 const route = useRoute();
 
-const activeMenu = ref((route.name as string) || "home");
+const activeMenu = ref((route.name ) || "home");
 const showSettings = ref(false);
 
 const historyStore = useHistoryStore();
@@ -23,10 +23,10 @@ const rootStore = useRootStore();
 const userStore = useUserStore();
 
 // 主题管理
-const theme = ref<'light' | 'dark' | 'system'>('system');
+const theme = ref('system');
 
 // 应用主题
-const applyTheme = (newTheme: 'light' | 'dark' | 'system') => {
+const applyTheme = (newTheme) => {
   theme.value = newTheme;
 
   if (newTheme === 'system') {
@@ -40,7 +40,7 @@ const applyTheme = (newTheme: 'light' | 'dark' | 'system') => {
 
 // 切换主题
 const toggleTheme = () => {
-  const themes: ('light' | 'dark' | 'system')[] = ['system', 'light', 'dark'];
+  const themes = ['system', 'light', 'dark'];
   const currentIndex = themes.indexOf(theme.value);
   const nextTheme = themes[(currentIndex + 1) % themes.length];
   applyTheme(nextTheme);
@@ -68,7 +68,7 @@ const getThemeIcon = () => {
 
 onMounted(() => {
   // 读取保存的主题设置
-  const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+  const savedTheme = localStorage.getItem('theme') 
   if (savedTheme) {
     applyTheme(savedTheme);
   }
@@ -92,7 +92,7 @@ const menuItems = ref([
   }
 ]);
 
-const handleMenuSelect = (key: string) => {
+const handleMenuSelect = (key) => {
   const item = menuItems.value.find((item) => item.name === key);
   if (item && item.path) {
     router.push(item.path);

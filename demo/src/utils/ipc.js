@@ -1,26 +1,10 @@
 import { invoke, InvokeArgs } from "@tauri-apps/api/core";
 
-/**
- * IPC 响应类型定义
- */
-export type IpcResponse<T = any> = {
-  success: boolean;
-  data?: T;
-  error?: string;
-};
-
-/**
- * IPC 请求选项接口
- */
-export interface IpcRequestOptions {
-  timeout?: number;
-  retries?: number;
-}
 
 /**
  * 默认 IPC 请求选项
  */
-const DEFAULT_OPTIONS: IpcRequestOptions = {
+const DEFAULT_OPTIONS = {
   timeout: 5000,
   retries: 1,
 };
@@ -32,17 +16,17 @@ const DEFAULT_OPTIONS: IpcRequestOptions = {
  * @param options 请求选项
  * @returns 返回响应结果的 Promise
  */
-export async function ipcRequest<T = any, A = any>(
-  cmd: string,
-  args?: A,
-  options: IpcRequestOptions = {}
-): Promise<IpcResponse<T>> {
+export async function ipcRequest(
+  cmd,
+  args,
+  options = {}
+){
   const mergedOptions = { ...DEFAULT_OPTIONS, ...options };
   let retries = mergedOptions.retries || 0;
 
   while (retries >= 0) {
     try {
-      const response = await invoke<T>(cmd, args as InvokeArgs);
+      const response = await invoke<T>(cmd, args);
       return {
         success: true,
         data: response,

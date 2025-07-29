@@ -1,33 +1,14 @@
 // 主表格相关的组合式函数
 import { ref, nextTick } from "vue";
-// @ts-ignore
 import { TabulatorFull as Tabulator } from "tabulator-tables";
 import "tabulator-tables/dist/css/tabulator.min.css";
 import { ElMessage } from "element-plus";
 
-// 接口定义
-interface TableItem {
-  id: string;
-  name: string;
-  type: string;
-  subType?: string;
-  description?: string;
-  children?: TableItem[];
-  _row_color?: string;
-}
-
-interface TableState {
-  expandedRows: Set<string>;
-  selectedRows: Set<string>;
-  scrollPosition: number;
-  filters: any[];
-  sorting: any[];
-}
 
 export function useMainTabulator() {
-  const mainTabulator = ref<any>(null);
+  const mainTabulator = ref(null);
   const isEditing = ref(false);
-  const tableState = ref<TableState>({
+  const tableState = ref({
     expandedRows: new Set(),
     selectedRows: new Set(),
     scrollPosition: 0,
@@ -40,27 +21,27 @@ export function useMainTabulator() {
     onAddRow: () => {
       ElMessage.info("主表格新增功能");
     },
-    onAddChildRow: (row: any) => {
+    onAddChildRow: (row) => {
       ElMessage.info(
         "添加子项功能 - 请在外部组件中通过 setEventHandlers 自定义实现"
       );
     },
-    onEditRow: (row: any) => {
+    onEditRow: (row) => {
       ElMessage.info("主表格编辑功能，可以双击单元格编辑");
     },
-    onDeleteRow: (row: any) => {
+    onDeleteRow: (row) => {
       ElMessage.info("主表格删除功能");
     },
-    onCopyRow: (row: any) => {
+    onCopyRow: (row) => {
       ElMessage.info("主表格复制功能");
     },
-    onCellEdited: (cell: any) => {
+    onCellEdited: (cell) => {
       ElMessage.info("主表格编辑功能");
     },
   };
 
   // 设置事件处理器
-  const setEventHandlers = (handlers: Partial<typeof eventHandlers>) => {
+  const setEventHandlers = (handlers) => {
     Object.assign(eventHandlers, handlers);
   };
 
@@ -68,21 +49,18 @@ export function useMainTabulator() {
   const saveTableState = () => {
     if (!mainTabulator.value) return;
 
-    // @ts-ignore
     const expandedRows = mainTabulator.value
       .getRows()
-      .filter((row: any) => row.isTreeExpanded());
+      .filter((row) => row.isTreeExpanded());
     tableState.value.expandedRows = new Set(
-      expandedRows.map((row: any) => (row.getData() as TableItem).id)
+      expandedRows.map((row) => (row.getData() ).id)
     );
 
-    // @ts-ignore
     const selectedRows = mainTabulator.value.getSelectedRows();
     tableState.value.selectedRows = new Set(
-      selectedRows.map((row: any) => (row.getData() as TableItem).id)
+      selectedRows.map((row) => (row.getData() ).id)
     );
 
-    // @ts-ignore
     tableState.value.scrollPosition = mainTabulator.value.getScrollPosition();
   };
 
@@ -94,27 +72,22 @@ export function useMainTabulator() {
 
     // 恢复展开状态
     tableState.value.expandedRows.forEach((id) => {
-      // @ts-ignore
       const row = mainTabulator.value.getRow(id);
       if (row) {
-        // @ts-ignore
         row.treeExpand();
       }
     });
 
     // 恢复选中状态
     tableState.value.selectedRows.forEach((id) => {
-      // @ts-ignore
       const row = mainTabulator.value.getRow(id);
       if (row) {
-        // @ts-ignore
         row.select();
       }
     });
 
     // 恢复滚动位置
     if (tableState.value.scrollPosition > 0) {
-      // @ts-ignore
       mainTabulator.value.scrollToPosition(
         0,
         tableState.value.scrollPosition,
@@ -124,8 +97,8 @@ export function useMainTabulator() {
   };
 
   // 行格式化器 - 添加颜色边框
-  const rowFormatter = (row: any) => {
-    const data = row.getData() as TableItem;
+  const rowFormatter = (row) => {
+    const data = row.getData() ;
     if (data._row_color) {
       const element = row.getElement();
       element.style.borderLeft = `4px solid ${data._row_color}`;
@@ -134,14 +107,14 @@ export function useMainTabulator() {
 
   // 定义表格列
   const getColumns = (
-    onColorChange: (id: string, color: string) => void
-  ): any[] => [
+    onColorChange
+  ) => [
     {
       title: "名称",
       field: "name",
       width: 250,
       editor: "input",
-      formatter: "tree" as any,
+      formatter: "tree",
       headerSort: false,
     },
     { title: "类型", field: "type", width: 150, editor: "input" },
@@ -151,15 +124,15 @@ export function useMainTabulator() {
       title: "颜色",
       field: "_row_color",
       width: 100,
-      formatter: (cell: any) => {
+      formatter: (cell) => {
         const value = cell.getValue();
         if (value) {
           return `<div style="width: 20px; height: 20px; background-color: ${value}; border: 1px solid #ccc; border-radius: 3px; display: inline-block;"></div>`;
         }
         return '<span style="color: #999;">无颜色</span>';
       },
-      cellClick: (e: UIEvent, cell: any) => {
-        const data = cell.getData() as TableItem;
+      cellClick: (e, cell) => {
+        const data = cell.getData() ;
         const input = document.createElement("input");
         input.type = "color";
         input.value = data._row_color || "#000000";
@@ -179,13 +152,12 @@ export function useMainTabulator() {
 
   // 初始化主表格
   const initMainTabulator = (
-    element: HTMLElement,
-    data: TableItem[],
-    onColorChange: (id: string, color: string) => void,
-    onRowClick?: (row: TableItem) => void
+    element,
+    data,
+    onColorChange,
+    onRowClick
   ) => {
     if (mainTabulator.value) {
-      // @ts-ignore
       mainTabulator.value.destroy();
     }
 
@@ -206,22 +178,25 @@ export function useMainTabulator() {
       dataTreeChildField: "children",
       dataTreeStartExpanded: true,
       dataTreeBranchElement: true,
+      selectableRange:true,
+      selectableRangeColumns:true,
+      selectableRangeRows:true,
       dataTreeChildIndent: 20,
       selectable: true,
       rowFormatter: rowFormatter,
       editTriggerEvent: "dblclick", // 设置双击编辑
-      cellEdited: (cell: any) => {
+      cellEdited: (cell) => {
         isEditing.value = true;
         console.log("Cell edited:", cell.getData());
         eventHandlers.onCellEdited(cell);
       },
-      rowClick: (e: UIEvent, row: any) => {
-        const data = row.getData() as TableItem;
+      rowClick: (e, row) => {
+        const data = row.getData() ;
         if (onRowClick) {
           onRowClick(data);
         }
       },
-      rowDblClick: (e: UIEvent, row: any) => {
+      rowDblClick: (e, row) => {
         console.log("双击行:", row.getData());
         // 双击行时可以触发编辑事件
         eventHandlers.onEditRow(row.getData());
@@ -236,28 +211,28 @@ export function useMainTabulator() {
         },
         {
           label: "添加子项",
-          action: (e: Event, row: any) => {
+          action: (e, row) => {
             console.log("右键菜单 - 添加子项被点击");
             eventHandlers.onAddChildRow(row.getData());
           },
         },
         {
           label: "编辑",
-          action: (e: Event, row: any) => {
+          action: (e, row) => {
             console.log("右键菜单 - 编辑被点击，行数据:", row.getData());
             eventHandlers.onEditRow(row.getData());
           },
         },
         {
           label: "删除",
-          action: (e: Event, row: any) => {
+          action: (e, row) => {
             console.log("右键菜单 - 删除被点击，行数据:", row.getData());
             eventHandlers.onDeleteRow(row.getData());
           },
         },
         {
           label: "复制",
-          action: (e: Event, row: any) => {
+          action: (e, row) => {
             console.log("右键菜单 - 复制被点击，行数据:", row.getData());
             eventHandlers.onCopyRow(row.getData());
           },
@@ -269,7 +244,7 @@ export function useMainTabulator() {
   };
 
   // 更新数据
-  const updateData = async (data: TableItem[]) => {
+  const updateData = async (data) => {
     if (!mainTabulator.value) return;
 
     if (isEditing.value) {
@@ -278,7 +253,6 @@ export function useMainTabulator() {
       isEditing.value = false;
     }
 
-    // @ts-ignore
     mainTabulator.value.setData(data);
 
     // 如果有保存的状态，恢复它
@@ -292,46 +266,40 @@ export function useMainTabulator() {
     // 数据查询方法
     getCurrentRow: () => {
       if (!mainTabulator.value) return null;
-      // @ts-ignore
       const selectedRows = mainTabulator.value.getSelectedRows();
       return selectedRows.length > 0
-        ? (selectedRows[0].getData() as TableItem)
+        ? (selectedRows[0].getData() )
         : null;
     },
 
     getAllData: () => {
       if (!mainTabulator.value) return [];
-      // @ts-ignore
-      return mainTabulator.value.getData() as TableItem[];
+      return mainTabulator.value.getData();
     },
 
-    getRowById: (id: string) => {
+    getRowById: (id) => {
       if (!mainTabulator.value) return null;
       try {
-        // @ts-ignore
         const row = mainTabulator.value.getRow(id);
-        return row ? (row.getData() as TableItem) : null;
+        return row ? (row.getData() ) : null;
       } catch {
         return null;
       }
     },
 
-    findRows: (criteria: Partial<TableItem>) => {
+    findRows: (criteria) => {
       if (!mainTabulator.value) return [];
-      // @ts-ignore
       return mainTabulator.value
         .searchRows(criteria)
-        .map((row: any) => row.getData() as TableItem);
+        .map((row) => row.getData() );
     },
 
     // 数据操作方法
-    updateRow: (id: string, data: Partial<TableItem>) => {
+    updateRow: (id, data) => {
       if (!mainTabulator.value) return false;
       try {
-        // @ts-ignore
         const row = mainTabulator.value.getRow(id);
         if (row) {
-          // @ts-ignore
           row.update(data);
           return true;
         }
@@ -341,13 +309,11 @@ export function useMainTabulator() {
       }
     },
 
-    deleteRow: (id: string) => {
+    deleteRow: (id) => {
       if (!mainTabulator.value) return false;
       try {
-        // @ts-ignore
         const row = mainTabulator.value.getRow(id);
         if (row) {
-          // @ts-ignore
           row.delete();
           return true;
         }
@@ -358,22 +324,19 @@ export function useMainTabulator() {
     },
 
     addRow: (
-      data: TableItem,
-      position?: "top" | "bottom",
-      parentId?: string
+      data,
+      position,
+      parentId
     ) => {
       if (!mainTabulator.value) return false;
       try {
         if (parentId) {
-          // @ts-ignore
           const parentRow = mainTabulator.value.getRow(parentId);
           if (parentRow) {
-            // @ts-ignore
             parentRow.addTreeChild(data);
             return true;
           }
         } else {
-          // @ts-ignore
           mainTabulator.value.addRow(data, position === "top");
           return true;
         }
@@ -386,10 +349,8 @@ export function useMainTabulator() {
     // 树形操作方法
     expandAll: () => {
       if (!mainTabulator.value) return;
-      // @ts-ignore
       mainTabulator.value.getRows().forEach((row) => {
         if (row.getTreeChildren().length > 0) {
-          // @ts-ignore
           row.treeExpand();
         }
       });
@@ -397,22 +358,18 @@ export function useMainTabulator() {
 
     collapseAll: () => {
       if (!mainTabulator.value) return;
-      // @ts-ignore
       mainTabulator.value.getRows().forEach((row) => {
         if (row.getTreeChildren().length > 0) {
-          // @ts-ignore
           row.treeCollapse();
         }
       });
     },
 
-    expandRow: (id: string) => {
+    expandRow: (id) => {
       if (!mainTabulator.value) return false;
       try {
-        // @ts-ignore
         const row = mainTabulator.value.getRow(id);
         if (row) {
-          // @ts-ignore
           row.treeExpand();
           return true;
         }
@@ -422,13 +379,11 @@ export function useMainTabulator() {
       }
     },
 
-    collapseRow: (id: string) => {
+    collapseRow: (id) => {
       if (!mainTabulator.value) return false;
       try {
-        // @ts-ignore
         const row = mainTabulator.value.getRow(id);
         if (row) {
-          // @ts-ignore
           row.treeCollapse();
           return true;
         }
@@ -438,12 +393,10 @@ export function useMainTabulator() {
       }
     },
 
-    isRowExpanded: (id: string) => {
+    isRowExpanded: (id) => {
       if (!mainTabulator.value) return false;
       try {
-        // @ts-ignore
         const row = mainTabulator.value.getRow(id);
-        // @ts-ignore
         return row ? row.isTreeExpanded() : false;
       } catch {
         return false;
@@ -451,13 +404,11 @@ export function useMainTabulator() {
     },
 
     // 选择操作方法
-    selectRow: (id: string) => {
+    selectRow: (id) => {
       if (!mainTabulator.value) return false;
       try {
-        // @ts-ignore
         const row = mainTabulator.value.getRow(id);
         if (row) {
-          // @ts-ignore
           row.select();
           return true;
         }
@@ -467,13 +418,11 @@ export function useMainTabulator() {
       }
     },
 
-    deselectRow: (id: string) => {
+    deselectRow: (id) => {
       if (!mainTabulator.value) return false;
       try {
-        // @ts-ignore
         const row = mainTabulator.value.getRow(id);
         if (row) {
-          // @ts-ignore
           row.deselect();
           return true;
         }
@@ -485,70 +434,59 @@ export function useMainTabulator() {
 
     getSelectedRows: () => {
       if (!mainTabulator.value) return [];
-      // @ts-ignore
       return mainTabulator.value
         .getSelectedRows()
-        .map((row: any) => row.getData() as TableItem);
+        .map((row) => row.getData() );
     },
 
     selectAll: () => {
       if (!mainTabulator.value) return;
-      // @ts-ignore
       mainTabulator.value.selectRow();
     },
 
     deselectAll: () => {
       if (!mainTabulator.value) return;
-      // @ts-ignore
       mainTabulator.value.deselectRow();
     },
 
     // 排序和过滤方法
-    sortBy: (field: string, direction: "asc" | "desc") => {
+    sortBy: (field, direction) => {
       if (!mainTabulator.value) return;
-      // @ts-ignore
       mainTabulator.value.setSort(field, direction);
     },
 
-    setFilter: (field: string, type: string, value: any) => {
+    setFilter: (field, type, value) => {
       if (!mainTabulator.value) return;
-      // @ts-ignore
       mainTabulator.value.setFilter(field, type, value);
     },
 
     clearFilter: () => {
       if (!mainTabulator.value) return;
-      // @ts-ignore
       mainTabulator.value.clearFilter();
     },
 
     // 分页方法
-    setPage: (page: number) => {
+    setPage: (page) => {
       if (!mainTabulator.value) return;
-      // @ts-ignore
       mainTabulator.value.setPage(page);
     },
 
     getCurrentPage: () => {
       if (!mainTabulator.value) return 1;
-      // @ts-ignore
       return mainTabulator.value.getPage();
     },
 
-    setPageSize: (size: number) => {
+    setPageSize: (size) => {
       if (!mainTabulator.value) return;
-      // @ts-ignore
       mainTabulator.value.setPageSize(size);
     },
 
     // 滚动方法
-    scrollToRow: (id: string, position?: "top" | "center" | "bottom") => {
+    scrollToRow: (id, position) => {
       if (!mainTabulator.value) return false;
       try {
-        // @ts-ignore
         const row = mainTabulator.value.getRow(id);
         if (row) {
-          // @ts-ignore
           row.scrollTo(position || "center");
           return true;
         }
@@ -560,36 +498,29 @@ export function useMainTabulator() {
 
     scrollToTop: () => {
       if (!mainTabulator.value) return;
-      // @ts-ignore
       mainTabulator.value.scrollToRow(1, "top", false);
     },
 
     scrollToBottom: () => {
-      if (!mainTabulator.value) return;
-      // @ts-ignore
       const rows = mainTabulator.value.getRows();
       if (rows.length > 0) {
-        // @ts-ignore
         rows[rows.length - 1].scrollTo("bottom");
       }
     },
 
     // 导出方法
-    exportToCSV: (filename?: string) => {
+    exportToCSV: (filename) => {
       if (!mainTabulator.value) return;
-      // @ts-ignore
       mainTabulator.value.download("csv", filename || "data.csv");
     },
 
-    exportToJSON: (filename?: string) => {
+    exportToJSON: (filename) => {
       if (!mainTabulator.value) return;
-      // @ts-ignore
       mainTabulator.value.download("json", filename || "data.json");
     },
 
-    exportToPDF: (filename?: string) => {
+    exportToPDF: (filename) => {
       if (!mainTabulator.value) return;
-      // @ts-ignore
       mainTabulator.value.download("pdf", filename || "data.pdf");
     },
 
@@ -598,20 +529,17 @@ export function useMainTabulator() {
       return { ...tableState.value };
     },
 
-    setTableState: (newState: Partial<TableState>) => {
+    setTableState: (newState) => {
       tableState.value = { ...tableState.value, ...newState };
     },
 
     getTableStats: () => {
       if (!mainTabulator.value) return null;
-      // @ts-ignore
       const allRows = mainTabulator.value.getRows();
-      // @ts-ignore
       const selectedRows = mainTabulator.value.getSelectedRows();
       return {
         totalRows: allRows.length,
         selectedRows: selectedRows.length,
-        // @ts-ignore
         filteredRows: mainTabulator.value.getDataCount("active"),
       };
     },
@@ -619,13 +547,11 @@ export function useMainTabulator() {
     // 刷新和重建方法
     refresh: () => {
       if (!mainTabulator.value) return;
-      // @ts-ignore
       mainTabulator.value.redraw();
     },
 
     destroy: () => {
       if (mainTabulator.value) {
-        // @ts-ignore
         mainTabulator.value.destroy();
         mainTabulator.value = null;
       }

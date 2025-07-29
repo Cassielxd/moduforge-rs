@@ -1,33 +1,23 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 
-interface UserInfo {
-  id: string;
-  username: string;
-  nickname: string;
-  email?: string;
-  avatar?: string;
-  role: string;
-  permissions: string[];
-}
-
 export const useUserStore = defineStore("user", () => {
   // 状态
   const isLoggedIn = ref(false);
-  const userInfo = ref<UserInfo | null>(null);
-  const token = ref<string | null>(null);
+  const userInfo = ref(null);
+  const token = ref(null);
 
   // 计算属性
   const userName = computed(
     () => userInfo.value?.nickname || userInfo.value?.username || "未知用户"
   );
   const userRole = computed(() => userInfo.value?.role || "guest");
-  const hasPermission = computed(() => (permission: string) => {
+  const hasPermission = computed(() => (permission) => {
     return userInfo.value?.permissions.includes(permission) || false;
   });
 
   // 方法
-  const login = (user: UserInfo, authToken: string) => {
+  const login = (user, authToken) => {
     isLoggedIn.value = true;
     userInfo.value = user;
     token.value = authToken;
@@ -63,7 +53,7 @@ export const useUserStore = defineStore("user", () => {
     }
   };
 
-  const updateUserInfo = (updates: Partial<UserInfo>) => {
+  const updateUserInfo = (updates) => {
     if (userInfo.value) {
       userInfo.value = { ...userInfo.value, ...updates };
       localStorage.setItem("user-info", JSON.stringify(userInfo.value));

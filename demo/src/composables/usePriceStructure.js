@@ -1,19 +1,9 @@
 // 单价构成组合式函数
 import { ref, computed } from "vue";
 
-export interface PriceStructureItem {
-  id: number | string;
-  component: string; // 构成要素
-  basePrice: number; // 基价
-  coefficient: number; // 系数
-  amount: number; // 金额
-  percentage: number; // 占比(%)
-  description?: string; // 说明
-}
-
 export function usePriceStructure() {
   // 单价构成数据
-  const structureData = ref<PriceStructureItem[]>([
+  const structureData = ref([
     {
       id: 1,
       component: "人工费",
@@ -64,14 +54,14 @@ export function usePriceStructure() {
   // 表格列配置（兼容useSubTabulator格式）
   const structureColumns = [
     { prop: "component", label: "构成要素", width: 120 },
-    { prop: "basePrice", label: "基价", width: 100, align: "right" as const },
-    { prop: "coefficient", label: "系数", width: 80, align: "right" as const },
-    { prop: "amount", label: "金额", width: 100, align: "right" as const },
+    { prop: "basePrice", label: "基价", width: 100, align: "right"  },
+    { prop: "coefficient", label: "系数", width: 80, align: "right"  },
+    { prop: "amount", label: "金额", width: 100, align: "right"  },
     {
       prop: "percentage",
       label: "占比(%)",
       width: 100,
-      align: "right" as const,
+      align: "right" ,
     },
     { prop: "description", label: "说明", width: 150 },
   ];
@@ -106,8 +96,8 @@ export function usePriceStructure() {
   });
 
   // 添加构成要素
-  const addStructureRow = (currentRow?: PriceStructureItem) => {
-    const newRow: PriceStructureItem = {
+  const addStructureRow = (currentRow) => {
+    const newRow = {
       id: Date.now(),
       component: "新要素",
       basePrice: 0,
@@ -135,7 +125,7 @@ export function usePriceStructure() {
   };
 
   // 删除构成要素
-  const deleteStructureRow = (row: PriceStructureItem) => {
+  const deleteStructureRow = (row) => {
     const index = structureData.value.findIndex((item) => item.id === row.id);
     if (index > -1) {
       structureData.value.splice(index, 1);
@@ -146,8 +136,8 @@ export function usePriceStructure() {
   };
 
   // 复制构成要素
-  const copyStructureRow = (row: PriceStructureItem) => {
-    const newRow: PriceStructureItem = {
+  const copyStructureRow = (row) => {
+    const newRow = {
       ...row,
       id: Date.now(),
       component: `${row.component} (复制)`,
@@ -158,18 +148,18 @@ export function usePriceStructure() {
   };
 
   // 编辑构成要素
-  const editStructureRow = (row: PriceStructureItem) => {
+  const editStructureRow = (row) => {
     return row;
   };
 
   // 更新金额（当基价或系数变化时）
-  const updateAmount = (row: PriceStructureItem) => {
+  const updateAmount = (row) => {
     row.amount = row.basePrice * row.coefficient;
     calculatePercentages();
   };
 
   // 批量更新系数（用于调价）
-  const updateCoefficients = (adjustmentRate: number) => {
+  const updateCoefficients = (adjustmentRate) => {
     structureData.value.forEach((item) => {
       if (!["管理费", "利润"].includes(item.component)) {
         item.coefficient *= 1 + adjustmentRate;

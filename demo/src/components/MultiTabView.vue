@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { ref } from "vue";
 import ProjectInfoView from "../views/ProjectInfoView.vue";
 import FbfxView from "../views/FbfxView.vue";
@@ -6,15 +6,15 @@ import CxxmView from "../views/CxxmView.vue";
 
 const activeTabName = ref("project-info"); // 默认显示项目信息
 
-const fbfxRef = ref<{ init: (id: any) => void } | null>(null);
-const cxxmRef = ref<{ init: (id: any) => void } | null>(null);
-const projectInfoRef = ref<{ init: (id: any) => void } | null>(null);
+const fbfxRef = ref(null);
+const cxxmRef = ref(null);
+const projectInfoRef = ref(null);
 
 // 记录当前选中的节点ID
-const currentSelectedId = ref<string | number | null>(null);
+const currentSelectedId = ref(null);
 
 // 处理标签页切换事件
-const handleTabChange = (tabName: string | number) => {
+const handleTabChange = (tabName) => {
   console.log(
     `MultiTabView: Tab changed to '${tabName}' with current ID:`,
     currentSelectedId.value
@@ -30,7 +30,7 @@ const handleTabChange = (tabName: string | number) => {
 };
 
 // 暴露给父组件的刷新方法
-const refreshData = (id: string | number | null) => {
+const refreshData = (id) => {
   console.log(`MultiTabView: Refreshing tab '${activeTabName.value}' with ID:`, id);
   // 保存当前选中的ID
   currentSelectedId.value = id;
@@ -47,7 +47,7 @@ const refreshData = (id: string | number | null) => {
 defineExpose({ refreshData });
 </script>
 
-<script lang="ts">
+<script>
 export default {
   name: "MultiTabView",
 };

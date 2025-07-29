@@ -1,20 +1,19 @@
 // 业务操作组合式函数
 import { ref, nextTick } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import type { TreeTableData } from "./useFbfxData";
 
 export function useFbfxActions(
-  tableTreeData: any,
-  mainTabulatorComposable: any
+  tableTreeData,
+  mainTabulatorComposable
 ) {
-  const currentTableItem = ref<TreeTableData | null>(null);
-  const currentRowKey = ref<string | number | null>(null);
+  const currentTableItem = ref(null);
+  const currentRowKey = ref(null);
 
   // 查找行数据的通用函数
   const findRowById = (
-    data: TreeTableData[],
-    id: string | number
-  ): TreeTableData | null => {
+    data,
+    id
+  ) => {
     for (const item of data) {
       if (String(item.id) === String(id)) {
         return item;
@@ -28,7 +27,7 @@ export function useFbfxActions(
   };
 
   // 获取目标行的通用函数（优先使用传入的row，否则使用当前选中的行）
-  const getTargetRow = (row?: TreeTableData): TreeTableData | null => {
+  const getTargetRow = (row) => {
     if (row) return row;
     if (currentRowKey.value) {
       return findRowById(tableTreeData.value, currentRowKey.value);
@@ -37,9 +36,9 @@ export function useFbfxActions(
   };
 
   // 颜色变化处理函数
-  const handleColorChange = (id: string, color: string) => {
+  const handleColorChange = (id, color) => {
     // 在原始数据中更新颜色
-    const updateColor = (items: TreeTableData[]): void => {
+    const updateColor = (items) => {
       for (const item of items) {
         if (String(item.id) === id) {
           item.color = color;
@@ -56,14 +55,14 @@ export function useFbfxActions(
   };
 
   // 行点击处理函数
-  const handleRowClick = (data: any) => {
+  const handleRowClick = (data) => {
     currentRowKey.value = data.id;
     console.log("选中行:", data);
   };
 
   // 添加行
-  const handleAddRow = (currentRow?: TreeTableData) => {
-    const newRow: TreeTableData = {
+  const handleAddRow = (currentRow) => {
+    const newRow = {
       id: Date.now(),
       name: "新文件",
       type: "file",
@@ -82,9 +81,9 @@ export function useFbfxActions(
     if (currentRow) {
       // 在指定行的下一行插入新行
       const insertAfter = (
-        data: TreeTableData[],
-        targetId: number | string
-      ): boolean => {
+        data,
+        targetId
+      ) => {
         for (let i = 0; i < data.length; i++) {
           if (data[i].id === targetId) {
             // 在当前位置的下一行插入
@@ -92,7 +91,7 @@ export function useFbfxActions(
             return true;
           }
           // 如果有子节点，递归查找
-          if (data[i].children && insertAfter(data[i].children!, targetId)) {
+          if (data[i].children && insertAfter(data[i].children, targetId)) {
             return true;
           }
         }
@@ -115,8 +114,8 @@ export function useFbfxActions(
   };
 
   // 添加子项
-  const handleAddChild = (parentRow: TreeTableData) => {
-    const newChild: TreeTableData = {
+  const handleAddChild = (parentRow) => {
+    const newChild = {
       id: Date.now(),
       name: "新子项",
       type: "file",
@@ -135,7 +134,7 @@ export function useFbfxActions(
   };
 
   // 编辑行
-  const handleEditRow = (row?: TreeTableData) => {
+  const handleEditRow = (row) => {
     const targetRow = getTargetRow(row);
 
     if (targetRow) {
@@ -146,7 +145,7 @@ export function useFbfxActions(
   };
 
   // 删除行
-  const handleDeleteRow = (row?: TreeTableData) => {
+  const handleDeleteRow = (row) => {
     const targetRow = getTargetRow(row);
 
     if (!targetRow) {
@@ -155,26 +154,26 @@ export function useFbfxActions(
     }
     // 递归查找并删除节点
     const deleteNode = (
-      data: TreeTableData[],
-      targetId: number | string
-    ): boolean => {
+      data,
+      targetId
+    ) => {
       for (let i = 0; i < data.length; i++) {
         // 使用字符串比较确保匹配
         if (String(data[i].id) === String(targetId)) {
           data.splice(i, 1);
           return true;
         }
-        if (data[i].children && deleteNode(data[i].children!, targetId)) {
+        if (data[i].children && deleteNode(data[i].children, targetId)) {
           return true;
         }
       }
       return false;
     };
 
-    if (deleteNode(tableTreeData.value, targetRow!.id)) {
+    if (deleteNode(tableTreeData.value, targetRow.id)) {
       ElMessage.success("删除成功");
       // 清空当前选中行
-      if (String(currentRowKey.value) === String(targetRow!.id)) {
+      if (String(currentRowKey.value) === String(targetRow.id)) {
         currentRowKey.value = null;
       }
     } else {
@@ -183,7 +182,7 @@ export function useFbfxActions(
   };
 
   // 复制行
-  const handleCopyRow = (row?: TreeTableData) => {
+  const handleCopyRow = (row) => {
     const targetRow = getTargetRow(row);
 
     if (!targetRow) {
@@ -191,7 +190,7 @@ export function useFbfxActions(
       return;
     }
 
-    const newItem: TreeTableData = {
+    const newItem = {
       ...targetRow,
       id: Date.now(),
       name: `${targetRow.name} (复制)`,
@@ -208,7 +207,7 @@ export function useFbfxActions(
   };
 
   // 设置当前行
-  const setCurrentRow = (rowId: string | number) => {
+  const setCurrentRow = (rowId) => {
     currentRowKey.value = rowId;
     // 使用组合式函数选择行
     mainTabulatorComposable.selectRow(String(rowId));
@@ -219,15 +218,15 @@ export function useFbfxActions(
     ElMessage.info("子表格新增功能");
   };
 
-  const handleSubTableEditRow = (row: any) => {
+  const handleSubTableEditRow = (row) => {
     ElMessage.info("子表格编辑功能，双击单元格进行编辑");
   };
 
-  const handleSubTableDeleteRow = (row: any) => {
+  const handleSubTableDeleteRow = (row) => {
     ElMessage.info("子表格删除功能");
   };
 
-  const handleSubTableCopyRow = (row: any) => {
+  const handleSubTableCopyRow = (row) => {
     ElMessage.info("子表格复制功能");
   };
 

@@ -1,21 +1,14 @@
-<script lang="ts">
+<script>
 import { defineComponent, ref } from "vue";
 import { ElMessage } from "element-plus";
-import RightTablePanel, { TableColumn } from "../components/RightTablePanel.vue";
-
-interface ProjectInfo {
-  id: number | string;
-  label: string;
-  value: string;
-  editable?: boolean;
-}
+import RightTablePanel from "../components/RightTablePanel.vue";
 
 export default defineComponent({
   name: "ProjectInfoView",
   components: { RightTablePanel },
   setup(props, { expose }) {
     // 项目基本信息数据
-    const projectInfoData = ref<ProjectInfo[]>([
+    const projectInfoData = ref([
       { id: 1, label: "项目名称", value: "ModuForge Demo 工程项目", editable: true },
       { id: 2, label: "项目编号", value: "PROJ-2024-001", editable: true },
       { id: 3, label: "项目经理", value: "张三", editable: true },
@@ -36,14 +29,14 @@ export default defineComponent({
     ]);
 
     // 项目信息表格列定义
-    const projectInfoColumns: TableColumn[] = [
+    const projectInfoColumns = [
       { prop: "label", label: "项目属性", width: 150 },
       { prop: "value", label: "属性值", minWidth: 300 },
     ];
 
     const rightTablePanelRef = ref();
 
-    const init = (id: string | number | null) => {
+    const init = (id) => {
       console.log("ProjectInfoView.vue init called with ID:", id);
       // 根据不同的节点ID可以加载不同的项目信息
       if (id) {
@@ -53,8 +46,8 @@ export default defineComponent({
     };
 
     // 处理表格事件
-    const handleAddRow = (currentRow?: ProjectInfo) => {
-      const newRow: ProjectInfo = {
+    const handleAddRow = (currentRow) => {
+      const newRow = {
         id: Date.now(),
         label: "新属性",
         value: "请输入值",
@@ -86,7 +79,7 @@ export default defineComponent({
       ElMessage.warning("项目信息不支持添加子项");
     };
 
-    const handleEditRow = (row: ProjectInfo) => {
+    const handleEditRow = (row) => {
       if (row.editable) {
         ElMessage.info("双击单元格可以编辑属性值");
       } else {
@@ -94,7 +87,7 @@ export default defineComponent({
       }
     };
 
-    const handleDeleteRow = (row: ProjectInfo) => {
+    const handleDeleteRow = (row) => {
       if (row.editable) {
         const index = projectInfoData.value.findIndex((item) => item.id === row.id);
         if (index > -1) {
@@ -106,8 +99,8 @@ export default defineComponent({
       }
     };
 
-    const handleCopyRow = (row: ProjectInfo) => {
-      const newItem: ProjectInfo = {
+    const handleCopyRow = (row) => {
+      const newItem = {
         ...row,
         id: Date.now(),
         label: `${row.label} (复制)`,

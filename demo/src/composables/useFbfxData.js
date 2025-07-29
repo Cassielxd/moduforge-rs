@@ -1,27 +1,10 @@
 // 数据管理组合式函数
 import { ref } from "vue";
 
-export interface TreeTableData {
-  id: number | string;
-  name: string;
-  type: string;
-  size?: string;
-  date: string;
-  children?: TreeTableData[];
-  color?: string;
-}
 
-export interface TableColumn {
-  prop: string;
-  label: string;
-  minWidth?: number;
-  width?: number;
-  align?: "left" | "center" | "right";
-  type?: "date";
-}
 
 // 将主表格数据转换为useMainTabulator所需的格式
-export const convertToMainTabulatorFormat = (data: TreeTableData[]): any[] => {
+export const convertToMainTabulatorFormat = (data) => {
   return data.map((item) => ({
     id: String(item.id),
     name: item.name,
@@ -37,7 +20,7 @@ export const convertToMainTabulatorFormat = (data: TreeTableData[]): any[] => {
 
 export function useFbfxData() {
   // 主表格数据
-  const tableTreeData = ref<TreeTableData[]>([
+  const tableTreeData = ref([
     {
       id: 1,
       name: "文档目录",
@@ -107,7 +90,7 @@ export function useFbfxData() {
   ]);
 
   // 主表格列配置
-  const tableColumns: TableColumn[] = [
+  const tableColumns= [
     { prop: "name", label: "名称", width: 200 },
     { prop: "type", label: "类型", width: 100 },
     { prop: "size", label: "大小", width: 100 },
@@ -171,7 +154,7 @@ export function useFbfxData() {
 
   const statisticsColumns = [
     { prop: "name", label: "统计项", width: 120 },
-    { prop: "value", label: "数值", width: 80, align: "right" as const },
+    { prop: "value", label: "数值", width: 80, align: "right"  },
     { prop: "unit", label: "单位", width: 60 },
     { prop: "description", label: "说明", minWidth: 200 },
   ];

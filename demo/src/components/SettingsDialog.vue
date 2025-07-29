@@ -1,20 +1,18 @@
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Delete } from '@element-plus/icons-vue';
 import { open } from '@tauri-apps/plugin-dialog';
-import { GlobalShortcut, useGlobalShortcutsStore } from '../stores/globalShortcuts';
+import { useGlobalShortcutsStore } from '../stores/globalShortcuts';
 
-const props = defineProps<{
-    modelValue: boolean
-}>();
+const props = defineProps();
 
 const emit = defineEmits(['update:modelValue']);
 
 const activeTab = ref('shortcuts');
 const savePath = ref('');
 const shortcutsStore = useGlobalShortcutsStore();
-const editingShortcut = ref<string | null>(null);
+const editingShortcut = ref(null);
 const editingValue = ref('');
 const newShortcut = ref({
     name: '',
@@ -40,20 +38,20 @@ const selectSavePath = async () => {
             defaultPath: savePath.value,
         });
         if (selected) {
-            savePath.value = selected as string;
+            savePath.value = selected ;
         }
     } catch (error) {
         ElMessage.error('选择目录失败');
     }
 };
 
-const startEditing = (shortcut: any) => {
+const startEditing = (shortcut) => {
     editingShortcut.value = shortcut.id;
     editingValue.value = shortcut.shortcut;
 };
 
-const handleKeyPress = (event: Event) => {
-    const keyboardEvent = event as KeyboardEvent;
+const handleKeyPress = (event) => {
+    const keyboardEvent = event;
     keyboardEvent.preventDefault();
     const keys = [];
     if (keyboardEvent.ctrlKey) keys.push('Ctrl');
@@ -67,7 +65,7 @@ const handleKeyPress = (event: Event) => {
     }
 };
 
-const saveEdit = async (row: any) => {
+const saveEdit = async (row) => {
     if (!editingValue.value) {
         ElMessage.warning('请输入快捷键组合');
         return;
@@ -78,12 +76,12 @@ const saveEdit = async (row: any) => {
     ElMessage.success('修改成功');
 };
 
-const cancelEdit = (row: any) => {
+const cancelEdit = (row) => {
     editingShortcut.value = null;
     editingValue.value = '';
 };
 
-const handleBlur = (row: any) => {
+const handleBlur = (row) => {
     // 可选：失焦时自动取消编辑
     // cancelEdit(row);
 };
@@ -113,8 +111,8 @@ const addNewShortcut = async () => {
     }
 };
 
-const handleNewShortcutKeyPress = (event: Event) => {
-    const keyboardEvent = event as KeyboardEvent;
+const handleNewShortcutKeyPress = (event) => {
+    const keyboardEvent = event;
     keyboardEvent.preventDefault();
     const keys = [];
     if (keyboardEvent.ctrlKey) keys.push('Ctrl');
@@ -128,7 +126,7 @@ const handleNewShortcutKeyPress = (event: Event) => {
     }
 };
 
-const deleteShortcut = async (id: string) => {
+const deleteShortcut = async (id) => {
     try {
         await shortcutsStore.removeShortcut(id);
         ElMessage.success('删除成功');

@@ -1,10 +1,9 @@
 // 工具函数组合式函数
-import type { TreeTableData } from "./useFbfxData";
 
-export function useFbfxUtils(tableTreeData: any) {
+export function useFbfxUtils(tableTreeData) {
   // 统计文件夹数量
   const getFolderCount = () => {
-    const countFolders = (items: TreeTableData[]): number => {
+    const countFolders = (items) => {
       let count = 0;
       items.forEach((item) => {
         if (item.type === "folder") {
@@ -21,7 +20,7 @@ export function useFbfxUtils(tableTreeData: any) {
 
   // 统计文件数量
   const getFileCount = () => {
-    const countFiles = (items: TreeTableData[]): number => {
+    const countFiles = (items) => {
       let count = 0;
       items.forEach((item) => {
         if (item.type === "file") {

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { onMounted, onUnmounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { Monitor, Close } from '@element-plus/icons-vue';

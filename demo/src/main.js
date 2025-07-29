@@ -69,7 +69,7 @@ window.addEventListener("storage", (e) => {
 });
 
 // 路由变化时检查用户状态
-router.afterEach((to: any, from: any) => {
+router.afterEach((to, from) => {
   console.log("路由变化:", from.path, "->", to.path);
   console.log("当前用户登录状态:", userStore.isLoggedIn);
 });

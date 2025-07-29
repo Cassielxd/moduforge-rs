@@ -3,10 +3,10 @@ import { defineStore } from "pinia";
 // 全局根节点 ID store
 export const useRootStore = defineStore("root", {
   state: () => ({
-    rootId: undefined as string | undefined,
+    rootId: undefined,
   }),
   actions: {
-    setRootId(id: string | undefined) {
+    setRootId(id) {
       this.rootId = id;
     },
     clearRootId() {

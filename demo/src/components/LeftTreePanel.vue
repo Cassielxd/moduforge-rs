@@ -1,26 +1,17 @@
-<script lang="ts">
+<script>
 import { defineComponent, ref, reactive } from "vue";
-import type { PropType } from "vue";
-import type { ElTree } from "element-plus";
+
 import { ElMessage, ElMessageBox } from "element-plus";
 import { addRootTree, addGcxmTree, addFootNote, deleteGcxmTree } from "@/api/gcxm";
 import { Folder, Document } from '@element-plus/icons-vue';
 import { useHistoryStore } from "@/stores/history";
 import { useRootStore } from "@/stores/root";
 
-interface Tree {
-  id: string;
-  type: string;
-  attrs: { name: string, code: string };
-  children?: Tree[];
-  marks: any[];
-}
-
 export default defineComponent({
   name: "LeftTreePanel",
   props: {
     treeData: {
-      type: Array as PropType<Tree[]>,
+      type: Array,
       required: true,
     },
   },
@@ -28,21 +19,21 @@ export default defineComponent({
   setup(props, { emit }) {
     const historyStore = useHistoryStore();
     const rootStore = useRootStore();
-    const localTreeData = ref<Tree[]>(props.treeData);
+    const localTreeData = ref(props.treeData);
 
-    const treeRef = ref<InstanceType<typeof ElTree>>();
+    const treeRef = ref();
     const treeContextMenuVisible = ref(false);
     const treeContextMenuPosition = reactive({ x: 0, y: 0 });
-    const currentTreeItem = ref<Tree | null>(null);
-    const currentTreeNode = ref<any>(null);
-    const editingTreeNodeId = ref<string | null>(null);
-    const selectedTreeNodeId = ref<string | undefined>(undefined);
+    const currentTreeItem = ref(null);
+    const currentTreeNode = ref(null);
+    const editingTreeNodeId = ref(null);
+    const selectedTreeNodeId = ref(undefined);
     const remarkDialogVisible = ref(false);
-    const remarkContent = ref<string>();
+    const remarkContent = ref();
     const addNodeDialogVisible = ref(false);
     const newNodeName = ref("");
 
-    const handleTreeContextMenu = (event: MouseEvent, data: Tree, node: any) => {
+    const handleTreeContextMenu = (event, data) => {
       event.preventDefault();
       currentTreeItem.value = data;
       currentTreeNode.value = node;
@@ -57,7 +48,7 @@ export default defineComponent({
       document.removeEventListener("click", closeTreeContextMenu);
     };
 
-    const handleTreeCommand = (command: string) => {
+    const handleTreeCommand = (command) => {
       if (command === "add") {
         newNodeName.value = "";
         addNodeDialogVisible.value = true;
@@ -84,7 +75,7 @@ export default defineComponent({
               const parent = currentTreeNode.value.parent;
               const children = parent.data.children || parent.data;
               const index = children.findIndex(
-                (item: Tree) => item.id === currentTreeItem.value?.id
+                (item) => item.id === currentTreeItem.value?.id
               );
               children.splice(index, 1);
               ElMessage.success("删除成功");
@@ -129,7 +120,7 @@ export default defineComponent({
       }
 
       try {
-        let newNode: any;
+        let newNode;
         // 根据是否有父节点决定调用哪个 API
         if (currentTreeItem.value) {
           let type = "DWGC";
@@ -185,21 +176,21 @@ export default defineComponent({
       }
     };
 
-    const handleTreeNodeDblClick = (data: Tree) => {
+    const handleTreeNodeDblClick = (data) => {
       editingTreeNodeId.value = data.id;
     };
     const finishEditTreeNode = () => {
       editingTreeNodeId.value = null;
       emit("update:treeData", localTreeData.value);
     };
-    const handleTreeNodeClick = (data: Tree, node: any) => {
+    const handleTreeNodeClick = (data, node) => {
       currentTreeItem.value = data;
       currentTreeNode.value = node;
       selectedTreeNodeId.value = data.id;
       emit("node-selected", data);
     };
 
-    const getFootnote = (marks: any[]): string | undefined => {
+    const getFootnote = (marks) => {
       if (!Array.isArray(marks)) {
         return undefined;
       }
@@ -208,7 +199,7 @@ export default defineComponent({
     };
 
     // 根据节点类型返回不同的图标组件
-    const getNodeIcon = (type: string) => {
+    const getNodeIcon = (type) => {
       switch (type) {
         case 'dwgc':
           return Folder; // 单位工程

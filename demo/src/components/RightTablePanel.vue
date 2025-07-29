@@ -1,28 +1,12 @@
-<script lang="ts">
+<script>
 import { defineComponent, ref, reactive, onMounted, onUnmounted, nextTick, watch } from "vue";
-import type { PropType } from "vue";
 import { ElMessage, ElMessageBox, ElDialog, ElButton, ElColorPicker, ElIcon } from "element-plus";
 // @ts-ignore
 import { TabulatorFull as Tabulator } from 'tabulator-tables';
-// @ts-ignore
-import type { RowComponent, CellComponent, TabulatorConfig } from 'tabulator-tables';
 import 'tabulator-tables/dist/css/tabulator.min.css';
 import { Plus, Edit, Delete, CopyDocument, Brush, Folder, Document } from '@element-plus/icons-vue';
 
 // --- Data Interfaces ---
-interface TableItem {
-  id: number | string;
-  [key: string]: any;
-}
-
-export interface TableColumn {
-  prop: string;
-  label: string;
-  minWidth?: number;
-  width?: number;
-  align?: "left" | "center" | "right";
-  type?: "date";
-}
 
 export default defineComponent({
   name: "RightTablePanel",
@@ -41,11 +25,11 @@ export default defineComponent({
   },
   props: {
     tableData: {
-      type: Array as PropType<TableItem[]>,
+      type: Array,
       required: true,
     },
     tableColumns: {
-      type: Array as PropType<TableColumn[]>,
+      type: Array,
       required: true,
     },
     isTreeTable: {
@@ -62,14 +46,14 @@ export default defineComponent({
     "copy-row",
   ],
   setup(props, { emit, expose }) {
-    const localTableData = ref<TableItem[]>(props.tableData);
-    const tableRef = ref<HTMLElement>();
-    const tabulator = ref<Tabulator | null>(null);
+    const localTableData = ref(props.tableData);
+    const tableRef = ref();
+    const tabulator = ref(null);
 
     const tableContextMenuVisible = ref(false);
     const tableContextMenuPosition = reactive({ x: 0, y: 0 });
-    const currentTableItem = ref<TableItem | null>(null);
-    const currentRowKey = ref<string | number | null>(null);
+    const currentTableItem = ref(null);
+    const currentRowKey = ref(null);
 
     // 颜色选择相关
     const colorDialogVisible = ref(false);
@@ -159,11 +143,11 @@ export default defineComponent({
 
       // 监听行选择 - 只有在Tabulator成功创建后才添加监听器
       if (tabulator.value) {
-        tabulator.value.on("rowClick", (e: Event, row: RowComponent) => {
+        tabulator.value.on("rowClick", (e, row) => {
           currentRowKey.value = row.getData().id;
 
           // 清除所有行的选中状态
-          tabulator.value?.getRows().forEach((r: RowComponent) => {
+          tabulator.value?.getRows().forEach((r) => {
             r.getElement().classList.remove('row-selected');
           });
 
@@ -173,7 +157,7 @@ export default defineComponent({
       }
     };
 
-    const handleTableContextMenu = (row: TableItem, column: any, event: MouseEvent) => {
+    const handleTableContextMenu = (row, column, event) => {
       event.preventDefault();
       currentTableItem.value = row;
       tableContextMenuPosition.x = event.clientX;
@@ -187,7 +171,7 @@ export default defineComponent({
       document.removeEventListener("click", closeTableContextMenu);
     };
 
-    const handleTableCommand = (command: string) => {
+    const handleTableCommand = (command) => {
       if (!currentTableItem.value) return;
 
       switch (command) {
@@ -228,7 +212,7 @@ export default defineComponent({
       if (currentTableItem.value && tabulator.value) {
         // 更新 Tabulator 中的数据
         const rows = tabulator.value.getRows();
-        const targetRow = rows.find((row: RowComponent) => row.getData().id === currentTableItem.value!.id);
+        const targetRow = rows.find((row) => row.getData().id === currentTableItem.value.id);
         if (targetRow) {
           targetRow.update({ ...targetRow.getData(), color: colorValue.value });
           localTableData.value = tabulator.value.getData();
@@ -239,7 +223,7 @@ export default defineComponent({
     };
 
     // 设置当前选中行的方法，供父组件调用
-    const setCurrentRow = (rowId: string | number) => {
+    const setCurrentRow = (rowId) => {
       currentRowKey.value = rowId;
       if (tabulator.value) {
         // 使用 nextTick 确保数据已更新并渲染完成
@@ -251,11 +235,11 @@ export default defineComponent({
             const rows = tabulator.value.getRows();
 
             // 清除所有行的选中状态
-            rows.forEach((r: RowComponent) => {
+            rows.forEach((r) => {
               r.getElement().classList.remove('row-selected');
             });
 
-            const targetRow = rows.find((row: RowComponent) => row.getData().id === rowId);
+            const targetRow = rows.find((row) => row.getData().id === rowId);
             if (targetRow) {
               targetRow.select();
               // 添加自定义选中样式
@@ -274,7 +258,7 @@ export default defineComponent({
               }
             } else {
               console.log('未找到要选中的行:', rowId);
-              console.log('可用的行ID:', rows.map((r: RowComponent) => r.getData().id));
+              console.log('可用的行ID:', rows.map((r) => r.getData().id));
             }
           }, 100); // 100ms 延迟确保数据更新完成
         });
@@ -284,7 +268,7 @@ export default defineComponent({
     // 简化：移除展开功能，只保留基本的树形表格显示
 
     // 更新数据的方法
-    const updateData = (newData: TableItem[]) => {
+    const updateData = (newData) => {
       const previousSelectedId = currentRowKey.value;
       localTableData.value = newData;
       if (tabulator.value) {
@@ -331,13 +315,13 @@ export default defineComponent({
           // 如果是编辑操作，只更新数据，不重建表格
           // 保存当前的展开状态
           const expandedRows = tabulator.value.getRows()
-            .filter((row: RowComponent) => {
+            .filter((row) => {
               // 安全检查：确保isTreeExpanded方法存在且为树形表格
               return props.isTreeTable &&
-                typeof (row as any).isTreeExpanded === 'function' &&
-                (row as any).isTreeExpanded();
+                typeof (row ).isTreeExpanded === 'function' &&
+                (row ).isTreeExpanded();
             })
-            .map((row: RowComponent) => row.getData().id);
+            .map((row) => row.getData().id);
 
           // 更新数据
           tabulator.value.setData(newData);
@@ -345,12 +329,12 @@ export default defineComponent({
           // 恢复展开状态
           nextTick(() => {
             if (tabulator.value && props.isTreeTable) {
-              expandedRows.forEach((id: string | number) => {
-                const row = tabulator.value!.getRows().find((r: RowComponent) => r.getData().id === id);
+              expandedRows.forEach((id) => {
+                const row = tabulator.value.getRows().find((r) => r.getData().id === id);
                 if (row && row.getData().children && row.getData().children.length > 0) {
                   // 安全检查：确保treeExpand方法存在
-                  if (typeof (row as any).treeExpand === 'function') {
-                    (row as any).treeExpand();
+                  if (typeof (row ).treeExpand === 'function') {
+                    (row ).treeExpand();
                   }
                 }
               });
@@ -372,7 +356,7 @@ export default defineComponent({
     const clearSelection = () => {
       currentRowKey.value = null;
       if (tabulator.value) {
-        tabulator.value.getRows().forEach((r: RowComponent) => {
+        tabulator.value.getRows().forEach((r) => {
           r.getElement().classList.remove('row-selected');
         });
         tabulator.value.deselectRow();
@@ -385,7 +369,7 @@ export default defineComponent({
     const getCurrentRow = () => {
       if (!tabulator.value || !currentRowKey.value) return null;
       const rows = tabulator.value.getRows();
-      return rows.find((row: RowComponent) => row.getData().id === currentRowKey.value)?.getData() || null;
+      return rows.find((row) => row.getData().id === currentRowKey.value)?.getData() || null;
     };
 
     // 获取所有行数据
@@ -394,26 +378,26 @@ export default defineComponent({
     };
 
     // 根据ID获取行数据
-    const getRowById = (id: string | number) => {
+    const getRowById = (id) => {
       if (!tabulator.value) return null;
       const rows = tabulator.value.getRows();
-      return rows.find((row: RowComponent) => row.getData().id === id)?.getData() || null;
+      return rows.find((row) => row.getData().id === id)?.getData() || null;
     };
 
     // 根据条件查找行
-    const findRows = (predicate: (row: TableItem) => boolean) => {
+    const findRows = (predicate) => {
       if (!tabulator.value) return [];
       const rows = tabulator.value.getRows();
       return rows
-        .map((row: RowComponent) => row.getData() as TableItem)
+        .map((row) => row.getData())
         .filter(predicate);
     };
 
     // 更新指定行的数据
-    const updateRow = (id: string | number, newData: Partial<TableItem>) => {
+    const updateRow = (id, newData) => {
       if (!tabulator.value) return false;
       const rows = tabulator.value.getRows();
-      const targetRow = rows.find((row: RowComponent) => row.getData().id === id);
+      const targetRow = rows.find((row) => row.getData().id === id);
       if (targetRow) {
         targetRow.update({ ...targetRow.getData(), ...newData });
         localTableData.value = tabulator.value.getData();
@@ -424,13 +408,13 @@ export default defineComponent({
     };
 
     // 删除指定行
-    const deleteRow = (id: string | number) => {
+    const deleteRow = (id) => {
       if (!tabulator.value) return false;
       const rows = tabulator.value.getRows();
-      const targetRow = rows.find((row: RowComponent) => row.getData().id === id);
+      const targetRow = rows.find((row) => row.getData().id === id);
       if (targetRow) {
         // 使用类型断言来访问 delete 方法
-        (targetRow as any).delete();
+        (targetRow ).delete();
         localTableData.value = tabulator.value.getData();
         emit("update:tableData", localTableData.value);
         return true;
@@ -439,10 +423,10 @@ export default defineComponent({
     };
 
     // 添加新行
-    const addRow = (rowData: TableItem) => {
+    const addRow = (rowData) => {
       if (!tabulator.value) return false;
       // 使用类型断言来访问 addRow 方法
-      (tabulator.value as any).addRow(rowData);
+      (tabulator.value ).addRow(rowData);
       localTableData.value = tabulator.value.getData();
       emit("update:tableData", localTableData.value);
       return true;
@@ -452,11 +436,11 @@ export default defineComponent({
     const expandAll = () => {
       if (!tabulator.value || !props.isTreeTable) return;
       const rows = tabulator.value.getRows();
-      rows.forEach((row: RowComponent) => {
+      rows.forEach((row) => {
         if (row.getData().children && row.getData().children.length > 0) {
           // 安全检查：确保treeExpand方法存在
-          if (typeof (row as any).treeExpand === 'function') {
-            (row as any).treeExpand();
+          if (typeof (row ).treeExpand === 'function') {
+            (row ).treeExpand();
           }
         }
       });
@@ -465,48 +449,48 @@ export default defineComponent({
     const collapseAll = () => {
       if (!tabulator.value || !props.isTreeTable) return;
       const rows = tabulator.value.getRows();
-      rows.forEach((row: RowComponent) => {
+      rows.forEach((row) => {
         // 安全检查：确保isTreeExpanded和treeCollapse方法存在
-        if (typeof (row as any).isTreeExpanded === 'function' &&
-          typeof (row as any).treeCollapse === 'function' &&
-          (row as any).isTreeExpanded()) {
-          (row as any).treeCollapse();
+        if (typeof (row ).isTreeExpanded === 'function' &&
+          typeof (row ).treeCollapse === 'function' &&
+          (row ).isTreeExpanded()) {
+          (row ).treeCollapse();
         }
       });
     };
 
-    const expandRow = (id: string | number) => {
+    const expandRow = (id) => {
       if (!tabulator.value || !props.isTreeTable) return false;
       const rows = tabulator.value.getRows();
-      const targetRow = rows.find((row: RowComponent) => row.getData().id === id);
+      const targetRow = rows.find((row) => row.getData().id === id);
       if (targetRow && targetRow.getData().children && targetRow.getData().children.length > 0) {
         // 安全检查：确保treeExpand方法存在
-        if (typeof (targetRow as any).treeExpand === 'function') {
-          (targetRow as any).treeExpand();
+        if (typeof (targetRow ).treeExpand === 'function') {
+          (targetRow ).treeExpand();
           return true;
         }
       }
       return false;
     };
 
-    const collapseRow = (id: string | number) => {
+    const collapseRow = (id) => {
       if (!tabulator.value || !props.isTreeTable) return false;
       const rows = tabulator.value.getRows();
-      const targetRow = rows.find((row: RowComponent) => row.getData().id === id);
+      const targetRow = rows.find((row) => row.getData().id === id);
       if (targetRow &&
-        typeof (targetRow as any).isTreeExpanded === 'function' &&
-        typeof (targetRow as any).treeCollapse === 'function' &&
-        (targetRow as any).isTreeExpanded()) {
-        (targetRow as any).treeCollapse();
+        typeof (targetRow ).isTreeExpanded === 'function' &&
+        typeof (targetRow ).treeCollapse === 'function' &&
+        (targetRow ).isTreeExpanded()) {
+        (targetRow ).treeCollapse();
         return true;
       }
       return false;
     };
 
-    const isRowExpanded = (id: string | number) => {
+    const isRowExpanded = (id) => {
       if (!tabulator.value || !props.isTreeTable) return false;
       const rows = tabulator.value.getRows();
-      const targetRow = rows.find((row: RowComponent) => row.getData().id === id);
+      const targetRow = rows.find((row) => row.getData().id === id);
       return targetRow ? targetRow.isTreeExpanded() : false;
     };
 
@@ -514,24 +498,24 @@ export default defineComponent({
     const getExpandedRows = () => {
       if (!tabulator.value || !props.isTreeTable) return [];
       const rows = tabulator.value.getRows();
-      return rows.filter((row: RowComponent) => row.isTreeExpanded()).map((row: RowComponent) => row.getData().id);
+      return rows.filter((row) => row.isTreeExpanded()).map((row) => row.getData().id);
     };
 
     // 设置展开状态
-    const setExpandedRows = (ids: (string | number)[]) => {
+    const setExpandedRows = (ids) => {
       if (!tabulator.value || !props.isTreeTable) return;
       const rows = tabulator.value.getRows();
 
       // 先收起所有行
-      rows.forEach((row: RowComponent) => {
+      rows.forEach((row) => {
         if (row.isTreeExpanded()) {
           row.treeCollapse();
         }
       });
 
       // 展开指定的行
-      ids.forEach((id: string | number) => {
-        const targetRow = rows.find((row: RowComponent) => row.getData().id === id);
+      ids.forEach((id) => {
+        const targetRow = rows.find((row) => row.getData().id === id);
         if (targetRow && targetRow.getData().children && targetRow.getData().children.length > 0) {
           targetRow.treeExpand();
         }
@@ -539,53 +523,53 @@ export default defineComponent({
     };
 
     // 排序相关方法
-    const sortBy = (field: string, dir: 'asc' | 'desc' = 'asc') => {
+    const sortBy = (field, dir) => {
       if (!tabulator.value) return;
-      (tabulator.value as any).setSort(field, dir);
+      (tabulator.value ).setSort(field, dir);
     };
 
     const clearSort = () => {
       if (!tabulator.value) return;
-      (tabulator.value as any).clearSort();
+      (tabulator.value ).clearSort();
     };
 
     // 过滤相关方法
-    const setFilter = (field: string, type: string, value: any) => {
+    const setFilter = (field, type, value) => {
       if (!tabulator.value) return;
-      (tabulator.value as any).setFilter(field, type, value);
+      (tabulator.value ).setFilter(field, type, value);
     };
 
     const clearFilter = () => {
       if (!tabulator.value) return;
-      (tabulator.value as any).clearFilter();
+      (tabulator.value ).clearFilter();
     };
 
     // 分页相关方法
-    const setPage = (page: number) => {
+    const setPage = (page) => {
       if (!tabulator.value) return;
-      (tabulator.value as any).setPage(page);
+      (tabulator.value ).setPage(page);
     };
 
     const getCurrentPage = () => {
       if (!tabulator.value) return 1;
-      return (tabulator.value as any).getPage();
+      return (tabulator.value ).getPage();
     };
 
     const getPageSize = () => {
       if (!tabulator.value) return 10;
-      return (tabulator.value as any).getPageSize();
+      return (tabulator.value ).getPageSize();
     };
 
-    const setPageSize = (size: number) => {
+    const setPageSize = (size) => {
       if (!tabulator.value) return;
-      (tabulator.value as any).setPageSize(size);
+      (tabulator.value ).setPageSize(size);
     };
 
     // 选择相关方法
-    const selectRow = (id: string | number) => {
+    const selectRow = (id) => {
       if (!tabulator.value) return false;
       const rows = tabulator.value.getRows();
-      const targetRow = rows.find((row: RowComponent) => row.getData().id === id);
+      const targetRow = rows.find((row) => row.getData().id === id);
       if (targetRow) {
         targetRow.select();
         return true;
@@ -593,12 +577,12 @@ export default defineComponent({
       return false;
     };
 
-    const deselectRow = (id: string | number) => {
+    const deselectRow = (id) => {
       if (!tabulator.value) return false;
       const rows = tabulator.value.getRows();
-      const targetRow = rows.find((row: RowComponent) => row.getData().id === id);
+      const targetRow = rows.find((row) => row.getData().id === id);
       if (targetRow) {
-        (targetRow as any).deselect();
+        (targetRow ).deselect();
         return true;
       }
       return false;
@@ -606,12 +590,12 @@ export default defineComponent({
 
     const getSelectedRows = () => {
       if (!tabulator.value) return [];
-      return (tabulator.value as any).getSelectedRows().map((row: RowComponent) => row.getData());
+      return (tabulator.value ).getSelectedRows().map((row) => row.getData());
     };
 
     const selectAll = () => {
       if (!tabulator.value) return;
-      (tabulator.value as any).selectRow();
+      (tabulator.value ).selectRow();
     };
 
     const deselectAll = () => {
@@ -620,10 +604,10 @@ export default defineComponent({
     };
 
     // 滚动相关方法
-    const scrollToRow = (id: string | number, position: 'start' | 'center' | 'end' = 'center') => {
+    const scrollToRow = (id, position) => {
       if (!tabulator.value) return false;
       const rows = tabulator.value.getRows();
-      const targetRow = rows.find((row: RowComponent) => row.getData().id === id);
+      const targetRow = rows.find((row) => row.getData().id === id);
       if (targetRow) {
         targetRow.getElement().scrollIntoView({
           behavior: 'smooth',
@@ -636,7 +620,7 @@ export default defineComponent({
 
     const scrollToTop = () => {
       if (!tabulator.value) return;
-      const tableElement = (tabulator.value as any).getElement();
+      const tableElement = (tabulator.value ).getElement();
       if (tableElement) {
         tableElement.scrollTop = 0;
       }
@@ -644,59 +628,59 @@ export default defineComponent({
 
     const scrollToBottom = () => {
       if (!tabulator.value) return;
-      const tableElement = (tabulator.value as any).getElement();
+      const tableElement = (tabulator.value ).getElement();
       if (tableElement) {
         tableElement.scrollTop = tableElement.scrollHeight;
       }
     };
 
     // 导出相关方法
-    const exportToCSV = (filename?: string) => {
+    const exportToCSV = (filename) => {
       if (!tabulator.value) return;
-      (tabulator.value as any).download('csv', filename || 'table-data.csv');
+      (tabulator.value ).download('csv', filename || 'table-data.csv');
     };
 
-    const exportToJSON = (filename?: string) => {
+    const exportToJSON = (filename) => {
       if (!tabulator.value) return;
-      (tabulator.value as any).download('json', filename || 'table-data.json');
+      (tabulator.value ).download('json', filename || 'table-data.json');
     };
 
-    const exportToPDF = (filename?: string) => {
+    const exportToPDF = (filename) => {
       if (!tabulator.value) return;
-      (tabulator.value as any).download('pdf', filename || 'table-data.pdf');
+      (tabulator.value ).download('pdf', filename || 'table-data.pdf');
     };
 
     // 表格状态方法
     const getTableState = () => {
       if (!tabulator.value) return null;
       return {
-        currentPage: (tabulator.value as any).getPage(),
-        pageSize: (tabulator.value as any).getPageSize(),
-        sort: (tabulator.value as any).getSorters(),
-        filter: (tabulator.value as any).getFilters(),
-        selectedRows: (tabulator.value as any).getSelectedRows().map((row: RowComponent) => row.getData().id),
+        currentPage: (tabulator.value ).getPage(),
+        pageSize: (tabulator.value ).getPageSize(),
+        sort: (tabulator.value ).getSorters(),
+        filter: (tabulator.value ).getFilters(),
+        selectedRows: (tabulator.value ).getSelectedRows().map((row) => row.getData().id),
         expandedRows: props.isTreeTable ? getExpandedRows() : [],
         currentRow: currentRowKey.value
       };
     };
 
-    const setTableState = (state: any) => {
+    const setTableState = (state) => {
       if (!tabulator.value) return;
 
       if (state.sort) {
-        (tabulator.value as any).setSort(state.sort);
+        (tabulator.value ).setSort(state.sort);
       }
 
       if (state.filter) {
-        (tabulator.value as any).setFilter(state.filter);
+        (tabulator.value ).setFilter(state.filter);
       }
 
       if (state.pageSize) {
-        (tabulator.value as any).setPageSize(state.pageSize);
+        (tabulator.value ).setPageSize(state.pageSize);
       }
 
       if (state.currentPage) {
-        (tabulator.value as any).setPage(state.currentPage);
+        (tabulator.value ).setPage(state.currentPage);
       }
 
       if (state.expandedRows && props.isTreeTable) {
@@ -724,11 +708,11 @@ export default defineComponent({
       const rows = tabulator.value.getRows();
       return {
         totalRows: rows.length,
-        visibleRows: rows.filter((row: RowComponent) => (row as any).isVisible()).length,
-        selectedRows: (tabulator.value as any).getSelectedRows().length,
+        visibleRows: rows.filter((row) => (row ).isVisible()).length,
+        selectedRows: (tabulator.value ).getSelectedRows().length,
         expandedRows: props.isTreeTable ? getExpandedRows().length : 0,
-        currentPage: (tabulator.value as any).getPage(),
-        totalPages: (tabulator.value as any).getPageMax()
+        currentPage: (tabulator.value ).getPage(),
+        totalPages: (tabulator.value ).getPageMax()
       };
     };
 

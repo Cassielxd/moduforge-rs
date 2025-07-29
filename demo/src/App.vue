@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { computed, onMounted, ref, defineAsyncComponent } from 'vue';
 import { useUserStore } from '@/stores/user';
 
@@ -10,7 +10,7 @@ const isInitialized = ref(false);
 // 计算是否需要显示登录弹窗 - 只有在初始化完成后才显示
 const showLoginDialog = computed({
   get: () => isInitialized.value && !userStore.isLoggedIn,
-  set: (value: boolean) => {
+  set: (value) => {
     // 如果试图关闭登录弹窗但用户未登录，则不允许关闭
     // 弹窗只能通过成功登录来关闭
   }

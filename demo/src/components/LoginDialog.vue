@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { ref, reactive } from 'vue';
 import { ElMessage } from 'element-plus';
 import { User, Lock, Document, Close } from '@element-plus/icons-vue';
@@ -9,13 +9,14 @@ const userStore = useUserStore();
 const loading = ref(false);
 
 // 控制弹窗显示
-const props = defineProps<{
-    modelValue: boolean;
-}>();
+const props = defineProps({
+    modelValue: {
+        type: Boolean,
+        default: false,
+    },
+});
 
-const emit = defineEmits<{
-    'update:modelValue': [value: boolean];
-}>();
+const emit = defineEmits('update:modelValue');
 
 // 登录表单数据
 const loginForm = reactive({

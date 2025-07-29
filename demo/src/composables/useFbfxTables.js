@@ -6,26 +6,26 @@ export function useFbfxTables() {
   const activeSubTab = ref("detail");
 
   // ========== Tabulator 相关变量 ==========
-  const subTableRef = ref<HTMLElement>();
+  const subTableRef = ref();
   // 为每个子标签页创建独立的ref
-  const detailTableRef = ref<HTMLElement>();
-  const statisticsTableRef = ref<HTMLElement>();
-  const historyTableRef = ref<HTMLElement>();
+  const detailTableRef = ref();
+  const statisticsTableRef = ref();
+  const historyTableRef = ref();
 
   // 初始化子表格
   const initSubTabulator = (
-    subTabulatorComposable: any,
-    detailData: any,
-    statisticsData: any,
-    historyData: any,
-    detailColumns: any,
-    statisticsColumns: any,
-    historyColumns: any,
-    eventHandlers: any
+    subTabulatorComposable,
+    detailData,
+    statisticsData,
+    historyData,
+    detailColumns,
+    statisticsColumns,
+    historyColumns,
+    eventHandlers
   ) => {
     console.log("initSubTabulator 被调用, activeSubTab:", activeSubTab.value);
 
-    let currentRef: HTMLElement | undefined;
+    let currentRef;
 
     // 根据当前活动标签页选择对应的ref
     switch (activeSubTab.value) {
@@ -90,18 +90,18 @@ export function useFbfxTables() {
 
   // 处理子标签页切换
   const handleSubTabChange = (
-    tabName: string | number,
-    subTabulatorComposable: any,
-    detailData: any,
-    statisticsData: any,
-    historyData: any,
-    detailColumns: any,
-    statisticsColumns: any,
-    historyColumns: any,
-    eventHandlers: any
+    tabName,
+    subTabulatorComposable,
+    detailData,
+    statisticsData,
+    historyData,
+    detailColumns,
+    statisticsColumns,
+    historyColumns,
+    eventHandlers
   ) => {
     console.log("FbfxView: Sub tab changed to:", tabName);
-    activeSubTab.value = tabName as string;
+    activeSubTab.value = tabName;
 
     // 重新初始化子表格
     nextTick(() => {

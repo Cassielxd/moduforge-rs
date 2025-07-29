@@ -4,27 +4,10 @@ import { ref } from "vue";
 import { TabulatorFull as Tabulator } from "tabulator-tables";
 import "tabulator-tables/dist/css/tabulator.min.css";
 import { ElMessage } from "element-plus";
-
-// 接口定义
-interface TableColumn {
-  prop: string;
-  label: string;
-  minWidth?: number;
-  width?: number;
-  align?: "left" | "center" | "right";
-  type?: "date";
-}
-
-// 子表格数据类型
-interface SubTableData {
-  id: number | string;
-  [key: string]: any;
-}
-
 export function useSubTabulator() {
   // 为每个标签页维护独立的实例
-  const subTabulators = ref<Record<string, any>>({});
-  const currentActiveTab = ref<string>("detail");
+  const subTabulators = ref({});
+  const currentActiveTab = ref("detail");
 
   // 默认数据
   const defaultData = {
@@ -106,7 +89,7 @@ export function useSubTabulator() {
     ],
     statistics: [
       { prop: "name", label: "统计项", width: 120 },
-      { prop: "value", label: "数值", width: 80, align: "right" as const },
+      { prop: "value", label: "数值", width: 80, align: "right" },
       { prop: "unit", label: "单位", width: 60 },
       { prop: "description", label: "说明", minWidth: 200 },
     ],
@@ -119,35 +102,35 @@ export function useSubTabulator() {
   };
 
   // 当前数据状态
-  const currentData = ref<SubTableData[]>([]);
-  const currentColumns = ref<TableColumn[]>([]);
+  const currentData = ref([]);
+  const currentColumns = ref([]);
 
   // 事件处理函数
   const eventHandlers = {
     onAddRow: () => {
       ElMessage.info("子表格新增功能");
     },
-    onEditRow: (row: any) => {
+    onEditRow: (row) => {
       ElMessage.info("子表格编辑功能，可以双击单元格编辑");
     },
-    onDeleteRow: (row: any) => {
+    onDeleteRow: (row) => {
       ElMessage.info("子表格删除功能");
     },
-    onCopyRow: (row: any) => {
+    onCopyRow: (row) => {
       ElMessage.info("子表格复制功能");
     },
-    onCellEdited: (cell: any) => {
+    onCellEdited: (cell) => {
       ElMessage.info("子表格编辑功能");
     },
   };
 
   // 设置事件处理器
-  const setEventHandlers = (handlers: Partial<typeof eventHandlers>) => {
+  const setEventHandlers = (handlers) => {
     Object.assign(eventHandlers, handlers);
   };
 
   // 获取列配置
-  const getColumns = (columns: TableColumn[]): any[] => [
+  const getColumns = (columns) => [
     {
       title: "",
       width: 50,
@@ -160,7 +143,7 @@ export function useSubTabulator() {
       width: col.width || col.minWidth || 120,
       headerSort: true,
       editor: "input",
-      cellEdited: (cell: any) => {
+      cellEdited: (cell) => {
         eventHandlers.onCellEdited(cell);
       },
     })),
@@ -168,10 +151,10 @@ export function useSubTabulator() {
 
   // 初始化子表格
   const initSubTabulator = (
-    element: HTMLElement,
-    tabName: string,
-    customData?: SubTableData[],
-    customColumns?: TableColumn[]
+    element,
+    tabName,
+    customData,
+    customColumns
   ) => {
     if (!element) return;
 
@@ -180,10 +163,10 @@ export function useSubTabulator() {
 
     // 确定数据和列配置
     const data =
-      customData || defaultData[tabName as keyof typeof defaultData] || [];
+      customData || defaultData[tabName] || [];
     const columns =
       customColumns ||
-      defaultColumns[tabName as keyof typeof defaultColumns] ||
+      defaultColumns[tabName] ||
       [];
 
     currentData.value = data;
@@ -210,11 +193,11 @@ export function useSubTabulator() {
       height: 400,
       maxHeight: 300,
       editTriggerEvent: "dblclick", // 设置双击编辑
-      cellEdited: (cell: any) => {
+      cellEdited: (cell) => {
         console.log("子表格单元格编辑:", cell.getData());
         eventHandlers.onCellEdited(cell);
       },
-      rowDblClick: (e: UIEvent, row: any) => {
+      rowDblClick: (e, row) => {
         console.log("双击子表格行:", row.getData());
         // 双击行时可以触发编辑事件
         eventHandlers.onEditRow(row.getData());
@@ -229,21 +212,21 @@ export function useSubTabulator() {
         },
         {
           label: "编辑",
-          action: (e: Event, row: any) => {
+          action: (e, row) => {
             console.log("右键菜单 - 编辑被点击，行数据:", row.getData());
             eventHandlers.onEditRow(row.getData());
           },
         },
         {
           label: "删除",
-          action: (e: Event, row: any) => {
+          action: (e, row) => {
             console.log("右键菜单 - 删除被点击，行数据:", row.getData());
             eventHandlers.onDeleteRow(row.getData());
           },
         },
         {
           label: "复制",
-          action: (e: Event, row: any) => {
+          action: (e, row) => {
             console.log("右键菜单 - 复制被点击，行数据:", row.getData());
             eventHandlers.onCopyRow(row.getData());
           },
@@ -255,7 +238,7 @@ export function useSubTabulator() {
   };
 
   // 更新数据
-  const updateData = (newData: SubTableData[]) => {
+  const updateData = (newData) => {
     if (!subTabulators.value[currentActiveTab.value]) return;
     currentData.value = newData;
     // @ts-ignore
@@ -264,10 +247,10 @@ export function useSubTabulator() {
 
   // 切换标签页
   const switchTab = (
-    element: HTMLElement,
-    tabName: string,
-    customData?: SubTableData[],
-    customColumns?: TableColumn[]
+    element,
+    tabName,
+    customData,
+    customColumns
   ) => {
     initSubTabulator(element, tabName, customData, customColumns);
   };
@@ -280,7 +263,7 @@ export function useSubTabulator() {
       // @ts-ignore
       return subTabulators.value[
         currentActiveTab.value
-      ].getData() as SubTableData[];
+      ].getData();
     },
 
     getAllRows: () => {
@@ -289,12 +272,12 @@ export function useSubTabulator() {
       return subTabulators.value[currentActiveTab.value].getRows();
     },
 
-    getRowById: (id: string | number) => {
+    getRowById: (id) => {
       if (!subTabulators.value[currentActiveTab.value]) return null;
       try {
         // @ts-ignore
         const row = subTabulators.value[currentActiveTab.value].getRow(id);
-        return row ? (row.getData() as SubTableData) : null;
+        return row ? row.getData() : null;
       } catch {
         return null;
       }
@@ -305,11 +288,11 @@ export function useSubTabulator() {
       // @ts-ignore
       return subTabulators.value[currentActiveTab.value]
         .getSelectedRows()
-        .map((row: any) => row.getData() as SubTableData);
+        .map((row) => row.getData());
     },
 
     // 数据操作方法
-    addRow: (data: SubTableData, position?: "top" | "bottom") => {
+    addRow: (data, position) => {
       if (!subTabulators.value[currentActiveTab.value]) return false;
       try {
         // @ts-ignore
@@ -324,7 +307,7 @@ export function useSubTabulator() {
       }
     },
 
-    updateRow: (id: string | number, data: Partial<SubTableData>) => {
+    updateRow: (id, data) => {
       if (!subTabulators.value[currentActiveTab.value]) return false;
       try {
         // @ts-ignore
@@ -340,7 +323,7 @@ export function useSubTabulator() {
       }
     },
 
-    deleteRow: (id: string | number) => {
+    deleteRow: (id) => {
       if (!subTabulators.value[currentActiveTab.value]) return false;
       try {
         // @ts-ignore
@@ -362,7 +345,7 @@ export function useSubTabulator() {
     },
 
     // 选择操作方法
-    selectRow: (id: string | number) => {
+    selectRow: (id) => {
       if (!subTabulators.value[currentActiveTab.value]) return false;
       try {
         // @ts-ignore
@@ -391,13 +374,13 @@ export function useSubTabulator() {
     },
 
     // 排序和过滤方法
-    sortBy: (field: string, direction: "asc" | "desc") => {
+    sortBy: (field, direction) => {
       if (!subTabulators.value[currentActiveTab.value]) return;
       // @ts-ignore
       subTabulators.value[currentActiveTab.value].setSort(field, direction);
     },
 
-    setFilter: (field: string, type: string, value: any) => {
+    setFilter: (field, type, value) => {
       if (!subTabulators.value[currentActiveTab.value]) return;
       // @ts-ignore
       subTabulators.value[currentActiveTab.value].setFilter(field, type, value);
@@ -410,7 +393,7 @@ export function useSubTabulator() {
     },
 
     // 导出方法
-    exportToCSV: (filename?: string) => {
+    exportToCSV: (filename) => {
       if (!subTabulators.value[currentActiveTab.value]) return;
       // @ts-ignore
       subTabulators.value[currentActiveTab.value].download(
@@ -419,7 +402,7 @@ export function useSubTabulator() {
       );
     },
 
-    exportToJSON: (filename?: string) => {
+    exportToJSON: (filename) => {
       if (!subTabulators.value[currentActiveTab.value]) return;
       // @ts-ignore
       subTabulators.value[currentActiveTab.value].download(

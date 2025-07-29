@@ -1,20 +1,15 @@
-<script setup lang="ts">
+<script setup>
 import { onMounted, ref, toRaw } from "vue";
 import LeftTreePanel from "../components/LeftTreePanel.vue";
 // @ts-ignore
 import MultiTabView from "../components/MultiTabView.vue";
-import type { ComponentPublicInstance } from "vue";
 
-const multiTabRef = ref<
-  ComponentPublicInstance & {
-    refreshData: (id: any) => void;
-  }
->();
+const multiTabRef = ref();
 
 const treeData = ref([]);
 
 
-const handleNodeSelected = (node: any) => {
+const handleNodeSelected = (node) => {
   const id = toRaw(node.id);
   if (multiTabRef.value) {
     multiTabRef.value.refreshData(id);
@@ -23,7 +18,7 @@ const handleNodeSelected = (node: any) => {
 
 // 统计函数
 const getTreeNodeCount = () => {
-  const countNodes = (nodes: any[]): number => {
+  const countNodes = (nodes) => {
     let count = 0;
     nodes.forEach((node) => {
       count++;

@@ -1,10 +1,9 @@
-<script lang="ts">
+<script>
 import { defineComponent, ref, nextTick, onMounted, onUnmounted, watch } from "vue";
 import { ElMessage, ElMessageBox, ElDialog, ElButton, ElColorPicker, ElIcon, ElTabs, ElTabPane } from "element-plus";
 // @ts-ignore
 import { TabulatorFull as Tabulator } from 'tabulator-tables';
 // @ts-ignore
-import type { RowComponent, CellComponent } from 'tabulator-tables';
 import 'tabulator-tables/dist/css/tabulator.min.css';
 import { Plus, Edit, Delete, CopyDocument, Brush, Folder, Document } from '@element-plus/icons-vue';
 
@@ -64,7 +63,7 @@ export default defineComponent({
     const historyColumns = standardConversion.historyColumns;
 
     // 主表格引用直接在这里定义
-    const mainTableRef = ref<HTMLElement>();
+    const mainTableRef = ref();
 
     // 表格管理
     const fbfxTables = useFbfxTables();
@@ -110,7 +109,7 @@ export default defineComponent({
     const { getFolderCount, getFileCount, getCurrentTime } = fbfxUtils;
 
     // 子表格事件处理器 - 根据不同标签页使用不同的处理方法
-    const getSubTableEventHandlers = (tabName: string) => {
+    const getSubTableEventHandlers = (tabName) => {
       switch (tabName) {
         case 'detail':
           return {
@@ -118,17 +117,17 @@ export default defineComponent({
               rcjDetail.addDetailRow();
               ElMessage.success("添加成功");
             },
-            onEditRow: (row: any) => {
+            onEditRow: (row) => {
               rcjDetail.editDetailRow(row);
               ElMessage.info("可以双击单元格进行编辑");
             },
-            onDeleteRow: (row: any) => {
+            onDeleteRow: (row) => {
               const success = rcjDetail.deleteDetailRow(row);
               if (success) {
                 ElMessage.success("删除成功");
               }
             },
-            onCopyRow: (row: any) => {
+            onCopyRow: (row) => {
               rcjDetail.copyDetailRow(row);
               ElMessage.success("复制成功");
             },
@@ -139,17 +138,17 @@ export default defineComponent({
               priceStructure.addStructureRow();
               ElMessage.success("添加成功");
             },
-            onEditRow: (row: any) => {
+            onEditRow: (row) => {
               priceStructure.editStructureRow(row);
               ElMessage.info("可以双击单元格进行编辑");
             },
-            onDeleteRow: (row: any) => {
+            onDeleteRow: (row) => {
               const success = priceStructure.deleteStructureRow(row);
               if (success) {
                 ElMessage.success("删除成功");
               }
             },
-            onCopyRow: (row: any) => {
+            onCopyRow: (row) => {
               priceStructure.copyStructureRow(row);
               ElMessage.success("复制成功");
             },
@@ -160,17 +159,17 @@ export default defineComponent({
               standardConversion.addConversionRule();
               ElMessage.success("添加成功");
             },
-            onEditRow: (row: any) => {
+            onEditRow: (row) => {
               standardConversion.editConversionRule(row);
               ElMessage.info("可以双击单元格进行编辑");
             },
-            onDeleteRow: (row: any) => {
+            onDeleteRow: (row) => {
               const success = standardConversion.deleteConversionRule(row);
               if (success) {
                 ElMessage.success("删除成功");
               }
             },
-            onCopyRow: (row: any) => {
+            onCopyRow: (row) => {
               standardConversion.copyConversionRule(row);
               ElMessage.success("复制成功");
             },
@@ -201,8 +200,8 @@ export default defineComponent({
     };
 
     // 处理子标签页切换
-    const handleSubTabChange = (tabName: string | number) => {
-      const eventHandlers = getSubTableEventHandlers(tabName as string);
+    const handleSubTabChange = (tabName) => {
+      const eventHandlers = getSubTableEventHandlers(tabName);
       _handleSubTabChange(
         tabName,
         subTabulatorComposable,
@@ -217,7 +216,7 @@ export default defineComponent({
     };
 
     // 初始化函数
-    const init = (id: string | number | null) => {
+    const init = (id) => {
       console.log("FbfxView.vue init called with ID:", id);
     };
 
@@ -249,7 +248,7 @@ export default defineComponent({
                 handleAddRow();
                 ElMessage.success("添加成功");
               },
-              onAddChildRow: (parentRow: any) => {
+              onAddChildRow: (parentRow) => {
                 // 添加子项功能实现
                 const newChild = {
                   id: `child_${parentRow.id}_${Date.now()}`,
@@ -271,13 +270,13 @@ export default defineComponent({
                   ElMessage.error("添加子项失败");
                 }
               },
-              onEditRow: (row: any) => {
+              onEditRow: (row) => {
                 handleEditRow(row);
               },
-              onDeleteRow: (row: any) => {
+              onDeleteRow: (row) => {
                 handleDeleteRow(row);
               },
-              onCopyRow: (row: any) => {
+              onCopyRow: (row) => {
                 handleCopyRow(row);
               },
             });

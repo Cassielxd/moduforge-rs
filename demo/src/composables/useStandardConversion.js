@@ -1,33 +1,9 @@
 // 标准换算组合式函数
 import { ref, computed } from "vue";
 
-export interface ConversionRule {
-  id: number | string;
-  itemName: string; // 项目名称
-  originalUnit: string; // 原单位
-  targetUnit: string; // 目标单位
-  conversionFactor: number; // 换算系数
-  formula: string; // 换算公式
-  remark?: string; // 备注
-  isActive: boolean; // 是否启用
-}
-
-export interface ConversionHistory {
-  id: number | string;
-  timestamp: string; // 时间戳
-  operation: string; // 操作类型
-  itemName: string; // 项目名称
-  originalValue: number; // 原始值
-  originalUnit: string; // 原单位
-  convertedValue: number; // 转换值
-  targetUnit: string; // 目标单位
-  conversionFactor: number; // 使用的换算系数
-  operator: string; // 操作人
-}
-
 export function useStandardConversion() {
   // 换算规则数据
-  const conversionRules = ref<ConversionRule[]>([
+  const conversionRules = ref([
     {
       id: 1,
       itemName: "混凝土",
@@ -71,7 +47,7 @@ export function useStandardConversion() {
   ]);
 
   // 换算历史记录
-  const conversionHistory = ref<ConversionHistory[]>([
+  const conversionHistory = ref([
     {
       id: 1,
       timestamp: "2024-07-29 15:30:22",
@@ -107,14 +83,14 @@ export function useStandardConversion() {
       prop: "originalValue",
       label: "原始值",
       width: 80,
-      align: "right" as const,
+      align: "right",
     },
     { prop: "originalUnit", label: "原单位", width: 60 },
     {
       prop: "convertedValue",
       label: "转换值",
       width: 80,
-      align: "right" as const,
+      align: "right",
     },
     { prop: "targetUnit", label: "目标单位", width: 60 },
     { prop: "operator", label: "操作人", width: 80 },
@@ -129,14 +105,14 @@ export function useStandardConversion() {
       prop: "originalValue",
       label: "原始值",
       width: 80,
-      align: "right" as const,
+      align: "right",
     },
     { prop: "originalUnit", label: "原单位", width: 60 },
     {
       prop: "convertedValue",
       label: "转换值",
       width: 80,
-      align: "right" as const,
+      align: "right",
     },
     { prop: "targetUnit", label: "目标单位", width: 60 },
     { prop: "operator", label: "操作人", width: 80 },
@@ -149,10 +125,10 @@ export function useStandardConversion() {
 
   // 执行换算
   const performConversion = (
-    itemName: string,
-    originalValue: number,
-    isReverse: boolean = false,
-    operator: string = "当前用户"
+    itemName,
+    originalValue,
+    isReverse = false,
+    operator = "当前用户"
   ) => {
     const rule = conversionRules.value.find(
       (r) => r.itemName === itemName && r.isActive
@@ -161,10 +137,10 @@ export function useStandardConversion() {
       throw new Error(`未找到项目 ${itemName} 的换算规则`);
     }
 
-    let convertedValue: number;
-    let operation: string;
-    let originalUnit: string;
-    let targetUnit: string;
+    let convertedValue;
+    let operation;
+    let originalUnit;
+    let targetUnit;
 
     if (isReverse) {
       // 反向换算
@@ -181,7 +157,7 @@ export function useStandardConversion() {
     }
 
     // 添加到历史记录
-    const historyRecord: ConversionHistory = {
+    const historyRecord = {
       id: Date.now(),
       timestamp: new Date().toLocaleString(),
       operation,
@@ -212,8 +188,8 @@ export function useStandardConversion() {
   };
 
   // 添加换算规则
-  const addConversionRule = (currentRow?: ConversionRule) => {
-    const newRule: ConversionRule = {
+  const addConversionRule = (currentRow) => {
+    const newRule = {
       id: Date.now(),
       itemName: "新项目",
       originalUnit: "单位1",
@@ -241,7 +217,7 @@ export function useStandardConversion() {
   };
 
   // 删除换算规则
-  const deleteConversionRule = (row: ConversionRule) => {
+  const deleteConversionRule = (row) => {
     const index = conversionRules.value.findIndex((item) => item.id === row.id);
     if (index > -1) {
       conversionRules.value.splice(index, 1);
@@ -251,8 +227,8 @@ export function useStandardConversion() {
   };
 
   // 复制换算规则
-  const copyConversionRule = (row: ConversionRule) => {
-    const newRule: ConversionRule = {
+  const copyConversionRule = (row) => {
+    const newRule = {
       ...row,
       id: Date.now(),
       itemName: `${row.itemName} (复制)`,
@@ -262,7 +238,7 @@ export function useStandardConversion() {
   };
 
   // 编辑换算规则
-  const editConversionRule = (row: ConversionRule) => {
+  const editConversionRule = (row) => {
     return row;
   };
 
@@ -281,18 +257,13 @@ export function useStandardConversion() {
   };
 
   // 导入换算规则
-  const importRules = (rules: ConversionRule[]) => {
+  const importRules = (rules) => {
     conversionRules.value = [...conversionRules.value, ...rules];
   };
 
   // 批量执行换算
   const batchConversion = (
-    conversions: Array<{
-      itemName: string;
-      originalValue: number;
-      isReverse?: boolean;
-    }>,
-    operator: string = "当前用户"
+    conversions
   ) => {
     const results = [];
     for (const conversion of conversions) {
@@ -301,11 +272,11 @@ export function useStandardConversion() {
           conversion.itemName,
           conversion.originalValue,
           conversion.isReverse || false,
-          operator
+          "当前用户"
         );
         results.push({ success: true, result });
       } catch (error) {
-        results.push({ success: false, error: (error as Error).message });
+        results.push({ success: false, error: (error ).message });
       }
     }
     return results;

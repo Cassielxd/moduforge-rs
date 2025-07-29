@@ -7,16 +7,9 @@ import {
   unregisterAll,
 } from "@tauri-apps/plugin-global-shortcut";
 
-export interface GlobalShortcut {
-  id: string;
-  name: string;
-  shortcut: string;
-  enabled: boolean;
-  handler: () => void;
-}
 
 export const useGlobalShortcutsStore = defineStore("globalShortcuts", () => {
-  const shortcuts = ref<GlobalShortcut[]>([]);
+  const shortcuts = ref([]);
   const isInitialized = ref(false);
 
   // 初始化全局快捷键
@@ -25,14 +18,14 @@ export const useGlobalShortcutsStore = defineStore("globalShortcuts", () => {
 
     try {
       // 检查是否在 Tauri 环境中
-      if (typeof window !== "undefined" && !(window as any).__TAURI__) {
+      if (typeof window !== "undefined" && !(window).__TAURI__) {
         console.warn("不在 Tauri 环境中，跳过全局快捷键初始化");
         isInitialized.value = true;
         return;
       }
 
       // 注册默认快捷键
-      const defaultShortcuts: GlobalShortcut[] = [
+      const defaultShortcuts = [
         {
           id: "new-file",
           name: "新建文件",
@@ -83,10 +76,10 @@ export const useGlobalShortcutsStore = defineStore("globalShortcuts", () => {
   };
 
   // 注册单个快捷键
-  const registerShortcut = async (shortcut: GlobalShortcut) => {
+  const registerShortcut = async (shortcut) => {
     try {
       // 检查是否在 Tauri 环境中
-      if (typeof window !== "undefined" && !(window as any).__TAURI__) {
+      if (typeof window !== "undefined" && !(window).__TAURI__) {
         console.warn("不在 Tauri 环境中，跳过快捷键注册");
         return;
       }
@@ -100,7 +93,7 @@ export const useGlobalShortcutsStore = defineStore("globalShortcuts", () => {
   };
 
   // 更新快捷键
-  const updateShortcut = async (id: string, newShortcut: string) => {
+  const updateShortcut = async (id, newShortcut) => {
     const shortcut = shortcuts.value.find((s) => s.id === id);
     if (!shortcut) return;
 
@@ -118,13 +111,13 @@ export const useGlobalShortcutsStore = defineStore("globalShortcuts", () => {
   };
 
   // 切换快捷键启用状态
-  const toggleShortcut = async (id: string) => {
+  const toggleShortcut = async (id) => {
     const shortcut = shortcuts.value.find((s) => s.id === id);
     if (!shortcut) return;
 
     try {
       // 检查是否在 Tauri 环境中
-      if (typeof window !== "undefined" && !(window as any).__TAURI__) {
+      if (typeof window !== "undefined" && !(window).__TAURI__) {
         console.warn("不在 Tauri 环境中，跳过快捷键切换");
         shortcut.enabled = !shortcut.enabled; // 仅更新 UI 状态
         return;
@@ -142,7 +135,7 @@ export const useGlobalShortcutsStore = defineStore("globalShortcuts", () => {
     }
   };
 
-  const addShortcut = async (shortcut: GlobalShortcut) => {
+  const addShortcut = async (shortcut) => {
     try {
       await register(shortcut.shortcut, shortcut.handler);
       shortcuts.value.push(shortcut);
@@ -152,7 +145,7 @@ export const useGlobalShortcutsStore = defineStore("globalShortcuts", () => {
     }
   };
 
-  const removeShortcut = async (id: string) => {
+  const removeShortcut = async (id) => {
     const shortcut = shortcuts.value.find((s) => s.id === id);
     if (!shortcut) return;
 

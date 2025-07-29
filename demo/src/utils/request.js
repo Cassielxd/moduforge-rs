@@ -1,8 +1,8 @@
-import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
+import axios from 'axios';
 import { ElMessage } from 'element-plus';
 
 // 创建 axios 实例
-const service: AxiosInstance = axios.create({
+const service = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api', // 从环境变量获取基础URL
   timeout: 15000, // 请求超时时间
   headers: {
@@ -12,7 +12,7 @@ const service: AxiosInstance = axios.create({
 
 // 请求拦截器
 service.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
+  (config) => {
     // 在发送请求之前做些什么
     // 例如：添加 token
     const token = localStorage.getItem('token');
@@ -30,11 +30,11 @@ service.interceptors.request.use(
 
 // 响应拦截器
 service.interceptors.response.use(
-  (response: AxiosResponse) => {
+  (response) => {
     const res = response.data;
     
     // 这里可以根据后端的响应结构定制
-    // 假设后端返回格式为 { code: number, data: any, message: string }
+    // 假设后端返回格式为 { code: number, data: any, message }
     if (res.code !== 200) {
       ElMessage({
         message: res.message || 'Error',
@@ -95,22 +95,22 @@ service.interceptors.response.use(
 );
 
 // 封装 GET 请求
-export function get<T>(url: string, params?: any): Promise<T> {
+export function get(url, params) {
   return service.get(url, { params });
 }
 
 // 封装 POST 请求
-export function post<T>(url: string, data?: any): Promise<T> {
+export function post(url, data) {
   return service.post(url, data);
 }
 
 // 封装 PUT 请求
-export function put<T>(url: string, data?: any): Promise<T> {
+export function put(url, data) {
   return service.put(url, data);
 }
 
 // 封装 DELETE 请求
-export function del<T>(url: string, params?: any): Promise<T> {
+export function del(url, params) {
   return service.delete(url, { params });
 }
 

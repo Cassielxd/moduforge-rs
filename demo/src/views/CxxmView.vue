@@ -1,25 +1,18 @@
-<script lang="ts">
+<script>
 import { defineComponent, ref, nextTick, onMounted, onUnmounted, watch } from "vue";
 import { ElMessage, ElMessageBox, ElDialog, ElButton, ElColorPicker, ElIcon } from "element-plus";
 // @ts-ignore
-import { TabulatorFull as Tabulator } from 'tabulator-tables';
 // @ts-ignore
-import type { RowComponent, CellComponent } from 'tabulator-tables';
 import 'tabulator-tables/dist/css/tabulator.min.css';
 import { Plus, Edit, Delete, CopyDocument, Brush } from '@element-plus/icons-vue';
 
 // 导入组合式函数
 import { useMainTabulator } from '@/composables/useMainTabulator';
 
-interface TableData {
-  id: number | string;
-  date: string;
-  level: string;
-  message: string;
-}
+
 
 // 转换数据格式
-const convertToCxxmTabulatorFormat = (data: TableData[]): any[] => {
+const convertToCxxmTabulatorFormat = (data) => {
   return data.map((item) => ({
     id: String(item.id),
     name: item.message, // 使用message作为name字段
@@ -45,13 +38,13 @@ export default defineComponent({
   },
   setup(props, { expose }) {
     // 主表格引用
-    const mainTableRef = ref<HTMLElement>();
+    const mainTableRef = ref();
 
     // 使用主表格组合式函数
     const mainTabulatorComposable = useMainTabulator();
 
     // 表格数据
-    const tableData = ref<TableData[]>([
+    const tableData = ref([
       { id: 1, date: "2024-07-29", level: "info", message: "用户登录" },
       { id: 2, date: "2024-07-29", level: "warn", message: "密码即将过期" },
       { id: 3, date: "2024-07-30", level: "error", message: "登录失败" },
@@ -61,9 +54,9 @@ export default defineComponent({
     // 颜色对话框相关
     const colorDialogVisible = ref(false);
     const colorValue = ref("#409EFF");
-    const currentRow = ref<any>(null);
+    const currentRow = ref(null);
 
-    const init = (id: string | number | null) => {
+    const init = (id) => {
       console.log("CxxmView.vue init called with ID:", id);
       // 如果需要，这里也可以根据ID刷新日志数据
       if (id) {
@@ -79,23 +72,23 @@ export default defineComponent({
     };
 
     // 颜色变更处理
-    const handleColorChange = (id: string, color: string) => {
+    const handleColorChange = (id, color) => {
       const item = tableData.value.find(item => String(item.id) === id);
       if (item) {
-        (item as any)._row_color = color;
+        (item)._row_color = color;
         console.log("CxxmView: 颜色变更", id, color);
       }
     };
 
     // 行点击处理
-    const handleRowClick = (row: any) => {
+    const handleRowClick = (row) => {
       currentRow.value = row;
       console.log("CxxmView: 行点击", row);
     };
 
     // 处理表格事件
-    const handleAddRow = (currentRow?: TableData) => {
-      const newRow: TableData = {
+    const handleAddRow = (currentRow) => {
+      const newRow = {
         id: Date.now(),
         date: new Date().toISOString().split("T")[0],
         level: "info",
@@ -118,17 +111,17 @@ export default defineComponent({
       }
     };
 
-    const handleAddChild = (parentRow: TableData) => {
+    const handleAddChild = (parentRow) => {
       // 普通表格不支持子项，显示提示
       ElMessage.warning("此表格不支持添加子项");
     };
 
-    const handleEditRow = (row: TableData) => {
+    const handleEditRow = (row) => {
       // 可以触发编辑模式或显示编辑弹窗
       ElMessage.info("编辑功能，可以双击单元格编辑");
     };
 
-    const handleDeleteRow = (row: TableData) => {
+    const handleDeleteRow = (row) => {
       ElMessageBox.confirm("确定要删除这一行吗？", "警告", {
         confirmButtonText: "确定",
         cancelButtonText: "取消",
@@ -144,8 +137,8 @@ export default defineComponent({
         .catch(() => { });
     };
 
-    const handleCopyRow = (row: TableData) => {
-      const newItem: TableData = {
+    const handleCopyRow = (row) => {
+      const newItem = {
         ...row,
         id: Date.now(),
         message: `${row.message} (复制)`,

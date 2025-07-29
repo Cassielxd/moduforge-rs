@@ -1,31 +1,22 @@
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { ElButton, ElTag, ElScrollbar } from 'element-plus';
 import { Loading } from '@element-plus/icons-vue';
 
-const props = defineProps<{
-    modelValue: boolean;
-}>();
+const props = defineProps();
 
-const emit = defineEmits<{
-    (e: 'update:modelValue', value: boolean): void;
-}>();
+const emit = defineEmits(['update:modelValue']);
 
-const dropdownRef = ref<HTMLElement | null>(null);
+const dropdownRef = ref(null);
 
-interface HistoryItem {
-    id: number;
-    title: string;
-    timestamp: string;
-    type: string;
-}
 
-const historyList = ref<HistoryItem[]>([]);
+
+const historyList = ref([]);
 const loading = ref(false);
 
 // 处理点击外部区域关闭菜单
-const handleClickOutside = (event: MouseEvent) => {
-    if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
+const handleClickOutside = (event) => {
+    if (dropdownRef.value && !dropdownRef.value.contains(event.target)) {
         emit('update:modelValue', false);
     }
 };

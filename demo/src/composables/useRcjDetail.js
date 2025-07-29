@@ -1,22 +1,9 @@
 // 人材机明细组合式函数
 import { ref, computed } from "vue";
 
-export interface RcjDetailItem {
-  id: number | string;
-  category: string; // 类别：人工、材料、机械
-  name: string; // 名称
-  specification: string; // 规格
-  unit: string; // 单位
-  quantity: number; // 数量
-  unitPrice: number; // 单价
-  totalPrice: number; // 合价
-  remark?: string; // 备注
-  children?: RcjDetailItem[]; // 子项
-}
-
 export function useRcjDetail() {
   // 人材机明细数据
-  const detailData = ref<RcjDetailItem[]>([
+  const detailData = ref([
     {
       id: 1,
       category: "人工",
@@ -71,9 +58,9 @@ export function useRcjDetail() {
     { prop: "name", label: "名称", width: 150 },
     { prop: "specification", label: "规格", width: 120 },
     { prop: "unit", label: "单位", width: 80 },
-    { prop: "quantity", label: "数量", width: 80, align: "right" as const },
-    { prop: "unitPrice", label: "单价", width: 100, align: "right" as const },
-    { prop: "totalPrice", label: "合价", width: 100, align: "right" as const },
+    { prop: "quantity", label: "数量", width: 80, align: "right" },
+    { prop: "unitPrice", label: "单价", width: 100, align: "right" },
+    { prop: "totalPrice", label: "合价", width: 100, align: "right" },
     { prop: "remark", label: "备注", width: 150 },
   ];
 
@@ -91,9 +78,9 @@ export function useRcjDetail() {
     };
 
     detailData.value.forEach((item) => {
-      if (stats[item.category as keyof typeof stats]) {
-        stats[item.category as keyof typeof stats].count++;
-        stats[item.category as keyof typeof stats].amount += item.totalPrice;
+      if (stats[item.category]) {
+        stats[item.category].count++;
+        stats[item.category].amount += item.totalPrice;
       }
     });
 
@@ -101,8 +88,8 @@ export function useRcjDetail() {
   });
 
   // 添加行
-  const addDetailRow = (currentRow?: RcjDetailItem) => {
-    const newRow: RcjDetailItem = {
+  const addDetailRow = (currentRow) => {
+    const newRow = {
       id: Date.now(),
       category: "人工",
       name: "新项目",
@@ -131,7 +118,7 @@ export function useRcjDetail() {
   };
 
   // 删除行
-  const deleteDetailRow = (row: RcjDetailItem) => {
+  const deleteDetailRow = (row) => {
     const index = detailData.value.findIndex((item) => item.id === row.id);
     if (index > -1) {
       detailData.value.splice(index, 1);
@@ -141,8 +128,8 @@ export function useRcjDetail() {
   };
 
   // 复制行
-  const copyDetailRow = (row: RcjDetailItem) => {
-    const newRow: RcjDetailItem = {
+  const copyDetailRow = (row) => {
+    const newRow = {
       ...row,
       id: Date.now(),
       name: `${row.name} (复制)`,
@@ -152,13 +139,13 @@ export function useRcjDetail() {
   };
 
   // 编辑行
-  const editDetailRow = (row: RcjDetailItem) => {
+  const editDetailRow = (row) => {
     // 这里可以触发编辑模式或显示编辑弹窗
     return row;
   };
 
   // 更新合价（当数量或单价变化时）
-  const updateTotalPrice = (row: RcjDetailItem) => {
+  const updateTotalPrice = (row) => {
     row.totalPrice = row.quantity * row.unitPrice;
   };
 
