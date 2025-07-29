@@ -310,7 +310,7 @@ pub enum ChangeType {
 }
 #[derive(Debug, Clone, PartialEq)]
 pub enum EntryChangeType {
-    /// Informs about a new value inserted under specified entry.
+    /// 通知在指定条目下插入了一个新值。.
     Inserted(Value),
 
     /// Informs about a change of old value (1st field) to a new one (2nd field) under
