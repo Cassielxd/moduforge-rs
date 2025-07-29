@@ -39,7 +39,7 @@ impl StateField for CollabStateField {
         _old_state: &State,
         _: &State,
     ) -> Arc<dyn Resource> {
-        Utils::apply_transaction_to_yrs(self.awareness.clone(), tr).await;
+        let _ = Utils::apply_transaction_to_yrs(self.awareness.clone(), tr).await;
         value
     }
 }

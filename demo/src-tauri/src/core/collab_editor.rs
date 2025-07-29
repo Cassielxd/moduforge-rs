@@ -495,12 +495,12 @@ impl CollabSyncManager {
     /// 处理同步事件
     async fn handle_sync_event(
         events: Vec<SyncEventType>,
-        editor: Arc<RwLock<ForgeAsyncRuntime>>,
-        awareness: AwarenessRef,
+        _editor: Arc<RwLock<ForgeAsyncRuntime>>,
+        _awareness: AwarenessRef,
     ) -> ForgeResult<()> {
         for event in events {
             match event {
-                SyncEventType::ArrayChange(path, changes) => {
+                SyncEventType::ArrayChange(_path, changes) => {
                     // path 数组第一个对应的 是 节点id
                     for change in changes {
                         match change {
