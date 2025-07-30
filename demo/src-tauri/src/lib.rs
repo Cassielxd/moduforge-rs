@@ -38,7 +38,6 @@ use dashmap::{mapref::one::RefMut, DashMap};
 use state::TypeMap;
 
 use crate::{
-    core::demo_editor::DemoEditor,
     types::{EditorTrait},
 };
 static APPLICATION_CONTEXT: TypeMap![Send + Sync] =

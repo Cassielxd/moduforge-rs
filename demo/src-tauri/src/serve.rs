@@ -63,8 +63,11 @@ impl App {
             .await
             .unwrap();
     }
-    pub async fn run(self) {
-        self.run_with_graceful_shutdown(shutdown_signal()).await;
+    pub fn run(self) {
+        tokio::spawn(async move {
+            self.run_with_graceful_shutdown(shutdown_signal()).await;
+        });
+       
     }
 }
 

@@ -148,15 +148,9 @@ async fn main() -> anyhow::Result<()> {
     init_contex().await;
 
     // 启动API服务器
-    tokio::spawn(async move {
-        let app: Router = build_app();
-        AppBuilder::new()
-            .next("/api", app.fallback(handler_404))
-            .build()
-            .run()
-            .await;
-    });
-
+    let app: Router = build_app();
+    let builder = AppBuilder::new().next("/api", app.fallback(handler_404));
+    builder.build().run();
     // 配置Tauri应用
     tauri::Builder::default()
         .setup(|app| {
