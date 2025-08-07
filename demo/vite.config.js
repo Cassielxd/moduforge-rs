@@ -7,7 +7,7 @@ import vueDevTools from "vite-plugin-vue-devtools";
 
 import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
-import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
+import { AntDesignVueResolver } from "unplugin-vue-components/resolvers";
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -15,10 +15,10 @@ export default defineConfig({
     vue(),
     vueDevTools(),
     AutoImport({
-      resolvers: [ElementPlusResolver()],
+      resolvers: [AntDesignVueResolver()],
     }),
     Components({
-      resolvers: [ElementPlusResolver()],
+      resolvers: [AntDesignVueResolver({ importStyle: false })],
     }),
   ],
   resolve: {
@@ -31,7 +31,7 @@ export default defineConfig({
   },
   define: {
     "process.env": {
-      VITE_APP_TITLE: JSON.stringify("ModuForge Demo"),
+      VITE_APP_TITLE: JSON.stringify("造价管理系统"),
       VITE_API_BASE_URL: JSON.stringify("http://localhost:20008/api"),
       VITE_APP_ENV: JSON.stringify(process.env.NODE_ENV),
     },

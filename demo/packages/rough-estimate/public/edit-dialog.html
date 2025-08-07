@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>编辑概算</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #fa8c16 0%, #d48806 100%);
+            color: white;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h2 {
+            margin-bottom: 8px;
+            font-size: 24px;
+        }
+
+        .header p {
+            opacity: 0.8;
+            font-size: 14px;
+        }
+
+        .content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .form-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .form-section h3 {
+            margin-bottom: 20px;
+            font-size: 18px;
+            color: #fff;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+        }
+
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .cost-breakdown {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .cost-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .cost-item h4 {
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .cost-item input {
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .cost-summary {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .cost-summary h4 {
+            margin-bottom: 10px;
+        }
+
+        .total-amount {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .modal-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #ff4d4f;
+            margin-bottom: 20px;
+        }
+
+        .modal-info h4 {
+            margin-bottom: 8px;
+            color: #ff4d4f;
+        }
+
+        .modal-info p {
+            font-size: 13px;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: #52c41a;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #73d13d;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-danger {
+            background: #ff4d4f;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #ff7875;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>✏️ 编辑概算</h2>
+        <p>修改项目概算信息和费用明细</p>
+    </div>
+
+    <div class="content">
+        <div class="modal-info">
+            <h4>模态编辑模式</h4>
+            <p>• 此窗口为模态模式，主窗口将被禁用<br>
+               • 请完成编辑后保存或取消，以恢复主窗口操作<br>
+               • 数据修改将实时计算总金额</p>
+        </div>
+
+        <div class="form-section">
+            <h3>基本信息</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>项目名称</label>
+                    <input type="text" id="projectName" placeholder="请输入项目名称">
+                </div>
+                <div class="form-group">
+                    <label>项目编号</label>
+                    <input type="text" id="projectCode" placeholder="请输入项目编号">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>项目状态</label>
+                    <select id="projectStatus">
+                        <option value="draft">草稿</option>
+                        <option value="reviewing">审核中</option>
+                        <option value="approved">已批准</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>负责人</label>
+                    <input type="text" id="manager" placeholder="请输入负责人">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>项目描述</label>
+                <textarea id="projectDesc" placeholder="请输入项目描述..."></textarea>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>费用分解</h3>
+            <div class="cost-breakdown">
+                <div class="cost-item">
+                    <h4>🏗️ 建筑工程费</h4>
+                    <input type="number" id="constructionCost" placeholder="万元" oninput="calculateTotal()">
+                    <small>包含土建、装修等费用</small>
+                </div>
+                <div class="cost-item">
+                    <h4>🔧 安装工程费</h4>
+                    <input type="number" id="installationCost" placeholder="万元" oninput="calculateTotal()">
+                    <small>包含水电、暖通等费用</small>
+                </div>
+                <div class="cost-item">
+                    <h4>🏭 设备购置费</h4>
+                    <input type="number" id="equipmentCost" placeholder="万元" oninput="calculateTotal()">
+                    <small>包含主要设备采购费用</small>
+                </div>
+                <div class="cost-item">
+                    <h4>📋 其他费用</h4>
+                    <input type="number" id="otherCost" placeholder="万元" oninput="calculateTotal()">
+                    <small>包含设计、监理等费用</small>
+                </div>
+            </div>
+            
+            <div class="cost-summary">
+                <h4>概算总金额</h4>
+                <div class="total-amount" id="totalAmount">0.00 万元</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-secondary" onclick="closeWindow()">取消</button>
+        <button class="btn btn-danger" onclick="resetForm()">重置</button>
+        <button class="btn btn-primary" onclick="saveChanges()">保存修改</button>
+    </div>
+
+    <script>
+        // 获取URL参数
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                id: params.get('id'),
+                name: params.get('name'),
+                amount: params.get('amount')
+            };
+        }
+
+        // 计算总金额
+        function calculateTotal() {
+            const construction = parseFloat(document.getElementById('constructionCost').value) || 0;
+            const installation = parseFloat(document.getElementById('installationCost').value) || 0;
+            const equipment = parseFloat(document.getElementById('equipmentCost').value) || 0;
+            const other = parseFloat(document.getElementById('otherCost').value) || 0;
+            
+            const total = construction + installation + equipment + other;
+            document.getElementById('totalAmount').textContent = total.toFixed(2) + ' 万元';
+        }
+
+        // 重置表单
+        function resetForm() {
+            if (confirm('确定要重置所有修改吗？')) {
+                loadInitialData();
+            }
+        }
+
+        // 保存修改
+        function saveChanges() {
+            const projectName = document.getElementById('projectName').value;
+            const projectCode = document.getElementById('projectCode').value;
+            
+            if (!projectName.trim()) {
+                alert('请输入项目名称');
+                return;
+            }
+            
+            if (!projectCode.trim()) {
+                alert('请输入项目编号');
+                return;
+            }
+
+            // 模拟保存数据
+            const formData = {
+                id: getUrlParams().id,
+                projectName,
+                projectCode,
+                projectStatus: document.getElementById('projectStatus').value,
+                manager: document.getElementById('manager').value,
+                projectDesc: document.getElementById('projectDesc').value,
+                costs: {
+                    construction: parseFloat(document.getElementById('constructionCost').value) || 0,
+                    installation: parseFloat(document.getElementById('installationCost').value) || 0,
+                    equipment: parseFloat(document.getElementById('equipmentCost').value) || 0,
+                    other: parseFloat(document.getElementById('otherCost').value) || 0
+                }
+            };
+
+            console.log('保存概算数据:', formData);
+            alert('概算修改已保存！');
+            closeWindow();
+        }
+
+        // 加载初始数据
+        function loadInitialData() {
+            const params = getUrlParams();
+            
+            if (params.name) {
+                document.getElementById('projectName').value = decodeURIComponent(params.name);
+                document.getElementById('projectCode').value = 'GS2024' + (params.id || '001');
+                document.getElementById('manager').value = '张三';
+                document.getElementById('projectDesc').value = '这是一个示例概算项目的描述信息。';
+                
+                // 模拟费用分解数据
+                document.getElementById('constructionCost').value = '1200.50';
+                document.getElementById('installationCost').value = '800.30';
+                document.getElementById('equipmentCost').value = '500.20';
+                document.getElementById('otherCost').value = '199.00';
+                
+                calculateTotal();
+            }
+        }
+
+        // 关闭窗口
+        function closeWindow() {
+            if (window.__TAURI__) {
+                window.__TAURI__.window.getCurrentWindow().close();
+            } else {
+                window.close();
+            }
+        }
+
+        // 页面加载完成
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('编辑页面已加载');
+            loadInitialData();
+        });
+    </script>
+</body>
+</html>

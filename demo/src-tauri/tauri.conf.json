@@ -19,6 +19,8 @@
         "resizable": true,
         "fullscreen": false,
         "decorations": false,
+        "maximizable": true,   
+        "minimizable": true,    
         "visible": false
       },
       {
@@ -37,7 +39,8 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "capabilities": ["default", "remote-capability"]
     }
   },
   "bundle": {

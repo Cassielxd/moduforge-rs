@@ -1,31 +1,23 @@
 {
-  "name": "cost-estimation-workspace",
+  "name": "rough-estimate",
   "version": "1.0.0",
-  "private": true,
   "type": "module",
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.5.0",
     "ant-design-vue": "^4.2.6",
     "pinia": "^3.0.3",
-    "vue": "^3.5.13",
-    "vue-router": "^4.5.1"
+    "vue": "^3.5.13"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.5.0",
     "@vitejs/plugin-vue": "^5.2.3",
     "unplugin-auto-import": "^19.3.0",
     "unplugin-vue-components": "^28.7.0",
-    "vite": "^6.2.4"
+    "vite": "^6.2.4",
+    "vite-plugin-vue-devtools": "^8.0.0"
   }
 }

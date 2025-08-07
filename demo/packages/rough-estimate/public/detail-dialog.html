@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>概算详情</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h2 {
+            margin-bottom: 8px;
+            font-size: 24px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .detail-card {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .detail-card h3 {
+            color: #1890ff;
+            margin-bottom: 20px;
+            font-size: 18px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+
+        .detail-row {
+            display: flex;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .detail-row .label {
+            min-width: 120px;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .detail-row .value {
+            flex: 1;
+            color: #333;
+        }
+
+        .status-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-draft {
+            background: #fff7e6;
+            color: #fa8c16;
+        }
+
+        .status-reviewing {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+
+        .status-approved {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+
+        .amount-highlight {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1890ff;
+        }
+
+        .progress-section {
+            margin-top: 20px;
+        }
+
+        .progress-bar {
+            background: #f0f0f0;
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #52c41a 0%, #73d13d 100%);
+            transition: width 0.3s ease;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #f0f0f0;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .tab.active {
+            color: #1890ff;
+            border-bottom-color: #1890ff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            padding: 20px;
+            border-top: 1px solid #f0f0f0;
+            background: white;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: #1890ff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #40a9ff;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .btn-secondary:hover {
+            background: #d9d9d9;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .data-table th {
+            background: #fafafa;
+            font-weight: 600;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>📊 概算详情</h2>
+        <p>查看项目详细信息和进度</p>
+    </div>
+
+    <div class="content">
+        <div class="detail-card">
+            <h3>基本信息</h3>
+            <div class="detail-row">
+                <span class="label">项目名称:</span>
+                <span class="value" id="projectName">-</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">项目编号:</span>
+                <span class="value" id="projectCode">-</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">概算金额:</span>
+                <span class="value amount-highlight" id="projectAmount">-</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">项目状态:</span>
+                <span class="value">
+                    <span class="status-tag" id="projectStatus">-</span>
+                </span>
+            </div>
+            <div class="detail-row">
+                <span class="label">创建时间:</span>
+                <span class="value" id="createTime">-</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">负责人:</span>
+                <span class="value" id="manager">-</span>
+            </div>
+        </div>
+
+        <div class="detail-card">
+            <h3>项目进度</h3>
+            <div class="progress-section">
+                <div class="detail-row">
+                    <span class="label">完成进度:</span>
+                    <span class="value" id="progressText">65%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 65%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-card">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('breakdown')">费用分解</div>
+                <div class="tab" onclick="switchTab('history')">操作历史</div>
+                <div class="tab" onclick="switchTab('attachments')">附件文档</div>
+            </div>
+
+            <div class="tab-content active" id="breakdown">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>费用项目</th>
+                            <th>金额(万元)</th>
+                            <th>占比</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>建筑工程费</td>
+                            <td>1,200.50</td>
+                            <td>45%</td>
+                        </tr>
+                        <tr>
+                            <td>安装工程费</td>
+                            <td>800.30</td>
+                            <td>30%</td>
+                        </tr>
+                        <tr>
+                            <td>设备购置费</td>
+                            <td>500.20</td>
+                            <td>18%</td>
+                        </tr>
+                        <tr>
+                            <td>其他费用</td>
+                            <td>199.00</td>
+                            <td>7%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="tab-content" id="history">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>操作时间</th>
+                            <th>操作人</th>
+                            <th>操作内容</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>2024-01-15 14:30</td>
+                            <td>张三</td>
+                            <td>创建项目概算</td>
+                        </tr>
+                        <tr>
+                            <td>2024-01-16 09:15</td>
+                            <td>李四</td>
+                            <td>更新建筑工程费</td>
+                        </tr>
+                        <tr>
+                            <td>2024-01-17 16:45</td>
+                            <td>王五</td>
+                            <td>提交审核</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="tab-content" id="attachments">
+                <p style="text-align: center; color: #999; padding: 40px;">
+                    📎 暂无附件文档
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-secondary" onclick="closeWindow()">关闭</button>
+        <button class="btn btn-primary" onclick="exportDetail()">导出详情</button>
+    </div>
+
+    <script>
+        // 获取URL参数
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                id: params.get('id'),
+                name: params.get('name')
+            };
+        }
+
+        // 切换标签页
+        function switchTab(tabName) {
+            // 移除所有活动状态
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // 激活当前标签
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        // 导出详情
+        function exportDetail() {
+            alert('详情导出功能开发中...');
+        }
+
+        // 关闭窗口
+        function closeWindow() {
+            if (window.__TAURI__) {
+                window.__TAURI__.window.getCurrentWindow().close();
+            } else {
+                window.close();
+            }
+        }
+
+        // 页面加载完成
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = getUrlParams();
+            console.log('详情页面参数:', params);
+            
+            // 模拟加载数据
+            if (params.name) {
+                document.getElementById('projectName').textContent = decodeURIComponent(params.name);
+                document.getElementById('projectCode').textContent = 'GS2024' + (params.id || '001');
+                document.getElementById('projectAmount').textContent = '2,700.00 万元';
+                document.getElementById('createTime').textContent = '2024-01-15';
+                document.getElementById('manager').textContent = '张三';
+                
+                // 设置状态
+                const statusEl = document.getElementById('projectStatus');
+                statusEl.textContent = '审核中';
+                statusEl.className = 'status-tag status-reviewing';
+            }
+        });
+    </script>
+</body>
+</html>

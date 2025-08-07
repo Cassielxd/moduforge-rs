@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模态弹窗 - 概算设置</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h2 {
+            margin-bottom: 8px;
+            font-size: 24px;
+        }
+
+        .header p {
+            opacity: 0.8;
+            font-size: 14px;
+        }
+
+        .content {
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+        }
+
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: #1890ff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #40a9ff;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #52c41a;
+        }
+
+        .modal-info h4 {
+            margin-bottom: 8px;
+            color: #52c41a;
+        }
+
+        .modal-info p {
+            font-size: 13px;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>🔒 模态弹窗</h2>
+        <p>此弹窗会阻止主窗口交互，直到关闭</p>
+    </div>
+
+    <div class="content">
+        <div class="modal-info">
+            <h4>模态窗口特性</h4>
+            <p>• 主窗口被禁用，无法点击或操作<br>
+               • 必须先关闭此弹窗才能继续操作主窗口<br>
+               • 适用于重要设置、确认对话框等场景</p>
+        </div>
+
+        <div class="form-group">
+            <label>概算项目名称</label>
+            <input type="text" placeholder="请输入项目名称" id="projectName">
+        </div>
+
+        <div class="form-group">
+            <label>预算类型</label>
+            <select id="budgetType">
+                <option value="">请选择预算类型</option>
+                <option value="preliminary">初步设计概算</option>
+                <option value="detailed">详细设计概算</option>
+                <option value="construction">施工图预算</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>项目描述</label>
+            <textarea placeholder="请输入项目描述..." id="projectDesc"></textarea>
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-secondary" onclick="closeWindow()">取消</button>
+        <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+    </div>
+
+    <script>
+        // 模拟保存设置
+        function saveSettings() {
+            const projectName = document.getElementById('projectName').value;
+            const budgetType = document.getElementById('budgetType').value;
+            const projectDesc = document.getElementById('projectDesc').value;
+
+            if (!projectName.trim()) {
+                alert('请输入项目名称');
+                return;
+            }
+
+            console.log('保存设置:', {
+                projectName,
+                budgetType,
+                projectDesc
+            });
+
+            alert('设置已保存！');
+            closeWindow();
+        }
+
+        // 关闭窗口
+        function closeWindow() {
+            if (window.__TAURI__) {
+                window.__TAURI__.window.getCurrentWindow().close();
+            } else {
+                window.close();
+            }
+        }
+
+        // 页面加载完成
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('模态弹窗页面已加载');
+        });
+    </script>
+</body>
+</html>

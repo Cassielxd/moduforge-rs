@@ -139,6 +139,72 @@ fn handle_logout(_window: tauri::Window) -> Result<(), String> {
     Ok(())
 }
 
+// 创建模块窗口的命令
+#[tauri::command]
+async fn create_module_window(
+    app: AppHandle,
+    module_key: String,
+    title: String,
+    url: String,
+) -> Result<(), String> {
+    println!("创建模块窗口: {} - {} - URL: {}", module_key, title, url);
+
+    // 检查窗口是否已存在
+    let window_label = format!("module-{}", module_key);
+    if let Some(existing_window) = app.get_webview_window(&window_label) {
+        println!("模块窗口已存在，显示并聚焦");
+        existing_window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
+        existing_window.set_focus().map_err(|e| format!("设置焦点失败: {}", e))?;
+        existing_window.unminimize().map_err(|e| format!("取消最小化失败: {}", e))?;
+        return Ok(());
+    }
+
+    // 验证 URL 格式
+    let parsed_url = url.parse().map_err(|e| {
+        let error_msg = format!("URL解析失败: {} - URL: {}", e, url);
+        println!("{}", error_msg);
+        error_msg
+    })?;
+    println!("URL解析成功: {:?}", parsed_url);
+
+    // 创建新的模块窗口
+    println!("开始创建窗口，标签: {}", window_label);
+    let module_window = tauri::WebviewWindowBuilder::new(
+        &app,
+        &window_label,
+        tauri::WebviewUrl::External(parsed_url),
+    )
+    .title(&title)
+    .inner_size(1200.0, 800.0)
+    .min_inner_size(900.0, 600.0)
+    .resizable(true)
+    .decorations(true)  // 使用系统标题栏
+    .visible(true)
+    .focused(true)
+    .center()
+    .build()
+    .map_err(|e| {
+        println!("创建模块窗口失败: {}", e);
+        format!("创建模块窗口失败: {}", e)
+    })?;
+
+    println!("模块窗口创建成功: {}", window_label);
+
+    // 强制显示和聚焦窗口
+    module_window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
+    module_window.set_focus().map_err(|e| format!("设置焦点失败: {}", e))?;
+
+    println!("窗口显示和聚焦完成");
+
+    #[cfg(debug_assertions)]
+    module_window.open_devtools();
+
+    Ok(())
+}
+
+// 暂时注释掉数据交互功能，先让窗口创建正常工作
+// TODO: 稍后重新实现数据交互功能
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // 初始化日志系统，降低tao警告级别
@@ -186,15 +252,15 @@ async fn main() -> anyhow::Result<()> {
 
             Ok(())
         })
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+
         .invoke_handler(tauri::generate_handler![
             handle_login_success,
             handle_logout,
             show_main_window,
             quit_app,
             show_tray_menu,
-            hide_tray_menu
+            hide_tray_menu,
+            create_module_window
         ])
         .run(tauri::generate_context!())
         .map_err(|e| {
