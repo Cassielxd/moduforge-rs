@@ -176,6 +176,8 @@ fn get_ops() -> RuntimeOptions {
                 tr: Some(Arc::new(BPlugin)),
                 priority: 1,
             })));
+
+            // 添加一个全局的资源管理器
             ext.add_op_fn(Arc::new(|op_state| {
                 op_state.put(OSSUpload);
                 Ok(())
@@ -184,6 +186,7 @@ fn get_ops() -> RuntimeOptions {
         })
         .build()
 }
+
 #[derive(Clone)]
 struct OSSUpload;
 impl OSSUpload {
@@ -210,16 +213,3 @@ async fn main() -> ForgeResult<()> {
     //dbg!(editor.doc());
     Ok(())
 }
-
-/*
- A B C  D
-
-root_tr
-
- A
- B  提交
- C  提交
- D
-    [3]tr
-
-*/
