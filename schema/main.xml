@@ -1,89 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schema top_node="doc" 
+<schema top_node="doc"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="moduforge-schema.xsd">
-  
-  <!-- 全局属性定义 -->
-  <global_attributes>
-    <global_attribute types="paragraph heading">
-      <attr name="id"/>
-      <attr name="class"/>
-      <attr name="style"/>
-    </global_attribute>
-    <global_attribute types="*">
-      <attr name="data-custom"/>
-      <attr name="data-source"/>
-    </global_attribute>
-  </global_attributes>
-  
   <nodes>
-    <!-- 文档根节点 -->
-    <node name="doc" group="block" desc="文档根节点，包含所有内容" content="paragraph+" marks="_">
+    <!-- 工程项目 -->
+    <node name="doc"  desc="工程项目" content="dwgc+" >
       <attrs>
-        <attr name="title" default="Untitled Document"/>
-        <attr name="version" default="1.0"/>
-        <attr name="created_at"/>
+        <attr name="title" default="工程项目"/>
+        <attr name="price" default="0"/>
+        <attr name="totalPrice" default="0"/>
       </attrs>
     </node>
-    
-    <!-- 段落节点 -->
-    <node name="paragraph" group="block" desc="段落节点，包含内联内容" content="" marks="strong em link">
+    <node name="dwgc"  desc="单位项目" >
       <attrs>
-        <attr name="align" default="left"/>
-        <attr name="indent" default="0"/>
+        <attr name="name" default="单位项目"/>
+        <attr name="price" default="0"/>
+        <attr name="totalPrice" default="0"/>
       </attrs>
     </node>
-    
-    <!-- 标题节点 -->
-    <node name="heading" group="block" desc="标题节点" content="" marks="strong em">
-      <attrs>
-        <attr name="level" default="1"/>
-        <attr name="id"/>
-      </attrs>
-    </node>
-    
-    <!-- 列表节点 -->
-    <node name="list" group="block" desc="列表节点" content="listitem+" marks="_">
-      <attrs>
-        <attr name="type" default="bullet"/>
-        <attr name="start" default="1"/>
-      </attrs>
-    </node>
-    
-    <!-- 列表项节点 -->
-    <node name="listitem" group="block" desc="列表项节点" content="paragraph" marks="_"/>
-    
-    <!-- 文本节点 -->
-    <node name="text" group="inline" desc="文本节点，叶子节点" content="" marks="_"/>
   </nodes>
-  
-  <marks>
-    <!-- 粗体标记 -->
-    <mark name="strong" group="formatting" desc="粗体文本标记" spanning="true">
-      <attrs>
-        <attr name="weight" default="bold"/>
-      </attrs>
-    </mark>
-    
-    <!-- 斜体标记 -->
-    <mark name="em" group="formatting" desc="斜体文本标记" spanning="true">
-    </mark>
-    
-    <!-- 链接标记 -->
-    <mark name="link" group="link" desc="超链接标记" spanning="false">
-      <attrs>
-        <attr name="href"/>
-        <attr name="title"/>
-        <attr name="target" default="_self"/>
-      </attrs>
-    </mark>
-    
-    <!-- 代码标记 -->
-    <mark name="code" group="formatting" desc="内联代码标记" spanning="true" excludes="strong em">
-      <attrs>
-        <attr name="language"/>
-      </attrs>
-    </mark>
-  </marks>
-  
 </schema>
