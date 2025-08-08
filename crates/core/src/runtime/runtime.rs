@@ -440,7 +440,6 @@ impl ForgeRuntime {
                 },
             }
         }
-        transaction.commit();
         Ok(())
     }
     pub async fn run_after_middleware(
@@ -483,16 +482,21 @@ impl ForgeRuntime {
             };
 
             if let Some(mut transaction) = middleware_result {
+                // 由运行时统一提交事务，再通过相同的 flow 引擎处理
                 transaction.commit();
-                let TransactionResult { state: new_state, transactions: trs } =
-                    self.state.apply(transaction).await.map_err(|e| {
-                        error_utils::state_error(format!(
-                            "附加事务应用失败: {}",
-                            e
-                        ))
-                    })?;
-                *state = Some(Arc::new(new_state));
-                transactions.extend(trs);
+                let task_result = self
+                    .flow_engine
+                    .submit((self.state.clone(), transaction))
+                    .await;
+                let Some(ProcessorResult { result: Some(result), .. }) =
+                    task_result.output
+                else {
+                    return Err(error_utils::state_error(
+                        "附加事务处理结果无效".to_string(),
+                    ));
+                };
+                *state = Some(Arc::new(result.state));
+                transactions.extend(result.transactions);
             }
         }
         Ok(())
