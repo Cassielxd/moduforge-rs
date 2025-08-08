@@ -11,6 +11,10 @@ pub struct IndexDoc {
     pub attrs_flat: Vec<(String, String)>,
     pub text: Option<String>,
     pub path: Vec<String>,
+    // 常用 fast fields（i64）
+    pub order_i64: Option<i64>,
+    pub created_at_i64: Option<i64>,
+    pub updated_at_i64: Option<i64>,
 }
 
 impl IndexDoc {
@@ -28,6 +32,11 @@ impl IndexDoc {
 
         let text = extract_text(node);
 
+        // 提取常用 fast fields（若存在且为数值）
+        let order_i64 = extract_i64(node, "order");
+        let created_at_i64 = extract_i64(node, "created_at");
+        let updated_at_i64 = extract_i64(node, "updated_at");
+
         IndexDoc {
             node_id: node.id.clone(),
             node_type: node.r#type.clone(),
@@ -36,6 +45,9 @@ impl IndexDoc {
             attrs_flat,
             text,
             path,
+            order_i64,
+            created_at_i64,
+            updated_at_i64,
         }
     }
 }
@@ -61,6 +73,15 @@ fn extract_text(node: &Node) -> Option<String> {
         }
     }
     None
+}
+
+/// 从节点属性中提取 i64 数值（仅当为数值或可解析为整数的字符串时）
+fn extract_i64(node: &Node, key: &str) -> Option<i64> {
+    node.attrs.get(key).and_then(|v| match v {
+        serde_json::Value::Number(n) => n.as_i64().or_else(|| n.as_u64().and_then(|u| i64::try_from(u).ok())),
+        serde_json::Value::String(s) => s.parse::<i64>().ok(),
+        _ => None,
+    })
 }
 
 /// 收集 NodeEnum 中所有节点 id（包含子树）

@@ -26,22 +26,34 @@ pub struct SearchQuery {
     pub limit: usize,
     /// 偏移量
     pub offset: usize,
+    /// 排序字段（fast field 名称），仅支持 i64 类型
+    pub sort_by: Option<String>,
+    /// 排序方向 true=升序，false=降序
+    pub sort_asc: bool,
+    /// search-after 游标：上一页最后一个文档的排序值（i64），与 sort_by 搭配使用
+    pub after_value: Option<i64>,
+    /// 可选的范围过滤：fast field i64 [min, max]
+    pub range_field: Option<String>,
+    pub range_min: Option<i64>,
+    pub range_max: Option<i64>,
 }
 
 // 不再使用通用接口，直接以 TantivyBackend 作为唯一后端
 
 // ------------------ Tantivy 后端 ------------------
 use tantivy::{schema::Schema, Index, Term};
-use tantivy::Document as _;
+use tantivy::schema::document::Value as _;
 use parking_lot::Mutex;
 use std::path::PathBuf;
 use tantivy_jieba::JiebaTokenizer;
+use tantivy::IndexReader;
 
 /// Tantivy 后端实现
 pub struct TantivyBackend {
     index: Index,
     schema: Schema,
     writer: Mutex<tantivy::IndexWriter>,
+    reader: IndexReader,
     fields: TantivyFields,
     /// 若使用临时目录创建，保存 TempDir 以便生命周期结束后自动清理
     temp_guard: Option<tempfile::TempDir>,
@@ -58,6 +70,10 @@ struct TantivyFields {
     marks: tantivy::schema::Field,
     attrs_flat: tantivy::schema::Field,
     text: tantivy::schema::Field,
+    // fast fields (i64)
+    order_i64: tantivy::schema::Field,
+    created_at_i64: tantivy::schema::Field,
+    updated_at_i64: tantivy::schema::Field,
 }
 
 impl TantivyBackend {
@@ -72,7 +88,8 @@ impl TantivyBackend {
         // 注册 jieba 中文分词器
         index.tokenizers().register("jieba_zh", JiebaTokenizer {});
         let writer = index.writer(128_000_000)?; // 128MB 写缓冲
-        Ok(Self { index, schema, writer: Mutex::new(writer), fields, temp_guard: None, index_dir: dir.canonicalize().unwrap_or(dir.to_path_buf()) })
+        let reader: IndexReader = index.reader_builder().try_into()?;
+        Ok(Self { index, schema, writer: Mutex::new(writer), reader, fields, temp_guard: None, index_dir: dir.canonicalize().unwrap_or(dir.to_path_buf()) })
     }
 
     /// 在指定临时根目录下创建唯一索引目录并初始化
@@ -84,7 +101,8 @@ impl TantivyBackend {
         let index = Index::create_in_dir(&dir, schema.clone())?;
         index.tokenizers().register("jieba_zh", JiebaTokenizer {});
         let writer = index.writer(128_000_000)?;
-        Ok(Self { index, schema, writer: Mutex::new(writer), fields, temp_guard: Some(td), index_dir: dir })
+        let reader: IndexReader = index.reader_builder().try_into()?;
+        Ok(Self { index, schema, writer: Mutex::new(writer), reader, fields, temp_guard: Some(td), index_dir: dir })
     }
 
     /// 使用系统临时目录创建索引
@@ -95,7 +113,8 @@ impl TantivyBackend {
         let index = Index::create_in_dir(&dir, schema.clone())?;
         index.tokenizers().register("jieba_zh", JiebaTokenizer {});
         let writer = index.writer(128_000_000)?;
-        Ok(Self { index, schema, writer: Mutex::new(writer), fields, temp_guard: Some(td), index_dir: dir })
+        let reader: IndexReader = index.reader_builder().try_into()?;
+        Ok(Self { index, schema, writer: Mutex::new(writer), reader, fields, temp_guard: Some(td), index_dir: dir })
     }
 
     /// 获取索引目录路径
@@ -117,9 +136,13 @@ fn build_schema() -> (Schema, TantivyFields) {
         .set_index_option(IndexRecordOption::WithFreqsAndPositions);
     let text_opts = TextOptions::default().set_indexing_options(text_indexing);
     let text = builder.add_text_field("text", text_opts);
+    // fast fields
+    let order_i64 = builder.add_i64_field("order_i64", FAST);
+    let created_at_i64 = builder.add_i64_field("created_at_i64", FAST);
+    let updated_at_i64 = builder.add_i64_field("updated_at_i64", FAST);
     let schema = builder.build();
     // 注意：schema 构建完成后再注册分词器到 Index
-    (schema, TantivyFields { node_id, node_type, parent_id, path_facet, marks, attrs_flat, text })
+    (schema, TantivyFields { node_id, node_type, parent_id, path_facet, marks, attrs_flat, text, order_i64, created_at_i64, updated_at_i64 })
 }
 
 fn add_index_doc(
@@ -139,6 +162,10 @@ fn add_index_doc(
     for m in &nd.marks { doc.add_text(fields.marks, m); }
     for (k, v) in &nd.attrs_flat { doc.add_text(fields.attrs_flat, &format!("{}={}", k, v)); }
     if let Some(t) = &nd.text { doc.add_text(fields.text, t); }
+    // fast fields
+    if let Some(v) = nd.order_i64 { doc.add_i64(fields.order_i64, v); }
+    if let Some(v) = nd.created_at_i64 { doc.add_i64(fields.created_at_i64, v); }
+    if let Some(v) = nd.updated_at_i64 { doc.add_i64(fields.updated_at_i64, v); }
     writer.add_document(doc)?;
     Ok(())
 }
@@ -162,6 +189,8 @@ impl TantivyBackend {
             }
         }
         writer.commit()?;
+        // 使新提交对查询可见
+        self.reader.reload()?;
         Ok(())
     }
 
@@ -176,14 +205,18 @@ impl TantivyBackend {
             add_index_doc(&mut writer, &self.schema, self.fields, d)?;
         }
         writer.commit()?;
+        // 使新提交对查询可见
+        self.reader.reload()?;
         Ok(())
     }
 
     pub async fn search_ids(&self, query: SearchQuery) -> anyhow::Result<Vec<String>> {
         use tantivy::collector::TopDocs;
         use tantivy::query::{BooleanQuery, Occur, Query, TermQuery};
-        let reader = self.index.reader_builder().try_into()?;
-        let searcher = reader.searcher();
+        use tantivy::Order;
+        use tantivy::query::RangeQuery;
+        use std::ops::Bound;
+        let searcher = self.reader.searcher();
 
         let mut subqueries: Vec<(Occur, Box<dyn Query>)> = Vec::new();
         if let Some(t) = &query.node_type {
@@ -212,28 +245,98 @@ impl TantivyBackend {
             }
         }
 
+        // 范围过滤（fast field i64）
+        if let Some(field_name) = &query.range_field {
+            let field = match field_name.as_str() {
+                "order_i64" => Some(self.fields.order_i64),
+                "created_at_i64" => Some(self.fields.created_at_i64),
+                "updated_at_i64" => Some(self.fields.updated_at_i64),
+                _ => None,
+            };
+            if let Some(f) = field {
+                let lower = match query.range_min {
+                    Some(v) => Bound::Included(Term::from_field_i64(f, v)),
+                    None => Bound::Unbounded,
+                };
+                let upper = match query.range_max {
+                    Some(v) => Bound::Included(Term::from_field_i64(f, v)),
+                    None => Bound::Unbounded,
+                };
+                let rq = RangeQuery::new(lower, upper);
+                subqueries.push((Occur::Must, Box::new(rq)));
+            }
+        }
+
+        // search-after（基于排序字段的边界）
+        if let (Some(sort_by), Some(after_val)) = (&query.sort_by, query.after_value) {
+            let (field_opt, lower_upper): (Option<tantivy::schema::Field>, (Bound<Term>, Bound<Term>)) = match sort_by.as_str() {
+                "order_i64" => (Some(self.fields.order_i64), if query.sort_asc {
+                    (Bound::Excluded(Term::from_field_i64(self.fields.order_i64, after_val)), Bound::Unbounded)
+                } else {
+                    (Bound::Unbounded, Bound::Excluded(Term::from_field_i64(self.fields.order_i64, after_val)))
+                }),
+                "created_at_i64" => (Some(self.fields.created_at_i64), if query.sort_asc {
+                    (Bound::Excluded(Term::from_field_i64(self.fields.created_at_i64, after_val)), Bound::Unbounded)
+                } else {
+                    (Bound::Unbounded, Bound::Excluded(Term::from_field_i64(self.fields.created_at_i64, after_val)))
+                }),
+                "updated_at_i64" => (Some(self.fields.updated_at_i64), if query.sort_asc {
+                    (Bound::Excluded(Term::from_field_i64(self.fields.updated_at_i64, after_val)), Bound::Unbounded)
+                } else {
+                    (Bound::Unbounded, Bound::Excluded(Term::from_field_i64(self.fields.updated_at_i64, after_val)))
+                }),
+                _ => (None, (Bound::Unbounded, Bound::Unbounded)),
+            };
+            if let Some(_f) = field_opt {
+                let rq = RangeQuery::new(lower_upper.0, lower_upper.1);
+                subqueries.push((Occur::Must, Box::new(rq)));
+            }
+        }
+
         let boxed_query: Box<dyn Query> = if subqueries.is_empty() {
             Box::new(tantivy::query::AllQuery)
         } else {
             Box::new(BooleanQuery::new(subqueries))
         };
 
-        let limit = if query.limit==0 { 50 } else { query.limit } + query.offset;
-        let top_docs: Vec<(f32, tantivy::DocAddress)> = searcher.search(&*boxed_query, &TopDocs::with_limit(limit))?;
+        // 基于 fast field 排序，并支持 search-after（通过上面的 RangeQuery 约束实现）
+        let limit = if query.limit==0 { 50 } else { query.limit };
+        let addrs: Vec<tantivy::DocAddress> = if let Some(sort_by) = &query.sort_by {
+            let order = if query.sort_asc { Order::Asc } else { Order::Desc };
+            match sort_by.as_str() {
+                "order_i64" => {
+                    let collector = TopDocs::with_limit(limit).order_by_fast_field::<i64>("order_i64", order);
+                    let sorted: Vec<(i64, tantivy::DocAddress)> = searcher.search(&*boxed_query, &collector)?;
+                    sorted.into_iter().map(|(_, addr)| addr).collect()
+                }
+                "created_at_i64" => {
+                    let collector = TopDocs::with_limit(limit).order_by_fast_field::<i64>("created_at_i64", order);
+                    let sorted: Vec<(i64, tantivy::DocAddress)> = searcher.search(&*boxed_query, &collector)?;
+                    sorted.into_iter().map(|(_, addr)| addr).collect()
+                }
+                "updated_at_i64" => {
+                    let collector = TopDocs::with_limit(limit).order_by_fast_field::<i64>("updated_at_i64", order);
+                    let sorted: Vec<(i64, tantivy::DocAddress)> = searcher.search(&*boxed_query, &collector)?;
+                    sorted.into_iter().map(|(_, addr)| addr).collect()
+                }
+                _ => {
+                    let top_docs: Vec<(f32, tantivy::DocAddress)> = searcher.search(&*boxed_query, &TopDocs::with_limit(limit))?;
+                    top_docs.into_iter().map(|(_, addr)| addr).collect()
+                }
+            }
+        } else {
+            let top_docs: Vec<(f32, tantivy::DocAddress)> = searcher.search(&*boxed_query, &TopDocs::with_limit(limit))?;
+            top_docs.into_iter().map(|(_, addr)| addr).collect()
+        };
         let mut ids = Vec::new();
-        for (_score, addr) in top_docs.into_iter().skip(query.offset) {
+        for addr in addrs.into_iter().skip(query.offset) {
             let doc: tantivy::schema::TantivyDocument = searcher.doc(addr)?;
-            // 通过 JSON 提取 node_id（注意 to_json 对单值也返回数组）
-            let json = doc.to_json(&self.schema);
-            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&json) {
-                if let Some(node_id_val) = v.get("node_id") {
-                    if let Some(s) = node_id_val.as_str() {
-                        ids.push(s.to_string());
-                    } else if let Some(arr) = node_id_val.as_array() {
-                        if let Some(first) = arr.first().and_then(|x| x.as_str()) {
-                            ids.push(first.to_string());
-                        }
-                    }
+            if let Some(val) = doc.get_first(self.fields.node_id) {
+                match val.as_value() {
+                    tantivy::schema::document::ReferenceValue::Leaf(
+                        tantivy::schema::document::ReferenceValueLeaf::Str(s),
+                    ) => ids.push(s.to_string()),
+                    _ => {}
                 }
             }
         }
