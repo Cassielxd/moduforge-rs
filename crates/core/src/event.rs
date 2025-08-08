@@ -8,7 +8,7 @@ use std::{
 
 use async_channel::{Receiver, Sender};
 use mf_state::{debug, state::State, Transaction};
-use tokio::signal;
+// 进程信号处理应由应用层负责，不在库层拦截
 use arc_swap::ArcSwap;
 use dashmap::DashMap;
 
@@ -47,13 +47,13 @@ pub type HandlerId = u64;
 /// - DashMap 用于快速查找和管理事件处理器
 /// - 原子计数器生成唯一 ID
 /// - 批量事件处理优化
-pub struct EventBus<T: Send + 'static> {
+pub struct EventBus<T: Send + Sync + Clone + 'static> {
     tx: Sender<T>,
     rt: Receiver<T>,
     /// 使用 ArcSwap 实现无锁读取的事件处理器列表
-    event_handlers: Arc<ArcSwap<Vec<Arc<dyn EventHandler<T>>>>>,
+    event_handlers: Arc<ArcSwap<Vec<Arc<dyn EventHandler<T> + Send + Sync>>>>,
     /// 使用 DashMap 快速查找事件处理器
-    handler_registry: Arc<DashMap<HandlerId, Arc<dyn EventHandler<T>>>>,
+    handler_registry: Arc<DashMap<HandlerId, Arc<dyn EventHandler<T> + Send + Sync>>>,
     /// 原子计数器生成唯一 ID
     next_handler_id: Arc<AtomicU64>,
     shutdown: (Sender<()>, Receiver<()>),
@@ -86,13 +86,13 @@ impl Default for EventBusStats {
     }
 }
 
-impl<T: Send + 'static> Default for EventBus<T> {
+impl<T: Send + Sync + Clone + 'static> Default for EventBus<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: Send + 'static> Clone for EventBus<T> {
+impl<T: Send + Sync + Clone + 'static> Clone for EventBus<T> {
     fn clone(&self) -> Self {
         Self {
             tx: self.tx.clone(),
@@ -107,11 +107,11 @@ impl<T: Send + 'static> Clone for EventBus<T> {
     }
 }
 
-impl<T: Send + 'static> EventBus<T> {
+impl<T: Send + Sync + Clone + 'static> EventBus<T> {
     /// 添加事件处理器，返回处理器 ID
     pub fn add_event_handler(
         &self,
-        event_handler: Arc<dyn EventHandler<T>>,
+        event_handler: Arc<dyn EventHandler<T> + Send + Sync>,
     ) -> ForgeResult<HandlerId> {
         let handler_id = self.next_handler_id.fetch_add(1, Ordering::Relaxed);
 
@@ -130,7 +130,7 @@ impl<T: Send + 'static> EventBus<T> {
     /// 批量添加事件处理器
     pub fn add_event_handlers(
         &self,
-        event_handlers: Vec<Arc<dyn EventHandler<T>>>,
+        event_handlers: Vec<Arc<dyn EventHandler<T> + Send + Sync>>,
     ) -> ForgeResult<Vec<HandlerId>> {
         let mut handler_ids = Vec::with_capacity(event_handlers.len());
 
@@ -192,7 +192,7 @@ impl<T: Send + 'static> EventBus<T> {
 
     /// 更新处理器列表（内部方法）
     fn update_handler_list(&self) {
-        let handlers: Vec<Arc<dyn EventHandler<T>>> = self
+        let handlers: Vec<Arc<dyn EventHandler<T> + Send + Sync>> = self
             .handler_registry
             .iter()
             .map(|entry| entry.value().clone())
@@ -283,28 +283,35 @@ impl<T: Send + 'static> EventBus<T> {
                             event_stats.events_processed.fetch_add(1, Ordering::Relaxed);
 
                             join_set.spawn(async move {
-                                let mut success_count = 0;
-                                let mut failure_count = 0;
-                                let mut timeout_count = 0;
+                                // 为该事件并发执行所有 handler
+                                let mut handler_set = tokio::task::JoinSet::new();
+                                for handler in handlers.iter().cloned() {
+                                    let event_for_task = event.clone();
+                                    handler_set.spawn(async move {
+                                        // 每个任务持有自己的事件克隆，避免跨任务借用问题
+                                        let e = event_for_task;
+                                        match tokio::time::timeout(handler_timeout, handler.handle(&e)).await {
+                                            Ok(Ok(_)) => (true, false, false),
+                                            Ok(Err(e)) => { debug!("事件处理器执行失败: {}", e); (false, true, false) },
+                                            Err(_) => { debug!("事件处理器执行超时"); (false, false, true) },
+                                        }
+                                    });
+                                }
 
-                                // 并发处理所有handler，添加超时保护
-                                for handler in handlers.iter() {
-                                    match tokio::time::timeout(handler_timeout, handler.handle(&event)).await {
-                                        Ok(Ok(_)) => {
-                                            success_count += 1;
-                                        }, // 处理成功
-                                        Ok(Err(e)) => {
-                                            failure_count += 1;
-                                            debug!("事件处理器执行失败: {}", e);
-                                        },
-                                        Err(_) => {
-                                            timeout_count += 1;
-                                            debug!("事件处理器执行超时");
-                                        },
+                                let mut success_count = 0u64;
+                                let mut failure_count = 0u64;
+                                let mut timeout_count = 0u64;
+                                while let Some(res) = handler_set.join_next().await {
+                                    match res {
+                                        Ok((ok, fail, timeout)) => {
+                                            if ok { success_count += 1; }
+                                            if fail { failure_count += 1; }
+                                            if timeout { timeout_count += 1; }
+                                        }
+                                        Err(e) => debug!("事件处理器任务错误: {}", e),
                                     }
                                 }
 
-                                // 更新统计信息
                                 if failure_count > 0 {
                                     event_stats.processing_failures.fetch_add(failure_count, Ordering::Relaxed);
                                 }
@@ -312,8 +319,7 @@ impl<T: Send + 'static> EventBus<T> {
                                     event_stats.processing_timeouts.fetch_add(timeout_count, Ordering::Relaxed);
                                 }
 
-                                debug!("事件处理完成: 成功={}, 失败={}, 超时={}",
-                                    success_count, failure_count, timeout_count);
+                                debug!("事件处理完成: 成功={}, 失败={}, 超时={}", success_count, failure_count, timeout_count);
                             });
                         },
                         Err(e) => {
@@ -323,24 +329,11 @@ impl<T: Send + 'static> EventBus<T> {
                         },
                     },
                     _ = shutdown_rt.recv() => {
-                        let _ = join_set.join_all().await;
-                        debug!("事件管理器,接收到关闭信号，正在退出...");
+                        // 使用统一清理流程，带超时
+                        cleanup_tasks(&mut join_set, cleanup_timeout).await;
+                        debug!("事件管理器接收到关闭信号，正在退出...");
                         break;
                     },
-                    shutdown_signal = Box::pin(signal::ctrl_c()) => {
-                        match shutdown_signal {
-                            Ok(()) => {
-                                debug!("事件管理器,接收到关闭信号，正在退出...");
-                                cleanup_tasks(&mut join_set, cleanup_timeout).await;
-                                break;
-                            },
-                            Err(e) => {
-                                debug!("事件管理器,处理关闭信号时出错: {}", e);
-                                cleanup_tasks(&mut join_set, cleanup_timeout).await;
-                                break;
-                            }
-                        }
-                    }
                     // 定期清理已完成的任务，防止JoinSet无限增长
                     _ = tokio::time::sleep(std::time::Duration::from_secs(1)) => {
                         // 非阻塞地清理已完成的任务

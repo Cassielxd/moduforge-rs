@@ -129,12 +129,12 @@ async fn main() -> ForgeResult<()> {
     }
 
     // 批量添加不稳定处理器
-    let flaky_handlers: Vec<Arc<dyn EventHandler<TestEvent>>> = (0..3)
+    let flaky_handlers: Vec<Arc<dyn EventHandler<TestEvent> + Send + Sync>> = (0..3)
         .map(|i| {
             Arc::new(FlakyHandler {
                 id: format!("flaky-{}", i),
                 failure_rate: 0.3, // 30% 失败率
-            }) as Arc<dyn EventHandler<TestEvent>>
+            }) as Arc<dyn EventHandler<TestEvent> + Send + Sync>
         })
         .collect();
 

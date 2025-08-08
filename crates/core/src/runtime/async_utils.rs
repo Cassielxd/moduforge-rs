@@ -182,7 +182,7 @@ impl<T> SyncWrapper<T> {
 }
 
 /// 为事件总线提供同步包装
-impl<T: Send + 'static> SyncWrapper<crate::event::EventBus<T>> {
+impl<T: Send + Sync + Clone + 'static> SyncWrapper<crate::event::EventBus<T>> {
     /// 同步广播事件（自动选择最佳方法）
     pub fn broadcast_auto(
         &self,

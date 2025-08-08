@@ -255,7 +255,10 @@ impl ForgeRuntime {
     /// 初始化编辑器，设置事件处理器并启动事件循环
     async fn init(&mut self) -> ForgeResult<()> {
         debug!("正在初始化编辑器");
-        self.event_bus.add_event_handlers(self.options.get_event_handlers())?;
+        // 适配新的事件处理器 trait 约束（Send + Sync）
+        let handlers: Vec<Arc<dyn crate::event::EventHandler<crate::event::Event> + Send + Sync>> =
+            self.options.get_event_handlers();
+        self.event_bus.add_event_handlers(handlers)?;
         self.event_bus.start_event_loop();
         debug!("事件总线已启动");
 
@@ -382,10 +385,10 @@ impl ForgeRuntime {
     /// 销毁编辑器实例
     pub async fn destroy(&mut self) -> ForgeResult<()> {
         debug!("正在销毁编辑器实例");
-        // 广播销毁事件
+        // 广播销毁事件（业务通知）
         self.event_bus.broadcast(Event::Destroy).await?;
-        // 停止事件循环
-        self.event_bus.broadcast(Event::Stop).await?;
+        // 停止事件循环（控制信号）
+        self.event_bus.destroy().await?;
         debug!("编辑器实例销毁成功");
         Ok(())
     }
