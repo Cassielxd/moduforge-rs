@@ -75,12 +75,14 @@ pub struct CollabEditor {
 impl EditorTrait for CollabEditor {
     async fn get_state(&self) -> Arc<State> {
         // 同样的问题，需要异步访问
-        panic!("get_state 需要异步访问，请使用 get_state_async")
+       let lock = self.editor.read().await;
+       lock.get_state().clone()
     }
 
     async fn doc(&self) -> Arc<NodePool> {
         // 同样的问题，需要异步访问
-        panic!("doc 需要异步访问，请使用 doc_async")
+        let lock = self.editor.read().await;
+        lock.doc()
     }
 
     async fn command(

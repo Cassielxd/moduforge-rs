@@ -1,0 +1,38 @@
+[package]
+name = "moduforge-search"
+version = {workspace=true}
+edition = {workspace=true}
+description = "moduforge 搜索服务"
+authors = {workspace=true}
+license = {workspace=true}
+documentation = {workspace=true}
+homepage = {workspace=true}
+repository = {workspace=true}
+
+
+[lib]
+name = "mf_search"
+
+[dependencies]
+
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+imbl = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+parking_lot = { workspace = true }
+uuid = { workspace = true }
+tempfile = { workspace = true }
+futures = { workspace = true }
+tokio = { workspace = true }
+
+# core model & ops
+moduforge-model = { version = "0.4.12", path = "../model" }
+moduforge-transform = { version = "0.4.12", path = "../transform" }
+moduforge-state = { version = "0.4.12", path = "../state" }
+
+# tantivy backend
+tantivy = { version = "0.24.2" }
+tantivy-jieba = "0.16.0"
+
+
