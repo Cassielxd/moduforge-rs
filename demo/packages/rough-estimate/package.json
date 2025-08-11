@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "copy-dist": "node copy-dist.js",
     "preview": "vite preview"
   },
   "dependencies": {

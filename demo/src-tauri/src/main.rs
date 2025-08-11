@@ -159,20 +159,28 @@ async fn create_module_window(
         return Ok(());
     }
 
-    // 验证 URL 格式
-    let parsed_url = url.parse().map_err(|e| {
-        let error_msg = format!("URL解析失败: {} - URL: {}", e, url);
-        println!("{}", error_msg);
-        error_msg
-    })?;
-    println!("URL解析成功: {:?}", parsed_url);
+    // 处理 URL：区分开发环境和生产环境
+    let webview_url = if url.starts_with("http://") || url.starts_with("https://") {
+        // 开发环境：外部 URL
+        let parsed_url = url.parse().map_err(|e| {
+            let error_msg = format!("URL解析失败: {} - URL: {}", e, url);
+            println!("{}", error_msg);
+            error_msg
+        })?;
+        println!("使用外部URL: {:?}", parsed_url);
+        tauri::WebviewUrl::External(parsed_url)
+    } else {
+        // 生产环境：应用内路径
+        println!("使用应用内路径: {}", url);
+        tauri::WebviewUrl::App(url.into())
+    };
 
     // 创建新的模块窗口
     println!("开始创建窗口，标签: {}", window_label);
     let module_window = tauri::WebviewWindowBuilder::new(
         &app,
         &window_label,
-        tauri::WebviewUrl::External(parsed_url),
+        webview_url,
     )
     .title(&title)
     .inner_size(1200.0, 800.0)

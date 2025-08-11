@@ -197,21 +197,30 @@ const openModule = async (module) => {
   try {
     message.loading(`正在打开${module.title}模块...`, 2)
 
+    // 检查是否为开发环境
+    const isDev = import.meta.env.DEV
+    let url
+
+    if (isDev) {
+      // 开发环境：使用开发服务器端口
+      url = `http://localhost:${module.port}`
+    } else {
+      // 生产环境：使用相对路径访问打包后的静态文件
+      url = `${module.key}/index.html`
+    }
+
     // 调用 Tauri 命令创建新窗口
     await invoke('create_module_window', {
       moduleKey: module.key,
       title: module.title,
-      url: `http://localhost:${module.port}`
+      url: url
     })
-
-    // 移除了数据交互逻辑，保持简洁
 
     message.success(`${module.title}模块已在新窗口中打开`)
   } catch (error) {
     console.error('打开模块失败:', error)
     message.error(`打开${module.title}模块失败: ${error}`)
   }
-
 }
 // 窗口控制方法
 const minimizeWindow = async () => {

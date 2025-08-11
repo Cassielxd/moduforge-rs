@@ -22,6 +22,16 @@ export default defineConfig({
     host: true,
     cors: true
   },
+  base: './',  // 使用相对路径
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html')
+      }
+    }
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src')

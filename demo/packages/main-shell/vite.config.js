@@ -19,6 +19,16 @@ export default defineConfig({
     port: 5173,
     host: true
   },
+  base: './',  // 使用相对路径
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html')
+      }
+    }
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src')
