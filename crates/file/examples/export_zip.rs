@@ -10,7 +10,10 @@ fn main(){
 mod tests {
     use anyhow::anyhow;
 use mf_core::{EditorOptionsBuilder, ForgeAsyncRuntime, ForgeResult};
-use mf_file::zipdoc::{SnapshotShardMeta, ZipDocumentWriter, ZipDocumentReader, write_snapshot_shards_msgpack, read_and_decode_snapshot_shards_msgpack};
+use mf_file::zipdoc::{SnapshotShardMeta, ZipDocumentWriter, ZipDocumentReader};
+use mf_file::zipdoc::formats::strategy::{
+    SnapshotFormat, export_zip_with_format, import_zip_with_format,
+};
 use std::collections::HashMap as StdHashMap;
 use mf_model::node::Node;
 use mf_model::imbl::HashMap as ImHashMap;
@@ -31,15 +34,16 @@ use std::sync::Arc;
         let shard_counts: Vec<usize> = tree.nodes.iter().map(|m| m.len()).collect();
         let meta_json = serde_json::json!({"title":"demo document","version":state.version});
         let shard_meta = SnapshotShardMeta { root_id: tree.root_id.clone(), num_shards, counts: shard_counts };
-        let file = std::fs::File::create(zip_path).map_err(|e| anyhow!(e))?;
-        let mut zw = ZipDocumentWriter::new(file).map_err(|e| anyhow!(e))?;
-        zw.add_json("meta.json", &meta_json).map_err(|e| anyhow!(e))?;
-        zw.add_deflated("schema.xml", &schema_bytes).map_err(|e| anyhow!(e))?;
-        write_snapshot_shards_msgpack(&mut zw, &shard_meta, |i| {
-            // 直接序列化 imbl::HashMap<String, Arc<Node>>（serde 已启用 rc/serde）
-            Ok(tree.nodes[i].clone())
-        }, 1).map_err(|e| anyhow!(e))?;
-        let _ = zw.finalize().map_err(|e| anyhow!(e))?;
+        export_zip_with_format(
+            zip_path,
+            &meta_json,
+            &schema_bytes,
+            &shard_meta,
+            |i| Ok(tree.nodes[i].clone()),
+            Some(&tree.parent_map),
+            1,
+            SnapshotFormat::MsgPack,
+        ).map_err(|e| anyhow!(e))?;
     }
     println!("exported zip: {}", zip_path);
 
@@ -49,9 +53,19 @@ use std::sync::Arc;
         let mut zr = ZipDocumentReader::new(file).map_err(|e| anyhow!(e))?;
         let meta_len = zr.read_all("meta.json").map_err(|e| anyhow!(e))?.len();
         let schema_len = zr.read_all("schema.xml").map_err(|e| anyhow!(e))?.len();
-        let (meta, maps): (SnapshotShardMeta, Vec<ImHashMap<String, Arc<Node>>>) = read_and_decode_snapshot_shards_msgpack(&mut zr).map_err(|e| anyhow!(e))?;
+        // 也可用高层导入封装
+        let (_meta_json, _schema_xml, meta, maps, parent_map): (
+            serde_json::Value,
+            Vec<u8>,
+            SnapshotShardMeta,
+            Vec<ImHashMap<String, Arc<Node>>>,
+            Option<ImHashMap<String, String>>,
+        ) = import_zip_with_format(zip_path, SnapshotFormat::MsgPack, true).map_err(|e| anyhow!(e))?;
         let total_nodes: usize = maps.iter().map(|m| m.len()).sum::<usize>();
-        println!("read zip: meta={}B, schema={}B, shards={}, nodes={}", meta_len, schema_len, meta.num_shards, total_nodes);
+        println!(
+            "read zip: meta={}B, schema={}B, shards={}, nodes={}, parent_map_entries={}",
+            meta_len, schema_len, meta.num_shards, total_nodes, parent_map.unwrap().len()
+        );
     }
         Ok(())
     }
