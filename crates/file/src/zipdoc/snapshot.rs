@@ -1,64 +1,10 @@
 use std::io::{self, Read, Seek, Write};
 use std::path::Path;
-use zip::{ZipWriter, ZipArchive, write::SimpleFileOptions, CompressionMethod};
+use rayon::prelude::*;
 use serde::{Serialize, Deserialize, de::DeserializeOwned};
 
-// 基于 ZIP 的文档写入器（docx 风格容器）
-pub struct ZipDocumentWriter<W: Write + Seek> {
-    zip: ZipWriter<W>,
-    manifest: serde_json::Value,
-}
-
-impl<W: Write + Seek> ZipDocumentWriter<W> {
-    // 创建写入器
-    pub fn new(w: W) -> io::Result<Self> {
-        let zip = ZipWriter::new(w);
-        let manifest = serde_json::json!({ "version": 1, "entries": [] });
-        Ok(Self { zip, manifest })
-    }
-    // 写入 JSON 文件（deflate 压缩）
-    pub fn add_json(&mut self, name: &str, value: &serde_json::Value) -> io::Result<()> {
-        let opts = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
-        self.zip.start_file(name, opts)?;
-        let data = serde_json::to_vec(value).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-        self.zip.write_all(&data)
-    }
-    // 写入原样存储的条目（不压缩）
-    pub fn add_stored(&mut self, name: &str, bytes: &[u8]) -> io::Result<()> {
-        let opts = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
-        self.zip.start_file(name, opts)?;
-        self.zip.write_all(bytes)
-    }
-    // 写入 deflate 压缩条目
-    pub fn add_deflated(&mut self, name: &str, bytes: &[u8]) -> io::Result<()> {
-        let opts = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
-        self.zip.start_file(name, opts)?;
-        self.zip.write_all(bytes)
-    }
-    // 完成写入，附带 manifest.json
-    pub fn finalize(mut self) -> io::Result<W> {
-        let opts = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
-        self.zip.start_file("manifest.json", opts)?;
-        let data = serde_json::to_vec(&self.manifest).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-        self.zip.write_all(&data)?;
-        self.zip.finish().map_err(|e| io::Error::new(io::ErrorKind::Other, e))
-    }
-}
-
-// 基于 ZIP 的文档读取器
-pub struct ZipDocumentReader<R: Read + Seek> { zip: ZipArchive<R> }
-
-impl<R: Read + Seek> ZipDocumentReader<R> {
-    // 打开读取器
-    pub fn new(r: R) -> io::Result<Self> { Ok(Self { zip: ZipArchive::new(r)? }) }
-    // 读取指定文件完整内容
-    pub fn read_all(&mut self, name: &str) -> io::Result<Vec<u8>> {
-        let mut f = self.zip.by_name(name)?;
-        let mut buf = Vec::with_capacity(f.size() as usize);
-        std::io::copy(&mut f, &mut buf)?;
-        Ok(buf)
-    }
-}
+use super::writer::ZipDocumentWriter;
+use super::reader::ZipDocumentReader;
 
 // =============== 分片快照辅助函数 ===============
 
@@ -103,14 +49,20 @@ pub fn read_snapshot_shards<R: Read + Seek>(
     let meta_bytes = zr.read_all("snapshot/meta.json")?;
     let meta: SnapshotShardMeta = serde_json::from_slice(&meta_bytes)
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-    let mut shards: Vec<Vec<u8>> = Vec::with_capacity(meta.num_shards);
+    // 顺序读取 ZIP 条目（ZIP 读取器不支持并发），但解压并行
+    let mut compressed: Vec<Vec<u8>> = Vec::with_capacity(meta.num_shards);
     for i in 0..meta.num_shards {
         let name = format!("snapshot/shard-{:03}.bin.zst", i);
         let zst = zr.read_all(&name)?;
-        let raw = zstd::stream::decode_all(&zst[..])
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-        shards.push(raw);
+        compressed.push(zst);
     }
+    let shards: Vec<Vec<u8>> = compressed
+        .into_par_iter()
+        .map(|zst| {
+            zstd::stream::decode_all(&zst[..])
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
     Ok((meta, shards))
 }
 
@@ -119,6 +71,7 @@ pub fn read_and_decode_snapshot_shards<R: Read + Seek, T: DeserializeOwned>(
     zr: &mut ZipDocumentReader<R>,
 ) -> io::Result<(SnapshotShardMeta, Vec<T>)> {
     let (meta, shards_raw) = read_snapshot_shards(zr)?;
+    // 为避免对 T 施加 Send 约束，这里顺序反序列化
     let mut out: Vec<T> = Vec::with_capacity(shards_raw.len());
     for raw in shards_raw.iter() {
         let (val, _): (T, _) = bincode::serde::decode_from_slice(raw, bincode::config::standard())
@@ -126,6 +79,27 @@ pub fn read_and_decode_snapshot_shards<R: Read + Seek, T: DeserializeOwned>(
         out.push(val);
     }
     Ok((meta, out))
+}
+
+/// 流式：逐个分片解压为原始字节并回调处理，避免一次性加载内存
+pub fn for_each_snapshot_shard_raw<R: Read + Seek, F>(
+    zr: &mut ZipDocumentReader<R>,
+    mut on_shard: F,
+) -> io::Result<SnapshotShardMeta>
+where
+    F: FnMut(usize, Vec<u8>) -> io::Result<()>,
+{
+    let meta_bytes = zr.read_all("snapshot/meta.json")?;
+    let meta: SnapshotShardMeta = serde_json::from_slice(&meta_bytes)
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    for i in 0..meta.num_shards {
+        let name = format!("snapshot/shard-{:03}.bin.zst", i);
+        let zst = zr.read_all(&name)?;
+        let raw = zstd::stream::decode_all(&zst[..])
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        on_shard(i, raw)?;
+    }
+    Ok(meta)
 }
 
 /// JSON 变体：用 serde_json 反序列化每个分片（对含有 JSON Value 的结构更稳健）
@@ -140,6 +114,22 @@ pub fn read_and_decode_snapshot_shards_json<R: Read + Seek, T: DeserializeOwned>
         out.push(val);
     }
     Ok((meta, out))
+}
+
+/// 流式：JSON 反序列化逐分片回调
+pub fn for_each_snapshot_shard_json<R: Read + Seek, T, F>(
+    zr: &mut ZipDocumentReader<R>,
+    mut on_shard: F,
+) -> io::Result<SnapshotShardMeta>
+where
+    T: DeserializeOwned,
+    F: FnMut(usize, T) -> io::Result<()>,
+{
+    for_each_snapshot_shard_raw(zr, |i, raw| {
+        let val: T = serde_json::from_slice(&raw)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        on_shard(i, val)
+    })
 }
 
 /// JSON 变体：将每个分片用 serde_json 序列化后 zstd 压缩写入
@@ -231,6 +221,22 @@ pub fn read_and_decode_snapshot_shards_msgpack<R: Read + Seek, T: DeserializeOwn
     Ok((meta, out))
 }
 
+/// 流式：MessagePack 反序列化逐分片回调
+pub fn for_each_snapshot_shard_msgpack<R: Read + Seek, T, F>(
+    zr: &mut ZipDocumentReader<R>,
+    mut on_shard: F,
+) -> io::Result<SnapshotShardMeta>
+where
+    T: DeserializeOwned,
+    F: FnMut(usize, T) -> io::Result<()>,
+{
+    for_each_snapshot_shard_raw(zr, |i, raw| {
+        let val: T = rmp_serde::from_slice(&raw)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        on_shard(i, val)
+    })
+}
+
 /// 读取并用 CBOR 反序列化每个分片
 pub fn read_and_decode_snapshot_shards_cbor<R: Read + Seek, T: DeserializeOwned>(
     zr: &mut ZipDocumentReader<R>,
@@ -243,6 +249,22 @@ pub fn read_and_decode_snapshot_shards_cbor<R: Read + Seek, T: DeserializeOwned>
         out.push(val);
     }
     Ok((meta, out))
+}
+
+/// 流式：CBOR 反序列化逐分片回调
+pub fn for_each_snapshot_shard_cbor<R: Read + Seek, T, F>(
+    zr: &mut ZipDocumentReader<R>,
+    mut on_shard: F,
+) -> io::Result<SnapshotShardMeta>
+where
+    T: DeserializeOwned,
+    F: FnMut(usize, T) -> io::Result<()>,
+{
+    for_each_snapshot_shard_raw(zr, |i, raw| {
+        let val: T = serde_cbor::from_slice(&raw)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        on_shard(i, val)
+    })
 }
 
 /// 高层接口：导出包含 meta.json、schema.xml 和分片快照的 ZIP 文档
