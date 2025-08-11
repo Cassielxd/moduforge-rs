@@ -184,6 +184,19 @@ impl WebsocketProvider {
         }
     }
 
+    /// 清理文档与 awareness 的订阅监听器
+    fn clear_subscriptions(&mut self) {
+        if !self.subscriptions.is_empty() {
+            tracing::debug!(
+                count = self.subscriptions.len(),
+                "🧹 正在清理订阅监听器: {} 个",
+                self.subscriptions.len()
+            );
+        }
+        // 逐一 drop 以解除注册
+        self.subscriptions.drain(..);
+    }
+
     /// 分类连接错误
     fn classify_connection_error(
         &self,
@@ -279,9 +292,19 @@ impl WebsocketProvider {
                                 let msg =
                                     Message::Sync(SyncMessage::Update(update))
                                         .encode_v1();
-                                let binding = sink_weak.upgrade().unwrap();
-                                let mut sink = binding.lock().await;
-                                sink.send(msg).await.unwrap();
+                                if let Some(binding) = sink_weak.upgrade() {
+                                    let mut sink = binding.lock().await;
+                                    if let Err(e) = sink.send(msg).await {
+                                        tracing::debug!(
+                                            "忽略发送错误（可能已断开）: {}",
+                                            e
+                                        );
+                                    }
+                                } else {
+                                    tracing::debug!(
+                                        "发送通道已释放（可能已断开），跳过文档更新发送"
+                                    );
+                                }
                             });
                         }
                     }
@@ -301,18 +324,28 @@ impl WebsocketProvider {
             let sink = self.client_conn.as_ref().unwrap().sink();
 
             // 修复 on_update 签名以匹配 yrs v0.18.8
-            let awareness_subscription =
-                awareness_lock.on_update(move |event| {
-                    let awareness_update = event.awareness_update().unwrap();
+            let awareness_subscription = awareness_lock.on_update(move |event| {
+                if let Some(awareness_update) = event.awareness_update() {
                     let sink_weak = sink.clone();
                     tokio::spawn(async move {
                         let msg: Vec<u8> =
                             Message::Awareness(awareness_update).encode_v1();
-                        let binding = sink_weak.upgrade().unwrap();
-                        let mut sink = binding.lock().await;
-                        sink.send(msg).await.unwrap();
+                        if let Some(binding) = sink_weak.upgrade() {
+                            let mut sink = binding.lock().await;
+                            if let Err(e) = sink.send(msg).await {
+                                tracing::debug!(
+                                    "忽略发送错误（可能已断开）: {}",
+                                    e
+                                );
+                            }
+                        } else {
+                            tracing::debug!(
+                                "发送通道已释放（可能已断开），跳过 Awareness 发送"
+                            );
+                        }
                     });
-                });
+                }
+            });
             self.subscriptions.push(awareness_subscription);
             tracing::info!("✅ 本地 Awareness 变更监听器已设置");
         }
@@ -346,10 +379,19 @@ impl WebsocketProvider {
     pub async fn disconnect(&mut self) {
         tracing::info!("🔌 断开 WebSocket 连接...");
 
-        // 清理连接
-        self.client_conn = None;
-        self.status = ConnectionStatus::Disconnected;
-        tracing::info!("✅ WebSocket 连接已断开");
+        // 1) 先清理订阅监听器，防止回调在断连后继续触发
+        self.clear_subscriptions();
+
+        // 2) 优雅关闭连接（关闭 sink 以促使处理循环退出）
+        if let Some(conn) = self.client_conn.take() {
+            if let Err(e) = conn.close().await {
+                tracing::debug!("关闭连接时出现错误（忽略）: {:?}", e);
+            }
+        }
+
+        // 3) 更新状态并通知
+        self.update_status(ConnectionStatus::Disconnected);
+        tracing::info!("✅ WebSocket 连接已断开且监听器已清理");
     }
 
     /// 检查连接状态
@@ -366,6 +408,7 @@ impl WebsocketProvider {
 impl Drop for WebsocketProvider {
     fn drop(&mut self) {
         // 在析构时清理监听器
-        tracing::debug!("🧹 WebsocketProvider 已清理");
+        self.clear_subscriptions();
+        tracing::debug!("🧹 WebsocketProvider 已清理（订阅监听器已释放）");
     }
 }

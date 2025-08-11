@@ -255,7 +255,10 @@ impl ForgeRuntime {
     /// 初始化编辑器，设置事件处理器并启动事件循环
     async fn init(&mut self) -> ForgeResult<()> {
         debug!("正在初始化编辑器");
-        self.event_bus.add_event_handlers(self.options.get_event_handlers())?;
+        // 适配新的事件处理器 trait 约束（Send + Sync）
+        let handlers: Vec<Arc<dyn crate::event::EventHandler<crate::event::Event> + Send + Sync>> =
+            self.options.get_event_handlers();
+        self.event_bus.add_event_handlers(handlers)?;
         self.event_bus.start_event_loop();
         debug!("事件总线已启动");
 
@@ -382,10 +385,10 @@ impl ForgeRuntime {
     /// 销毁编辑器实例
     pub async fn destroy(&mut self) -> ForgeResult<()> {
         debug!("正在销毁编辑器实例");
-        // 广播销毁事件
+        // 广播销毁事件（业务通知）
         self.event_bus.broadcast(Event::Destroy).await?;
-        // 停止事件循环
-        self.event_bus.broadcast(Event::Stop).await?;
+        // 停止事件循环（控制信号）
+        self.event_bus.destroy().await?;
         debug!("编辑器实例销毁成功");
         Ok(())
     }
@@ -437,7 +440,6 @@ impl ForgeRuntime {
                 },
             }
         }
-        transaction.commit();
         Ok(())
     }
     pub async fn run_after_middleware(
@@ -480,16 +482,21 @@ impl ForgeRuntime {
             };
 
             if let Some(mut transaction) = middleware_result {
+                // 由运行时统一提交事务，再通过相同的 flow 引擎处理
                 transaction.commit();
-                let TransactionResult { state: new_state, transactions: trs } =
-                    self.state.apply(transaction).await.map_err(|e| {
-                        error_utils::state_error(format!(
-                            "附加事务应用失败: {}",
-                            e
-                        ))
-                    })?;
-                *state = Some(Arc::new(new_state));
-                transactions.extend(trs);
+                let task_result = self
+                    .flow_engine
+                    .submit((self.state.clone(), transaction))
+                    .await;
+                let Some(ProcessorResult { result: Some(result), .. }) =
+                    task_result.output
+                else {
+                    return Err(error_utils::state_error(
+                        "附加事务处理结果无效".to_string(),
+                    ));
+                };
+                *state = Some(Arc::new(result.state));
+                transactions.extend(result.transactions);
             }
         }
         Ok(())

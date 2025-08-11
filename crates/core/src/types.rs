@@ -50,7 +50,7 @@ pub struct RuntimeOptions {
     content: Content,
     extensions: Vec<Extensions>,
     history_limit: Option<usize>,
-    event_handlers: Vec<Arc<dyn EventHandler<Event>>>,
+    event_handlers: Vec<Arc<dyn EventHandler<Event> + Send + Sync>>,
     middleware_stack: MiddlewareStack,
 }
 impl RuntimeOptions {
@@ -137,12 +137,12 @@ impl RuntimeOptions {
         self
     }
 
-    pub fn get_event_handlers(&self) -> Vec<Arc<dyn EventHandler<Event>>> {
+    pub fn get_event_handlers(&self) -> Vec<Arc<dyn EventHandler<Event> + Send + Sync>> {
         self.event_handlers.clone()
     }
     pub fn set_event_handlers(
         mut self,
-        event_handlers: Vec<Arc<dyn EventHandler<Event>>>,
+        event_handlers: Vec<Arc<dyn EventHandler<Event> + Send + Sync>>,
     ) -> Self {
         self.event_handlers = event_handlers;
         self
@@ -154,7 +154,7 @@ pub struct EditorOptionsBuilder {
     content: Content,
     extensions: Vec<Extensions>,
     history_limit: Option<usize>,
-    event_handlers: Vec<Arc<dyn EventHandler<Event>>>,
+    event_handlers: Vec<Arc<dyn EventHandler<Event> + Send + Sync>>,
     middleware_stack: MiddlewareStack,
 }
 
@@ -195,7 +195,7 @@ impl EditorOptionsBuilder {
 
     pub fn event_handlers(
         mut self,
-        handlers: Vec<Arc<dyn EventHandler<Event>>>,
+        handlers: Vec<Arc<dyn EventHandler<Event> + Send + Sync>>,
     ) -> Self {
         self.event_handlers = handlers;
         self
@@ -203,7 +203,7 @@ impl EditorOptionsBuilder {
 
     pub fn add_event_handler(
         mut self,
-        handler: Arc<dyn EventHandler<Event>>,
+        handler: Arc<dyn EventHandler<Event> + Send + Sync>,
     ) -> Self {
         self.event_handlers.push(handler);
         self
