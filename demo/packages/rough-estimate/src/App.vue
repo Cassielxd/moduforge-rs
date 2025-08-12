@@ -82,40 +82,15 @@
 
           <!-- 数据表格 -->
           <a-card class="table-card" :bordered="false">
-            <a-table
-              :columns="columns"
-              :data-source="filteredData"
-              :pagination="pagination"
-              :loading="loading"
-              @change="handleTableChange"
-              row-key="id"
-            >
-              <template #bodyCell="{ column, record }">
-                <template v-if="column.key === 'status'">
-                  <a-tag :color="getStatusColor(record.status)">
-                    {{ getStatusText(record.status) }}
-                  </a-tag>
-                </template>
-                <template v-else-if="column.key === 'amount'">
-                  <span style="color: #1890ff; font-weight: 500;">
-                    ¥{{ record.amount.toLocaleString() }}
-                  </span>
-                </template>
-                <template v-else-if="column.key === 'action'">
-                  <a-space>
-                    <a-button type="link" size="small" @click="viewDetail(record)">
-                      查看
-                    </a-button>
-                    <a-button type="link" size="small" @click="editRecord(record)">
-                      编辑
-                    </a-button>
-                    <a-button type="link" size="small" danger @click="deleteRecord(record)">
-                      删除
-                    </a-button>
-                  </a-space>
-                </template>
-              </template>
-            </a-table>
+            <CostTable
+              :data="filteredData"
+              :columns="costTableColumns"
+              table-type="estimate"
+              :editable="false"
+              @data-change="handleCostTableDataChange"
+              @row-select="handleCostTableRowSelect"
+              @cell-edit="handleCostTableCellEdit"
+            />
           </a-card>
         </div>
       </a-layout-content>
@@ -131,6 +106,8 @@ import {
   ImportOutlined,
   ExportOutlined
 } from '@ant-design/icons-vue'
+import { CostTable } from '@cost-app/shared-components'
+
 
 // 数据状态
 const loading = ref(false)
@@ -138,7 +115,7 @@ const searchText = ref('')
 const statusFilter = ref('')
 const dateFilter = ref(null)
 
-// 表格配置
+// 表格配置（Ant Table 用）
 const columns = [
   {
     title: '项目名称',
@@ -178,6 +155,29 @@ const columns = [
     width: 200,
   },
 ]
+
+// 共享表格组件（CostTable）相关配置
+const CostTableComp = ref(null)
+const costTableColumns = [
+  { field: 'name', title: '项目名称', width: 200 },
+  { field: 'amount', title: '概算金额', width: 150 },
+  { field: 'status', title: '状态', width: 100 },
+  { field: 'createTime', title: '创建时间', width: 150 },
+  { field: 'creator', title: '创建人', width: 100 },
+]
+
+const handleCostTableDataChange = (newData) => {
+  estimateData.value = newData
+  pagination.value.total = newData.length
+}
+
+const handleCostTableRowSelect = (row) => {
+  message.info(`选中：${row.name}`)
+}
+
+const handleCostTableCellEdit = ({ row, field, value }) => {
+  console.log('Cell Edited:', row, field, value)
+}
 
 // 分页配置
 const pagination = ref({
@@ -222,7 +222,7 @@ const filteredData = computed(() => {
   let data = estimateData.value
 
   if (searchText.value) {
-    data = data.filter(item => 
+    data = data.filter(item =>
       item.name.toLowerCase().includes(searchText.value.toLowerCase()) ||
       item.creator.toLowerCase().includes(searchText.value.toLowerCase())
     )
@@ -302,9 +302,20 @@ const deleteRecord = (record) => {
   message.warning(`删除概算: ${record.name}`)
 }
 
-onMounted(() => {
+onMounted(async () => {
   console.log('概算管理系统已加载')
   pagination.value.total = estimateData.value.length
+  // 尝试按本地路径动态加载共享表格组件（开发环境）
+  try {
+    // 方案B：直接使用已打包的包
+    const mod = await import('@cost-app/shared-components')
+    CostTableComp.value = mod?.CostTable || null
+    if (CostTableComp.value) {
+      console.log('已加载共享表格组件 CostTable (package)')
+    }
+  } catch (err) {
+    console.warn('未找到共享组件包，继续使用内置表格', err)
+  }
 })
 </script>
 

@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@cost-app/shared-components": "file:../shared-components",
     "@tauri-apps/api": "^2.5.0",
     "ant-design-vue": "^4.2.6",
     "pinia": "^3.0.3",

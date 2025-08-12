@@ -1,17 +1,18 @@
 <template>
   <div class="cost-table-container">
     <div class="table-toolbar">
-      <el-button-group>
-        <el-button @click="addRow" type="primary" icon="Plus">新增</el-button>
-        <el-button @click="deleteSelected" type="danger" icon="Delete">删除</el-button>
-        <el-button @click="exportData" icon="Download">导出</el-button>
-      </el-button-group>
+      <a-space>
+        <a-button type="primary" @click="addRow">新增</a-button>
+        <a-button danger @click="deleteSelected">删除</a-button>
+        <a-button @click="exportData">导出</a-button>
+      </a-space>
       <div class="table-search">
-        <el-input
-          v-model="searchText"
+        <a-input-search
+          v-model:value="searchText"
           placeholder="搜索..."
-          prefix-icon="Search"
-          @input="handleSearch"
+          @search="handleSearch"
+          @change="handleSearch"
+          allow-clear
         />
       </div>
     </div>
@@ -30,6 +31,7 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
 import { TabulatorFull as Tabulator } from 'tabulator-tables'
+import 'tabulator-tables/dist/css/tabulator.min.css'
 import { useTableOperations } from '../composables/useTableOperations.js'
 import { useCostCalculation } from '../composables/useCostCalculation.js'
 
@@ -135,7 +137,7 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .table-search {

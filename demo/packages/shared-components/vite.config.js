@@ -12,11 +12,11 @@ export default defineConfig({
       formats: ['es', 'umd']
     },
     rollupOptions: {
-      external: ['vue', 'element-plus'],
+      external: ['vue', 'ant-design-vue'],
       output: {
         globals: {
           vue: 'Vue',
-          'element-plus': 'ElementPlus'
+          'ant-design-vue': 'antd'
         }
       }
     }
