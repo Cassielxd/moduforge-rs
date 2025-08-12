@@ -26,8 +26,6 @@ pub struct NodePool {
     key: String,
 }
 
-unsafe impl Send for NodePool {}
-unsafe impl Sync for NodePool {}
 
 impl NodePool {
     pub fn new(inner: Arc<Tree>) -> Arc<NodePool> {
@@ -1217,9 +1215,7 @@ pub struct LazyQueryEngine {
     config: LazyQueryConfig,
 }
 
-// 为 LazyQueryEngine 实现线程安全
-unsafe impl Send for LazyQueryEngine {}
-unsafe impl Sync for LazyQueryEngine {}
+// 注意：LazyQueryEngine 包含非原子内部缓存，不应跨线程共享可变引用
 
 impl LazyQueryEngine {
     pub fn new(

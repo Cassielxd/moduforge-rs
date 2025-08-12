@@ -41,8 +41,6 @@ pub struct Node {
     #[serde(rename = "m")]
     pub marks: imbl::Vector<Mark>,
 }
-unsafe impl Send for Node {}
-unsafe impl Sync for Node {}
 
 impl Node {
     /// 创建一个新的节点实例

@@ -38,7 +38,7 @@ pub trait Command: Send + Sync + Debug {
 #[derive(Clone)]
 pub struct Transaction {
     /// 存储元数据的哈希表，支持任意类型数据
-    pub meta: imbl::HashMap<String, Arc<dyn Any>>,
+    pub meta: imbl::HashMap<String, Arc<dyn Any + Send + Sync>>,
     /// 事务的时间戳
     pub id: u64,
     transform: Transform,
@@ -52,8 +52,6 @@ impl Debug for Transaction {
     }
 }
 
-unsafe impl Send for Transaction {}
-unsafe impl Sync for Transaction {}
 impl Deref for Transaction {
     type Target = Transform;
 
@@ -153,7 +151,7 @@ impl Transaction {
     /// 设置元数据
     /// key: 键
     /// value: 值（支持任意类型）
-    pub fn set_meta<K, T: 'static>(
+    pub fn set_meta<K, T: Send + Sync + 'static>(
         &mut self,
         key: K,
         value: T,

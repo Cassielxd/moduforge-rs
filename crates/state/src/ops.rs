@@ -12,9 +12,7 @@ pub struct GlobalResourceManager {
     pub gotham_state: GothamState,
 }
 
-// 实现Send和Sync trait，表明GlobalResourceManager可以在线程间安全传递和共享
-unsafe impl Send for GlobalResourceManager {}
-unsafe impl Sync for GlobalResourceManager {}
+// GlobalResourceManager 由内部并发结构保证并发访问安全，无需不安全声明
 
 impl GlobalResourceManager {
     /// 创建新的全局资源管理器实例

@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock, OnceLock};
 
 use mf_model::node_pool::NodePool;
+use mf_model::NodeId;
 use mf_transform::step::Step;
 
 use crate::backend::IndexMutation;
@@ -155,9 +156,9 @@ impl TypedStepIndexer<RemoveNodeStep> for RemoveNodeIndexer {
         let mut all_ids: Vec<String> = Vec::new();
         for id in &step.node_ids {
             if let Some(enum_subtree) = ctx.pool_before.get_inner().all_children(id, None) {
-                all_ids.extend(collect_ids_from_enum(&enum_subtree));
+                all_ids.extend(collect_ids_from_enum(&enum_subtree).into_iter().map(|id| id.to_string()));
             } else {
-                all_ids.push(id.clone());
+                all_ids.push(id.to_string());
             }
         }
         vec![IndexMutation::DeleteManyById(all_ids)]
@@ -170,7 +171,7 @@ impl TypedStepIndexer<MoveNodeStep> for MoveNodeIndexer {
     fn index_step(&self, step: &MoveNodeStep, ctx: &StepIndexContext) -> Vec<IndexMutation> {
         // MoveNodeStep 的字段为私有，使用序列化提取 node_id
         #[derive(Deserialize)]
-        struct MoveNodeSerde { node_id: String }
+        struct MoveNodeSerde { node_id: NodeId }
         if let Some(bytes) = Step::serialize(step) {
             if let Ok(ms) = serde_json::from_slice::<MoveNodeSerde>(&bytes) {
                 let mut muts = Vec::new();
@@ -186,7 +187,7 @@ impl TypedStepIndexer<MoveNodeStep> for MoveNodeIndexer {
     }
 }
 
-fn collect_ids_from_enum(ne: &NodeEnum) -> Vec<String> {
+fn collect_ids_from_enum(ne: &NodeEnum) -> Vec<NodeId> {
     let mut ids = vec![ne.0.id.clone()];
     for c in &ne.1 { ids.extend(collect_ids_from_enum(c)); }
     ids

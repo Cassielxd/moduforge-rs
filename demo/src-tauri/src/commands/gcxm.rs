@@ -53,7 +53,7 @@ impl Command for AddFootNoteCammand {
             tr,
             &AddMarkRequest {
                 editor_name: self.editor_name.clone(),
-                id: self.id.to_string(),
+                id: self.id.clone(),
                 marks: vec![mark],
             },
         )

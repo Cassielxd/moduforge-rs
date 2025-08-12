@@ -22,7 +22,7 @@ pub mod rcj;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GetDataTreeRequest {
     pub editor_name: String,
-    pub id: String,
+    pub id: NodeId,
 }
 
 pub async fn get_inc_data(

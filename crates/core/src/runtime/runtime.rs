@@ -32,8 +32,6 @@ pub struct ForgeRuntime {
     options: RuntimeOptions,
     config: ForgeConfig,
 }
-unsafe impl Send for ForgeRuntime {}
-unsafe impl Sync for ForgeRuntime {}
 impl ForgeRuntime {
     /// 创建新的编辑器实例
     ///

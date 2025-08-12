@@ -14,8 +14,6 @@ pub struct Extension {
     op_fn: Option<OpFn>,
 }
 
-unsafe impl Send for Extension {}
-unsafe impl Sync for Extension {}
 
 impl Extension {
     pub fn new() -> Self {

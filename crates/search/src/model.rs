@@ -28,7 +28,7 @@ impl IndexDoc {
         }
 
         // 路径（根到当前）
-        let path = pool.get_node_path(&node.id).into_iter().collect();
+        let path: Vec<String> = pool.get_node_path(&node.id).into_iter().map(|id| id.to_string()).collect();
 
         let text = extract_text(node);
 
@@ -38,9 +38,9 @@ impl IndexDoc {
         let updated_at_i64 = extract_i64(node, "updated_at");
 
         IndexDoc {
-            node_id: node.id.clone(),
+            node_id: node.id.to_string(),
             node_type: node.r#type.clone(),
-            parent_id,
+            parent_id: parent_id.map(|id| id.to_string()),
             marks,
             attrs_flat,
             text,

@@ -137,7 +137,7 @@ mod tests {
         let mut attrs = imbl::HashMap::new();
         attrs.insert("test_attr".to_string(), serde_json::json!("test_value"));
 
-        let step = AttrStep { id: "test_node".to_string(), values: attrs };
+        let step = AttrStep { id: "test_node".into(), values: attrs };
 
         let result = convert_step(&step, &mut txn, &context);
         let duration = start.elapsed();

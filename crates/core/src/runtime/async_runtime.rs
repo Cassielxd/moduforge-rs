@@ -70,8 +70,6 @@ pub struct ForgeAsyncRuntime {
     base: ForgeRuntime,
     flow_engine: FlowEngine,
 }
-unsafe impl Send for ForgeAsyncRuntime {}
-unsafe impl Sync for ForgeAsyncRuntime {}
 
 impl Deref for ForgeAsyncRuntime {
     type Target = ForgeRuntime;

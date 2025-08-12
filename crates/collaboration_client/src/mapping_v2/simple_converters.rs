@@ -45,7 +45,7 @@ impl TypedStepConverter<AddNodeStep> for SimpleNodeAddConverter {
 
         // 如果不是根节点，需要更新父节点的content数组
         if let Some(root_id) = root_id {
-            if root_id.to_string(txn) != step.parent_id {
+            if root_id.to_string(txn) != step.parent_id.to_string() {
                 let parent_node_data = Utils::get_or_create_node_data_map(
                     &nodes_map,
                     txn,
