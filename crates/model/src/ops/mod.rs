@@ -1,4 +1,4 @@
-use crate::tree::Tree;
+use crate::{tree::Tree, types::NodeId};
 
 pub mod add;
 pub mod bitand;
@@ -11,13 +11,13 @@ pub mod sub;
 // 用于处理节点赋值的包装器
 pub struct NodeRef<'a> {
     tree: &'a mut Tree,
-    key: String,
+    key: NodeId,
 }
 
 impl<'a> NodeRef<'a> {
     pub fn new(
         tree: &'a mut Tree,
-        key: String,
+        key: NodeId,
     ) -> Self {
         Self { tree, key }
     }
@@ -40,13 +40,13 @@ impl<'a> std::ops::DerefMut for NodeRef<'a> {
 // 用于处理节点赋值的包装器
 pub struct MarkRef<'a> {
     tree: &'a mut Tree,
-    key: String,
+    key: NodeId,
 }
 
 impl<'a> MarkRef<'a> {
     pub fn new(
         tree: &'a mut Tree,
-        key: String,
+        key: NodeId,
     ) -> Self {
         Self { tree, key }
     }
@@ -68,13 +68,13 @@ impl<'a> std::ops::DerefMut for MarkRef<'a> {
 
 pub struct AttrsRef<'a> {
     tree: &'a mut Tree,
-    key: String,
+    key: NodeId,
 }
 
 impl<'a> AttrsRef<'a> {
     pub fn new(
         tree: &'a mut Tree,
-        key: String,
+        key: NodeId,
     ) -> Self {
         Self { tree, key }
     }

@@ -121,11 +121,11 @@ impl Node {
     ///
     pub fn insert_contents(
         &self,
-        node_ids: &Vec<String>,
+        node_ids: &Vec<NodeId>,
     ) -> Self {
         let mut new_node = self.clone();
         for node_id in node_ids {
-            new_node.content.push_back(node_id.into());
+            new_node.content.push_back(node_id.clone());
         }
         new_node
     }

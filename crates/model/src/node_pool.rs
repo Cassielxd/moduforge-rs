@@ -1130,10 +1130,10 @@ impl OptimizedQueryEngine {
         nodes1: &[Arc<Node>],
         nodes2: &[Arc<Node>],
     ) -> Vec<Arc<Node>> {
-        let set1: HashSet<_> = nodes1.iter().map(|n| n.id.as_str()).collect();
+        let set1: HashSet<_> = nodes1.iter().map(|n| n.id.as_ref()).collect();
         nodes2
             .iter()
-            .filter(|node| set1.contains(node.id.as_str()))
+            .filter(|node| set1.contains(node.id.as_ref()))
             .cloned()
             .collect()
     }
@@ -1579,10 +1579,10 @@ impl LazyQueryEngine {
         nodes1: &[Arc<Node>],
         nodes2: &[Arc<Node>],
     ) -> Vec<Arc<Node>> {
-        let set1: HashSet<_> = nodes1.iter().map(|n| n.id.as_str()).collect();
+        let set1: HashSet<_> = nodes1.iter().map(|n| n.id.as_ref()).collect();
         nodes2
             .iter()
-            .filter(|node| set1.contains(node.id.as_str()))
+            .filter(|node| set1.contains(node.id.as_ref()))
             .cloned()
             .collect()
     }

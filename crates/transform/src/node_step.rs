@@ -24,7 +24,7 @@ impl AddNodeStep {
     }
     // 递归收集单个节点枚举的所有子节点 id
     pub fn collect_node_ids(node_enum: &NodeEnum) -> Vec<NodeId> {
-        let mut ids: Vec<String> = vec![node_enum.0.id.clone()];
+        let mut ids: Vec<NodeId> = vec![node_enum.0.id.clone()];
         for child in &node_enum.1 {
             ids.extend(Self::collect_node_ids(child));
         }
@@ -62,10 +62,7 @@ impl Step for AddNodeStep {
         }
 
         if !all_node_ids.is_empty() {
-            return Some(Arc::new(RemoveNodeStep::new(
-                self.parent_id.clone(),
-                all_node_ids,
-            )));
+            return Some(Arc::new(RemoveNodeStep::new(self.parent_id.clone(), all_node_ids)));
         }
         None
     }
@@ -193,11 +190,10 @@ mod tests {
     use super::*;
     use mf_model::{
         node::Node,
-        node_type::{NodeEnum, NodeType, NodeSpec},
-        schema::{Schema, SchemaSpec, AttributeSpec},
+        node_type::{NodeEnum, NodeSpec},
+        schema::{Schema, SchemaSpec},
         tree::Tree,
         attrs::Attrs,
-        mark::Mark,
     };
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -242,13 +238,12 @@ mod tests {
         let node = create_test_node("root");
         let test = create_test_node("test");
         let node_enum = NodeEnum(node, vec![NodeEnum(test, vec![])]);
-        let step =
-            AddNodeStep::new("root".to_string(), vec![node_enum.clone()]);
+        let step = AddNodeStep::new("root".into(), vec![node_enum.clone()]);
         let result = step.apply(&mut tree, schema.clone());
         assert!(result.is_ok());
 
         // Verify node was added
-        assert!(tree.get_node(&"test".to_string()).is_some());
+        assert!(tree.get_node(&"test".into()).is_some());
 
         // Test invert
         let inverted = step.invert(&Arc::new(tree.clone()));
@@ -259,7 +254,7 @@ mod tests {
             let result = inverted_step.apply(&mut tree, schema);
             assert!(result.is_ok());
             // Verify node was removed
-            assert!(tree.get_node(&"test".to_string()).is_none());
+            assert!(tree.get_node(&"test".into()).is_none());
         }
     }
 
@@ -270,15 +265,15 @@ mod tests {
 
         // Add a node first
         let node = create_test_node("test");
-        tree.add_node(&"root".to_string(), &vec![node]).unwrap();
+        tree.add_node(&"root".into(), &vec![node]).unwrap();
 
         let step =
-            RemoveNodeStep::new("root".to_string(), vec!["test".to_string()]);
+            RemoveNodeStep::new("root".into(), vec!["test".into()]);
         let result = step.apply(&mut tree, schema.clone());
         assert!(result.is_ok());
 
         // Verify node was removed
-        assert!(tree.get_node(&"test".to_string()).is_none());
+        assert!(tree.get_node(&"test".into()).is_none());
 
         // Test invert
         let inverted = step.invert(&Arc::new(tree.clone()));
@@ -295,9 +290,9 @@ mod tests {
         let target = create_test_node("target");
         let node = create_test_node("node");
 
-        tree.add_node(&"root".to_string(), &vec![source]).unwrap();
-        tree.add_node(&"root".to_string(), &vec![target]).unwrap();
-        tree.add_node(&"source".to_string(), &vec![node]).unwrap();
+        tree.add_node(&"root".into(), &vec![source]).unwrap();
+        tree.add_node(&"root".into(), &vec![target]).unwrap();
+        tree.add_node(&"source".into(), &vec![node]).unwrap();
 
         let step = MoveNodeStep::new(
             "source".to_string(),
@@ -310,8 +305,8 @@ mod tests {
         assert!(result.is_ok());
 
         // Verify node was moved
-        let target_node = tree.get_node(&"target".to_string()).unwrap();
-        assert!(target_node.content.contains(&"node".to_string()));
+        let target_node = tree.get_node(&"target".into()).unwrap();
+        assert!(target_node.content.contains(&"node".into()));
 
         // Test invert
         let inverted = step.invert(&Arc::new(tree.clone()));

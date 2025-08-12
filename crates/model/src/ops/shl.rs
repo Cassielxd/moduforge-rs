@@ -13,7 +13,7 @@ impl<'a> Shl<Node> for NodeRef<'a> {
         node: Node,
     ) -> Self::Output {
         // 在索引0处插入节点（开头位置）
-        self.tree.add_at_index(&self.key.clone().into(), 0, &node)?;
+        self.tree.add_at_index(&self.key.clone(), 0, &node)?;
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
 }
@@ -28,7 +28,7 @@ impl<'a> Shl<Vec<Node>> for NodeRef<'a> {
     ) -> Self::Output {
         // 反向插入，确保节点顺序正确
         for (i, node) in nodes.into_iter().enumerate() {
-            self.tree.add_at_index(&self.key.clone().into(), i, &node)?;
+            self.tree.add_at_index(&self.key.clone(), i, &node)?;
         }
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
@@ -43,8 +43,7 @@ impl<'a> Shl<usize> for NodeRef<'a> {
         positions: usize,
     ) -> Self::Output {
         // 获取当前节点在父节点中的位置
-        if let Some(parent) =
-            self.tree.get_parent_node(&self.key.clone().into())
+        if let Some(parent) = self.tree.get_parent_node(&self.key.clone())
         {
             let siblings = self.tree.children(&parent.id).unwrap_or_default();
 
@@ -59,7 +58,7 @@ impl<'a> Shl<usize> for NodeRef<'a> {
                     //这里只需要修改  content 中的顺序就行，不需要删除和添加
                     let mut node = self
                         .tree
-                        .get_node(&self.key.clone().into())
+                        .get_node(&self.key.clone())
                         .unwrap()
                         .as_ref()
                         .clone();

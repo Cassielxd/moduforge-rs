@@ -29,7 +29,7 @@ impl<'a> BitOr<NodeId> for NodeRef<'a> {
         }
 
         if !nodes_to_add.is_empty() {
-            self.tree.add_node(&self.key.clone().into(), &nodes_to_add)?;
+            self.tree.add_node(&self.key.clone(), &nodes_to_add)?;
         }
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
@@ -57,7 +57,7 @@ impl<'a> BitOr<Vec<NodeId>> for NodeRef<'a> {
         }
 
         if !all_nodes_to_add.is_empty() {
-            self.tree.add_node(&self.key.clone().into(), &all_nodes_to_add)?;
+            self.tree.add_node(&self.key.clone(), &all_nodes_to_add)?;
         }
 
         Ok(NodeRef::new(self.tree, self.key.clone()))
@@ -73,7 +73,7 @@ impl<'a> BitOr<Vec<Node>> for NodeRef<'a> {
         nodes: Vec<Node>,
     ) -> Self::Output {
         if !nodes.is_empty() {
-            self.tree.add_node(&self.key.clone().into(), &nodes)?;
+            self.tree.add_node(&self.key.clone(), &nodes)?;
         }
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
@@ -89,14 +89,14 @@ impl<'a> BitOr<Mark> for MarkRef<'a> {
     ) -> Self::Output {
         // 检查标记是否已存在
         let existing_marks =
-            self.tree.get_marks(&self.key.clone().into()).unwrap_or_default();
+            self.tree.get_marks(&self.key.clone()).unwrap_or_default();
         let mark_exists = existing_marks.iter().any(|existing_mark| {
             existing_mark.r#type == mark.r#type
                 && existing_mark.attrs == mark.attrs
         });
 
         if !mark_exists {
-            self.tree.add_mark(&self.key.clone().into(), &vec![mark])?;
+            self.tree.add_mark(&self.key.clone(), &vec![mark])?;
         }
 
         Ok(MarkRef::new(self.tree, self.key.clone()))
@@ -112,7 +112,7 @@ impl<'a> BitOr<Vec<Mark>> for MarkRef<'a> {
         marks: Vec<Mark>,
     ) -> Self::Output {
         let existing_marks =
-            self.tree.get_marks(&self.key.clone().into()).unwrap_or_default();
+            self.tree.get_marks(&self.key.clone()).unwrap_or_default();
         let mut unique_marks = Vec::new();
 
         for mark in marks {
@@ -127,7 +127,7 @@ impl<'a> BitOr<Vec<Mark>> for MarkRef<'a> {
         }
 
         if !unique_marks.is_empty() {
-            self.tree.add_mark(&self.key.clone().into(), &unique_marks)?;
+            self.tree.add_mark(&self.key.clone(), &unique_marks)?;
         }
 
         Ok(MarkRef::new(self.tree, self.key.clone()))

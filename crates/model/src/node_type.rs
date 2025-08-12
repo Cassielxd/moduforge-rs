@@ -208,13 +208,13 @@ impl NodeType {
     /// 返回包含新创建的节点及其所有子节点的向量
     pub fn create_and_fill(
         &self,
-        id: Option<String>,
+        id: Option<NodeId>,
         attrs: Option<&HashMap<String, Value>>,
         content: Vec<Node>,
         marks: Option<Vec<Mark>>,
         schema: &Schema,
     ) -> NodeEnum {
-        let id: String = id.unwrap_or_else(IdGenerator::get_id);
+        let id: NodeId = id.unwrap_or_else(IdGenerator::get_id);
         let attrs = self.compute_attrs(attrs);
 
         // 首先创建需要填充的内容
@@ -314,13 +314,13 @@ impl NodeType {
     /// 创建节点
     pub fn create(
         &self,
-        id: Option<String>,
+        id: Option<NodeId>,
         attrs: Option<&HashMap<String, Value>>,
         content: Vec<NodeId>,
         marks: Option<Vec<Mark>>,
     ) -> Node {
         // 实现...
-        let id: String = id.unwrap_or_else(IdGenerator::get_id);
+        let id: NodeId = id.unwrap_or_else(IdGenerator::get_id);
 
         Node::new(
             &id,
