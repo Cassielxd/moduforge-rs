@@ -17,7 +17,7 @@ use mf_model::{node_pool::NodePool, schema::Schema};
 use mf_state::{
     debug, error, info,
     ops::GlobalResourceManager,
-    state::{State, StateConfig, TransactionResult},
+    state::{State, StateConfig},
     transaction::{Command, Transaction},
 };
 

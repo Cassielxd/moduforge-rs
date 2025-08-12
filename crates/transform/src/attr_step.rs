@@ -38,7 +38,17 @@ impl Step for AttrStep {
         let _ = schema;
         match dart.get_node(&self.id) {
             Some(node) => {
-                let attr = &schema.nodes.get(&node.r#type).unwrap().attrs;
+                // 获取节点类型定义，若缺失则返回错误而非 panic
+                let node_type = match schema.nodes.get(&node.r#type) {
+                    Some(nt) => nt,
+                    None => {
+                        return Err(transform_error(format!(
+                            "未知的节点类型: {}",
+                            node.r#type
+                        )));
+                    }
+                };
+                let attr = &node_type.attrs;
                 // 删除 self.values 中 attr中没有定义的属性
                 let mut new_values = self.values.clone();
                 for (key, _) in self.values.iter() {
