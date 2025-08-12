@@ -173,13 +173,21 @@ impl Step for MoveNodeStep {
         &self,
         dart: &Arc<Tree>,
     ) -> Option<Arc<dyn Step>> {
-        match dart.get_node(&self.node_id) {
-            Some(_) => Some(Arc::new(MoveNodeStep::new(
-                self.target_parent_id.clone(),
-                self.source_parent_id.clone(),
-                self.node_id.clone(),
-                self.position,
-            ))),
+        match dart.get_parent_node(&self.node_id) {
+            Some(source_parent) => {
+                // 反向时需要把节点放回原父节点的原索引
+                let original_index = source_parent
+                    .content
+                    .iter()
+                    .position(|id| id == &self.node_id);
+                let original_pos = original_index; // Option<usize>
+                Some(Arc::new(MoveNodeStep::new(
+                    self.target_parent_id.clone(),
+                    self.source_parent_id.clone(),
+                    self.node_id.clone(),
+                    original_pos,
+                )))
+            },
             None => None,
         }
     }

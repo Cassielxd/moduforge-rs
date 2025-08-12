@@ -78,15 +78,22 @@ impl Step for AttrStep {
     ) -> Option<Arc<dyn Step>> {
         match dart.get_node(&self.id) {
             Some(node) => {
-                let mut new_values = imbl::hashmap!();
-                for (key, value) in node.attrs.attrs.iter() {
-                    new_values.insert(key.clone(), value.clone());
+                // 仅对本次修改过的键生成反向值，避免覆盖无关属性
+                let mut revert_values = imbl::hashmap!();
+                for (changed_key, _) in self.values.iter() {
+                    if let Some(old_val) = node.attrs.get_safe(changed_key) {
+                        revert_values.insert(changed_key.clone(), old_val.clone());
+                    }
+                    // 若原先不存在该键，这里不设置（缺少删除语义）；
+                    // 如需彻底还原，可扩展支持 unset 语义
                 }
-                Some(Arc::new(AttrStep::new(self.id.clone(), new_values)))
+                if revert_values.is_empty() {
+                    None
+                } else {
+                    Some(Arc::new(AttrStep::new(self.id.clone(), revert_values)))
+                }
             },
-            None => {
-                return None;
-            },
+            None => None,
         }
     }
 }

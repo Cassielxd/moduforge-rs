@@ -1,4 +1,4 @@
-use std::{any::Any, sync::Arc};
+use std::{any::{type_name, Any, TypeId}, sync::Arc};
 
 use mf_model::{schema::Schema, tree::Tree};
 use std::fmt::Debug;
@@ -6,7 +6,10 @@ use std::fmt::Debug;
 use crate::TransformResult;
 
 pub trait Step: Any + Send + Sync + Debug + 'static {
-    fn name(&self) -> String;
+    fn name(&self) -> String {
+        type_name::<Self>().to_string()
+    }
+
     fn apply(
         &self,
         dart: &mut Tree,
