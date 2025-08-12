@@ -37,7 +37,12 @@ pub mod middleware;
 pub mod node;
 pub mod runtime;
 pub mod schema_parser;
+pub mod snapshot;
 pub mod types;
+
+// 构建工具模块（仅在构建时可用）
+#[cfg(feature = "build-tools")]
+pub mod build_tools;
 pub use error::{ForgeResult, error_utils};
 /// 重命名
 pub mod model {

@@ -1,0 +1,13 @@
+[workspace]
+
+[package]
+name = "snapshot_demo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+moduforge-core = { path = "../../crates/core" }
+tokio = { version = "1", features = ["full"] }
+
+[build-dependencies]
+moduforge-core = { path = "../../crates/core", features = ["build-tools"] }

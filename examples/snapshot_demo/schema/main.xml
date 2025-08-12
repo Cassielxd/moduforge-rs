@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema top_node="doc"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="moduforge-schema.xsd">
+  <nodes>
+    <!-- 工程项目 -->
+    <node name="doc"  desc="工程项目" content="dwgc+" >
+      <attrs>
+        <attr name="title" default="工程项目"/>
+        <attr name="price" default="0"/>
+        <attr name="totalPrice" default="0"/>
+      </attrs>
+    </node>
+    <node name="dwgc"  desc="单位项目" >
+      <attrs>
+        <attr name="name" default="单位项目"/>
+        <attr name="price" default="0"/>
+        <attr name="totalPrice" default="0"/>
+      </attrs>
+    </node>
+  </nodes>
+</schema>

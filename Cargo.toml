@@ -6,7 +6,8 @@ members = [
    "devtool-rules"
    ]
 exclude = [
-   "demo"
+   "demo",
+   "examples/*"
 ]
 [workspace.package]
 version = "0.4.12"

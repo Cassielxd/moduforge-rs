@@ -10,6 +10,7 @@ use crate::{
     history_manager::HistoryManager,
     metrics,
     runtime::sync_flow::FlowEngine,
+    snapshot::SnapshotManager,
     types::{HistoryEntryWithMeta, ProcessorResult, RuntimeOptions},
 };
 
@@ -33,6 +34,75 @@ pub struct ForgeRuntime {
     config: ForgeConfig,
 }
 impl ForgeRuntime {
+    /// 从快照创建编辑器实例（最快启动方式）
+    ///
+    /// # 参数
+    /// * `snapshot_path` - 快照文件路径
+    /// * `options` - 可选的运行时选项（会与快照中的配置合并）
+    ///
+    /// # 返回值
+    /// * `ForgeResult<Self>` - 编辑器实例或错误
+    ///
+    /// # 示例
+    /// ```rust
+    /// use mf_core::ForgeRuntime;
+    ///
+    /// let runtime = ForgeRuntime::from_snapshot("target/snapshots/core_snapshot.bin", None).await?;
+    /// ```
+    pub async fn from_snapshot(
+        snapshot_path: &str,
+        options: Option<RuntimeOptions>,
+    ) -> ForgeResult<Self> {
+        let start_time = Instant::now();
+        info!("正在从快照创建编辑器实例: {}", snapshot_path);
+
+        // 1. 加载和验证快照
+        let snapshot = SnapshotManager::load_from_file(snapshot_path)?;
+        SnapshotManager::validate_snapshot(&snapshot)?;
+
+        // 2. 从快照恢复扩展管理器
+        let extension_manager = SnapshotManager::restore_extension_manager(&snapshot)?;
+
+        // 3. 使用快照中的配置，可选择与运行时选项合并
+        let config = snapshot.config;
+        let options = options.unwrap_or_default();
+
+        // 4. 快速构建运行时（跳过耗时的初始化步骤）
+        let runtime = Self::create_from_snapshot_data(
+            options,
+            config,
+            extension_manager,
+        ).await?;
+
+        info!("快照编辑器实例创建成功");
+        metrics::snapshot_runtime_creation_duration(start_time.elapsed());
+        Ok(runtime)
+    }
+
+    /// 尝试从快照创建，如果失败则回退到常规创建
+    ///
+    /// # 参数
+    /// * `snapshot_path` - 快照文件路径
+    /// * `options` - 运行时选项
+    ///
+    /// # 返回值
+    /// * `ForgeResult<Self>` - 编辑器实例或错误
+    pub async fn from_snapshot_or_fallback(
+        snapshot_path: &str,
+        options: RuntimeOptions,
+    ) -> ForgeResult<Self> {
+        match Self::from_snapshot(snapshot_path, Some(options.clone())).await {
+            Ok(runtime) => {
+                info!("成功从快照加载");
+                Ok(runtime)
+            },
+            Err(e) => {
+                info!("快照加载失败，回退到常规创建: {}", e);
+                Self::create(options).await
+            },
+        }
+    }
+
     /// 创建新的编辑器实例
     ///
     /// 此方法会自动从以下位置加载XML schema配置：
@@ -378,6 +448,59 @@ impl ForgeRuntime {
         }
 
         ExtensionManager::new(&all_extensions)
+    }
+
+    /// 从快照数据创建运行时实例（跳过耗时初始化）
+    async fn create_from_snapshot_data(
+        options: RuntimeOptions,
+        config: ForgeConfig,
+        extension_manager: ExtensionManager,
+    ) -> ForgeResult<Self> {
+        let start_time = Instant::now();
+        info!("正在从快照数据创建编辑器实例");
+
+        let event_bus = EventBus::with_config(config.event.clone());
+        debug!("已创建事件总线");
+
+        let op_state = GlobalResourceManager::new();
+        for op_fn in extension_manager.get_op_fns() {
+            op_fn(&op_state)?;
+        }
+
+        let mut state_config = StateConfig {
+            schema: Some(extension_manager.get_schema()),
+            doc: None,
+            stored_marks: None,
+            plugins: Some(extension_manager.get_plugins().clone()),
+            resource_manager: Some(Arc::new(op_state)),
+        };
+        create_doc::create_doc(&options.get_content(), &mut state_config)
+            .await?;
+        let state: State = State::create(state_config).await?;
+
+        let state: Arc<State> = Arc::new(state);
+        debug!("已创建编辑器状态");
+
+        let mut runtime = ForgeRuntime {
+            event_bus,
+            state: state.clone(),
+            flow_engine: Arc::new(FlowEngine::new()?),
+            extension_manager,
+            history_manager: HistoryManager::with_config(
+                HistoryEntryWithMeta::new(
+                    state.clone(),
+                    "从快照创建工程项目".to_string(),
+                    serde_json::Value::Null,
+                ),
+                config.history.clone(),
+            ),
+            options,
+            config,
+        };
+        runtime.init().await?;
+        
+        debug!("快照运行时创建耗时: {:?}", start_time.elapsed());
+        Ok(runtime)
     }
 
     /// 销毁编辑器实例
