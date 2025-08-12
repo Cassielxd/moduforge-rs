@@ -18,7 +18,7 @@ pub struct AttrStep {
 
 impl AttrStep {
     pub fn new(
-        id: String,
+        id: NodeId,
         values: ImHashMap<String, Value>,
     ) -> Self {
         AttrStep { id, values }
@@ -129,7 +129,7 @@ mod tests {
         values.insert("age".to_string(), json!(25));
 
         let step = AttrStep::new("node1".into(), values.clone().into());
-        assert_eq!(step.id, "node1");
+        assert_eq!(step.id, "node1".into());
         assert_eq!(step.values, values.into());
     }
 
@@ -193,7 +193,7 @@ mod tests {
         // 创建属性步骤
         let mut values = HashMap::new();
         values.insert("name".to_string(), json!("test"));
-        let step = AttrStep::new("nonexistent".to_string(), values.into());
+        let step = AttrStep::new("nonexistent".into(), values.into());
 
         // 应用步骤
         let result = step.apply(&mut tree, schema);
@@ -212,7 +212,7 @@ mod tests {
         // 验证序列化后的数据可以反序列化
         let deserialized: AttrStep =
             serde_json::from_slice(&serialized.unwrap()).unwrap();
-        assert_eq!(deserialized.id, "node1");
+        assert_eq!(deserialized.id, "node1".into());
         assert_eq!(deserialized.values.get("name").unwrap(), &json!("test"));
     }
 
@@ -229,7 +229,7 @@ mod tests {
         let mut values = HashMap::new();
         values.insert("name".to_string(), json!("original_name"));
         values.insert("age".to_string(), json!(25));
-        let step = AttrStep::new("node1".to_string(), values.into());
+        let step = AttrStep::new("node1".into(), values.into());
         step.apply(&mut tree, schema.clone()).unwrap();
 
         // 创建新的属性步骤，修改属性

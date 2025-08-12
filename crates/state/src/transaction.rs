@@ -100,7 +100,7 @@ impl Transaction {
     /// values: 属性键值对
     pub fn set_node_attribute(
         &mut self,
-        id: String,
+        id: NodeId,
         values: imbl::HashMap<String, Value>,
     ) -> TransformResult<()> {
         self.step(Arc::new(AttrStep::new(id, values)))?;

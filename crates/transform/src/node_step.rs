@@ -295,9 +295,9 @@ mod tests {
         tree.add_node(&"source".into(), &vec![node]).unwrap();
 
         let step = MoveNodeStep::new(
-            "source".to_string(),
-            "target".to_string(),
-            "node".to_string(),
+            "source".into(),
+            "target".into(),
+            "node".into(),
             None,
         );
 
