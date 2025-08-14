@@ -4,7 +4,7 @@
 use app_lib::{initialize::init_contex, router::build_app, serve::AppBuilder};
 use axum::{http::StatusCode, response::IntoResponse, Router};
 use mf_state::init_logging;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, Emitter};
 
 // 自定义事件处理函数
 fn handle_tauri_error(error: tauri::Error) {
@@ -210,6 +210,141 @@ async fn create_module_window(
     Ok(())
 }
 
+// 创建子窗口的命令（支持模态和非模态）
+#[tauri::command]
+async fn create_child_window(
+    app: AppHandle,
+    window_id: String,
+    title: String,
+    url: String,
+    modal: Option<bool>,
+    width: Option<f64>,
+    height: Option<f64>,
+    parent_window: Option<String>,
+) -> Result<(), String> {
+    println!("创建子窗口: {} - {} - URL: {} - Modal: {:?}", window_id, title, url, modal);
+
+    let is_modal = modal.unwrap_or(false);
+    let window_width = width.unwrap_or(800.0);
+    let window_height = height.unwrap_or(600.0);
+
+    // 检查窗口是否已存在
+    if let Some(existing_window) = app.get_webview_window(&window_id) {
+        println!("子窗口已存在，显示并聚焦");
+        existing_window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
+        existing_window.set_focus().map_err(|e| format!("设置焦点失败: {}", e))?;
+        existing_window.unminimize().map_err(|e| format!("取消最小化失败: {}", e))?;
+        return Ok(());
+    }
+
+    // 如果是模态窗口，先禁用父窗口
+    if is_modal {
+        if let Some(parent_label) = &parent_window {
+            if let Some(parent_win) = app.get_webview_window(parent_label) {
+                // 通过发送事件来禁用父窗口
+                let _ = parent_win.emit("window-disabled", true);
+                println!("已禁用父窗口: {}", parent_label);
+            }
+        } else if let Some(main_window) = app.get_webview_window("main") {
+            // 默认禁用主窗口
+            let _ = main_window.emit("window-disabled", true);
+            println!("已禁用主窗口");
+        }
+    }
+
+    // 处理 URL
+    let webview_url = if url.starts_with("http://") || url.starts_with("https://") {
+        let parsed_url = url.parse().map_err(|e| {
+            let error_msg = format!("URL解析失败: {} - URL: {}", e, url);
+            println!("{}", error_msg);
+            error_msg
+        })?;
+        tauri::WebviewUrl::External(parsed_url)
+    } else {
+        tauri::WebviewUrl::App(url.into())
+    };
+
+    // 创建子窗口
+    let mut window_builder = tauri::WebviewWindowBuilder::new(
+        &app,
+        &window_id,
+        webview_url,
+    )
+    .title(&title)
+    .inner_size(window_width, window_height)
+    .resizable(true)
+    .decorations(true)
+    .visible(true)
+    .focused(true)
+    .center();
+
+    // 如果是模态窗口，设置为总是在顶部
+    if is_modal {
+        window_builder = window_builder.always_on_top(true);
+    }
+
+    let child_window = window_builder
+        .build()
+        .map_err(|e| {
+            println!("创建子窗口失败: {}", e);
+            format!("创建子窗口失败: {}", e)
+        })?;
+
+    println!("子窗口创建成功: {}", window_id);
+
+    // 监听窗口关闭事件，如果是模态窗口，关闭时重新启用父窗口
+    if is_modal {
+        let app_handle = app.clone();
+        let parent_label = parent_window.clone().unwrap_or_else(|| "main".to_string());
+        let window_id_clone = window_id.clone();
+
+        child_window.on_window_event(move |event| {
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                println!("模态窗口 {} 即将关闭，重新启用父窗口", window_id_clone);
+                if let Some(parent_win) = app_handle.get_webview_window(&parent_label) {
+                    let _ = parent_win.emit("window-enabled", true);
+                    println!("已重新启用父窗口: {}", parent_label);
+                }
+            }
+        });
+    }
+
+    child_window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
+    child_window.set_focus().map_err(|e| format!("设置焦点失败: {}", e))?;
+
+    #[cfg(debug_assertions)]
+    child_window.open_devtools();
+
+    Ok(())
+}
+
+// 关闭子窗口的命令
+#[tauri::command]
+async fn close_child_window(
+    app: AppHandle,
+    window_id: String,
+    parent_window: Option<String>,
+) -> Result<(), String> {
+    println!("关闭子窗口: {}", window_id);
+
+    if let Some(window) = app.get_webview_window(&window_id) {
+        // 如果有父窗口，重新启用它
+        if let Some(parent_label) = parent_window {
+            if let Some(parent_win) = app.get_webview_window(&parent_label) {
+                let _ = parent_win.emit("window-enabled", true);
+                println!("已重新启用父窗口: {}", parent_label);
+            }
+        }
+
+        window.close().map_err(|e| format!("关闭窗口失败: {}", e))?;
+        println!("子窗口已关闭: {}", window_id);
+    } else {
+        return Err(format!("窗口不存在: {}", window_id));
+    }
+
+    Ok(())
+}
+
 // 暂时注释掉数据交互功能，先让窗口创建正常工作
 // TODO: 稍后重新实现数据交互功能
 
@@ -268,7 +403,9 @@ async fn main() -> anyhow::Result<()> {
             quit_app,
             show_tray_menu,
             hide_tray_menu,
-            create_module_window
+            create_module_window,
+            create_child_window,
+            close_child_window
         ])
         .run(tauri::generate_context!())
         .map_err(|e| {

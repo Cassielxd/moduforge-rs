@@ -90,6 +90,9 @@
             </a-row>
           </div>
 
+          <!-- 子窗口演示 -->
+          <ChildWindowDemo />
+
           <!-- 系统状态 -->
           <a-card title="系统状态" class="status-card">
             <a-row :gutter="16">
@@ -131,6 +134,7 @@ import {
 } from '@ant-design/icons-vue'
 import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import ChildWindowDemo from '../components/ChildWindowDemo.vue'
 
 // 窗口状态
 const isMaximized = ref(false)

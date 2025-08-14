@@ -90,6 +90,9 @@
               @data-change="handleCostTableDataChange"
               @row-select="handleCostTableRowSelect"
               @cell-edit="handleCostTableCellEdit"
+              @open-form="handleOpenForm"
+              @edit-row="handleEditRow"
+              @delete-row="handleDeleteRow"
             />
           </a-card>
         </div>
@@ -106,7 +109,8 @@ import {
   ImportOutlined,
   ExportOutlined
 } from '@ant-design/icons-vue'
-import { CostTable } from '@cost-app/shared-components'
+import { CostTable, useEstimate, useGlobalStore } from '@cost-app/shared-components'
+import { invoke } from '@tauri-apps/api/core'
 
 
 // 数据状态
@@ -157,13 +161,52 @@ const columns = [
 ]
 
 // 共享表格组件（CostTable）相关配置
-const CostTableComp = ref(null)
 const costTableColumns = [
-  { field: 'name', title: '项目名称', width: 200 },
-  { field: 'amount', title: '概算金额', width: 150 },
-  { field: 'status', title: '状态', width: 100 },
-  { field: 'createTime', title: '创建时间', width: 150 },
-  { field: 'creator', title: '创建人', width: 100 },
+  {
+    title: '项目名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 200,
+    sorter: true
+  },
+  {
+    title: '项目类型',
+    dataIndex: 'type',
+    key: 'type',
+    width: 120
+  },
+  {
+    title: '概算金额',
+    dataIndex: 'amount',
+    key: 'amount',
+    width: 150,
+    sorter: true
+  },
+  {
+    title: '状态',
+    dataIndex: 'status',
+    key: 'status',
+    width: 100
+  },
+  {
+    title: '负责人',
+    dataIndex: 'creator',
+    key: 'creator',
+    width: 100
+  },
+  {
+    title: '创建时间',
+    dataIndex: 'createTime',
+    key: 'createTime',
+    width: 150,
+    sorter: true
+  },
+  {
+    title: '操作',
+    key: 'action',
+    width: 200,
+    fixed: 'right'
+  }
 ]
 
 const handleCostTableDataChange = (newData) => {
@@ -175,9 +218,7 @@ const handleCostTableRowSelect = (row) => {
   message.info(`选中：${row.name}`)
 }
 
-const handleCostTableCellEdit = ({ row, field, value }) => {
-  console.log('Cell Edited:', row, field, value)
-}
+
 
 // 分页配置
 const pagination = ref({
@@ -189,38 +230,87 @@ const pagination = ref({
   showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
 })
 
-// 模拟数据
-const estimateData = ref([
-  {
-    id: 1,
-    name: '办公楼建设项目',
-    amount: 5000000,
-    status: 'approved',
-    createTime: '2024-01-15',
-    creator: '张三',
-  },
-  {
-    id: 2,
-    name: '道路改造工程',
-    amount: 3200000,
-    status: 'reviewing',
-    createTime: '2024-01-20',
-    creator: '李四',
-  },
-  {
-    id: 3,
-    name: '绿化景观项目',
-    amount: 1800000,
-    status: 'draft',
-    createTime: '2024-01-25',
-    creator: '王五',
-  },
-])
+// 使用共享状态管理
+const {
+  projects: estimateData,
+  selectedItems,
+  filters,
+  filteredProjects,
+  totalProjects,
+  selectedCount,
+  addProject,
+  updateProject,
+  deleteProject,
+  setProjects,
+  selectItems,
+  clearSelection,
+  setFilter,
+  clearFilters
+} = useEstimate()
 
-// 过滤后的数据
+// 初始化数据（如果没有数据的话）
+if (estimateData.length === 0) {
+  setProjects([
+    {
+      id: 1,
+      name: '办公楼建设项目',
+      type: 'building',
+      amount: 5000000,
+      status: 'approved',
+      createTime: '2024-01-15',
+      creator: '张三',
+      description: '新建办公楼项目，包含主体建筑和配套设施',
+      manager: '张三',
+      startDate: '2024-02-01',
+      endDate: '2024-12-31'
+    },
+    {
+      id: 2,
+      name: '道路改造工程',
+      type: 'infrastructure',
+      amount: 3200000,
+      status: 'reviewing',
+      createTime: '2024-01-20',
+      creator: '李四',
+      description: '城市主干道改造升级工程',
+      manager: '李四',
+      startDate: '2024-03-01',
+      endDate: '2024-10-31'
+    },
+    {
+      id: 3,
+      name: '绿化景观项目',
+      type: 'landscape',
+      amount: 1800000,
+      status: 'draft',
+      createTime: '2024-01-25',
+      creator: '王五',
+      description: '公园绿化和景观设计项目',
+      manager: '王五',
+      startDate: '2024-04-01',
+      endDate: '2024-08-31'
+    },
+    {
+      id: 4,
+      name: '装修改造工程',
+      type: 'renovation',
+      amount: 800000,
+      status: 'approved',
+      createTime: '2024-02-01',
+      creator: '赵六',
+      description: '办公区域装修改造项目',
+      manager: '赵六',
+      startDate: '2024-03-15',
+      endDate: '2024-06-30'
+    }
+  ])
+}
+
+// 使用共享状态的过滤数据，同时支持本地筛选
 const filteredData = computed(() => {
-  let data = estimateData.value
+  let data = filteredProjects.value
 
+  // 本地搜索文本筛选
   if (searchText.value) {
     data = data.filter(item =>
       item.name.toLowerCase().includes(searchText.value.toLowerCase()) ||
@@ -228,6 +318,7 @@ const filteredData = computed(() => {
     )
   }
 
+  // 本地状态筛选
   if (statusFilter.value) {
     data = data.filter(item => item.status === statusFilter.value)
   }
@@ -257,8 +348,13 @@ const getStatusText = (status) => {
 }
 
 // 操作方法
-const newEstimate = () => {
-  message.info('新建概算功能开发中...')
+const newEstimate = async () => {
+  try {
+    await openFormWindow('create', null)
+  } catch (error) {
+    console.error('打开新建表单失败:', error)
+    message.error('打开表单失败')
+  }
 }
 
 const importData = () => {
@@ -267,6 +363,63 @@ const importData = () => {
 
 const exportData = () => {
   message.success('数据导出成功！')
+}
+
+// 打开表单窗口
+const openFormWindow = async (mode = 'create', data = null) => {
+  try {
+    const windowId = `estimate-form-${mode}-${Date.now()}`
+    const title = mode === 'create' ? '新建概算' : mode === 'edit' ? '编辑概算' : '查看概算'
+
+    // 构建URL参数
+    const params = new URLSearchParams({
+      mode,
+      formType: 'estimate'
+    })
+
+    if (data) {
+      params.append('data', JSON.stringify(data))
+    }
+
+    await invoke('create_child_window', {
+      windowId,
+      title,
+      url: `/form-page?${params.toString()}`,
+      modal: mode !== 'view', // 查看模式使用非模态，编辑模式使用模态
+      width: 1200,
+      height: 800,
+      parentWindow: 'main'
+    })
+
+    message.success(`${title}窗口已打开`)
+  } catch (error) {
+    console.error('打开表单窗口失败:', error)
+    message.error('打开窗口失败')
+  }
+}
+
+// 表格事件处理
+const handleOpenForm = ({ type, data }) => {
+  openFormWindow(type, data)
+}
+
+const handleEditRow = (record) => {
+  openFormWindow('edit', record)
+}
+
+const handleDeleteRow = (record) => {
+  // 使用共享状态的删除方法
+  deleteProject(record.id)
+  message.success(`已删除 ${record.name}`)
+}
+
+
+
+
+
+const handleCostTableCellEdit = (editInfo) => {
+  console.log('单元格编辑:', editInfo)
+  message.success('数据已更新')
 }
 
 const handleSearch = () => {
@@ -302,20 +455,9 @@ const deleteRecord = (record) => {
   message.warning(`删除概算: ${record.name}`)
 }
 
-onMounted(async () => {
+onMounted(() => {
   console.log('概算管理系统已加载')
   pagination.value.total = estimateData.value.length
-  // 尝试按本地路径动态加载共享表格组件（开发环境）
-  try {
-    // 方案B：直接使用已打包的包
-    const mod = await import('@cost-app/shared-components')
-    CostTableComp.value = mod?.CostTable || null
-    if (CostTableComp.value) {
-      console.log('已加载共享表格组件 CostTable (package)')
-    }
-  } catch (err) {
-    console.warn('未找到共享组件包，继续使用内置表格', err)
-  }
 })
 </script>
 

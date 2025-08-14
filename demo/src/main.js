@@ -13,6 +13,36 @@ const routes = [
     name: 'Dashboard',
     component: () => import('./views/Dashboard.vue'),
     meta: { title: '工作台' }
+  },
+  {
+    path: '/form-page',
+    name: 'FormPage',
+    component: () => import('./views/FormPage.vue'),
+    meta: { title: '表单页面' }
+  },
+  {
+    path: '/settings-page',
+    name: 'SettingsPage',
+    component: () => import('./views/SettingsPage.vue'),
+    meta: { title: '系统设置' }
+  },
+  {
+    path: '/data-page',
+    name: 'DataPage',
+    component: () => import('./views/DataPage.vue'),
+    meta: { title: '数据查看器' }
+  },
+  {
+    path: '/estimate-demo',
+    name: 'EstimateDemo',
+    component: () => import('./views/EstimateDemo.vue'),
+    meta: { title: '概算演示' }
+  },
+  {
+    path: '/table-test',
+    name: 'TableTest',
+    component: () => import('./views/TableTest.vue'),
+    meta: { title: '表格测试' }
   }
 ]
 

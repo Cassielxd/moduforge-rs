@@ -2,9 +2,22 @@
   <div class="cost-table-container">
     <div class="table-toolbar">
       <a-space>
-        <a-button type="primary" @click="addRow">新增</a-button>
-        <a-button danger @click="deleteSelected">删除</a-button>
-        <a-button @click="exportData">导出</a-button>
+        <a-button type="primary" @click="addRow">
+          <template #icon><PlusOutlined /></template>
+          新增
+        </a-button>
+        <a-button danger @click="deleteSelected" :disabled="!hasSelection">
+          <template #icon><DeleteOutlined /></template>
+          删除
+        </a-button>
+        <a-button @click="exportData">
+          <template #icon><ExportOutlined /></template>
+          导出
+        </a-button>
+        <a-button @click="openFormWindow" type="primary" ghost>
+          <template #icon><FormOutlined /></template>
+          表单编辑
+        </a-button>
       </a-space>
       <div class="table-search">
         <a-input-search
@@ -16,22 +29,73 @@
         />
       </div>
     </div>
-    
-    <div ref="tableContainer" class="table-content"></div>
-    
+
+    <div class="table-content">
+      <a-table
+        :columns="tableColumns"
+        :data-source="filteredData"
+        :row-selection="rowSelection"
+        :pagination="paginationConfig"
+        :loading="loading"
+        :scroll="{ x: 1200, y: 400 }"
+        size="middle"
+        bordered
+        @change="handleTableChange"
+      >
+        <template #bodyCell="{ column, record, index }">
+          <template v-if="column.key === 'amount'">
+            <span class="amount-cell">
+              ¥{{ formatAmount(record.amount) }}
+            </span>
+          </template>
+          <template v-else-if="column.key === 'status'">
+            <a-tag :color="getStatusColor(record.status)">
+              {{ getStatusText(record.status) }}
+            </a-tag>
+          </template>
+          <template v-else-if="column.key === 'action'">
+            <a-space>
+              <a-button type="link" size="small" @click="editRow(record)">
+                编辑
+              </a-button>
+              <a-button type="link" size="small" @click="viewDetail(record)">
+                详情
+              </a-button>
+              <a-popconfirm
+                title="确定删除这条记录吗？"
+                @confirm="deleteRow(record)"
+              >
+                <a-button type="link" size="small" danger>
+                  删除
+                </a-button>
+              </a-popconfirm>
+            </a-space>
+          </template>
+        </template>
+      </a-table>
+    </div>
+
     <div class="table-footer">
       <div class="summary-info">
-        <span>总计: {{ summary.total }}</span>
-        <span>已选: {{ summary.selected }}</span>
+        <a-space>
+          <span>总计: ¥{{ formatAmount(summary.total) }}</span>
+          <span>已选: {{ selectedRowKeys.length }} 项</span>
+          <span>选中金额: ¥{{ formatAmount(summary.selected) }}</span>
+        </a-space>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
-import { TabulatorFull as Tabulator } from 'tabulator-tables'
-import 'tabulator-tables/dist/css/tabulator.min.css'
+import { ref, computed, watch } from 'vue'
+import { message } from 'ant-design-vue'
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  ExportOutlined,
+  FormOutlined
+} from '@ant-design/icons-vue'
 import { useTableOperations } from '../composables/useTableOperations.js'
 import { useCostCalculation } from '../composables/useCostCalculation.js'
 
@@ -51,77 +115,181 @@ const props = defineProps({
   editable: {
     type: Boolean,
     default: true
+  },
+  showFormButton: {
+    type: Boolean,
+    default: true
   }
 })
 
-const emit = defineEmits(['dataChange', 'rowSelect', 'cellEdit'])
+const emit = defineEmits(['dataChange', 'rowSelect', 'cellEdit', 'openForm', 'editRow', 'deleteRow'])
 
-const tableContainer = ref(null)
 const searchText = ref('')
-const tabulator = ref(null)
+const loading = ref(false)
+const selectedRowKeys = ref([])
 
-const { addRow, deleteSelected, exportData, handleSearch } = useTableOperations()
 const { calculateTotal, calculateSelected } = useCostCalculation()
 
-const summary = computed(() => ({
-  total: calculateTotal(props.data),
-  selected: calculateSelected(getSelectedRows())
-}))
+// 计算属性
+const filteredData = computed(() => {
+  if (!searchText.value) return props.data
 
-onMounted(() => {
-  initTable()
+  return props.data.filter(item => {
+    const searchLower = searchText.value.toLowerCase()
+    return Object.values(item).some(value =>
+      String(value).toLowerCase().includes(searchLower)
+    )
+  })
 })
 
-watch(() => props.data, (newData) => {
-  if (tabulator.value) {
-    tabulator.value.setData(newData)
+const tableColumns = computed(() => {
+  return props.columns.map(col => ({
+    ...col,
+    key: col.dataIndex || col.field,
+    dataIndex: col.dataIndex || col.field,
+    sorter: col.sorter !== false,
+    ellipsis: true
+  }))
+})
+
+const summary = computed(() => {
+  const selectedData = props.data.filter(item => selectedRowKeys.value.includes(item.id))
+  return {
+    total: calculateTotal(props.data),
+    selected: calculateSelected(selectedData)
   }
+})
+
+const hasSelection = computed(() => selectedRowKeys.value.length > 0)
+
+const paginationConfig = computed(() => ({
+  current: 1,
+  pageSize: 20,
+  total: filteredData.value.length,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+  pageSizeOptions: ['10', '20', '50', '100']
+}))
+
+const rowSelection = computed(() => ({
+  selectedRowKeys: selectedRowKeys.value,
+  onChange: (keys, rows) => {
+    selectedRowKeys.value = keys
+    emit('rowSelect', rows)
+  },
+  getCheckboxProps: (record) => ({
+    disabled: record.disabled === true,
+    name: record.name,
+  }),
+}))
+
+// 方法
+const formatAmount = (amount) => {
+  if (!amount) return '0.00'
+  return Number(amount).toLocaleString('zh-CN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })
+}
+
+const getStatusColor = (status) => {
+  const colors = {
+    draft: 'default',
+    reviewing: 'processing',
+    approved: 'success',
+    rejected: 'error',
+    active: 'blue',
+    completed: 'green',
+    cancelled: 'red'
+  }
+  return colors[status] || 'default'
+}
+
+const getStatusText = (status) => {
+  const texts = {
+    draft: '草稿',
+    reviewing: '审核中',
+    approved: '已批准',
+    rejected: '已拒绝',
+    active: '进行中',
+    completed: '已完成',
+    cancelled: '已取消'
+  }
+  return texts[status] || status
+}
+
+const handleTableChange = (pagination, filters, sorter) => {
+  console.log('Table changed:', pagination, filters, sorter)
+}
+
+const addRow = () => {
+  emit('openForm', {
+    type: 'create',
+    data: null
+  })
+}
+
+const deleteSelected = () => {
+  if (selectedRowKeys.value.length === 0) {
+    message.warning('请先选择要删除的数据')
+    return
+  }
+
+  const selectedData = props.data.filter(item => selectedRowKeys.value.includes(item.id))
+  selectedData.forEach(record => {
+    emit('deleteRow', record)
+  })
+
+  selectedRowKeys.value = []
+  message.success(`已删除 ${selectedData.length} 条记录`)
+}
+
+const exportData = () => {
+  const dataToExport = selectedRowKeys.value.length > 0
+    ? props.data.filter(item => selectedRowKeys.value.includes(item.id))
+    : props.data
+
+  console.log('导出数据:', dataToExport)
+  message.success(`已导出 ${dataToExport.length} 条数据`)
+}
+
+const handleSearch = () => {
+  // 搜索逻辑已在 computed 中处理
+}
+
+const openFormWindow = () => {
+  emit('openForm', {
+    type: 'create',
+    data: null
+  })
+}
+
+const editRow = (record) => {
+  emit('editRow', record)
+}
+
+const viewDetail = (record) => {
+  message.info(`查看 ${record.name} 详情`)
+}
+
+const deleteRow = (record) => {
+  emit('deleteRow', record)
+}
+
+// 监听数据变化
+watch(() => props.data, () => {
+  // 清除无效的选中项
+  selectedRowKeys.value = selectedRowKeys.value.filter(key =>
+    props.data.some(item => item.id === key)
+  )
 }, { deep: true })
 
-function initTable() {
-  const tableConfig = {
-    data: props.data,
-    columns: props.columns,
-    layout: "fitColumns",
-    responsiveLayout: "hide",
-    pagination: "local",
-    paginationSize: 50,
-    selectable: true,
-    selectableCheck: function(row) {
-      return row.getData().selectable !== false
-    },
-    rowSelected: function(row) {
-      emit('rowSelect', row.getData())
-    },
-    cellEdited: function(cell) {
-      emit('cellEdit', {
-        row: cell.getRow().getData(),
-        field: cell.getField(),
-        value: cell.getValue()
-      })
-      emit('dataChange', tabulator.value.getData())
-    }
-  }
-
-  if (!props.editable) {
-    tableConfig.columns = tableConfig.columns.map(col => ({
-      ...col,
-      editor: false
-    }))
-  }
-
-  tabulator.value = new Tabulator(tableContainer.value, tableConfig)
-}
-
-function getSelectedRows() {
-  return tabulator.value ? tabulator.value.getSelectedData() : []
-}
-
 defineExpose({
-  getTableData: () => tabulator.value?.getData() || [],
-  getSelectedData: getSelectedRows,
-  clearSelection: () => tabulator.value?.deselectRow(),
-  refreshTable: () => tabulator.value?.redraw()
+  getTableData: () => filteredData.value,
+  getSelectedData: () => props.data.filter(item => selectedRowKeys.value.includes(item.id)),
+  clearSelection: () => { selectedRowKeys.value = [] },
+  refreshTable: () => { /* Ant Table 自动刷新 */ }
 })
 </script>
 
@@ -136,8 +304,9 @@ defineExpose({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
+  padding: 16px 0;
   border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 16px;
 }
 
 .table-search {
@@ -150,15 +319,33 @@ defineExpose({
 }
 
 .table-footer {
-  padding: 8px 0;
-  border-top: 1px solid #e4e7ed;
-  background: #f5f7fa;
+  padding: 12px 0;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+  margin-top: 16px;
 }
 
 .summary-info {
-  display: flex;
-  gap: 20px;
   font-size: 14px;
-  color: #606266;
+  color: #666;
+  font-weight: 500;
+}
+
+.amount-cell {
+  font-weight: 600;
+  color: #1890ff;
+}
+
+:deep(.ant-table-thead > tr > th) {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+:deep(.ant-table-tbody > tr:hover > td) {
+  background: #e6f7ff;
+}
+
+:deep(.ant-table-row-selected > td) {
+  background: #bae7ff;
 }
 </style>
