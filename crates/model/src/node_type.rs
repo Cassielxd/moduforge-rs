@@ -123,10 +123,9 @@ impl NodeType {
         let default_attrs = attrs
             .iter()
             .filter_map(|(name, attr)| {
-                if attr.has_default {
-                    Some((name.clone(), attr.default.clone().unwrap()))
-                } else {
-                    None
+                match (&attr.has_default, &attr.default) {
+                    (true, Some(v)) => Some((name.clone(), v.clone())),
+                    _ => None,
                 }
             })
             .collect();
@@ -208,13 +207,13 @@ impl NodeType {
     /// 返回包含新创建的节点及其所有子节点的向量
     pub fn create_and_fill(
         &self,
-        id: Option<String>,
+        id: Option<NodeId>,
         attrs: Option<&HashMap<String, Value>>,
         content: Vec<Node>,
         marks: Option<Vec<Mark>>,
         schema: &Schema,
     ) -> NodeEnum {
-        let id: String = id.unwrap_or_else(IdGenerator::get_id);
+        let id: NodeId = id.unwrap_or_else(IdGenerator::get_id);
         let attrs = self.compute_attrs(attrs);
 
         // 首先创建需要填充的内容
@@ -231,11 +230,10 @@ impl NodeType {
                     // 对每个需要的类型名称，从 schema 中获取完整的 NodeType 并创建节点
                     for type_name in needed_type_names {
                         // 从 schema 中获取完整的 NodeType
-                        let complete_node_type =
-                            schema.nodes.get(&type_name).expect(&format!(
-                                "无法在 schema 中找到节点类型: {}",
-                                type_name
-                            ));
+                        let complete_node_type = match schema.nodes.get(&type_name) {
+                            Some(nt) => nt,
+                            None => panic!("无法在 schema 中找到节点类型: {}", type_name),
+                        };
 
                         // 在content中查找同类型的节点
                         let existing_node =
@@ -314,13 +312,13 @@ impl NodeType {
     /// 创建节点
     pub fn create(
         &self,
-        id: Option<String>,
+        id: Option<NodeId>,
         attrs: Option<&HashMap<String, Value>>,
         content: Vec<NodeId>,
         marks: Option<Vec<Mark>>,
     ) -> Node {
         // 实现...
-        let id: String = id.unwrap_or_else(IdGenerator::get_id);
+        let id: NodeId = id.unwrap_or_else(IdGenerator::get_id);
 
         Node::new(
             &id,

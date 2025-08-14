@@ -26,8 +26,6 @@ pub struct NodePool {
     key: String,
 }
 
-unsafe impl Send for NodePool {}
-unsafe impl Sync for NodePool {}
 
 impl NodePool {
     pub fn new(inner: Arc<Tree>) -> Arc<NodePool> {
@@ -844,11 +842,11 @@ impl OptimizedQueryEngine {
     pub fn new(
         pool: &NodePool,
         config: QueryCacheConfig,
-    ) -> Self {
+    ) -> PoolResult<Self> {
         let mut engine = Self {
             pool: Arc::new(pool.clone()),
             cache: if config.enabled {
-                Some(LruCache::new(NonZeroUsize::new(config.capacity).unwrap()))
+                Some(LruCache::new(NonZeroUsize::new(config.capacity).ok_or_else(|| anyhow::anyhow!("query cache capacity must be > 0"))?))
             } else {
                 None
             },
@@ -857,14 +855,14 @@ impl OptimizedQueryEngine {
             mark_index: HashMap::new(),
         };
         let start = Instant::now();
-        engine.build_indices();
+        engine.build_indices()?;
         let duration = start.elapsed();
         println!("索引构建完成，耗时: {:?}", duration);
-        engine
+        Ok(engine)
     }
 
     /// 构建索引
-    fn build_indices(&mut self) {
+    fn build_indices(&mut self) -> PoolResult<()> {
         use rayon::prelude::*;
         use std::collections::HashMap;
         use std::sync::Mutex;
@@ -950,41 +948,57 @@ impl OptimizedQueryEngine {
 
             // 批量更新全局索引，使用更细粒度的锁
             {
-                let mut type_idx = type_index.lock().unwrap();
-                for (k, v) in local_type_index {
-                    type_idx
-                        .entry(k)
-                        .or_insert_with(|| Vec::with_capacity(v.len()))
-                        .extend(v);
+                if let Ok(mut type_idx) = type_index.lock() {
+                    for (k, v) in local_type_index {
+                        type_idx
+                            .entry(k)
+                            .or_insert_with(|| Vec::with_capacity(v.len()))
+                            .extend(v);
+                    }
+                } else {
+                    return;
                 }
             }
             {
-                let mut depth_idx = depth_index.lock().unwrap();
-                for (k, v) in local_depth_index {
-                    depth_idx
-                        .entry(k)
-                        .or_insert_with(|| Vec::with_capacity(v.len()))
-                        .extend(v);
+                if let Ok(mut depth_idx) = depth_index.lock() {
+                    for (k, v) in local_depth_index {
+                        depth_idx
+                            .entry(k)
+                            .or_insert_with(|| Vec::with_capacity(v.len()))
+                            .extend(v);
+                    }
+                } else {
+                    return;
                 }
             }
             {
-                let mut mark_idx = mark_index.lock().unwrap();
-                for (k, v) in local_mark_index {
-                    mark_idx
-                        .entry(k)
-                        .or_insert_with(|| Vec::with_capacity(v.len()))
-                        .extend(v);
+                if let Ok(mut mark_idx) = mark_index.lock() {
+                    for (k, v) in local_mark_index {
+                        mark_idx
+                            .entry(k)
+                            .or_insert_with(|| Vec::with_capacity(v.len()))
+                            .extend(v);
+                    }
+                } else {
+                    return;
                 }
             }
         });
 
         // 将并行构建的索引转移到结构体中
-        self.type_index =
-            Arc::try_unwrap(type_index).unwrap().into_inner().unwrap();
-        self.depth_index =
-            Arc::try_unwrap(depth_index).unwrap().into_inner().unwrap();
-        self.mark_index =
-            Arc::try_unwrap(mark_index).unwrap().into_inner().unwrap();
+        self.type_index = Arc::try_unwrap(type_index)
+            .map_err(|_| anyhow::anyhow!("type_index still has refs"))?
+            .into_inner()
+            .map_err(|_| anyhow::anyhow!("type_index poisoned"))?;
+        self.depth_index = Arc::try_unwrap(depth_index)
+            .map_err(|_| anyhow::anyhow!("depth_index still has refs"))?
+            .into_inner()
+            .map_err(|_| anyhow::anyhow!("depth_index poisoned"))?;
+        self.mark_index = Arc::try_unwrap(mark_index)
+            .map_err(|_| anyhow::anyhow!("mark_index still has refs"))?
+            .into_inner()
+            .map_err(|_| anyhow::anyhow!("mark_index poisoned"))?;
+        Ok(())
     }
 
     /// 按类型查询（使用索引）
@@ -1130,10 +1144,10 @@ impl OptimizedQueryEngine {
         nodes1: &[Arc<Node>],
         nodes2: &[Arc<Node>],
     ) -> Vec<Arc<Node>> {
-        let set1: HashSet<_> = nodes1.iter().map(|n| n.id.as_str()).collect();
+        let set1: HashSet<_> = nodes1.iter().map(|n| n.id.as_ref()).collect();
         nodes2
             .iter()
-            .filter(|node| set1.contains(node.id.as_str()))
+            .filter(|node| set1.contains(node.id.as_ref()))
             .cloned()
             .collect()
     }
@@ -1144,9 +1158,8 @@ impl NodePool {
     pub fn optimized_query(
         &self,
         config: QueryCacheConfig,
-    ) -> OptimizedQueryEngine {
-        let engine = OptimizedQueryEngine::new(self, config);
-        engine
+    ) -> PoolResult<OptimizedQueryEngine> {
+        OptimizedQueryEngine::new(self, config)
     }
 }
 
@@ -1217,9 +1230,7 @@ pub struct LazyQueryEngine {
     config: LazyQueryConfig,
 }
 
-// 为 LazyQueryEngine 实现线程安全
-unsafe impl Send for LazyQueryEngine {}
-unsafe impl Sync for LazyQueryEngine {}
+// 注意：LazyQueryEngine 包含非原子内部缓存，不应跨线程共享可变引用
 
 impl LazyQueryEngine {
     pub fn new(
@@ -1230,19 +1241,19 @@ impl LazyQueryEngine {
             pool: Arc::new(pool.clone()),
             query_cache: if config.cache_enabled {
                 Some(LruCache::new(
-                    NonZeroUsize::new(config.cache_capacity).unwrap(),
+                    NonZeroUsize::new(config.cache_capacity).expect("cache_capacity > 0"),
                 ))
             } else {
                 None
             },
             type_index_cache: LruCache::new(
-                NonZeroUsize::new(config.index_cache_capacity).unwrap(),
+                NonZeroUsize::new(config.index_cache_capacity).expect("index_cache_capacity > 0"),
             ),
             depth_index_cache: LruCache::new(
-                NonZeroUsize::new(config.index_cache_capacity).unwrap(),
+                NonZeroUsize::new(config.index_cache_capacity).expect("index_cache_capacity > 0"),
             ),
             mark_index_cache: LruCache::new(
-                NonZeroUsize::new(config.index_cache_capacity).unwrap(),
+                NonZeroUsize::new(config.index_cache_capacity).expect("index_cache_capacity > 0"),
             ),
             type_query_stats: HashMap::new(),
             depth_query_stats: HashMap::new(),
@@ -1579,10 +1590,10 @@ impl LazyQueryEngine {
         nodes1: &[Arc<Node>],
         nodes2: &[Arc<Node>],
     ) -> Vec<Arc<Node>> {
-        let set1: HashSet<_> = nodes1.iter().map(|n| n.id.as_str()).collect();
+        let set1: HashSet<_> = nodes1.iter().map(|n| n.id.as_ref()).collect();
         nodes2
             .iter()
-            .filter(|node| set1.contains(node.id.as_str()))
+            .filter(|node| set1.contains(node.id.as_ref()))
             .cloned()
             .collect()
     }
@@ -1683,6 +1694,7 @@ impl NodePool {
         &self,
         config: LazyQueryConfig,
     ) -> LazyQueryEngine {
+        // 保持懒查询引擎构造不失败，如需校验容量可在配置层保障
         LazyQueryEngine::new(self, config)
     }
 }

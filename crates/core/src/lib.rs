@@ -37,7 +37,12 @@ pub mod middleware;
 pub mod node;
 pub mod runtime;
 pub mod schema_parser;
+pub mod snapshot;
 pub mod types;
+
+// 构建工具模块（仅在构建时可用）
+#[cfg(feature = "build-tools")]
+pub mod build_tools;
 pub use error::{ForgeResult, error_utils};
 /// 重命名
 pub mod model {
@@ -68,7 +73,7 @@ pub use extension::Extension;
 pub use extension_manager::{ExtensionManager, ExtensionManagerBuilder};
 pub use history_manager::{History, HistoryManager};
 pub use runtime::runtime::ForgeRuntime;
-pub use schema_parser::{XmlSchemaParser, XmlSchemaError, XmlSchemaResult};
+pub use schema_parser::{XmlSchemaParser, XmlSchemaSerializer, XmlSchemaError, XmlSchemaResult};
 pub use runtime::sync_processor::{
     SyncProcessor, TaskProcessor as SyncTaskProcessor,
 };

@@ -13,7 +13,7 @@ impl<'a> Shr<Node> for NodeRef<'a> {
         node: Node,
     ) -> Self::Output {
         // 添加到末尾（等同于标准的add操作）
-        self.tree.add_node(&self.key.clone().into(), &vec![node])?;
+        self.tree.add_node(&self.key.clone(), &vec![node])?;
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
 }
@@ -27,7 +27,7 @@ impl<'a> Shr<Vec<Node>> for NodeRef<'a> {
         nodes: Vec<Node>,
     ) -> Self::Output {
         if !nodes.is_empty() {
-            self.tree.add_node(&self.key.clone().into(), &nodes)?;
+            self.tree.add_node(&self.key.clone(), &nodes)?;
         }
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
@@ -42,10 +42,9 @@ impl<'a> Shr<usize> for NodeRef<'a> {
         positions: usize,
     ) -> Self::Output {
         // 获取当前节点在父节点中的位置
-        if let Some(parent) =
-            self.tree.get_parent_node(&self.key.clone().into())
+        if let Some(parent) = self.tree.get_parent_node(&self.key.clone())
         {
-            let siblings: imbl::Vector<String> =
+            let siblings =
                 self.tree.children(&parent.id).unwrap_or_default();
 
             if let Some(current_index) =
@@ -60,7 +59,7 @@ impl<'a> Shr<usize> for NodeRef<'a> {
                     //这里只需要修改  content 中的顺序就行，不需要删除和添加
                     let mut node = self
                         .tree
-                        .get_node(&self.key.clone().into())
+                        .get_node(&self.key.clone())
                         .unwrap()
                         .as_ref()
                         .clone();
@@ -85,7 +84,7 @@ impl<'a> Shr<Mark> for MarkRef<'a> {
         mark: Mark,
     ) -> Self::Output {
         // 添加到末尾（等同于标准的add操作）
-        self.tree.add_mark(&self.key.clone().into(), &vec![mark])?;
+        self.tree.add_mark(&self.key.clone(), &vec![mark])?;
         Ok(MarkRef::new(self.tree, self.key.clone()))
     }
 }
@@ -99,7 +98,7 @@ impl<'a> Shr<Vec<Mark>> for MarkRef<'a> {
         marks: Vec<Mark>,
     ) -> Self::Output {
         if !marks.is_empty() {
-            self.tree.add_mark(&self.key.clone().into(), &marks)?;
+            self.tree.add_mark(&self.key.clone(), &marks)?;
         }
         Ok(MarkRef::new(self.tree, self.key.clone()))
     }

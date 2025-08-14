@@ -16,18 +16,11 @@
 //! - `patch`: 补丁系统，用于增量更新
 //! - `step`: 步骤定义，定义转换操作的基本接口
 //! - `transform`: 转换系统，协调各种转换操作
-//! - `incremental_pool`: 增量更新的节点池，提供内存优化
-//!
-//! 核心类型：
-//! - `PatchStep`: 补丁步骤，用于应用补丁
-//! - `BatchStep`: 批量步骤，用于执行多个转换操作
-//! - `IncrementalNodePool`: 增量更新的节点池
-//! - `IncrementalPoolManager`: 节点池版本管理器
 
 pub mod attr_step;
+pub mod batch_step;
 pub mod mark_step;
 pub mod node_step;
-pub mod patch;
 pub mod step;
 pub mod transform;
 use anyhow::Result;

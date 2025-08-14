@@ -10,6 +10,7 @@ use mf_core::{EditorOptionsBuilder, ForgeAsyncRuntime, ForgeResult};
 use mf_persistence::api::{CommitMode, PersistOptions};
 use mf_persistence::subscriber::SnapshotSubscriber;
 use mf_persistence::sqlite::SqliteEventStore;
+// runtime-only example: for export/import, see export_doc.rs and export_zip.rs
 
 #[tokio::main]
 async fn main() -> ForgeResult<()> {
@@ -51,8 +52,14 @@ async fn main() -> ForgeResult<()> {
     let dw_node = schema.nodes["dwgc"].create_and_fill(None, None, vec![], None, schema);
     tr.add_node(doc.root_id().clone(), vec![dw_node])?;
     editor.dispatch(tr).await?;
+    // 睡眠五秒，等待持久化与快照
+    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+    let state = editor.get_state();
+    println!("事务已分发并持久化，当前版本: {}", state.version);
 
-    println!("事务已分发并持久化，当前版本: {}", editor.get_state().version);
+    // 如需导出/导入演示，请运行：
+    // cargo run -p moduforge-persistence --example export_doc
+    // cargo run -p moduforge-persistence --example export_zip
     Ok(())
 }
 

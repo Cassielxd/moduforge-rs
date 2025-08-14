@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema top_node="doc" version="1.0">
+  <nodes>
+    <node name="doc" group="block">
+      <desc>文档根节点</desc>
+      <content>paragraph+</content>
+    </node>
+    
+    <node name="paragraph" group="block">
+      <desc>段落节点</desc>
+      <content>text*</content>
+      <marks>strong em</marks>
+    </node>
+    
+    <node name="text">
+      <desc>文本节点</desc>
+    </node>
+  </nodes>
+  
+  <marks>
+    <mark name="strong" group="formatting">
+      <desc>粗体标记</desc>
+      <spanning>true</spanning>
+    </mark>
+    
+    <mark name="em" group="formatting">
+      <desc>斜体标记</desc>
+      <spanning>true</spanning>
+    </mark>
+  </marks>
+</schema>

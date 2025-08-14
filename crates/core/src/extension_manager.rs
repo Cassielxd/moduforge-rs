@@ -421,6 +421,12 @@ impl ExtensionManager {
         self.add_extensions(extensions)
     }
 
+    /// 添加从快照恢复的插件
+    pub fn add_restored_plugins(&mut self, plugins: Vec<std::sync::Arc<mf_state::plugin::Plugin>>) -> ForgeResult<()> {
+        self.plugins.extend(plugins);
+        Ok(())
+    }
+
     /// 动态添加XML内容扩展
     ///
     /// # 参数

@@ -20,7 +20,7 @@ impl<'a> Add<Node> for NodeRef<'a> {
         self,
         node: Node,
     ) -> Self::Output {
-        self.tree.add_node(&self.key.clone().into(), &vec![node])?;
+        self.tree.add_node(&self.key.clone(), &vec![node])?;
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
 }
@@ -32,7 +32,7 @@ impl<'a> Add<(usize, Node)> for NodeRef<'a> {
         self,
         (index, node): (usize, Node),
     ) -> Self::Output {
-        self.tree.add_at_index(&self.key.clone().into(), index, &node)?;
+        self.tree.add_at_index(&self.key.clone(), index, &node)?;
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
 }
@@ -45,7 +45,7 @@ impl<'a> Add<Vec<Node>> for NodeRef<'a> {
         self,
         nodes: Vec<Node>,
     ) -> Self::Output {
-        self.tree.add_node(&self.key.clone().into(), &nodes)?;
+        self.tree.add_node(&self.key.clone(), &nodes)?;
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
 }
@@ -55,7 +55,7 @@ impl<'a> Add<NodeEnum> for NodeRef<'a> {
         self,
         nodes: NodeEnum,
     ) -> Self::Output {
-        self.tree.add(&self.key.clone().into(), vec![nodes])?;
+        self.tree.add(&self.key.clone(), vec![nodes])?;
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
 }
@@ -68,7 +68,7 @@ impl<'a> Add<Mark> for MarkRef<'a> {
         self,
         mark: Mark,
     ) -> Self::Output {
-        self.tree.add_mark(&self.key.clone().into(), &vec![mark])?;
+        self.tree.add_mark(&self.key.clone(), &vec![mark])?;
         Ok(MarkRef::new(self.tree, self.key.clone()))
     }
 }
@@ -81,7 +81,7 @@ impl<'a> Add<Vec<Mark>> for MarkRef<'a> {
         self,
         marks: Vec<Mark>,
     ) -> Self::Output {
-        self.tree.add_mark(&self.key.clone().into(), &marks)?;
+        self.tree.add_mark(&self.key.clone(), &marks)?;
         Ok(MarkRef::new(self.tree, self.key.clone()))
     }
 }
@@ -94,7 +94,7 @@ impl<'a> Add<Attrs> for AttrsRef<'a> {
         self,
         attrs: Attrs,
     ) -> Self::Output {
-        self.tree.update_attr(&self.key.clone().into(), attrs.attrs)?;
+        self.tree.update_attr(&self.key.clone(), attrs.attrs)?;
         Ok(AttrsRef::new(self.tree, self.key.clone()))
     }
 }
@@ -105,7 +105,7 @@ impl<'a> Add<(String, Value)> for AttrsRef<'a> {
         (key, value): (String, Value),
     ) -> Self::Output {
         self.tree.update_attr(
-            &self.key.clone().into(),
+            &self.key.clone(),
             imbl::hashmap! {key=>value},
         )?;
         Ok(AttrsRef::new(self.tree, self.key.clone()))
@@ -120,7 +120,7 @@ impl<'a> Add<imbl::HashMap<String, Value>> for AttrsRef<'a> {
         self,
         attrs: imbl::HashMap<String, Value>,
     ) -> Self::Output {
-        self.tree.update_attr(&self.key.clone().into(), attrs)?;
+        self.tree.update_attr(&self.key.clone(), attrs)?;
         Ok(AttrsRef::new(self.tree, self.key.clone()))
     }
 }

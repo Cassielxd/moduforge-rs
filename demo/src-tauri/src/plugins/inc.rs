@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use mf_model::{attrs::Attrs, mark::Mark, node::Node};
+use mf_model::{attrs::Attrs, mark::Mark, node::Node, NodeId};
 use mf_state::{
     plugin::StateField, resource::Resource, State, StateConfig, Transaction,
 };
@@ -22,11 +22,11 @@ pub struct Operations(pub Vec<Operation>);
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum Operation {
-    RemoveMark(String, Vec<String>),
-    AddMark(String, Vec<Mark>),
-    UpdateAttrs(String, Attrs),
+    RemoveMark(NodeId, Vec<String>),
+    AddMark(NodeId, Vec<Mark>),
+    UpdateAttrs(NodeId, Attrs),
     UpdateNode(Vec<Arc<Node>>),
-    RemoveNode(Vec<String>),
+    RemoveNode(Vec<NodeId>),
 }
 impl Resource for Operations {}
 /// 权限状态字段管理器

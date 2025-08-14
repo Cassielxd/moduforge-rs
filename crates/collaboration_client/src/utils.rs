@@ -487,7 +487,7 @@ impl Utils {
             }
 
             // 创建节点
-            let content_vec: Vec<String> =
+            let content_vec: Vec<NodeId> =
                 content.clone().into_iter().collect();
             let marks_vec: Vec<Mark> = marks.clone().into_iter().collect();
             let node =

@@ -18,7 +18,7 @@ pub struct AttrStep {
 
 impl AttrStep {
     pub fn new(
-        id: String,
+        id: NodeId,
         values: ImHashMap<String, Value>,
     ) -> Self {
         AttrStep { id, values }
@@ -38,7 +38,17 @@ impl Step for AttrStep {
         let _ = schema;
         match dart.get_node(&self.id) {
             Some(node) => {
-                let attr = &schema.nodes.get(&node.r#type).unwrap().attrs;
+                // 获取节点类型定义，若缺失则返回错误而非 panic
+                let node_type = match schema.nodes.get(&node.r#type) {
+                    Some(nt) => nt,
+                    None => {
+                        return Err(transform_error(format!(
+                            "未知的节点类型: {}",
+                            node.r#type
+                        )));
+                    }
+                };
+                let attr = &node_type.attrs;
                 // 删除 self.values 中 attr中没有定义的属性
                 let mut new_values = self.values.clone();
                 for (key, _) in self.values.iter() {
@@ -68,15 +78,22 @@ impl Step for AttrStep {
     ) -> Option<Arc<dyn Step>> {
         match dart.get_node(&self.id) {
             Some(node) => {
-                let mut new_values = imbl::hashmap!();
-                for (key, value) in node.attrs.attrs.iter() {
-                    new_values.insert(key.clone(), value.clone());
+                // 仅对本次修改过的键生成反向值，避免覆盖无关属性
+                let mut revert_values = imbl::hashmap!();
+                for (changed_key, _) in self.values.iter() {
+                    if let Some(old_val) = node.attrs.get_safe(changed_key) {
+                        revert_values.insert(changed_key.clone(), old_val.clone());
+                    }
+                    // 若原先不存在该键，这里不设置（缺少删除语义）；
+                    // 如需彻底还原，可扩展支持 unset 语义
                 }
-                Some(Arc::new(AttrStep::new(self.id.clone(), new_values)))
+                if revert_values.is_empty() {
+                    None
+                } else {
+                    Some(Arc::new(AttrStep::new(self.id.clone(), revert_values)))
+                }
             },
-            None => {
-                return None;
-            },
+            None => None,
         }
     }
 }
@@ -128,8 +145,8 @@ mod tests {
         values.insert("name".to_string(), json!("test"));
         values.insert("age".to_string(), json!(25));
 
-        let step = AttrStep::new("node1".to_string(), values.clone().into());
-        assert_eq!(step.id, "node1");
+        let step = AttrStep::new("node1".into(), values.clone().into());
+        assert_eq!(step.id, "node1".into());
         assert_eq!(step.values, values.into());
     }
 
@@ -146,14 +163,14 @@ mod tests {
         let mut values = HashMap::new();
         values.insert("name".to_string(), json!("test"));
         values.insert("age".to_string(), json!(25));
-        let step = AttrStep::new("node1".to_string(), values.into());
+        let step = AttrStep::new("node1".into(), values.into());
 
         // 应用步骤
         let result = step.apply(&mut tree, schema.clone());
         assert!(result.is_ok());
 
         // 验证属性是否被正确设置
-        let updated_node = tree.get_node(&"node1".to_string()).unwrap();
+        let updated_node = tree.get_node(&"node1".into()).unwrap();
         assert_eq!(updated_node.attrs.get("name").unwrap(), &json!("test"));
         assert_eq!(updated_node.attrs.get("age").unwrap(), &json!(25));
     }
@@ -170,14 +187,14 @@ mod tests {
         // 创建包含无效属性的步骤
         let mut values = HashMap::new();
         values.insert("invalid_attr".to_string(), json!("test"));
-        let step = AttrStep::new("node1".to_string(), values.into());
+        let step = AttrStep::new("node1".into(), values.into());
 
         // 应用步骤
         let result = step.apply(&mut tree, schema.clone());
         assert!(result.is_ok());
 
         // 验证无效属性是否被过滤掉
-        let updated_node = tree.get_node(&"node1".to_string()).unwrap();
+        let updated_node = tree.get_node(&"node1".into()).unwrap();
         assert!(updated_node.attrs.get("invalid_attr").is_none());
     }
 
@@ -193,7 +210,7 @@ mod tests {
         // 创建属性步骤
         let mut values = HashMap::new();
         values.insert("name".to_string(), json!("test"));
-        let step = AttrStep::new("nonexistent".to_string(), values.into());
+        let step = AttrStep::new("nonexistent".into(), values.into());
 
         // 应用步骤
         let result = step.apply(&mut tree, schema);
@@ -204,7 +221,7 @@ mod tests {
     fn test_attr_step_serialize() {
         let mut values = HashMap::new();
         values.insert("name".to_string(), json!("test"));
-        let step = AttrStep::new("node1".to_string(), values.into());
+        let step = AttrStep::new("node1".into(), values.into());
 
         let serialized = Step::serialize(&step);
         assert!(serialized.is_some());
@@ -212,7 +229,7 @@ mod tests {
         // 验证序列化后的数据可以反序列化
         let deserialized: AttrStep =
             serde_json::from_slice(&serialized.unwrap()).unwrap();
-        assert_eq!(deserialized.id, "node1");
+        assert_eq!(deserialized.id, "node1".into());
         assert_eq!(deserialized.values.get("name").unwrap(), &json!("test"));
     }
 
@@ -229,14 +246,14 @@ mod tests {
         let mut values = HashMap::new();
         values.insert("name".to_string(), json!("original_name"));
         values.insert("age".to_string(), json!(25));
-        let step = AttrStep::new("node1".to_string(), values.into());
+        let step = AttrStep::new("node1".into(), values.into());
         step.apply(&mut tree, schema.clone()).unwrap();
 
         // 创建新的属性步骤，修改属性
         let mut new_values = HashMap::new();
         new_values.insert("name".to_string(), json!("modified_name"));
         new_values.insert("age".to_string(), json!(30));
-        let new_step = AttrStep::new("node1".to_string(), new_values.into());
+        let new_step = AttrStep::new("node1".into(), new_values.into());
 
         // 获取反转步骤
         let inverted = new_step.invert(&Arc::new(tree.clone()));
@@ -244,7 +261,7 @@ mod tests {
 
         // 应用新步骤
         new_step.apply(&mut tree, schema.clone()).unwrap();
-        let node = tree.get_node(&"node1".to_string()).unwrap();
+        let node = tree.get_node(&"node1".into()).unwrap();
         assert_eq!(node.attrs.get("name").unwrap(), &json!("modified_name"));
         assert_eq!(node.attrs.get("age").unwrap(), &json!(30));
 
@@ -253,7 +270,7 @@ mod tests {
         inverted_step.apply(&mut tree, schema).unwrap();
 
         // 验证属性是否恢复到原始值
-        let node = tree.get_node(&"node1".to_string()).unwrap();
+        let node = tree.get_node(&"node1".into()).unwrap();
         assert_eq!(node.attrs.get("name").unwrap(), &json!("original_name"));
         assert_eq!(node.attrs.get("age").unwrap(), &json!(25));
     }

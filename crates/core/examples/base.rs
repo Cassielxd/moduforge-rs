@@ -4,7 +4,7 @@ use mf_core::{
     middleware::Middleware, EditorOptionsBuilder, Extension, Extensions,
     ForgeAsyncRuntime, ForgeResult, RuntimeOptions,
 };
-use mf_model::imbl::HashMap;
+use mf_model::{imbl::HashMap, NodeId};
 use mf_state::{
     error::StateResult,
     plugin::{Plugin, PluginSpec, PluginTrait},
@@ -55,7 +55,7 @@ impl PluginTrait for APlugin {
         let mut new_tr = new_state.tr();
 
         for tr in trs {
-            if let Some(dwgcKeys) = tr.get_meta::<Vec<String>>("dwgcKeys") {
+            if let Some(dwgcKeys) = tr.get_meta::<Vec<NodeId>>("dwgcKeys") {
                 for id in dwgcKeys {
                     if let Some(node) = doc.get_node(&id) {
                         let price1 = node

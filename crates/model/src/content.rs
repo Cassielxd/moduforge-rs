@@ -1165,7 +1165,7 @@ mod tests {
             "existing_table_123",
             "table".to_string(),
             Attrs::default(),
-            vec!["existing_row_456".to_string()],
+            vec!["existing_row_456".into()],
             vec![],
         );
 
@@ -1174,7 +1174,7 @@ mod tests {
             "existing_para_789",
             "paragraph".to_string(),
             Attrs::default(),
-            vec!["existing_text_000".to_string()],
+            vec!["existing_text_000".into()],
             vec![],
         );
 

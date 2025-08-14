@@ -27,8 +27,6 @@ pub struct GlobalAttributeItem {
     pub attributes: HashMap<String, AttributeSpec>,
 }
 
-unsafe impl Send for GlobalAttributeItem {}
-unsafe impl Sync for GlobalAttributeItem {}
 
 #[derive(Clone)]
 pub enum Extensions {

@@ -75,8 +75,7 @@ pub struct PluginSpec {
     pub priority: i32,
 }
 
-unsafe impl Send for PluginSpec {}
-unsafe impl Sync for PluginSpec {}
+// PluginSpec 所有字段满足 Send+Sync 约束（Arc 指针），无需不安全实现
 
 impl PluginSpec {
     /// 插件状态管理器
@@ -121,8 +120,7 @@ pub struct Plugin {
     pub key: String,
 }
 
-unsafe impl Send for Plugin {}
-unsafe impl Sync for Plugin {}
+// Plugin 包含的字段满足 Auto Traits
 
 impl Plugin {
     /// 创建新的插件实例

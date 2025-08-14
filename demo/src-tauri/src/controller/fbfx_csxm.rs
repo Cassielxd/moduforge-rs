@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use mf_model::{id_generator::IdGenerator, node::Node};
+use mf_model::{id_generator::IdGenerator, node::Node, NodeId};
 
 use crate::{
     commands::{
@@ -21,7 +21,7 @@ use serde::Deserialize;
 pub async fn add_fbfx_csxm(
     Json(mut param): Json<AddRequest>
 ) -> ResponseResult<String> {
-    let id: String = IdGenerator::get_id();
+    let id= IdGenerator::get_id();
     param.id = Some(id.clone());
     let mut demo_editor = ContextHelper::get_editor(&id).unwrap();
     let meta = serde_json::to_value(param.clone()).unwrap();
@@ -56,7 +56,7 @@ pub async fn delete_fbfx_csxm(
 #[derive(Debug, Deserialize)]
 pub struct FbfxCsxmPost {
     pub editor_name: String,
-    pub id: String,
+    pub id: NodeId,
 }
 
 /// 获取分部分项 措施项目树

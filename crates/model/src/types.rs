@@ -1,2 +1,2 @@
-pub type NodeId = String;
+pub type NodeId = Box<str>;
 pub enum ContentEnum {}

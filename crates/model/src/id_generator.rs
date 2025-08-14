@@ -4,10 +4,10 @@ use base62::encode;
 pub struct IdGenerator;
 
 impl IdGenerator {
-    pub fn get_id() -> String {
+    pub fn get_id() -> Box<str>  {
         let uuid = Uuid::new_v4();
         let num = u128::from_be_bytes(*uuid.as_bytes());
-        encode(num)
+        encode(num).into_boxed_str()
     }
 }
 

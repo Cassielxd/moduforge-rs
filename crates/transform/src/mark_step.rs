@@ -34,7 +34,7 @@ impl Step for AddMarkStep {
         let result = dart.mark(&self.id) + self.marks.clone();
         match result {
             Ok(_) => Ok(StepResult::ok()),
-            Err(e) => Ok(StepResult::fail(e.to_string())),
+            Err(e) => Err(transform_error(e.to_string())),
         }
     }
     fn serialize(&self) -> Option<Vec<u8>> {
@@ -93,10 +93,21 @@ impl Step for RemoveMarkStep {
         dart: &Arc<Tree>,
     ) -> Option<Arc<dyn Step>> {
         match dart.get_node(&self.id) {
-            Some(node) => Some(Arc::new(AddMarkStep::new(
-                self.id.clone(),
-                node.marks.clone().iter().map(|m| m.clone()).collect(),
-            ))),
+            Some(node) => {
+                // 仅恢复被移除的 mark 类型，避免把未移除的也加回
+                let removed_types = &self.mark_types;
+                let to_restore: Vec<Mark> = node
+                    .marks
+                    .iter()
+                    .filter(|m| removed_types.contains(&m.r#type))
+                    .cloned()
+                    .collect();
+                if to_restore.is_empty() {
+                    None
+                } else {
+                    Some(Arc::new(AddMarkStep::new(self.id.clone(), to_restore)))
+                }
+            },
             None => None,
         }
     }

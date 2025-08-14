@@ -29,7 +29,7 @@ impl<'a> Sub<Vec<NodeId>> for NodeRef<'a> {
         self,
         node_ids: Vec<NodeId>,
     ) -> Self::Output {
-        self.tree.remove_node(&self.key.clone().into(), node_ids)?;
+        self.tree.remove_node(&self.key.clone(), node_ids)?;
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
 }
@@ -41,7 +41,7 @@ impl<'a> Sub<usize> for NodeRef<'a> {
         self,
         index: usize,
     ) -> Self::Output {
-        self.tree.remove_node_by_index(&self.key.clone().into(), index)?;
+        self.tree.remove_node_by_index(&self.key.clone(), index)?;
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
 }
@@ -54,7 +54,7 @@ impl<'a> Sub<Mark> for MarkRef<'a> {
         mark: Mark,
     ) -> Self::Output {
         self.tree
-            .remove_mark(&self.key.clone().into(), &[mark.r#type.clone()])?;
+            .remove_mark(&self.key.clone(), &[mark.r#type.clone()])?;
         Ok(MarkRef::new(self.tree, self.key.clone()))
     }
 }
@@ -65,7 +65,7 @@ impl<'a> Sub<String> for MarkRef<'a> {
         self,
         mark_name: String,
     ) -> Self::Output {
-        self.tree.remove_mark_by_name(&self.key.clone().into(), &mark_name)?;
+        self.tree.remove_mark_by_name(&self.key.clone(), &mark_name)?;
         Ok(MarkRef::new(self.tree, self.key.clone()))
     }
 }
@@ -75,7 +75,7 @@ impl<'a> Sub<Vec<String>> for MarkRef<'a> {
         self,
         mark_names: Vec<String>,
     ) -> Self::Output {
-        self.tree.remove_mark(&self.key.clone().into(), &mark_names)?;
+        self.tree.remove_mark(&self.key.clone(), &mark_names)?;
         Ok(MarkRef::new(self.tree, self.key.clone()))
     }
 }

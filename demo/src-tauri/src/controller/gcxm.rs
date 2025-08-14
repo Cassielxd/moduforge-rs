@@ -7,7 +7,7 @@ use axum::{
     Json, Router,
 };
 use mf_core::{types::NodePoolFnTrait, ForgeResult};
-use mf_model::{id_generator::IdGenerator, node::Node, node_pool::NodePool};
+use mf_model::{id_generator::IdGenerator, node::Node, node_pool::NodePool, NodeId};
 use mf_state::StateConfig;
 use serde::Deserialize;
 use serde_json::Value;
@@ -31,7 +31,7 @@ use crate::{
 #[derive(Debug, Deserialize, Clone)]
 pub struct GcxmPost {
     pub name: String,
-    pub id: Option<String>,
+    pub id: Option<NodeId>,
     pub collab: bool,
 }
 
@@ -88,7 +88,7 @@ pub async fn create_collab_editor(
 ) -> anyhow::Result<()> {
     let option = init_collab_options(
         create_callback.clone(),
-        create_callback.id.clone().unwrap(),
+        create_callback.id.clone().unwrap().to_string(),
     )
     .await;
     let editor = init_collab_editor(option).await;
@@ -102,7 +102,7 @@ pub async fn create_collab_editor(
 pub async fn new_project(
     Json(mut param): Json<GcxmPost>
 ) -> ResponseResult<GcxmTreeItem> {
-    let id: String = IdGenerator::get_id();
+    let id = IdGenerator::get_id();
     param.id = Some(id.clone());
     if param.collab {
         create_collab_editor(Arc::new(param.clone())).await?;
@@ -162,7 +162,7 @@ pub async fn get_gcxm_tree(
 
     let parent_map = &doc.get_inner().parent_map;
     if let Some(root_item) =
-        GcxmTreeItem::from_nodes(editor_name, nodes, parent_map)
+        GcxmTreeItem::from_nodes(editor_name.into(), nodes, parent_map)
     {
         res!(root_item)
     } else {
@@ -174,7 +174,7 @@ pub async fn get_gcxm_tree(
 pub async fn delete_gcxm(
     Json(param): Json<DeleteNodeRequest>
 ) -> ResponseResult<String> {
-    if param.id == param.editor_name {
+    if param.id.to_string() == param.editor_name {
         return Err(AppError(anyhow::anyhow!("不能删除工程项目".to_string())));
     }
     let editor = ContextHelper::get_editor(&param.editor_name);
