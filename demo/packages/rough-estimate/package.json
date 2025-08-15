@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@cost-app/shared-components": "file:../shared-components",
+    "@surely-vue/table": "^5.0.4",
     "@tauri-apps/api": "^2.5.0",
     "ant-design-vue": "^4.2.6",
     "pinia": "^3.0.3",

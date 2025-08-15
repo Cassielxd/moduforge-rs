@@ -31,48 +31,18 @@
     </div>
 
     <div class="table-content">
-      <a-table
+      <s-table
         :columns="tableColumns"
         :data-source="filteredData"
         :row-selection="rowSelection"
-        :pagination="paginationConfig"
         :loading="loading"
         :scroll="{ x: 1200, y: 400 }"
         size="middle"
         bordered
         @change="handleTableChange"
       >
-        <template #bodyCell="{ column, record, index }">
-          <template v-if="column.key === 'amount'">
-            <span class="amount-cell">
-              ¥{{ formatAmount(record.amount) }}
-            </span>
-          </template>
-          <template v-else-if="column.key === 'status'">
-            <a-tag :color="getStatusColor(record.status)">
-              {{ getStatusText(record.status) }}
-            </a-tag>
-          </template>
-          <template v-else-if="column.key === 'action'">
-            <a-space>
-              <a-button type="link" size="small" @click="editRow(record)">
-                编辑
-              </a-button>
-              <a-button type="link" size="small" @click="viewDetail(record)">
-                详情
-              </a-button>
-              <a-popconfirm
-                title="确定删除这条记录吗？"
-                @confirm="deleteRow(record)"
-              >
-                <a-button type="link" size="small" danger>
-                  删除
-                </a-button>
-              </a-popconfirm>
-            </a-space>
-          </template>
-        </template>
-      </a-table>
+      
+      </s-table>
     </div>
 
     <div class="table-footer">

@@ -98,7 +98,7 @@ function startSharedComponents() {
 function startMainApp() {
   logSection('启动主应用')
   
-  const mainApp = spawn('npm', ['run', 'dev'], {
+  const mainApp = spawn('npm', ['run', 'tauri:dev'], {
     cwd: __dirname,
     stdio: 'pipe',
     shell: true

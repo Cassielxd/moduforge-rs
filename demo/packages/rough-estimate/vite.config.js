@@ -32,6 +32,17 @@ export default defineConfig({
       }
     }
   },
+      // CSS预处理器配置
+  css: {
+    preprocessorOptions: {
+      less: {
+        javascriptEnabled: true,
+        modifyVars: {
+          // 可以在这里添加Less变量覆盖
+        }
+      }
+    }
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src')

@@ -2,6 +2,7 @@
 /data
 /logs
 .idea
+/frontendUi
 
 /.vs
 .DS_Store

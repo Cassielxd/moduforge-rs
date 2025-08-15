@@ -4,6 +4,10 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Antd from 'ant-design-vue'
 import 'ant-design-vue/dist/reset.css'
 
+// 导入STable配置和样式
+import { setupSTable } from '@cost-app/shared-components'
+import '@surely-vue/table/dist/index.less'
+
 import App from './App.vue'
 
 // 创建路由
@@ -65,5 +69,8 @@ const pinia = createPinia()
 app.use(pinia)
 app.use(router)
 app.use(Antd)
+
+// 注册STable
+setupSTable(app)
 
 app.mount('#app')

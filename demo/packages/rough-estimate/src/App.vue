@@ -457,7 +457,7 @@ const deleteRecord = (record) => {
 
 onMounted(() => {
   console.log('概算管理系统已加载')
-  pagination.value.total = estimateData.value.length
+  pagination.value.total = estimateData.value?.length
 })
 </script>
 

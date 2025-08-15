@@ -1,3 +1,6 @@
+// 导出STable相关
+export { STable, setupSTable } from './plugins/stable.js'
+
 // 导出共享组件
 export { default as CostTable } from './components/CostTable.vue'
 export { default as CostForm } from './components/CostForm.vue'
@@ -22,3 +25,5 @@ export {
 
 // 导出状态管理核心
 export { globalState, getters, actions, persistence } from './store/index.js'
+
+

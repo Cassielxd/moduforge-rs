@@ -12,12 +12,13 @@ export default defineConfig(({ mode }) => ({
       formats: ['es', 'umd']
     },
     rollupOptions: {
-      external: ['vue', 'ant-design-vue', 'dayjs'],
+      external: ['vue', 'ant-design-vue', 'dayjs', '@surely-vue/table'],
       output: {
         globals: {
           vue: 'Vue',
           'ant-design-vue': 'antd',
-          'dayjs': 'dayjs'
+          'dayjs': 'dayjs',
+          '@surely-vue/table': 'STable'
         }
       }
     },
@@ -30,6 +31,17 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src')
+    }
+  },
+  // CSS预处理器配置
+  css: {
+    preprocessorOptions: {
+      less: {
+        javascriptEnabled: true,
+        modifyVars: {
+          // 可以在这里添加Less变量覆盖
+        }
+      }
     }
   },
   // 开发服务器配置
