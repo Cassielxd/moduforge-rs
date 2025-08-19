@@ -1,11 +1,13 @@
-pub mod error;
-pub mod record;
 pub mod document;
+pub mod error;
 pub mod history;
+pub mod record;
 pub mod zipdoc;
 pub use error::{FileError, Result};
 pub use record::{Writer, Reader, Iter, HEADER_LEN, REC_HDR};
-pub use document::{DocumentWriter, DocumentReader, SegmentType, Directory, SegmentEntry};
+pub use document::{
+    DocumentWriter, DocumentReader, SegmentType, Directory, SegmentEntry,
+};
 pub use history::{TypeWrapper, encode_history_frames, decode_history_frames};
 pub use zipdoc::{ZipDocumentWriter, ZipDocumentReader};
 
@@ -46,6 +48,3 @@ mod tests {
 }
 
 // moved implementations to modules: document.rs, history.rs, zipdoc.rs
-
-
-

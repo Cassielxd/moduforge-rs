@@ -36,20 +36,22 @@ async fn main() -> ForgeResult<()> {
         "default_doc",
     ));
 
-    let options = EditorOptionsBuilder::new()
-        .add_event_handler(subscriber)
-        .build();
+    let options =
+        EditorOptionsBuilder::new().add_event_handler(subscriber).build();
 
     // 4) 从 XML schema 加载运行时（注意路径相对于工作目录，必要时调整为 "../../schema/main.xml"）
     let xml_path = "schema/main.xml";
-    let mut editor = ForgeAsyncRuntime::from_xml_schema_path(xml_path, Some(options), None).await?;
+    let mut editor =
+        ForgeAsyncRuntime::from_xml_schema_path(xml_path, Some(options), None)
+            .await?;
 
     // 5) 构造一个新增节点事务（dwgc）并分发
     let doc = editor.doc();
     let mut tr = editor.get_tr();
     let schema = &tr.schema;
     // 依赖 main.xml 中定义的 <node name="dwgc" ...>
-    let dw_node = schema.nodes["dwgc"].create_and_fill(None, None, vec![], None, schema);
+    let dw_node =
+        schema.nodes["dwgc"].create_and_fill(None, None, vec![], None, schema);
     tr.add_node(doc.root_id().clone(), vec![dw_node])?;
     editor.dispatch(tr).await?;
     // 睡眠五秒，等待持久化与快照
@@ -62,5 +64,3 @@ async fn main() -> ForgeResult<()> {
     // cargo run -p moduforge-persistence --example export_zip
     Ok(())
 }
-
-

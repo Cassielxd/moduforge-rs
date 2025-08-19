@@ -21,7 +21,7 @@ use serde::Deserialize;
 pub async fn add_fbfx_csxm(
     Json(mut param): Json<AddRequest>
 ) -> ResponseResult<String> {
-    let id= IdGenerator::get_id();
+    let id = IdGenerator::get_id();
     param.id = Some(id.clone());
     let mut demo_editor = ContextHelper::get_editor(&id).unwrap();
     let meta = serde_json::to_value(param.clone()).unwrap();

@@ -29,7 +29,8 @@ where
     F: FnMut(usize) -> io::Result<Vec<u8>>,
 {
     // 写 meta
-    let meta_val = serde_json::to_value(meta).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    let meta_val = serde_json::to_value(meta)
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
     zw.add_json("snapshot/meta.json", &meta_val)?;
     // 写每个分片
     for i in 0..meta.num_shards {
@@ -44,7 +45,7 @@ where
 
 /// 读取分片快照：返回元数据和解压后的每个分片字节
 pub fn read_snapshot_shards<R: Read + Seek>(
-    zr: &mut ZipDocumentReader<R>,
+    zr: &mut ZipDocumentReader<R>
 ) -> io::Result<(SnapshotShardMeta, Vec<Vec<u8>>)> {
     let meta_bytes = zr.read_all("snapshot/meta.json")?;
     let meta: SnapshotShardMeta = serde_json::from_slice(&meta_bytes)
@@ -68,14 +69,15 @@ pub fn read_snapshot_shards<R: Read + Seek>(
 
 /// 读取并用 bincode 反序列化每个分片
 pub fn read_and_decode_snapshot_shards<R: Read + Seek, T: DeserializeOwned>(
-    zr: &mut ZipDocumentReader<R>,
+    zr: &mut ZipDocumentReader<R>
 ) -> io::Result<(SnapshotShardMeta, Vec<T>)> {
     let (meta, shards_raw) = read_snapshot_shards(zr)?;
     // 为避免对 T 施加 Send 约束，这里顺序反序列化
     let mut out: Vec<T> = Vec::with_capacity(shards_raw.len());
     for raw in shards_raw.iter() {
-        let (val, _): (T, _) = bincode::serde::decode_from_slice(raw, bincode::config::standard())
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let (val, _): (T, _) =
+            bincode::serde::decode_from_slice(raw, bincode::config::standard())
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         out.push(val);
     }
     Ok((meta, out))
@@ -102,7 +104,6 @@ where
     Ok(meta)
 }
 
-
 /// 高层接口：导出包含 meta.json、schema.xml 和分片快照的 ZIP 文档
 pub fn export_zip_with_shards<P, F>(
     path: P,
@@ -127,7 +128,7 @@ where
 
 /// 高层接口：导入 ZIP 文档，返回（meta.json、schema.xml、分片元数据、解码后的分片）
 pub fn import_zip_with_shards<P, T>(
-    path: P,
+    path: P
 ) -> io::Result<(serde_json::Value, Vec<u8>, SnapshotShardMeta, Vec<T>)>
 where
     P: AsRef<Path>,
@@ -139,8 +140,7 @@ where
     let meta_val: serde_json::Value = serde_json::from_slice(&meta_json)
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
     let schema_xml = zr.read_all("schema.xml")?;
-    let (shard_meta, decoded) = read_and_decode_snapshot_shards::<_, T>(&mut zr)?;
+    let (shard_meta, decoded) =
+        read_and_decode_snapshot_shards::<_, T>(&mut zr)?;
     Ok((meta_val, schema_xml, shard_meta, decoded))
 }
-
-

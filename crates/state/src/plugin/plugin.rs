@@ -2,15 +2,39 @@ use async_trait::async_trait;
 use std::sync::Arc;
 
 use crate::error::StateResult;
+use crate::plugin::{PluginConfig, PluginMetadata};
 use crate::resource::Resource;
 
-use super::state::{State, StateConfig};
-use super::transaction::Transaction;
+use crate::state::{State, StateConfig};
+use crate::transaction::Transaction;
 
 /// 插件特征
 /// 定义插件的核心行为，包括事务处理和过滤功能
 #[async_trait]
 pub trait PluginTrait: Send + Sync + Debug {
+    /// 获取插件元数据（静态信息）- 提供默认实现
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "default_plugin".to_string(),
+            version: "1.0.0".to_string(),
+            description: "默认插件".to_string(),
+            author: "系统".to_string(),
+            dependencies: vec![],
+            conflicts: vec![],
+            state_fields: vec![],
+            tags: vec![],
+        }
+    }
+
+    /// 获取插件配置（静态配置）- 提供默认实现
+    fn config(&self) -> PluginConfig {
+        PluginConfig {
+            enabled: true,
+            priority: 0,
+            settings: std::collections::HashMap::new(),
+        }
+    }
+
     /// 追加事务处理
     /// 允许插件在事务执行前修改或扩展事务内容
     async fn append_transaction(
@@ -31,6 +55,8 @@ pub trait PluginTrait: Send + Sync + Debug {
         true
     }
 }
+///PluginTrait实现一个 default 实现
+
 /// 状态字段特征
 /// 定义插件状态的管理方式，包括初始化、应用更改和序列化
 #[async_trait]
@@ -70,9 +96,7 @@ pub trait StateField: Send + Sync + Debug {
 #[derive(Clone, Debug)]
 pub struct PluginSpec {
     pub state_field: Option<Arc<dyn StateField>>,
-    pub key: PluginKey,
-    pub tr: Option<Arc<dyn PluginTrait>>,
-    pub priority: i32,
+    pub tr: Arc<dyn PluginTrait>,
 }
 
 // PluginSpec 所有字段满足 Send+Sync 约束（Arc 指针），无需不安全实现
@@ -85,8 +109,7 @@ impl PluginSpec {
         state: &State,
     ) -> bool {
         match &self.tr {
-            Some(filter) => filter.filter_transaction(tr, state).await,
-            None => true,
+            filter => filter.filter_transaction(tr, state).await,
         }
     }
     /// 执行事务追加
@@ -96,19 +119,12 @@ impl PluginSpec {
         old_state: &State,
         new_state: &State,
     ) -> StateResult<Option<Transaction>> {
-        match &self.tr {
-            Some(transaction) => {
-                let tr = transaction
-                    .append_transaction(trs, old_state, new_state)
-                    .await?;
-                if let Some(mut tr) = tr {
-                    tr.commit();
-                    Ok(Some(tr))
-                } else {
-                    Ok(None)
-                }
-            },
-            None => Ok(None),
+        let tr = self.tr.append_transaction(trs, old_state, new_state).await?;
+        if let Some(mut tr) = tr {
+            tr.commit();
+            Ok(Some(tr))
+        } else {
+            Ok(None)
         }
     }
 }
@@ -125,7 +141,7 @@ pub struct Plugin {
 impl Plugin {
     /// 创建新的插件实例
     pub fn new(spec: PluginSpec) -> Self {
-        let key = spec.key.0.clone();
+        let key = spec.tr.metadata().name.clone();
 
         Plugin { spec, key }
     }
@@ -161,7 +177,3 @@ impl Plugin {
 /// 使用 Arc 包装的任意类型作为插件状态
 //pub type PluginState = Arc<dyn std::any::Any + Send + Sync>;
 use std::fmt::Debug;
-
-/// 插件键类型
-/// 使用两个字符串组成的元组作为插件的唯一标识
-pub type PluginKey = (String, String);

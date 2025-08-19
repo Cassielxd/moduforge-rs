@@ -1,4 +1,7 @@
-use mf_model::{mark::Mark, node::Node, node_type::NodeEnum, node_pool::NodePool, types::NodeId};
+use mf_model::{
+    mark::Mark, node::Node, node_type::NodeEnum, node_pool::NodePool,
+    types::NodeId,
+};
 use std::sync::Arc;
 
 /// 扁平化后的索引文档（写入后端的基础结构）
@@ -19,16 +22,24 @@ pub struct IndexDoc {
 
 impl IndexDoc {
     /// 从节点与池快照构建索引文档
-    pub fn from_node(pool: &NodePool, node: &Arc<Node>) -> Self {
+    pub fn from_node(
+        pool: &NodePool,
+        node: &Arc<Node>,
+    ) -> Self {
         let parent_id = pool.parent_id(&node.id).cloned();
-        let marks = node.marks.iter().map(|m: &Mark| m.r#type.clone()).collect();
+        let marks =
+            node.marks.iter().map(|m: &Mark| m.r#type.clone()).collect();
         let mut attrs_flat = Vec::with_capacity(node.attrs.attrs.len());
         for (k, v) in node.attrs.attrs.iter() {
             attrs_flat.push((k.clone(), flatten_value(v)));
         }
 
         // 路径（根到当前）
-        let path: Vec<String> = pool.get_node_path(&node.id).into_iter().map(|id| id.to_string()).collect();
+        let path: Vec<String> = pool
+            .get_node_path(&node.id)
+            .into_iter()
+            .map(|id| id.to_string())
+            .collect();
 
         let text = extract_text(node);
 
@@ -76,9 +87,14 @@ fn extract_text(node: &Node) -> Option<String> {
 }
 
 /// 从节点属性中提取 i64 数值（仅当为数值或可解析为整数的字符串时）
-fn extract_i64(node: &Node, key: &str) -> Option<i64> {
+fn extract_i64(
+    node: &Node,
+    key: &str,
+) -> Option<i64> {
     node.attrs.get(key).and_then(|v| match v {
-        serde_json::Value::Number(n) => n.as_i64().or_else(|| n.as_u64().and_then(|u| i64::try_from(u).ok())),
+        serde_json::Value::Number(n) => n
+            .as_i64()
+            .or_else(|| n.as_u64().and_then(|u| i64::try_from(u).ok())),
         serde_json::Value::String(s) => s.parse::<i64>().ok(),
         _ => None,
     })
@@ -92,5 +108,3 @@ pub fn collect_node_ids_from_enum(node_enum: &NodeEnum) -> Vec<NodeId> {
     }
     ids
 }
-
-

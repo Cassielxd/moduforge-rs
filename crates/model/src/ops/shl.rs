@@ -43,8 +43,7 @@ impl<'a> Shl<usize> for NodeRef<'a> {
         positions: usize,
     ) -> Self::Output {
         // 获取当前节点在父节点中的位置
-        if let Some(parent) = self.tree.get_parent_node(&self.key.clone())
-        {
+        if let Some(parent) = self.tree.get_parent_node(&self.key.clone()) {
             let siblings = self.tree.children(&parent.id).unwrap_or_default();
 
             if let Some(current_index) =

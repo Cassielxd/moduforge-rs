@@ -67,7 +67,6 @@ impl App {
         tokio::spawn(async move {
             self.run_with_graceful_shutdown(shutdown_signal()).await;
         });
-       
     }
 }
 

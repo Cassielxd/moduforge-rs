@@ -14,7 +14,8 @@ impl<'a> BitAnd<String> for NodeRef<'a> {
         self,
         node_type: String,
     ) -> Self::Output {
-        let children = self.tree.children(&self.key.clone()).unwrap_or_default();
+        let children =
+            self.tree.children(&self.key.clone()).unwrap_or_default();
         let mut nodes_to_remove = Vec::new();
 
         for child_id in children {
@@ -42,7 +43,8 @@ impl<'a> BitAnd<Vec<String>> for NodeRef<'a> {
         self,
         node_types: Vec<String>,
     ) -> Self::Output {
-        let children = self.tree.children(&self.key.clone()).unwrap_or_default();
+        let children =
+            self.tree.children(&self.key.clone()).unwrap_or_default();
         let mut nodes_to_remove = Vec::new();
 
         for child_id in children {

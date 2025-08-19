@@ -5,7 +5,9 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use mf_model::{attrs::Attrs, mark::Mark, node::Node, NodeId};
 use mf_state::{
-    plugin::StateField, resource::Resource, State, StateConfig, Transaction,
+    plugin::{PluginMetadata, PluginTrait, StateField},
+    resource::Resource,
+    State, StateConfig, Transaction,
 };
 use mf_transform::{
     attr_step::AttrStep,
@@ -141,5 +143,23 @@ impl StateField for IncStateField {
     ) -> Arc<dyn Resource> {
         IncStateField::collect_tr(tr, new_state);
         value
+    }
+}
+
+#[derive(Debug)]
+pub struct IncStatePlugin;
+
+impl PluginTrait for IncStatePlugin {
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "inc_plugin".to_string(),
+            version: "1.0.0".to_string(),
+            description: "增量数据插件".to_string(),
+            author: "collab".to_string(),
+            dependencies: vec![],
+            conflicts: vec![],
+            state_fields: vec![],
+            tags: vec![],
+        }
     }
 }

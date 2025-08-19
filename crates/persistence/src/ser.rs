@@ -9,8 +9,13 @@ use mf_state::Transaction;
 use serde::{Serialize, Deserialize};
 
 /// 可选的 zstd 压缩（level=1，优先速度）。
-pub fn compress_if_needed(input: &[u8], enable: bool) -> anyhow::Result<Vec<u8>> {
-    if !enable { return Ok(input.to_vec()); }
+pub fn compress_if_needed(
+    input: &[u8],
+    enable: bool,
+) -> anyhow::Result<Vec<u8>> {
+    if !enable {
+        return Ok(input.to_vec());
+    }
     let out = encode_all(input, 1)?; // fast
     Ok(out)
 }
@@ -36,14 +41,21 @@ pub fn serialize_steps_concat(transaction: &Transaction) -> Vec<u8> {
 
 // 标准化的步骤帧格式，便于跨版本重放
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct TypeWrapper { pub type_id: String, pub data: Vec<u8> }
+pub struct TypeWrapper {
+    pub type_id: String,
+    pub data: Vec<u8>,
+}
 
 // 快照序列化载体（与 StateSerialize 的字段对应）
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct SnapshotData { pub node_pool: Vec<u8>, pub state_fields: Vec<u8> }
+pub struct SnapshotData {
+    pub node_pool: Vec<u8>,
+    pub state_fields: Vec<u8>,
+}
 
 pub fn frame_steps(transaction: &Transaction) -> Vec<TypeWrapper> {
-    let mut frames: Vec<TypeWrapper> = Vec::with_capacity(transaction.steps.len());
+    let mut frames: Vec<TypeWrapper> =
+        Vec::with_capacity(transaction.steps.len());
     for step in transaction.steps.iter() {
         if let Some(data) = step.serialize() {
             frames.push(TypeWrapper { type_id: step.name(), data });
@@ -51,4 +63,3 @@ pub fn frame_steps(transaction: &Transaction) -> Vec<TypeWrapper> {
     }
     frames
 }
-

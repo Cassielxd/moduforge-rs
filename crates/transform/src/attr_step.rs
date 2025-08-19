@@ -46,7 +46,7 @@ impl Step for AttrStep {
                             "未知的节点类型: {}",
                             node.r#type
                         )));
-                    }
+                    },
                 };
                 let attr = &node_type.attrs;
                 // 删除 self.values 中 attr中没有定义的属性
@@ -82,7 +82,8 @@ impl Step for AttrStep {
                 let mut revert_values = imbl::hashmap!();
                 for (changed_key, _) in self.values.iter() {
                     if let Some(old_val) = node.attrs.get_safe(changed_key) {
-                        revert_values.insert(changed_key.clone(), old_val.clone());
+                        revert_values
+                            .insert(changed_key.clone(), old_val.clone());
                     }
                     // 若原先不存在该键，这里不设置（缺少删除语义）；
                     // 如需彻底还原，可扩展支持 unset 语义
@@ -90,7 +91,10 @@ impl Step for AttrStep {
                 if revert_values.is_empty() {
                     None
                 } else {
-                    Some(Arc::new(AttrStep::new(self.id.clone(), revert_values)))
+                    Some(Arc::new(AttrStep::new(
+                        self.id.clone(),
+                        revert_values,
+                    )))
                 }
             },
             None => None,

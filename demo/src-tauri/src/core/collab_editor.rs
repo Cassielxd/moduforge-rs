@@ -35,7 +35,10 @@ use mf_state::{
     State, Transaction,
 };
 
-use crate::{plugins::collab::CollabStateField, types::EditorTrait};
+use crate::{
+    plugins::collab::{CollabPlugin, CollabStateField},
+    types::EditorTrait,
+};
 
 pub struct CollabEditorOptions {
     pub editor_options: RuntimeOptions,
@@ -75,8 +78,8 @@ pub struct CollabEditor {
 impl EditorTrait for CollabEditor {
     async fn get_state(&self) -> Arc<State> {
         // 同样的问题，需要异步访问
-       let lock = self.editor.read().await;
-       lock.get_state().clone()
+        let lock = self.editor.read().await;
+        lock.get_state().clone()
     }
 
     async fn doc(&self) -> Arc<NodePool> {
@@ -156,9 +159,7 @@ impl CollabEditor {
                 state_field: Some(Arc::new(CollabStateField::new(
                     sync_manager.awareness.clone(),
                 ))),
-                key: ("collab".to_string(), "协作".to_string()),
-                tr: None,
-                priority: 0,
+                tr: Arc::new(CollabPlugin),
             }))
         });
         // 添加协作扩展

@@ -86,11 +86,7 @@ impl<T: Clone> HistoryManager<T> {
 
         // 处理历史长度限制：超出时舍弃第一个（最旧的）
         let past_sliced = if length >= self.config.max_entries {
-            if past.is_empty() {
-                Vec::new()
-            } else {
-                past[1..].to_vec()
-            }
+            if past.is_empty() { Vec::new() } else { past[1..].to_vec() }
         } else {
             past.clone()
         };

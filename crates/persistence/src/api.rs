@@ -63,17 +63,37 @@ pub struct Snapshot {
 #[async_trait]
 pub trait EventStore: Send + Sync {
     /// 追加单条事件。返回分配的 `lsn`。
-    async fn append(&self, ev: PersistedEvent) -> anyhow::Result<i64>;
+    async fn append(
+        &self,
+        ev: PersistedEvent,
+    ) -> anyhow::Result<i64>;
     /// 在单事务内批量追加事件。返回最后一条的 `lsn`。
-    async fn append_batch(&self, evs: Vec<PersistedEvent>) -> anyhow::Result<i64>;
+    async fn append_batch(
+        &self,
+        evs: Vec<PersistedEvent>,
+    ) -> anyhow::Result<i64>;
     /// 读取指定文档分片自 `from_lsn` 之后的增量事件，上限为 `limit` 条。
-    async fn load_since(&self, doc_id: &str, from_lsn: i64, limit: u32) -> anyhow::Result<Vec<PersistedEvent>>;
+    async fn load_since(
+        &self,
+        doc_id: &str,
+        from_lsn: i64,
+        limit: u32,
+    ) -> anyhow::Result<Vec<PersistedEvent>>;
     /// 获取指定文档分片的最新快照（如果存在）。
-    async fn latest_snapshot(&self, doc_id: &str) -> anyhow::Result<Option<Snapshot>>;
+    async fn latest_snapshot(
+        &self,
+        doc_id: &str,
+    ) -> anyhow::Result<Option<Snapshot>>;
     /// 写入/替换快照，应保证原子性。
-    async fn write_snapshot(&self, snap: Snapshot) -> anyhow::Result<()>;
+    async fn write_snapshot(
+        &self,
+        snap: Snapshot,
+    ) -> anyhow::Result<()>;
     /// 可选压缩：删除已被最新快照覆盖的历史事件。
-    async fn compact(&self, doc_id: &str) -> anyhow::Result<()>;
+    async fn compact(
+        &self,
+        doc_id: &str,
+    ) -> anyhow::Result<()>;
 }
 
 /// 用于启动引导的状态加载结果（快照 + 增量事件）。
@@ -94,8 +114,13 @@ pub trait Persistence: Send + Sync {
         context_meta: &serde_json::Value,
     ) -> anyhow::Result<i64>;
 
-    async fn load_state(&self, doc_id: &str) -> anyhow::Result<LoadedState>;
+    async fn load_state(
+        &self,
+        doc_id: &str,
+    ) -> anyhow::Result<LoadedState>;
 
-    async fn checkpoint_if_needed(&self, doc_id: &str) -> anyhow::Result<()>;
+    async fn checkpoint_if_needed(
+        &self,
+        doc_id: &str,
+    ) -> anyhow::Result<()>;
 }
-

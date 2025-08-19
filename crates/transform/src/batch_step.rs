@@ -32,7 +32,8 @@ impl Step for BatchStep {
     ) -> TransformResult<StepResult> {
         // 预先为每个子步骤生成回滚步骤（基于应用前的快照）
         // 注意：为保证回滚正确性，这里在应用每个子步骤前都记录一次基线
-        let mut inverses: Vec<Arc<dyn Step>> = Vec::with_capacity(self.steps.len());
+        let mut inverses: Vec<Arc<dyn Step>> =
+            Vec::with_capacity(self.steps.len());
 
         for step in &self.steps {
             // 基于当前草稿生成该步骤的反向操作
@@ -76,7 +77,10 @@ impl Step for BatchStep {
         None
     }
 
-    fn invert(&self, dart: &Arc<Tree>) -> Option<Arc<dyn Step>> {
+    fn invert(
+        &self,
+        dart: &Arc<Tree>,
+    ) -> Option<Arc<dyn Step>> {
         // 简化策略：对每个子步骤都基于同一基线计算反向，并逆序封装
         // 注意：这与 Transform::apply_steps_batch 的预处理策略保持一致
         let mut invs: Vec<Arc<dyn Step>> = Vec::new();
@@ -97,10 +101,7 @@ impl Step for BatchStep {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        attr_step::AttrStep,
-        node_step::AddNodeStep,
-    };
+    use crate::{attr_step::AttrStep, node_step::AddNodeStep};
     use mf_model::{
         attrs::Attrs,
         node::Node,
@@ -115,22 +116,50 @@ mod tests {
         let mut nodes = HashMap::new();
         nodes.insert(
             "doc".to_string(),
-            NodeSpec { content: None, marks: None, group: None, desc: None, attrs: None },
+            NodeSpec {
+                content: None,
+                marks: None,
+                group: None,
+                desc: None,
+                attrs: None,
+            },
         );
-        let spec = SchemaSpec { nodes, marks: HashMap::new(), top_node: Some("doc".to_string()) };
+        let spec = SchemaSpec {
+            nodes,
+            marks: HashMap::new(),
+            top_node: Some("doc".to_string()),
+        };
         Arc::new(Schema::compile(spec).unwrap())
     }
 
     #[test]
     fn batch_step_apply_and_invert() {
         let schema = create_schema();
-        let root = Node::new("doc", "doc".to_string(), Attrs::default(), vec![], vec![]);
+        let root = Node::new(
+            "doc",
+            "doc".to_string(),
+            Attrs::default(),
+            vec![],
+            vec![],
+        );
         let mut tree = Tree::new(root);
 
         // add + attr as a batch
-        let child = Node::new("n1", "doc".to_string(), Attrs::default(), vec![], vec![]);
-        let add = Arc::new(AddNodeStep::new("doc".into(), vec![NodeEnum(child, vec![])]));
-        let set = Arc::new(AttrStep::new("n1".into(), imbl::hashmap! {"k".into()=>json!(1)}));
+        let child = Node::new(
+            "n1",
+            "doc".to_string(),
+            Attrs::default(),
+            vec![],
+            vec![],
+        );
+        let add = Arc::new(AddNodeStep::new(
+            "doc".into(),
+            vec![NodeEnum(child, vec![])],
+        ));
+        let set = Arc::new(AttrStep::new(
+            "n1".into(),
+            imbl::hashmap! {"k".into()=>json!(1)},
+        ));
 
         let batch = BatchStep::new(vec![add, set]);
         let res = batch.apply(&mut tree, schema.clone());
@@ -142,5 +171,3 @@ mod tests {
         assert!(r.is_ok());
     }
 }
-
-

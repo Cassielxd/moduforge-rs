@@ -14,7 +14,6 @@ pub struct Extension {
     op_fn: Option<OpFn>,
 }
 
-
 impl Extension {
     pub fn new() -> Self {
         Extension {

@@ -3,9 +3,7 @@ use serde::{Serialize, de::DeserializeOwned};
 
 use crate::zipdoc::{ZipDocumentReader, ZipDocumentWriter};
 use crate::zipdoc::snapshot::{
-    SnapshotShardMeta,
-    read_snapshot_shards,
-    for_each_snapshot_shard_raw,
+    SnapshotShardMeta, read_snapshot_shards, for_each_snapshot_shard_raw,
 };
 
 pub fn write_snapshot_shards_msgpack<W, F, T>(
@@ -19,11 +17,13 @@ where
     F: FnMut(usize) -> io::Result<T>,
     T: Serialize,
 {
-    let meta_val = serde_json::to_value(meta).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    let meta_val = serde_json::to_value(meta)
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
     zw.add_json("snapshot/meta.json", &meta_val)?;
     for i in 0..meta.num_shards {
         let v = get_shard_value(i)?;
-        let bytes = rmp_serde::to_vec(&v).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let bytes = rmp_serde::to_vec(&v)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         let zst = zstd::stream::encode_all(&bytes[..], zstd_level)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         let name = format!("snapshot/shard-{:03}.bin.zst", i);
@@ -32,8 +32,11 @@ where
     Ok(())
 }
 
-pub fn read_and_decode_snapshot_shards_msgpack<R: Read + Seek, T: DeserializeOwned>(
-    zr: &mut ZipDocumentReader<R>,
+pub fn read_and_decode_snapshot_shards_msgpack<
+    R: Read + Seek,
+    T: DeserializeOwned,
+>(
+    zr: &mut ZipDocumentReader<R>
 ) -> io::Result<(SnapshotShardMeta, Vec<T>)> {
     let (meta, shards_raw) = read_snapshot_shards(zr)?;
     let mut out: Vec<T> = Vec::with_capacity(shards_raw.len());
@@ -77,7 +80,7 @@ where
 }
 
 pub fn read_parent_map_msgpack<R, T>(
-    zr: &mut ZipDocumentReader<R>,
+    zr: &mut ZipDocumentReader<R>
 ) -> io::Result<T>
 where
     R: Read + Seek,
@@ -90,5 +93,3 @@ where
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
     Ok(val)
 }
-
-

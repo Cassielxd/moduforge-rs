@@ -3,14 +3,10 @@ use std::time::Instant;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    config::ForgeConfig,
-    extension_manager::ExtensionManager,
-    ForgeResult,
-};
+use crate::{config::ForgeConfig, extension_manager::ExtensionManager, ForgeResult};
 
 /// 核心快照数据结构
-/// 
+///
 /// 包含运行时需要的所有预编译数据，避免重复初始化
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoreSnapshot {
@@ -61,26 +57,28 @@ impl SerializableSchema {
     pub fn from_schema(schema: &mf_model::schema::Schema) -> Self {
         let mut nodes = HashMap::new();
         let mut marks = HashMap::new();
-        
+
         for (name, node_type) in &schema.nodes {
-            nodes.insert(name.clone(), SerializableNodeType {
-                group: node_type.spec.group.clone(),
-                content_spec: format!("{:?}", node_type.spec.content),
-            });
+            nodes.insert(
+                name.clone(),
+                SerializableNodeType {
+                    group: node_type.spec.group.clone(),
+                    content_spec: format!("{:?}", node_type.spec.content),
+                },
+            );
         }
-        
+
         for (name, mark_type) in &schema.marks {
-            marks.insert(name.clone(), SerializableMarkType {
-                group: mark_type.spec.group.clone(),
-                spanning: mark_type.spec.spanning.unwrap_or(false),
-            });
+            marks.insert(
+                name.clone(),
+                SerializableMarkType {
+                    group: mark_type.spec.group.clone(),
+                    spanning: mark_type.spec.spanning.unwrap_or(false),
+                },
+            );
         }
-        
-        Self {
-            nodes,
-            marks,
-            top_node: schema.spec.top_node.clone(),
-        }
+
+        Self { nodes, marks, top_node: schema.spec.top_node.clone() }
     }
 }
 
@@ -102,19 +100,28 @@ impl SnapshotBuilder {
     }
 
     /// 设置配置
-    pub fn with_config(mut self, config: ForgeConfig) -> Self {
+    pub fn with_config(
+        mut self,
+        config: ForgeConfig,
+    ) -> Self {
         self.config = Some(config);
         self
     }
 
     /// 添加 XML Schema 文件
-    pub fn add_xml_schema(mut self, path: String) -> Self {
+    pub fn add_xml_schema(
+        mut self,
+        path: String,
+    ) -> Self {
         self.xml_schema_paths.push(path);
         self
     }
 
     /// 添加自定义扩展
-    pub fn add_extension(mut self, extension: crate::types::Extensions) -> Self {
+    pub fn add_extension(
+        mut self,
+        extension: crate::types::Extensions,
+    ) -> Self {
         self.custom_extensions.push(extension);
         self
     }
@@ -126,47 +133,52 @@ impl SnapshotBuilder {
 
         // 1. 获取配置
         let config = self.config.unwrap_or_default();
-        
+
         // 2. 构建扩展管理器
         let mut extension_builder = ExtensionManager::builder();
-        
+
         // 添加 XML Schema
         for path in &self.xml_schema_paths {
             extension_builder = extension_builder.add_xml_file(path);
         }
-        
+
         // 添加自定义扩展
-        extension_builder = extension_builder.add_extensions(self.custom_extensions);
-        
+        extension_builder =
+            extension_builder.add_extensions(self.custom_extensions);
+
         let extension_manager = extension_builder.build()?;
         let schema = extension_manager.get_schema();
 
         // 3. 序列化核心数据（使用 JSON 格式避免 Serialize trait 问题）
-        let schema_json = serde_json::to_string(&SerializableSchema::from_schema(&schema))
-            .map_err(|e| crate::error::error_utils::config_error(
-                format!("序列化 Schema 失败: {}", e)
-            ))?;
+        let schema_json =
+            serde_json::to_string(&SerializableSchema::from_schema(&schema))
+                .map_err(|e| {
+                    crate::error::error_utils::config_error(format!(
+                        "序列化 Schema 失败: {}",
+                        e
+                    ))
+                })?;
 
         // 4. 构建扩展注册表
         let mut extension_registry = HashMap::new();
-        
+
         for (name, node_type) in &schema.nodes {
             extension_registry.insert(
                 name.clone(),
                 ExtensionType::Node {
                     group: node_type.spec.group.clone(),
                     content_spec: format!("{:?}", node_type.spec.content),
-                }
+                },
             );
         }
-        
+
         for (name, mark_type) in &schema.marks {
             extension_registry.insert(
                 name.clone(),
                 ExtensionType::Mark {
                     group: mark_type.spec.group.clone(),
                     spanning: mark_type.spec.spanning.unwrap_or(false),
-                }
+                },
             );
         }
 
@@ -208,41 +220,54 @@ pub struct SnapshotManager;
 
 impl SnapshotManager {
     /// 保存快照到文件
-    pub fn save_to_file(snapshot: &CoreSnapshot, path: &str) -> ForgeResult<()> {
-        let data = bincode::serialize(snapshot)
-            .map_err(|e| crate::error::error_utils::config_error(
-                format!("序列化快照失败: {}", e)
-            ))?;
-            
-        std::fs::write(path, data)
-            .map_err(|e| crate::error::error_utils::config_error(
-                format!("写入快照文件失败: {}", e)
-            ))?;
-            
+    pub fn save_to_file(
+        snapshot: &CoreSnapshot,
+        path: &str,
+    ) -> ForgeResult<()> {
+        let data = bincode::serialize(snapshot).map_err(|e| {
+            crate::error::error_utils::config_error(format!(
+                "序列化快照失败: {}",
+                e
+            ))
+        })?;
+
+        std::fs::write(path, data).map_err(|e| {
+            crate::error::error_utils::config_error(format!(
+                "写入快照文件失败: {}",
+                e
+            ))
+        })?;
+
         println!("快照已保存到: {}", path);
         Ok(())
     }
 
     /// 从文件加载快照
     pub fn load_from_file(path: &str) -> ForgeResult<CoreSnapshot> {
-        let data = std::fs::read(path)
-            .map_err(|e| crate::error::error_utils::config_error(
-                format!("读取快照文件失败: {}", e)
-            ))?;
-            
-        let snapshot: CoreSnapshot = bincode::deserialize(&data)
-            .map_err(|e| crate::error::error_utils::config_error(
-                format!("反序列化快照失败: {}", e)
-            ))?;
-            
+        let data = std::fs::read(path).map_err(|e| {
+            crate::error::error_utils::config_error(format!(
+                "读取快照文件失败: {}",
+                e
+            ))
+        })?;
+
+        let snapshot: CoreSnapshot =
+            bincode::deserialize(&data).map_err(|e| {
+                crate::error::error_utils::config_error(format!(
+                    "反序列化快照失败: {}",
+                    e
+                ))
+            })?;
+
         // 验证快照版本
         if snapshot.version != env!("CARGO_PKG_VERSION") {
-            return Err(crate::error::error_utils::config_error(
-                format!("快照版本不匹配: {} vs {}", 
-                    snapshot.version, env!("CARGO_PKG_VERSION"))
-            ));
+            return Err(crate::error::error_utils::config_error(format!(
+                "快照版本不匹配: {} vs {}",
+                snapshot.version,
+                env!("CARGO_PKG_VERSION")
+            )));
         }
-        
+
         Ok(snapshot)
     }
 
@@ -251,41 +276,46 @@ impl SnapshotManager {
         // 1. 检查版本兼容性
         let current_version = env!("CARGO_PKG_VERSION");
         if snapshot.version != current_version {
-            return Err(crate::error::error_utils::config_error(
-                format!("快照版本 {} 与当前版本 {} 不兼容", 
-                    snapshot.version, current_version)
-            ));
+            return Err(crate::error::error_utils::config_error(format!(
+                "快照版本 {} 与当前版本 {} 不兼容",
+                snapshot.version, current_version
+            )));
         }
 
         // 2. 检查数据完整性
         if snapshot.schema_json.is_empty() {
             return Err(crate::error::error_utils::config_error(
-                "快照中 Schema 数据为空".to_string()
+                "快照中 Schema 数据为空".to_string(),
             ));
         }
 
         // 3. 验证配置
-        snapshot.config.validate()
-            .map_err(|e| crate::error::error_utils::config_error(
-                format!("快照配置无效: {}", e)
-            ))?;
+        snapshot.config.validate().map_err(|e| {
+            crate::error::error_utils::config_error(format!(
+                "快照配置无效: {}",
+                e
+            ))
+        })?;
 
         Ok(())
     }
 
     /// 从快照恢复 ExtensionManager
-    pub fn restore_extension_manager(snapshot: &CoreSnapshot) -> ForgeResult<ExtensionManager> {
+    pub fn restore_extension_manager(
+        snapshot: &CoreSnapshot
+    ) -> ForgeResult<ExtensionManager> {
         let start_time = Instant::now();
-        
+
         // 从快照重建扩展管理器
         let mut extensions = Vec::new();
-        
+
         // 从扩展注册表重建扩展
         for (name, ext_type) in &snapshot.extension_registry {
             match ext_type {
                 ExtensionType::Node { .. } => {
                     // 创建基础节点扩展
-                    let node = crate::node::Node::create(name, Default::default());
+                    let node =
+                        crate::node::Node::create(name, Default::default());
                     extensions.push(crate::types::Extensions::N(node));
                 },
                 ExtensionType::Mark { .. } => {
@@ -295,17 +325,19 @@ impl SnapshotManager {
                 },
             }
         }
-        
+
         // 使用扩展列表创建基础管理器
         let manager = ExtensionManager::new(&extensions)?;
-        
+
         crate::metrics::snapshot_restore_duration(start_time.elapsed());
         Ok(manager)
     }
 
-
     /// 检查快照是否需要更新
-    pub fn needs_update(snapshot: &CoreSnapshot, xml_paths: &[String]) -> bool {
+    pub fn needs_update(
+        snapshot: &CoreSnapshot,
+        xml_paths: &[String],
+    ) -> bool {
         // 检查 XML 文件是否发生变化
         for path in xml_paths {
             if let Ok(metadata) = std::fs::metadata(path) {
@@ -314,7 +346,7 @@ impl SnapshotManager {
                         .duration_since(std::time::UNIX_EPOCH)
                         .unwrap_or_default()
                         .as_secs();
-                    
+
                     if modified_secs > snapshot.created_at {
                         return true;
                     }
@@ -336,7 +368,7 @@ mod tests {
     fn test_snapshot_build_and_restore() {
         let temp_dir = tempdir().unwrap();
         let xml_path = temp_dir.path().join("test.xml");
-        
+
         // 创建测试 XML
         let xml_content = r#"
         <?xml version="1.0" encoding="UTF-8"?>
@@ -348,31 +380,32 @@ mod tests {
           </nodes>
         </schema>
         "#;
-        
+
         fs::write(&xml_path, xml_content).unwrap();
-        
+
         // 构建快照
         let snapshot = SnapshotBuilder::new()
             .with_config(ForgeConfig::development())
             .add_xml_schema(xml_path.to_string_lossy().to_string())
             .build()
             .unwrap();
-            
+
         // 验证快照
         assert!(SnapshotManager::validate_snapshot(&snapshot).is_ok());
-        
+
         // 从快照恢复
-        let manager = SnapshotManager::restore_extension_manager(&snapshot).unwrap();
+        let manager =
+            SnapshotManager::restore_extension_manager(&snapshot).unwrap();
         assert_eq!(manager.get_schema().nodes.len(), 1);
         assert!(manager.get_schema().nodes.contains_key("doc"));
     }
-    
+
     #[test]
     fn test_snapshot_file_operations() {
         let temp_dir = tempdir().unwrap();
         let snapshot_path = temp_dir.path().join("test_snapshot.bin");
         let xml_path = temp_dir.path().join("test.xml");
-        
+
         // 创建测试 XML
         let xml_content = r#"
         <?xml version="1.0" encoding="UTF-8"?>
@@ -384,26 +417,34 @@ mod tests {
           </nodes>
         </schema>
         "#;
-        
+
         fs::write(&xml_path, xml_content).unwrap();
-        
+
         // 创建快照
         let original_snapshot = SnapshotBuilder::new()
             .with_config(ForgeConfig::testing())
             .add_xml_schema(xml_path.to_string_lossy().to_string())
             .build()
             .unwrap();
-            
+
         // 保存到文件
-        SnapshotManager::save_to_file(&original_snapshot, 
-            snapshot_path.to_string_lossy().as_ref()).unwrap();
-            
+        SnapshotManager::save_to_file(
+            &original_snapshot,
+            snapshot_path.to_string_lossy().as_ref(),
+        )
+        .unwrap();
+
         // 从文件加载
         let loaded_snapshot = SnapshotManager::load_from_file(
-            snapshot_path.to_string_lossy().as_ref()).unwrap();
-            
+            snapshot_path.to_string_lossy().as_ref(),
+        )
+        .unwrap();
+
         // 验证内容一致
         assert_eq!(original_snapshot.version, loaded_snapshot.version);
-        assert_eq!(original_snapshot.content_hash, loaded_snapshot.content_hash);
+        assert_eq!(
+            original_snapshot.content_hash,
+            loaded_snapshot.content_hash
+        );
     }
 }

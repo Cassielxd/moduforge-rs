@@ -105,7 +105,10 @@ impl Step for RemoveMarkStep {
                 if to_restore.is_empty() {
                     None
                 } else {
-                    Some(Arc::new(AddMarkStep::new(self.id.clone(), to_restore)))
+                    Some(Arc::new(AddMarkStep::new(
+                        self.id.clone(),
+                        to_restore,
+                    )))
                 }
             },
             None => None,
