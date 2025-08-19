@@ -27,9 +27,9 @@ futures = { workspace = true }
 tokio = { workspace = true }
 
 # core model & ops
-moduforge-model = { version = "0.4.12", path = "../model" }
-moduforge-transform = { version = "0.4.12", path = "../transform" }
-moduforge-state = { version = "0.4.12", path = "../state" }
+moduforge-model = { workspace = true }
+moduforge-transform ={ workspace = true }
+moduforge-state = { workspace = true }
 
 # tantivy backend
 tantivy = { version = "0.24.2" }

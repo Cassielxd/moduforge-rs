@@ -29,7 +29,7 @@ tokio-util = { version = "0.7", features = ["rt"] }
 chrono = { workspace = true }
 
 # core/state for integration types
-moduforge-state = { path = "../state", version = "0.4.12" }
-moduforge-model = { path = "../model", version = "0.4.12" }
-moduforge-transform = { path = "../transform", version = "0.4.12" }
-moduforge-core = { path = "../core", version = "0.4.12" }
+moduforge-state = { workspace = true }
+moduforge-model = { workspace = true }
+moduforge-transform = { workspace = true }
+moduforge-core = { workspace = true }
