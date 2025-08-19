@@ -1,13 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-pub mod config;
+
 pub mod dependency;
 pub mod manager;
 pub mod plugin;
 
 pub use plugin::*;
 pub use dependency::DependencyManager;
-pub use config::ConfigManager;
 pub use manager::PluginManager;
 /// 插件元数据
 /// 插件的元数据，用于描述插件的名称、版本、描述、作者、依赖、冲突、状态字段、标签等信息

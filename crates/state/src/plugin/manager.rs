@@ -4,7 +4,6 @@ use tokio::sync::RwLock;
 use anyhow::Result;
 
 use super::dependency::DependencyManager;
-use super::config::ConfigManager;
 use super::plugin::Plugin;
 
 /// 插件管理器
@@ -12,7 +11,6 @@ use super::plugin::Plugin;
 pub struct PluginManager {
     pub plugins: Arc<RwLock<HashMap<String, Arc<Plugin>>>>,
     pub dependency_manager: Arc<RwLock<DependencyManager>>,
-    pub config_manager: Arc<ConfigManager>,
     pub plugin_order: Arc<RwLock<Vec<String>>>,
     // 新增：标记是否已完成初始化
     pub initialized: Arc<RwLock<bool>>,
@@ -23,7 +21,6 @@ impl PluginManager {
         Self {
             plugins: Arc::new(RwLock::new(HashMap::new())),
             dependency_manager: Arc::new(RwLock::new(DependencyManager::new())),
-            config_manager: Arc::new(ConfigManager::new()),
             plugin_order: Arc::new(RwLock::new(Vec::new())),
             initialized: Arc::new(RwLock::new(false)),
         }
@@ -51,6 +48,7 @@ impl PluginManager {
 
         // 更新依赖图
         self.update_dependency_graph(&plugin).await?;
+
         tracing::info!("插件 '{}' 注册成功", plugin_name);
         Ok(())
     }

@@ -145,6 +145,18 @@ impl Plugin {
 
         Plugin { spec, key }
     }
+    /// 获取插件名称
+    pub fn get_name(&self) -> &str {
+        &self.key
+    }
+    /// 获取插件元数据
+    pub fn get_metadata(&self) -> PluginMetadata {
+        self.spec.tr.metadata()
+    }
+    /// 获取插件配置
+    pub fn get_config(&self) -> PluginConfig {
+        self.spec.tr.config()
+    }
 
     /// 从全局状态中获取插件状态
     pub fn get_state(
