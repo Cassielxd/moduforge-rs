@@ -42,5 +42,6 @@ declare module 'vue' {
     ChildWindowDemo: typeof import('./src/components/ChildWindowDemo.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    WindowManagerDemo: typeof import('./src/components/WindowManagerDemo.vue')['default']
   }
 }

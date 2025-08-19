@@ -1,6 +1,6 @@
 # 🏗️ ModuForge Demo - 造价管理系统
 
-基于 Tauri + Vue 3 + 微前端架构的现代化造价管理系统。
+基于 Tauri + Vue 3 + 微前端架构的现代化造价管理系统演示应用。
 
 ## 🎯 项目特性
 
@@ -8,6 +8,7 @@
 - ✅ **Tauri 桌面应用**: 高性能的桌面应用框架
 - ✅ **Vue 3 + Vite**: 现代化的前端技术栈
 - ✅ **多窗口支持**: 每个模块可在独立窗口中运行
+- ✅ **共享组件库**: 包含通用头部组件和窗口控制功能
 - ✅ **自动化构建**: 一键构建所有子模块
 
 ## 📁 项目结构
@@ -22,7 +23,8 @@ demo/
 │   ├── rough-estimate/         # 概算模块 ✅
 │   ├── main-shell/             # 主应用模块 ✅
 │   ├── budget/                 # 预算模块 (待开发)
-│   └── shared-components/      # 共享组件库
+│   └── shared-components/      # 共享组件库 ✅
+│       └── src/layouts/        # 通用头部组件
 ├── src-tauri/                  # Tauri 后端
 └── dist/                       # 构建产物
 ```
@@ -70,10 +72,11 @@ npm run tauri:build
 |------|------|------|------|
 | 概算 | ✅ 可用 | 5174 | 项目概算管理和计算 |
 | 主应用 | ✅ 可用 | 5173 | 主应用界面和导航 |
-| 预算 | 🔄 开发中 | 5175 | 项目预算编制和管理 |
-| 预算审核 | 🔄 开发中 | 5176 | 预算审核流程管理 |
-| 结算 | 🔄 开发中 | 5177 | 项目结算管理 |
-| 结算审核 | 🔄 开发中 | 5178 | 结算审核流程管理 |
+| 共享组件 | ✅ 可用 | 5175 | 通用组件库，包含头部组件等 |
+| 预算 | 🔄 开发中 | 5176 | 项目预算编制和管理 |
+| 预算审核 | 🔄 开发中 | 5177 | 预算审核流程管理 |
+| 结算 | 🔄 开发中 | 5178 | 项目结算管理 |
+| 结算审核 | 🔄 开发中 | 5179 | 结算审核流程管理 |
 
 ## 🔧 开发指南
 
@@ -93,10 +96,55 @@ npm run tauri:build
 
 详细信息请参考 [PACKAGING_GUIDE.md](./PACKAGING_GUIDE.md)
 
+## 🎮 新功能：共享组件库
+
+项目现在包含一个功能完整的共享组件库，提供：
+
+### 通用头部组件
+
+- **AppHeader**: 功能丰富的主应用头部组件
+- **SimpleHeader**: 轻量级子窗口头部组件
+
+### 窗口控制功能
+
+- ✅ 最小化窗口
+- ✅ 最大化/还原窗口
+- ✅ 关闭窗口
+- ✅ 窗口拖拽
+- ✅ 窗口状态同步
+
+### 使用示例
+
+```vue
+<template>
+  <AppHeader
+    title="造价管理系统"
+    :show-window-controls="true"
+    @minimize="onMinimize"
+    @close="onClose"
+  >
+    <template #right>
+      <div class="user-info">管理员</div>
+    </template>
+  </AppHeader>
+</template>
+
+<script setup>
+import { AppHeader } from 'shared-components'
+
+const onMinimize = () => console.log('窗口最小化')
+const onClose = () => console.log('窗口关闭')
+</script>
+```
+
+详细使用说明请参考：`packages/shared-components/src/layouts/README.md`
+
 ## 📚 相关文档
 
 - [📦 打包指南](./PACKAGING_GUIDE.md) - 详细的构建和打包说明
 - [🏗️ 微前端架构](./README_MICROFRONTEND.md) - 微前端架构详细说明
+- [🪟 窗口管理指南](./WINDOW_MANAGEMENT_GUIDE.md) - Tauri 窗口管理功能说明
+- [🧩 共享组件使用](./packages/shared-components/src/layouts/README.md) - 共享组件库使用指南
 
 ## 🛠️ 技术栈
 
@@ -115,11 +163,3 @@ npm run tauri:build
 ### 全局状态管理
 
 项目使用 Pinia 进行状态管理，支持跨模块的状态共享。
-
-## 🤝 贡献指南
-
-1. Fork 项目
-2. 创建功能分支
-3. 提交更改
-4. 推送到分支
-5. 创建 Pull Request

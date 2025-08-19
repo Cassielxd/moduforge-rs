@@ -1,35 +1,33 @@
 <template>
   <div id="app">
     <a-layout class="layout">
-      <!-- 顶部导航 -->
-      <a-layout-header class="header">
-        <div class="header-content">
-          <div class="logo">
-            <h3>概算管理系统</h3>
+      <!-- 使用共享头部组件 -->
+      <SimpleHeader
+        title="概算管理系统"
+        :show-window-controls="true"
+        @minimize="onMinimize"
+        @maximize="onMaximize"
+        @close="onClose"
+      >
+        <template #right>
+          <div class="actions">
+            <a-space>
+              <a-button type="primary" @click="newEstimate">
+                <template #icon><PlusOutlined /></template>
+                新建概算
+              </a-button>
+              <a-button @click="importData">
+                <template #icon><ImportOutlined /></template>
+                导入数据
+              </a-button>
+              <a-button @click="exportData">
+                <template #icon><ExportOutlined /></template>
+                导出数据
+              </a-button>
+            </a-space>
           </div>
-          <div class="header-center">
-            <!-- 可拖动区域 -->
-          </div>
-          <div class="header-right">
-            <div class="actions">
-              <a-space>
-                <a-button type="primary" @click="newEstimate">
-                  <template #icon><PlusOutlined /></template>
-                  新建概算
-                </a-button>
-                <a-button @click="importData">
-                  <template #icon><ImportOutlined /></template>
-                  导入数据
-                </a-button>
-                <a-button @click="exportData">
-                  <template #icon><ExportOutlined /></template>
-                  导出数据
-                </a-button>
-              </a-space>
-            </div>
-          </div>
-        </div>
-      </a-layout-header>
+        </template>
+      </SimpleHeader>
 
       <!-- 主内容区 -->
       <a-layout-content class="content">
@@ -109,7 +107,7 @@ import {
   ImportOutlined,
   ExportOutlined
 } from '@ant-design/icons-vue'
-import { CostTable, useEstimate, useGlobalStore } from '@cost-app/shared-components'
+import { CostTable, useEstimate, useGlobalStore, SimpleHeader } from '@cost-app/shared-components'
 import { invoke } from '@tauri-apps/api/core'
 
 
@@ -438,6 +436,22 @@ const handleRefresh = () => {
   message.success('数据已刷新')
 }
 
+// 窗口控制方法
+const onMinimize = () => {
+  console.log('概算窗口最小化')
+  // SimpleHeader 组件会自动处理窗口控制逻辑
+}
+
+const onMaximize = () => {
+  console.log('概算窗口最大化/还原')
+  // SimpleHeader 组件会自动处理窗口控制逻辑
+}
+
+const onClose = () => {
+  console.log('概算窗口关闭')
+  // SimpleHeader 组件会自动处理窗口控制逻辑
+}
+
 const handleTableChange = (pag, filters, sorter) => {
   pagination.value = pag
   console.log('表格变更:', pag, filters, sorter)
@@ -466,41 +480,10 @@ onMounted(() => {
   height: 100vh;
 }
 
-.header {
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-  padding: 0;
-}
-
-.header-content {
+/* 头部样式已移至共享组件 */
+.actions {
   display: flex;
   align-items: center;
-  height: 100%;
-  padding: 0 24px;
-}
-
-.logo {
-  flex-shrink: 0;
-}
-
-.logo h3 {
-  color: white;
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.header-center {
-  flex: 1;
-  height: 100%;
-}
-
-.header-right {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 16px;
 }
 
 .content {

@@ -194,6 +194,15 @@ const modules = ref([
     color: '#13c2c2',
     status: 'development',
     port: 5179
+  },
+  {
+    key: 'window-manager',
+    title: '窗体管理演示',
+    description: '演示父子窗体关系管理功能',
+    icon: BorderOutlined,
+    color: '#f5222d',
+    status: 'ready',
+    isInternal: true // 标记为内部页面
   }
 ])
 
@@ -201,24 +210,41 @@ const openModule = async (module) => {
   try {
     message.loading(`正在打开${module.title}模块...`, 2)
 
-    // 检查是否为开发环境
-    const isDev = import.meta.env.DEV
-    let url
-
-    if (isDev) {
-      // 开发环境：使用开发服务器端口
-      url = `http://localhost:${module.port}`
+    // 检查是否为内部页面
+    if (module.isInternal) {
+      // 内部页面：使用路由导航
+      if (module.key === 'window-manager') {
+        // 创建窗体管理演示窗口
+        await invoke('create_child_window', {
+          windowId: 'window-manager-demo',
+          title: module.title,
+          url: '/#/window-manager',
+          modal: false,
+          width: 1000,
+          height: 800,
+          parentWindow: 'main'
+        })
+      }
     } else {
-      // 生产环境：使用相对路径访问打包后的静态文件
-      url = `${module.key}/index.html`
-    }
+      // 外部模块：使用开发服务器或静态文件
+      const isDev = import.meta.env.DEV
+      let url
 
-    // 调用 Tauri 命令创建新窗口
-    await invoke('create_module_window', {
-      moduleKey: module.key,
-      title: module.title,
-      url: url
-    })
+      if (isDev) {
+        // 开发环境：使用开发服务器端口
+        url = `http://localhost:${module.port}`
+      } else {
+        // 生产环境：使用相对路径访问打包后的静态文件
+        url = `${module.key}/index.html`
+      }
+
+      // 调用 Tauri 命令创建新窗口
+      await invoke('create_module_window', {
+        moduleKey: module.key,
+        title: module.title,
+        url: url
+      })
+    }
 
     message.success(`${module.title}模块已在新窗口中打开`)
   } catch (error) {

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimpleHeader 组件测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1000px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .test-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .test-section {
+            padding: 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .test-section:last-child {
+            border-bottom: none;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #1890ff;
+        }
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: 500;
+            margin: 8px 0;
+        }
+        .status.success {
+            background: #f6ffed;
+            color: #52c41a;
+            border: 1px solid #b7eb8f;
+        }
+        .status.error {
+            background: #fff2f0;
+            color: #ff4d4f;
+            border: 1px solid #ffccc7;
+        }
+        .code {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 8px 0;
+            overflow-x: auto;
+        }
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+        .checklist li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .checklist li:before {
+            content: "✓ ";
+            color: #52c41a;
+            font-weight: bold;
+        }
+        .demo-header {
+            background: #fff;
+            border-bottom: 1px solid #e8e8e8;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            justify-content: space-between;
+        }
+        .demo-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .demo-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #8c8c8c;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .demo-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #262626;
+            transform: translateY(-1px);
+        }
+        .demo-btn.close:hover {
+            background: rgba(239, 68, 68, 0.8);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>🔧 SimpleHeader 组件修复验证</h1>
+            <p>子窗体头部组件样式和功能测试</p>
+        </div>
+
+        <div class="test-section">
+            <h3>修复内容总结</h3>
+            <ul class="checklist">
+                <li>移除了冗余的图标依赖，使用内联 SVG</li>
+                <li>简化了窗口控制逻辑，移除了复杂的条件判断</li>
+                <li>统一了按钮样式，确保视觉一致性</li>
+                <li>清理了不必要的 useChildWindow 属性</li>
+                <li>优化了事件处理和错误处理</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>样式演示</h3>
+            <p>以下是修复后的头部组件样式预览：</p>
+            <div class="demo-header">
+                <h3 style="margin: 0; color: #262626; font-weight: 500; font-size: 16px;">概算管理系统</h3>
+                <div class="demo-controls">
+                    <button class="demo-btn" title="最小化">
+                        <svg width="12" height="12" viewBox="0 0 12 12">
+                            <path d="M2 6h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <button class="demo-btn" title="最大化">
+                        <svg width="12" height="12" viewBox="0 0 12 12">
+                            <path d="M2 2h8v8H2z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                        </svg>
+                    </button>
+                    <button class="demo-btn close" title="关闭">
+                        <svg width="12" height="12" viewBox="0 0 12 12">
+                            <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>代码优化</h3>
+            <p><strong>之前的问题：</strong></p>
+            <div class="code">
+// 冗余的图标导入
+import { MinusOutlined, BorderOutlined, ShrinkOutlined, CloseOutlined } from '@ant-design/icons-vue'
+
+// 复杂的条件逻辑
+if (props.useChildWindow) {
+  await currentWindow.value.minimize()
+} else {
+  const { invoke } = await import('@tauri-apps/api/core')
+  await invoke('minimize_window_with_children', { windowId })
+}
+            </div>
+            
+            <p><strong>修复后的代码：</strong></p>
+            <div class="code">
+// 使用内联 SVG，无需额外依赖
+&lt;svg width="12" height="12" viewBox="0 0 12 12"&gt;
+  &lt;path d="M2 6h8" stroke="currentColor" stroke-width="1.5"/&gt;
+&lt;/svg&gt;
+
+// 简化的逻辑
+const handleMinimize = async () => {
+  if (loading.value || !isTauri.value || !currentWindow.value) return
+  loading.value = true
+  try {
+    emit('minimize')
+    await currentWindow.value.minimize()
+  } catch (error) {
+    console.error('最小化窗口失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>测试步骤</h3>
+            <ol>
+                <li>启动开发服务器：<code class="code">npm run dev</code></li>
+                <li>启动概算模块：<code class="code">cd packages/rough-estimate && npm run dev</code></li>
+                <li>启动 Tauri 应用：<code class="code">npm run tauri:dev</code></li>
+                <li>在主应用中点击"概算"模块</li>
+                <li>验证子窗口头部的窗口控制按钮：
+                    <ul>
+                        <li>按钮样式清晰可见</li>
+                        <li>悬停效果正常</li>
+                        <li>最小化功能正常</li>
+                        <li>最大化/还原功能正常</li>
+                        <li>关闭功能正常</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3>预期结果</h3>
+            <div class="status success">
+                ✅ 子窗口头部显示清晰的窗口控制按钮
+            </div>
+            <div class="status success">
+                ✅ 按钮有合适的悬停效果和视觉反馈
+            </div>
+            <div class="status success">
+                ✅ 最小化、最大化、关闭功能正常工作
+            </div>
+            <div class="status success">
+                ✅ 代码简洁，无冗余依赖
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>技术改进</h3>
+            <ul>
+                <li><strong>移除外部依赖：</strong>不再依赖 @ant-design/icons-vue，使用内联 SVG</li>
+                <li><strong>简化逻辑：</strong>移除复杂的 useChildWindow 条件判断</li>
+                <li><strong>统一样式：</strong>确保按钮在不同主题下都有良好的视觉效果</li>
+                <li><strong>错误处理：</strong>改进了错误处理和边界条件检查</li>
+                <li><strong>性能优化：</strong>减少了不必要的导入和计算</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

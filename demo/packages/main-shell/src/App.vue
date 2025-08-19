@@ -1,12 +1,16 @@
 <template>
   <div id="app">
-    <el-container class="app-container">
-      <!-- 顶部导航 -->
-      <el-header class="app-header">
-        <div class="header-content">
-          <div class="logo">
-            <h2>造价管理系统</h2>
-          </div>
+    <div class="app-container">
+      <!-- 使用共享头部组件 -->
+      <AppHeader
+        title="造价管理系统"
+        :show-window-controls="true"
+        :use-child-window="true"
+        @minimize="onMinimize"
+        @maximize="onMaximize"
+        @close="onClose"
+      >
+        <template #center>
           <el-menu
             :default-active="$route.path"
             mode="horizontal"
@@ -20,19 +24,36 @@
             <el-menu-item index="/settlement">结算</el-menu-item>
             <el-menu-item index="/settlement-review">结算审核</el-menu-item>
           </el-menu>
-        </div>
-      </el-header>
+        </template>
+      </AppHeader>
 
       <!-- 主内容区 -->
-      <el-main class="app-main">
+      <div class="app-main">
         <router-view />
-      </el-main>
-    </el-container>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { onMounted } from 'vue'
+import { AppHeader } from '@cost-app/shared-components'
+
+// 窗口控制方法
+const onMinimize = () => {
+  console.log('主应用窗口最小化')
+  // AppHeader 组件会自动处理窗口控制逻辑
+}
+
+const onMaximize = () => {
+  console.log('主应用窗口最大化/还原')
+  // AppHeader 组件会自动处理窗口控制逻辑
+}
+
+const onClose = () => {
+  console.log('主应用窗口关闭')
+  // AppHeader 组件会自动处理窗口控制逻辑
+}
 
 onMounted(() => {
   console.log('🏠 主应用已启动')
@@ -42,40 +63,36 @@ onMounted(() => {
 <style scoped>
 .app-container {
   height: 100vh;
-}
-
-.app-header {
-  background: #fff;
-  border-bottom: 1px solid #e4e7ed;
-  padding: 0;
-}
-
-.header-content {
   display: flex;
-  align-items: center;
-  height: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-.logo {
-  margin-right: 40px;
-}
-
-.logo h2 {
-  margin: 0;
-  color: #409eff;
-  font-weight: 600;
+  flex-direction: column;
 }
 
 .main-nav {
   flex: 1;
   border-bottom: none;
+  background: transparent;
+}
+
+.main-nav :deep(.el-menu-item) {
+  color: white;
+  border-bottom: 2px solid transparent;
+}
+
+.main-nav :deep(.el-menu-item:hover) {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.main-nav :deep(.el-menu-item.is-active) {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-bottom-color: white;
+  color: white;
 }
 
 .app-main {
+  flex: 1;
   background: #f5f7fa;
   padding: 20px;
+  overflow-y: auto;
 }
 </style>

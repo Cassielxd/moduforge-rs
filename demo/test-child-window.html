@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>子窗体测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 24px;
+            padding: 16px;
+            border: 1px solid #e8e8e8;
+            border-radius: 6px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #1890ff;
+        }
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .status.success {
+            background: #f6ffed;
+            color: #52c41a;
+            border: 1px solid #b7eb8f;
+        }
+        .status.error {
+            background: #fff2f0;
+            color: #ff4d4f;
+            border: 1px solid #ffccc7;
+        }
+        .status.warning {
+            background: #fffbe6;
+            color: #faad14;
+            border: 1px solid #ffe58f;
+        }
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+        .checklist li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .checklist li:before {
+            content: "✓ ";
+            color: #52c41a;
+            font-weight: bold;
+        }
+        .code {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔧 子窗体放大缩小功能修复验证</h1>
+        
+        <div class="test-section">
+            <h3>修复内容</h3>
+            <ul class="checklist">
+                <li>为 SimpleHeader 组件添加 useChildWindow 属性</li>
+                <li>修复窗口控制方法逻辑（最小化、最大化、关闭）</li>
+                <li>改进窗口控制按钮样式</li>
+                <li>更新事件处理方法注释</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>测试步骤</h3>
+            <ol>
+                <li>启动开发服务器：<code class="code">npm run dev</code></li>
+                <li>启动 Tauri 应用：<code class="code">npm run tauri:dev</code></li>
+                <li>在主应用中点击"概算"模块，打开子窗口</li>
+                <li>测试子窗口头部的窗口控制按钮：
+                    <ul>
+                        <li>最小化按钮（-）</li>
+                        <li>最大化/还原按钮（□/⧉）</li>
+                        <li>关闭按钮（×）</li>
+                    </ul>
+                </li>
+                <li>检查按钮样式是否正常显示</li>
+                <li>验证功能是否正常工作</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3>预期结果</h3>
+            <div class="status success">
+                ✅ 子窗口头部显示清晰的窗口控制按钮
+            </div>
+            <div class="status success">
+                ✅ 最小化按钮可以正常最小化子窗口
+            </div>
+            <div class="status success">
+                ✅ 最大化按钮可以在最大化和还原之间切换
+            </div>
+            <div class="status success">
+                ✅ 关闭按钮可以正常关闭子窗口
+            </div>
+            <div class="status success">
+                ✅ 按钮有合适的悬停效果和视觉反馈
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>技术细节</h3>
+            <p><strong>子窗口配置：</strong></p>
+            <div class="code">
+.decorations(false) // 不显示原生标题栏
+.skip_taskbar(true) // 不在状态栏显示
+            </div>
+            
+            <p><strong>窗口控制逻辑：</strong></p>
+            <div class="code">
+// 子窗口模式
+if (props.useChildWindow) {
+  await currentWindow.value.minimize()
+} else {
+  // 主窗口模式
+  await invoke('minimize_window_with_children', { windowId })
+}
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>故障排除</h3>
+            <p>如果遇到问题，请检查：</p>
+            <ul>
+                <li>确保所有依赖已正确安装</li>
+                <li>检查控制台是否有错误信息</li>
+                <li>验证 Tauri 环境是否正确配置</li>
+                <li>确认子窗口正确传递了 <code>:use-child-window="true"</code> 属性</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>相关文件</h3>
+            <ul>
+                <li><code>packages/shared-components/src/layouts/SimpleHeader.vue</code> - 主要修复文件</li>
+                <li><code>packages/rough-estimate/src/App.vue</code> - 子窗口应用</li>
+                <li><code>packages/main-shell/src/App.vue</code> - 主应用</li>
+                <li><code>src-tauri/src/main.rs</code> - Tauri 窗口配置</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

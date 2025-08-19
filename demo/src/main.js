@@ -47,6 +47,12 @@ const routes = [
     name: 'TableTest',
     component: () => import('./views/TableTest.vue'),
     meta: { title: '表格测试' }
+  },
+  {
+    path: '/window-manager',
+    name: 'WindowManager',
+    component: () => import('./components/WindowManagerDemo.vue'),
+    meta: { title: '窗体管理演示' }
   }
 ]
 

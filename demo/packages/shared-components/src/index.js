@@ -26,4 +26,7 @@ export {
 // 导出状态管理核心
 export { globalState, getters, actions, persistence } from './store/index.js'
 
+// 导出布局组件
+export { AppHeader, SimpleHeader } from './layouts/index.js'
+
 
