@@ -1,3 +1,6 @@
+// 导入样式文件
+import './styles/simple-header.css'
+
 // 导出STable相关
 export { STable, setupSTable } from './plugins/stable.js'
 
@@ -28,5 +31,18 @@ export { globalState, getters, actions, persistence } from './store/index.js'
 
 // 导出布局组件
 export { AppHeader, SimpleHeader } from './layouts/index.js'
+
+// 导出Web环境工具函数
+export {
+  isTauriEnvironment,
+  supportsFullscreen,
+  isFullscreen,
+  enterFullscreen,
+  exitFullscreen,
+  toggleFullscreen,
+  simulateMinimize,
+  WebWindowController,
+  webWindowController
+} from './utils/webEnvironment.js'
 
 

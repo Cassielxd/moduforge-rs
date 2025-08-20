@@ -273,10 +273,14 @@ async fn create_module_window(
     // 检查窗口是否已存在
     let window_label = format!("module-{}", module_key);
     if let Some(existing_window) = app.get_webview_window(&window_label) {
-        println!("模块窗口已存在，显示并聚焦");
+        println!("模块窗口已存在，简单恢复显示");
+        
+        // 像工作台一样简单处理：只做基本的显示和聚焦
         existing_window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
         existing_window.set_focus().map_err(|e| format!("设置焦点失败: {}", e))?;
         existing_window.unminimize().map_err(|e| format!("取消最小化失败: {}", e))?;
+        
+        println!("模块窗口恢复完成: {}", window_label);
         return Ok(());
     }
 

@@ -3,7 +3,7 @@
     <a-layout class="layout">
       <!-- 使用共享头部组件 -->
       <SimpleHeader
-        title="概算管理系统"
+        :title="headerTitle"
         :show-window-controls="true"
         @minimize="onMinimize"
         @maximize="onMaximize"
@@ -109,7 +109,14 @@ import {
 } from '@ant-design/icons-vue'
 import { CostTable, useEstimate, useGlobalStore, SimpleHeader } from '@cost-app/shared-components'
 import { invoke } from '@tauri-apps/api/core'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 
+// 标题
+const headerTitle = ref('概算管理系统')
+
+// 窗口状态
+const isMaximized = ref(false)
+const currentWindow = ref(null)
 
 // 数据状态
 const loading = ref(false)
@@ -436,20 +443,57 @@ const handleRefresh = () => {
   message.success('数据已刷新')
 }
 
-// 窗口控制方法
-const onMinimize = () => {
+// 窗口控制方法（参考Dashboard.vue的实现）
+const onMinimize = async () => {
   console.log('概算窗口最小化')
-  // SimpleHeader 组件会自动处理窗口控制逻辑
+  try {
+    if (currentWindow.value) {
+      await currentWindow.value.minimize()
+      console.log('窗口已最小化')
+    } else {
+      console.error('窗口对象未初始化')
+    }
+  } catch (error) {
+    console.error('最小化窗口失败:', error)
+    message.error('最小化失败')
+  }
 }
 
-const onMaximize = () => {
+const onMaximize = async () => {
   console.log('概算窗口最大化/还原')
-  // SimpleHeader 组件会自动处理窗口控制逻辑
+  try {
+    if (currentWindow.value) {
+      if (isMaximized.value) {
+        await currentWindow.value.unmaximize()
+        isMaximized.value = false
+        console.log('窗口已还原')
+      } else {
+        await currentWindow.value.maximize()
+        isMaximized.value = true
+        console.log('窗口已最大化')
+      }
+    } else {
+      console.error('窗口对象未初始化')
+    }
+  } catch (error) {
+    console.error('切换最大化状态失败:', error)
+    message.error('窗口操作失败')
+  }
 }
 
-const onClose = () => {
+const onClose = async () => {
   console.log('概算窗口关闭')
-  // SimpleHeader 组件会自动处理窗口控制逻辑
+  try {
+    if (currentWindow.value) {
+      await currentWindow.value.close()
+      console.log('窗口已关闭')
+    } else {
+      console.error('窗口对象未初始化')
+    }
+  } catch (error) {
+    console.error('关闭窗口失败:', error)
+    message.error('关闭失败')
+  }
 }
 
 const handleTableChange = (pag, filters, sorter) => {
@@ -469,9 +513,35 @@ const deleteRecord = (record) => {
   message.warning(`删除概算: ${record.name}`)
 }
 
-onMounted(() => {
+onMounted(async () => {
   console.log('概算管理系统已加载')
+  console.log('头部标题:', headerTitle.value)
   pagination.value.total = estimateData.value?.length
+  
+  // 初始化窗口对象（参考Dashboard.vue的实现）
+  try {
+    currentWindow.value = getCurrentWindow()
+    console.log('窗口对象已初始化:', currentWindow.value)
+
+    // 获取初始窗口状态
+    isMaximized.value = await currentWindow.value.isMaximized()
+    console.log('初始最大化状态:', isMaximized.value)
+
+    // 监听窗口状态变化
+    await currentWindow.value.onResized(() => {
+      // 窗口大小改变时更新状态
+      currentWindow.value.isMaximized().then(maximized => {
+        isMaximized.value = maximized
+        console.log('窗口状态更新:', maximized ? '最大化' : '正常')
+      })
+    })
+
+    // 简化窗口事件监听，像工作台一样
+    // 不需要特殊的恢复逻辑，让系统自然处理
+
+  } catch (error) {
+    console.error('初始化窗口状态失败:', error)
+  }
 })
 </script>
 

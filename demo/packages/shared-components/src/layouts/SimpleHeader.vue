@@ -1,5 +1,5 @@
 <template>
-  <div class="simple-header" :class="{ 'draggable': draggable }" :data-tauri-drag-region="draggable">
+  <div class="simple-header" :class="{ 'draggable': draggable, 'web-environment': !isTauri }" :data-tauri-drag-region="draggable">
     <div class="header-content">
       <!-- 左侧标题 -->
       <div class="header-left">
@@ -60,6 +60,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { webWindowController, isTauriEnvironment } from '../utils/webEnvironment.js'
 
 // Props
 const props = defineProps({
@@ -86,6 +87,10 @@ const props = defineProps({
   closeTitle: {
     type: String,
     default: '关闭'
+  },
+  useChildWindow: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -99,87 +104,157 @@ const currentWindow = ref(null)
 
 // 检测是否在 Tauri 环境中
 const isTauri = computed(() => {
-  return typeof window !== 'undefined' && window.__TAURI__
+  return isTauriEnvironment()
+})
+
+// 检测是否为子窗口
+const isChildWindow = computed(() => {
+  if (!isTauri.value) return false
+  try {
+    // 通过URL参数或窗口标识符来判断是否为子窗口
+    const urlParams = new URLSearchParams(window.location.search)
+    const isChild = urlParams.has('mode') || urlParams.has('formType') || 
+                    window.location.pathname.includes('form-page')
+    console.log('检测子窗口状态:', isChild, 'URL:', window.location.href)
+    return isChild
+  } catch (error) {
+    console.warn('检测子窗口状态失败:', error)
+    return false
+  }
 })
 
 // 初始化窗口管理
 const initWindowManager = async () => {
-  if (!isTauri.value) return
+  if (!isTauri.value) {
+    console.log('非Tauri环境，跳过窗口管理器初始化')
+    return
+  }
 
   try {
     const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow')
     currentWindow.value = getCurrentWebviewWindow()
 
     if (currentWindow.value) {
+      console.log('窗口管理器初始化成功', {
+        label: currentWindow.value.label,
+        isChild: isChildWindow.value
+      })
+      
       // 检查当前窗口状态
-      isMaximized.value = await currentWindow.value.isMaximized()
+      try {
+        isMaximized.value = await currentWindow.value.isMaximized()
+        console.log('当前窗口最大化状态:', isMaximized.value)
+      } catch (stateError) {
+        console.warn('获取窗口状态失败:', stateError)
+        isMaximized.value = false
+      }
 
       // 监听窗口状态变化事件
-      const unlisten = await currentWindow.value.listen('tauri://resize', async () => {
-        isMaximized.value = await currentWindow.value.isMaximized()
-        emit('window-state-change', { maximized: isMaximized.value })
-      })
+      try {
+        const unlisten = await currentWindow.value.listen('tauri://resize', async () => {
+          try {
+            const newMaximizedState = await currentWindow.value.isMaximized()
+            isMaximized.value = newMaximizedState
+            emit('window-state-change', { maximized: newMaximizedState })
+            console.log('窗口状态变化:', newMaximizedState)
+          } catch (listenerError) {
+            console.warn('监听器中获取窗口状态失败:', listenerError)
+          }
+        })
 
-      return unlisten
+        return unlisten
+      } catch (listenError) {
+        console.warn('添加窗口状态监听器失败:', listenError)
+      }
+    } else {
+      console.warn('无法获取当前窗口实例')
     }
   } catch (error) {
     console.error('初始化窗口管理器失败:', error)
+    // 在非Tauri环境或出错时，设置默认状态
+    isMaximized.value = false
   }
 }
 
 // 窗口控制方法
 const handleMinimize = async () => {
-  if (loading.value || !isTauri.value || !currentWindow.value) return
-
-  loading.value = true
-  try {
-    emit('minimize')
-    await currentWindow.value.minimize()
-  } catch (error) {
-    console.error('最小化窗口失败:', error)
-  } finally {
-    loading.value = false
+  if (loading.value) {
+    console.log('操作进行中，跳过最小化')
+    return
   }
+
+  // 先发出事件，让外部组件处理
+  emit('minimize')
+  
+  // 如果是非 Tauri 环境，执行 Web 模拟
+  if (!isTauri.value) {
+    await webWindowController.minimize()
+    return
+  }
+
+  // 在 Tauri 环境下，如果外部组件监听了事件，就不再执行内部逻辑
+  // 这里简单地不执行任何操作，让外部处理
+  console.log('已发出最小化事件，等待外部处理')
 }
 
 const handleMaximize = async () => {
-  if (loading.value || !isTauri.value || !currentWindow.value) return
-
-  loading.value = true
-  try {
-    emit('maximize')
-
-    if (isMaximized.value) {
-      await currentWindow.value.unmaximize()
-    } else {
-      await currentWindow.value.maximize()
-    }
-  } catch (error) {
-    console.error('切换窗口最大化状态失败:', error)
-  } finally {
-    loading.value = false
+  if (loading.value) {
+    console.log('操作进行中，跳过最大化切换')
+    return
   }
+
+  // 先发出事件，让外部组件处理
+  emit('maximize')
+
+  // 如果是非 Tauri 环境，执行 Web 模拟
+  if (!isTauri.value) {
+    const result = await webWindowController.toggleMaximize()
+    if (result.success) {
+      isMaximized.value = result.isMaximized
+    }
+    return
+  }
+
+  // 在 Tauri 环境下，让外部处理
+  console.log('已发出最大化事件，等待外部处理')
 }
 
 const handleClose = async () => {
-  if (loading.value || !isTauri.value || !currentWindow.value) return
-
-  loading.value = true
-  try {
-    emit('close')
-    await currentWindow.value.close()
-  } catch (error) {
-    console.error('关闭窗口失败:', error)
-  } finally {
-    loading.value = false
+  if (loading.value) {
+    console.log('操作进行中，跳过关闭')
+    return
   }
+
+  // 先发出事件，让外部组件处理
+  emit('close')
+
+  // 如果是非 Tauri 环境，执行 Web 模拟
+  if (!isTauri.value) {
+    await webWindowController.close()
+    return
+  }
+
+  // 在 Tauri 环境下，让外部处理
+  console.log('已发出关闭事件，等待外部处理')
 }
 
 // 生命周期
 let unlistenResize = null
 
 onMounted(async () => {
-  unlistenResize = await initWindowManager()
+  console.log('SimpleHeader 组件挂载', {
+    title: props.title,
+    showWindowControls: props.showWindowControls,
+    isTauri: isTauri.value
+  })
+  
+  if (isTauri.value) {
+    unlistenResize = await initWindowManager()
+  } else {
+    // 非Tauri环境，同步Web控制器状态
+    isMaximized.value = webWindowController.getMaximizedState()
+    console.log('Web环境初始化，最大化状态:', isMaximized.value)
+  }
 })
 
 onUnmounted(() => {
@@ -189,127 +264,4 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
-.simple-header {
-  background: #fff;
-  border-bottom: 1px solid #e8e8e8;
-  padding: 0;
-  height: 48px;
-  position: relative;
-  z-index: 1000;
-}
-
-.simple-header.draggable {
-  -webkit-app-region: drag;
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  height: 100%;
-  padding: 0 16px;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  -webkit-app-region: no-drag;
-}
-
-.header-center {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  -webkit-app-region: no-drag;
-}
-
-.title {
-  margin: 0;
-  color: #262626;
-  font-weight: 500;
-  font-size: 16px;
-}
-
-.window-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: 12px;
-}
-
-.control-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #8c8c8c;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(10px);
-}
-
-.control-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: #262626;
-  transform: translateY(-1px);
-}
-
-.control-btn:active {
-  transform: translateY(0);
-}
-
-.control-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.control-btn.close-btn:hover {
-  background: rgba(239, 68, 68, 0.8);
-  color: white;
-}
-
-.control-btn svg {
-  width: 12px;
-  height: 12px;
-}
-
-/* 深色主题支持 */
-@media (prefers-color-scheme: dark) {
-  .simple-header {
-    background: #141414;
-    border-bottom-color: #303030;
-  }
-  
-  .title {
-    color: #fff;
-  }
-  
-  .control-btn {
-    color: #8c8c8c;
-  }
-  
-  .control-btn:hover {
-    background: #262626;
-    color: #fff;
-  }
-  
-  .control-btn:active {
-    background: #1890ff;
-  }
-}
-</style>
+<!-- 样式已移动到全局CSS文件 src/styles/simple-header.css -->

@@ -7,6 +7,9 @@ import 'ant-design-vue/dist/reset.css'
 import { setupSTable } from '@cost-app/shared-components'
 import '@surely-vue/table/dist/index.less'
 
+// 导入共享组件样式 - 必须导入才能显示样式
+import '@cost-app/shared-components/dist/shared-components.css'
+
 import App from './App.vue'
 
 const app = createApp(App)
