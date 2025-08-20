@@ -1,0 +1,62 @@
+//! 通用模块
+//!
+//! 提供宏系统中共享的错误处理、工具函数和常量定义。
+//! 严格遵循 SOLID 设计原则，确保代码的可维护性和可扩展性。
+//!
+//! # 模块组成
+//!
+//! - `error`: 错误处理系统，提供统一的错误类型和友好的编译时错误消息
+//! - `utils`: 工具函数库，提供类型检查、代码生成等辅助功能  
+//! - `constants`: 常量定义，包括支持的类型列表、错误消息模板等
+//!
+//! # 设计原则体现
+//!
+//! - **单一职责原则 (SRP)**: 每个子模块都有明确的单一功能
+//! - **接口隔离原则 (ISP)**: 提供精简、专用的公共接口
+//! - **开闭原则 (OCP)**: 通过常量配置支持扩展而不修改核心逻辑
+//! - **里氏替换原则 (LSP)**: 错误类型和工具函数可以无缝替换使用
+
+/// 错误处理模块
+/// 
+/// 提供统一的错误类型定义和编译时错误消息生成功能。
+/// 遵循单一职责原则，专门负责宏系统的错误处理。
+pub mod error;
+
+/// 工具函数模块
+/// 
+/// 提供类型检查、代码生成等辅助功能。
+/// 遵循接口隔离原则，为不同的工具功能提供专门的接口。
+pub mod utils;
+
+/// 常量定义模块
+/// 
+/// 定义宏系统使用的各种常量，包括支持的类型、错误消息模板等。
+/// 遵循开闭原则，通过常量配置支持功能扩展。
+pub mod constants;
+
+// 重新导出核心类型和函数，遵循接口隔离原则
+pub use error::{MacroError, MacroResult, create_compile_error, create_compile_error_with_suggestion};
+pub use utils::{
+    generate_imports,
+    is_option_type,
+    extract_option_inner_type,
+    generate_field_conversion,
+    is_supported_type,
+    extract_type_name,
+    generate_attr_setter_code,
+    is_valid_identifier,
+};
+pub use constants::{
+    SUPPORTED_BASIC_TYPES,
+    COMMON_NODE_TYPES,
+    COMMON_MARK_TYPES,
+    required_attributes,
+    optional_attributes,
+    error_messages,
+    suggestion_templates,
+    defaults,
+    codegen,
+    documentation,
+    validation,
+    performance,
+};

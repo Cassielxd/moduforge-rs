@@ -3,9 +3,22 @@
     "allow": [
       "Bash(touch:*)",
       "Bash(cp:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(cargo check:*)",
+      "Bash(rm:*)",
+      "Bash(mkdir:*)",
+      "Bash(cargo test)",
+      "Bash(cargo test:*)",
+      "Bash(sed:*)",
+      "Bash(timeout 60 cargo test --test integration_tests)",
+      "Bash(cargo run:*)",
+      "Bash(rustc:*)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "D:\\mnt\\d\\workspace\\rust2025\\moduforge-rs\\crates",
+      "D:\\d\\workspace\\rust2025\\moduforge-rs\\crates"
+    ]
   }
 }
