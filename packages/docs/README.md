@@ -72,25 +72,31 @@ packages/docs/
 
 ## 📚 文档内容
 
-### 核心文档
-- `index.md` - 项目概述
+### 📖 核心文档
+- `index.md` - 项目概述和快速了解
+- `quick-start.md` - 快速入门指南和教程
+- `architecture-overview.md` - 框架架构详细概览
+- `api-reference.md` - 完整 API 参考文档
+- `performance-guide.md` - 性能优化指南
+
+### 🔧 开发指南
 - `plugin-development-guide.md` - 插件开发指南
 - `setup-external-project.md` - 外部项目集成
 - `example-integration-project.md` - 集成示例
 
-### 架构文档
+### 🏗️ 架构设计
 - `architecture_use_cases.md` - 架构应用场景
 - `architecture_limitations_analysis.md` - 架构限制分析
 - `business_dependency_design.md` - 业务依赖设计
 - `meta_based_dependency_design.md` - 元数据依赖设计
 
-### 技术文档
-- `node-budget-mapping.md` - 节点预算映射
-- `CUSTOM_FUNCTIONS.md` - 自定义函数
+### 💼 业务应用
+- `node-budget-mapping.md` - 节点预算映射示例
+- `CUSTOM_FUNCTIONS.md` - 自定义函数开发
 - `simple_enhanced_history.md` - 历史增强功能
-- `websocket-error-troubleshooting.md` - WebSocket 故障排查
 
-### 演示文档
+### 🔧 故障排查
+- `websocket-error-troubleshooting.md` - WebSocket 故障排查
 - `demo-showcase.md` - 功能演示
 - `ANALYSIS.md` - 项目分析
 

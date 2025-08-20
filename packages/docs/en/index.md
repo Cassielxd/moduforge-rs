@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: "ModuForge-RS"
-  text: "Rust-based State Management Framework"
-  tagline: "Immutable data structures and event-driven architecture for any business scenario"
+  text: "Modular Application Framework"
+  tagline: "High-performance Rust-based modular framework with state management, rules engine, real-time collaboration and plugin extensibility"
   image:
     src: /logo.svg
     alt: ModuForge-RS
@@ -20,34 +20,43 @@ hero:
       link: https://github.com/Cassielxd/moduforge-rs
 
 features:
+  - icon: 🏗️
+    title: Modular Architecture
+    details: Highly modular architecture with 14 independent crates for flexible composition and on-demand integration.
+  
   - icon: 🚀
-    title: Event-Driven Architecture
-    details: Built on immutable data structures with comprehensive event system for reliable state management.
+    title: High-Performance Runtime
+    details: Tokio-based async runtime with immutable data structures and concurrent transaction processing.
   
   - icon: 🔧
-    title: Plugin System
-    details: Highly modular architecture with dynamic plugin loading and lifecycle management.
-  
-  - icon: ⚡
-    title: Async Processing
-    details: High-performance async runtime with middleware support and concurrent transaction processing.
-  
-  - icon: 🎯
-    title: Business Agnostic
-    details: No business logic binding - customize and extend for any use case through extensions.
+    title: Plugin Ecosystem
+    details: Complete plugin development framework with dependency management, lifecycle control, and hot-swapping.
   
   - icon: 📊
     title: Rules Engine
-    details: Powerful rule engine with expression parsing, decision trees, and template system.
+    details: Built-in GoRules JDM-compatible rules engine with high-performance expression language.
   
-  - icon: 🔄
+  - icon: 🤝
     title: Real-time Collaboration
-    details: Built-in collaboration features with WebSocket support and conflict resolution.
+    details: Conflict-free collaborative system based on Yrs CRDT with WebSocket real-time synchronization.
+  
+  - icon: 🎯
+    title: Business Neutral
+    details: Zero business logic coupling, adaptable to editors, pricing, workflow, and other scenarios through extensions.
 ---
 
-## Quick Start
+## What is ModuForge-RS?
 
-ModuForge-RS is a Rust-based state management and data transformation framework focusing on immutable data structures and event-driven architecture. It provides a business-agnostic editor core implementation that can be customized and extended to support the needs of any business scenario.
+ModuForge-RS is a high-performance modular application framework built in Rust, specifically designed for constructing complex business applications. The framework consists of 14 independent crates, providing complete solutions from data modeling, state management, rules engine to real-time collaboration.
+
+### Core Capabilities
+
+🏗️ **Modular Design** - 14 specialized crates for flexible composition and extension  
+⚡ **High-Performance Runtime** - Tokio-based async architecture with high concurrency support  
+🔧 **Plugin Ecosystem** - Complete plugin development framework with hot-swapping and dependency management  
+📊 **Rules Engine** - Built-in business rules engine with dynamic decision-making and expression computing  
+🤝 **Real-time Collaboration** - CRDT-based conflict-free collaboration with multi-user real-time editing  
+🎯 **Business Neutral** - Zero business logic coupling, adaptable to any domain application scenarios
 
 ### How ModuForge Works
 

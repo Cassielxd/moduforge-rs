@@ -219,7 +219,7 @@ impl AppConfig {
 ```rust
 use mf_core::extension::Extension;
 use mf_state::{
-    plugin::{Plugin, PluginSpec, PluginTrait, StateField},
+    plugin::{Plugin, PluginSpec, PluginTrait, StateField, PluginMetadata, PluginConfig},
     resource::Resource,
     state::{State, StateConfig},
     transaction::Transaction,
@@ -307,6 +307,27 @@ pub struct MarkdownPlugin;
 
 #[async_trait]
 impl PluginTrait for MarkdownPlugin {
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "markdown_plugin".to_string(),
+            version: "1.0.0".to_string(),
+            description: "Markdown 处理插件".to_string(),
+            author: "编辑器团队".to_string(),
+            dependencies: vec![],
+            conflicts: vec![],
+            state_fields: vec!["markdown_data".to_string()],
+            tags: vec!["markdown".to_string(), "content".to_string()],
+        }
+    }
+    
+    fn config(&self) -> PluginConfig {
+        PluginConfig {
+            enabled: true,
+            priority: 15,
+            settings: std::collections::HashMap::new(),
+        }
+    }
+    
     async fn append_transaction(
         &self,
         transactions: &[Transaction],
@@ -436,7 +457,7 @@ impl DocumentHandler {
 ```rust
 use mf_core::extension::Extension;
 use mf_state::{
-    plugin::{Plugin, PluginSpec, PluginTrait},
+    plugin::{Plugin, PluginSpec, PluginTrait, PluginMetadata, PluginConfig},
     transaction::Transaction,
     state::State,
     error::StateResult,
@@ -450,6 +471,27 @@ pub struct CustomCommandsPlugin;
 
 #[async_trait]
 impl PluginTrait for CustomCommandsPlugin {
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "custom_commands_plugin".to_string(),
+            version: "1.0.0".to_string(),
+            description: "自定义命令插件".to_string(),
+            author: "编辑器团队".to_string(),
+            dependencies: vec![],
+            conflicts: vec![],
+            state_fields: vec![],
+            tags: vec!["commands".to_string(), "shortcuts".to_string()],
+        }
+    }
+    
+    fn config(&self) -> PluginConfig {
+        PluginConfig {
+            enabled: true,
+            priority: 20,
+            settings: std::collections::HashMap::new(),
+        }
+    }
+    
     async fn append_transaction(
         &self,
         transactions: &[Transaction],

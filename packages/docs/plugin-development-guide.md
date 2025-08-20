@@ -136,7 +136,7 @@ impl StateField for MyStateField {
 
 ```rust
 use mf_state::{
-    plugin::PluginTrait,
+    plugin::{PluginTrait, PluginMetadata, PluginConfig},
     transaction::Transaction,
     state::State,
     error::StateResult,
@@ -148,6 +148,29 @@ pub struct MyPlugin;
 
 #[async_trait]
 impl PluginTrait for MyPlugin {
+    // 插件元数据
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "my_plugin".to_string(),
+            version: "1.0.0".to_string(),
+            description: "我的示例插件".to_string(),
+            author: "开发者".to_string(),
+            dependencies: vec![],
+            conflicts: vec![],
+            state_fields: vec!["my_plugin_data".to_string()],
+            tags: vec!["example".to_string()],
+        }
+    }
+    
+    // 插件配置
+    fn config(&self) -> PluginConfig {
+        PluginConfig {
+            enabled: true,
+            priority: 10,
+            settings: std::collections::HashMap::new(),
+        }
+    }
+    
     // 事务后处理：生成额外的事务
     async fn append_transaction(
         &self,
