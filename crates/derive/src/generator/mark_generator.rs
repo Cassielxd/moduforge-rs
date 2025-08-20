@@ -120,19 +120,20 @@ impl<'a> MarkGenerator<'a> {
         // 生成必要的导入语句
         let imports = self.generate_imports();
 
-        // 生成属性映射构建代码
-        let attrs_code = self.generate_attrs_map_code()?;
+
+        // 生成 MarkSpec 构建代码
+        let spec_code = self.generate_mark_spec_code()?;
 
         // 只返回 to_mark 方法的实现，不包含 impl 块
         let method_impl = quote! {
-            /// 将结构体转换为 mf_model::mark::Mark 实例
+            /// 将结构体转换为 mf_core::mark::Mark 实例
             ///
             /// 此方法由 #[derive(Mark)] 宏自动生成，根据结构体的字段
             /// 和宏属性配置创建相应的 Mark 实例。
             ///
             /// # 返回值
             /// 
-            /// 返回配置好的 `mf_model::mark::Mark` 实例
+            /// 返回配置好的 `mf_core::mark::Mark` 实例
             ///
             /// # 生成说明
             ///
@@ -140,16 +141,13 @@ impl<'a> MarkGenerator<'a> {
             /// 它遵循以下设计原则：
             /// - **单一职责**: 只负责 Mark 实例的创建
             /// - **里氏替换**: 生成的 Mark 可以替换手动创建的实例
-            pub fn to_mark(&self) -> mf_model::mark::Mark {
+            pub fn to_mark(&self) -> mf_core::mark::Mark {
                 #imports
                 
-                #attrs_code
+                #spec_code
                 
                 // 创建并返回 Mark 实例
-                mf_model::mark::Mark {
-                    r#type: #mark_type.to_string(),
-                    attrs: mf_model::attrs::Attrs::from(attrs_map),
-                }
+                mf_core::mark::Mark::new(#mark_type, spec)
             }
         };
 
@@ -176,96 +174,6 @@ impl<'a> MarkGenerator<'a> {
         }
     }
 
-    /// 生成属性映射构建代码
-    ///
-    /// 为所有标记为 #[attr] 的字段生成属性映射构建代码。
-    /// 此方法遵循单一职责原则，专门负责属性映射的代码生成。
-    ///
-    /// # 返回值
-    ///
-    /// 成功时返回属性映射构建代码，失败时返回生成错误
-    ///
-    /// # 生成的代码结构
-    ///
-    /// ```rust
-    /// let mut attrs = HashMap::with_capacity(field_count);
-    /// attrs.insert("field1", AttributeSpec {
-    ///     default: Some(serde_json::to_value(&self.field1).unwrap_or(JsonValue::Null))
-    /// });
-    /// // ... 更多字段 ...
-    /// ```
-    ///
-    /// # 设计原则体现
-    ///
-    /// - **单一职责**: 只负责属性映射代码生成
-    /// - **开闭原则**: 通过转换器系统支持新的字段类型
-    fn generate_attrs_map_code(&self) -> MacroResult<TokenStream2> {
-        let attr_fields = &self.config.attr_fields;
-        
-        if attr_fields.is_empty() {
-            // 没有属性字段时，创建空的 HashMap
-            return Ok(quote! {
-                let attrs_map = imbl::HashMap::new();
-            });
-        }
-
-        let mut field_setters = Vec::new();
-
-        // 为每个属性字段生成设置代码
-        for field_config in attr_fields {
-            let field_setter = self.generate_field_attr_code(field_config)?;
-            field_setters.push(field_setter);
-        }
-
-        // 生成完整的属性映射构建代码
-        let attrs_code = quote! {
-            let mut attrs_map = imbl::HashMap::new();
-            #(#field_setters)*
-        };
-
-        Ok(attrs_code)
-    }
-
-    /// 生成单个字段的属性设置代码
-    ///
-    /// 为单个属性字段生成相应的属性设置代码。
-    /// 遵循单一职责原则，专门处理单个字段的转换逻辑。
-    ///
-    /// # 参数
-    ///
-    /// * `field_config` - 字段配置信息
-    ///
-    /// # 返回值
-    ///
-    /// 成功时返回字段属性设置代码，失败时返回转换错误
-    ///
-    /// # 生成的代码示例
-    ///
-    /// ```rust
-    /// attrs_map.insert("field_name".to_string(), AttributeSpec {
-    ///     default: Some(serde_json::to_value(&self.field_name).unwrap_or(JsonValue::Null))
-    /// });
-    /// ```
-    ///
-    /// # 设计原则体现
-    ///
-    /// - **单一职责**: 只负责单个字段的属性设置代码生成
-    /// - **里氏替换**: 对任何字段配置都能正确处理
-    fn generate_field_attr_code(&self, field_config: &FieldConfig) -> MacroResult<TokenStream2> {
-        let field_name = &field_config.name;
-        let field_ident = syn::parse_str::<Ident>(field_name)
-            .map_err(|_| MacroError::parse_error(
-                &format!("无效的字段名称: {}", field_name),
-                &field_config.field,
-            ))?;
-
-        // 生成属性设置代码
-        let attr_code = quote! {
-            attrs_map.insert(#field_name.to_string(), serde_json::to_value(&self.#field_ident).unwrap_or(serde_json::Value::Null));
-        };
-
-        Ok(attr_code)
-    }
 
     /// 生成 MarkSpec 构建代码
     ///
@@ -291,9 +199,14 @@ impl<'a> MarkGenerator<'a> {
     /// - **单一职责**: 只负责 MarkSpec 构建代码生成
     /// - **开闭原则**: 通过配置支持扩展而不修改代码
     fn generate_mark_spec_code(&self) -> MacroResult<TokenStream2> {
+        // 生成属性映射构建代码
+        let attrs_code = self.generate_attrs_spec_code()?;
+
         let spec_code = quote! {
-            let spec = MarkSpec {
-                attrs: attrs,
+            #attrs_code
+            
+            let spec = mf_model::mark_type::MarkSpec {
+                attrs,
                 excludes: None,
                 group: None,
                 spanning: None,
@@ -302,6 +215,72 @@ impl<'a> MarkGenerator<'a> {
         };
 
         Ok(spec_code)
+    }
+
+    /// 生成属性映射构建代码 (for MarkSpec)
+    ///
+    /// 为所有标记为 #[attr] 的字段生成 MarkSpec 的属性映射构建代码。
+    /// 此方法遵循单一职责原则，专门负责属性映射的代码生成。
+    ///
+    /// # 返回值
+    ///
+    /// 成功时返回属性映射构建代码，失败时返回生成错误
+    fn generate_attrs_spec_code(&self) -> MacroResult<TokenStream2> {
+        let attr_fields = &self.config.attr_fields;
+        
+        if attr_fields.is_empty() {
+            // 没有属性字段时，创建空的 attrs
+            return Ok(quote! {
+                let attrs = None;
+            });
+        }
+
+        let mut field_setters = Vec::new();
+
+        // 为每个属性字段生成设置代码
+        for field_config in attr_fields {
+            let field_setter = self.generate_field_spec_code(field_config)?;
+            field_setters.push(field_setter);
+        }
+
+        // 生成完整的属性映射构建代码
+        let attrs_code = quote! {
+            let mut attrs_map = std::collections::HashMap::new();
+            #(#field_setters)*
+            let attrs = Some(attrs_map);
+        };
+
+        Ok(attrs_code)
+    }
+
+    /// 生成单个字段的属性设置代码 (for MarkSpec)
+    ///
+    /// 为单个属性字段生成相应的 MarkSpec 属性设置代码。
+    /// 遵循单一职责原则，专门处理单个字段的转换逻辑。
+    ///
+    /// # 参数
+    ///
+    /// * `field_config` - 字段配置信息
+    ///
+    /// # 返回值
+    ///
+    /// 成功时返回字段属性设置代码，失败时返回转换错误
+    fn generate_field_spec_code(&self, field_config: &FieldConfig) -> MacroResult<TokenStream2> {
+        let field_name = &field_config.name;
+        let field_ident = syn::parse_str::<Ident>(field_name)
+            .map_err(|_| MacroError::parse_error(
+                &format!("无效的字段名称: {}", field_name),
+                &field_config.field,
+            ))?;
+
+        // 生成属性设置代码，创建 AttributeSpec
+        let attr_code = quote! {
+            attrs_map.insert(#field_name.to_string(), mf_model::schema::AttributeSpec {
+                default: Some(serde_json::to_value(&self.#field_ident).unwrap_or(serde_json::Value::Null))
+            });
+        };
+
+        Ok(attr_code)
     }
 }
 

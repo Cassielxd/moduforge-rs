@@ -203,9 +203,9 @@ mod tests {
         let mf_mark = mark.to_mark();
         
         // 验证生成的标记具有正确的类型
-        assert_eq!(mf_mark.r#type, "emphasis");
+        assert_eq!(mf_mark.name, "emphasis");
         
-        println!("基本 Mark 测试通过 - 类型: {}", mf_mark.r#type);
+        println!("基本 Mark 测试通过 - 类型: {}", mf_mark.name);
     }
 
     /// 测试完整 Mark 派生宏功能
@@ -224,9 +224,9 @@ mod tests {
         let mf_mark = mark.to_mark();
         
         // 验证生成的标记具有正确的配置
-        assert_eq!(mf_mark.r#type, "styling");
+        assert_eq!(mf_mark.name, "styling");
         
-        println!("完整 Mark 测试通过 - 类型: {}", mf_mark.r#type);
+        println!("完整 Mark 测试通过 - 类型: {}", mf_mark.name);
     }
 
     /// 测试无属性字段的边界情况
@@ -238,7 +238,7 @@ mod tests {
         
         let empty_mark = EmptyMarkTest;
         let mf_mark = empty_mark.to_mark();
-        assert_eq!(mf_mark.r#type, "spacer");
+        assert_eq!(mf_mark.name, "spacer");
         
         println!("空属性测试通过");
     }

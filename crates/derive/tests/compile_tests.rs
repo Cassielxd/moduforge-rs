@@ -146,7 +146,7 @@ mod tests {
         };
         
         let mf_mark = mark.to_mark();
-        assert_eq!(mf_mark.r#type, "test_mark");
+        assert_eq!(mf_mark.name, "test_mark");
         
         println!("有效配置编译测试通过");
     }
@@ -166,7 +166,7 @@ mod tests {
         };
         
         let mf_mark = mark.to_mark();
-        assert_eq!(mf_mark.r#type, "minimal");
+        assert_eq!(mf_mark.name, "minimal");
         
         println!("最小配置编译测试通过");
     }
@@ -207,7 +207,7 @@ mod tests {
         };
         
         let mf_mark = mark.to_mark();
-        assert_eq!(mf_mark.r#type, "single_field");
+        assert_eq!(mf_mark.name, "single_field");
         
         println!("单字段结构体测试通过");
     }
@@ -221,7 +221,7 @@ mod tests {
 
         let mark = EmptyStructMark;
         let mf_mark = mark.to_mark();
-        assert_eq!(mf_mark.r#type, "empty");
+        assert_eq!(mf_mark.name, "empty");
         
         println!("空结构体测试通过");
     }
@@ -297,7 +297,7 @@ mod tests {
         let result = mark.to_mark();
         
         // 验证返回类型是 mf_core::mark::Mark
-        let _type_check: mf_model::mark::Mark = result;
+        let _type_check: mf_core::mark::Mark = result;
         
         println!("返回类型正确性测试通过");
     }
@@ -335,7 +335,7 @@ mod tests {
         };
         
         let mf_mark = mark.to_mark();
-        assert_eq!(mf_mark.r#type, "inner");
+        assert_eq!(mf_mark.name, "inner");
         
         println!("宏可见性测试通过");
     }

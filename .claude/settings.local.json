@@ -12,7 +12,10 @@
       "Bash(sed:*)",
       "Bash(timeout 60 cargo test --test integration_tests)",
       "Bash(cargo run:*)",
-      "Bash(rustc:*)"
+      "Bash(rustc:*)",
+      "Bash(timeout 60 cargo test -p moduforge-macros-derive)",
+      "Bash(timeout 30 cargo test -p moduforge-macros-derive integration_tests)",
+      "Bash(timeout 30 cargo test -p moduforge-macros-derive)"
     ],
     "deny": [],
     "ask": [],
