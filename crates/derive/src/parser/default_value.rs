@@ -107,6 +107,13 @@ pub enum DefaultValueType {
     /// 存储解析后的 JSON 值，用于复杂数据结构的默认值
     Json(serde_json::Value),
     
+    /// 自定义类型默认值
+    /// 
+    /// 存储原始字符串表达式，用于自定义类型的默认值
+    /// 这允许用户在 #[attr(default="CustomStruct::new()")] 中指定自定义构造函数
+    /// 或 #[attr(default="CustomStruct::default()")] 使用默认构造
+    CustomType(String),
+    
     /// 空值类型默认值
     /// 
     /// 用于表示 Option 类型的 None 值
@@ -270,7 +277,17 @@ impl DefaultValueParser {
             }
         }
         
-        // 5. 默认情况：作为字符串处理
+        // 5. 检查是否为自定义类型表达式
+        if Self::is_custom_type_expression(trimmed_value) {
+            return Ok(DefaultValue {
+                raw_value: raw_value.to_string(),
+                value_type: DefaultValueType::CustomType(trimmed_value.to_string()),
+                is_json: false,
+                span,
+            });
+        }
+        
+        // 6. 默认情况：作为字符串处理
         Ok(DefaultValue {
             raw_value: raw_value.to_string(),
             value_type: DefaultValueType::String(trimmed_value.to_string()),
@@ -331,6 +348,82 @@ impl DefaultValueParser {
         
         false
     }
+    
+    /// 检测是否为自定义类型表达式
+    ///
+    /// 自定义类型表达式的识别规则：
+    /// - 包含 `::` （模块路径分隔符）
+    /// - 以 `()` 结尾（方法调用）
+    /// - 常见的构造函数模式：`new()`, `default()`, `with_default()`
+    /// - 允许链式调用：`Builder::new().build()`
+    ///
+    /// # 参数
+    ///
+    /// * `value` - 要检测的字符串值
+    ///
+    /// # 返回值
+    ///
+    /// 如果字符串看起来像自定义类型表达式，返回 true
+    ///
+    /// # 识别的模式
+    ///
+    /// - `CustomStruct::new()`
+    /// - `CustomStruct::default()`
+    /// - `CustomStruct::with_capacity(10)`
+    /// - `some_module::CustomStruct::new()`
+    /// - `Builder::new().with_field("value").build()`
+    ///
+    /// # 使用示例
+    ///
+    /// ```rust
+    /// assert!(DefaultValueParser::is_custom_type_expression("MyStruct::new()"));
+    /// assert!(DefaultValueParser::is_custom_type_expression("std::collections::HashMap::new()"));
+    /// assert!(DefaultValueParser::is_custom_type_expression("Builder::new().build()"));
+    /// assert!(!DefaultValueParser::is_custom_type_expression("simple string"));
+    /// assert!(!DefaultValueParser::is_custom_type_expression("42"));
+    /// assert!(!DefaultValueParser::is_custom_type_expression("true"));
+    /// ```
+    fn is_custom_type_expression(value: &str) -> bool {
+        let trimmed = value.trim();
+        
+        // 空字符串不是自定义类型表达式
+        if trimmed.is_empty() {
+            return false;
+        }
+        
+        // 检查是否包含 :: （模块路径分隔符）
+        let has_namespace = trimmed.contains("::");
+        
+        // 检查是否以 () 结尾（方法调用）
+        let has_method_call = trimmed.ends_with("()") || 
+                             trimmed.contains("(") && trimmed.ends_with(")");
+        
+        // 检查常见的构造函数模式
+        let common_constructors = [
+            "::new()",
+            "::default()",
+            "::with_default()",
+            "::with_capacity(",
+            "::empty()",
+            "::create()",
+        ];
+        
+        let has_common_constructor = common_constructors.iter()
+            .any(|pattern| trimmed.contains(pattern));
+        
+        // 检查链式调用模式（包含多个方法调用）
+        let method_call_count = trimmed.matches("()").count() + 
+                               trimmed.matches(')').count() - trimmed.matches("()").count();
+        let has_chaining = method_call_count > 1;
+        
+        // 自定义类型表达式的判断条件（满足任一即可）：
+        // 1. 有命名空间且有方法调用
+        // 2. 有常见构造函数模式
+        // 3. 有链式调用
+        has_namespace && has_method_call || 
+        has_common_constructor || 
+        has_chaining
+    }
 }
 
 impl DefaultValue {
@@ -364,6 +457,7 @@ impl DefaultValue {
             DefaultValueType::Float(_) => "Float",
             DefaultValueType::Boolean(_) => "Boolean",
             DefaultValueType::Json(_) => "Json",
+            DefaultValueType::CustomType(_) => "CustomType",
             DefaultValueType::Null => "Null",
         }
     }
@@ -419,6 +513,18 @@ impl DefaultValue {
     /// 如果是空值类型返回 true，否则返回 false
     pub fn is_null(&self) -> bool {
         matches!(self.value_type, DefaultValueType::Null)
+    }
+    
+    /// 检查是否为自定义类型
+    ///
+    /// 判断默认值是否为自定义类型表达式。
+    /// 用于类型验证和代码生成。
+    ///
+    /// # 返回值
+    ///
+    /// 如果是自定义类型返回 true，否则返回 false
+    pub fn is_custom_type(&self) -> bool {
+        matches!(self.value_type, DefaultValueType::CustomType(_))
     }
 }
 

@@ -113,8 +113,8 @@ mod tests {
     /// 测试完整 Node 派生宏功能
     #[test]  
     fn test_full_node_derivation() {
-        // 调用生成的 to_node() 静态方法，返回使用默认值的 Node 定义
-        let mf_node = FullNodeTest::to_node();
+        // 调用生成的 node_definition() 静态方法，返回使用默认值的 Node 定义
+        let mf_node = FullNodeTest::node_definition();
         println!("{mf_node:?}");
         
         // 验证节点类型
@@ -156,6 +156,82 @@ mod tests {
         assert_eq!(struct_via_from.is_published, true);
 
         println!("反向 From trait 实现测试通过");
+    }
+
+    /// 测试包含所有字段的反向 From trait 实现
+    #[test]
+    fn test_reverse_from_with_all_fields() {
+        // 创建一个 Node 实例，包含 attr 字段的数据
+        let mut attrs_map = imbl::HashMap::new();
+        attrs_map.insert("title".to_string(), serde_json::json!("测试标题"));
+        attrs_map.insert("priority".to_string(), serde_json::json!(5));
+        attrs_map.insert("is_published".to_string(), serde_json::json!(false));
+        // 注意：internal_id 和 cache_data 也有 #[attr] 标记，但通常不会从外部设置
+        
+        let node = mf_model::node::Node {
+            id: "test_all_fields".into(),
+            r#type: "rich_content".to_string(),
+            attrs: mf_model::attrs::Attrs {
+                attrs: attrs_map,
+            },
+            content: imbl::Vector::new(),
+            marks: imbl::Vector::new(),
+        };
+
+        // 使用 .into() 方法转换
+        let struct_instance: FullNodeTest = node.into();
+        
+        // 验证从 attrs 中提取的字段
+        assert_eq!(struct_instance.title, "测试标题");
+        assert_eq!(struct_instance.priority, 5);
+        assert_eq!(struct_instance.is_published, false);
+        
+        // 验证没有在 attrs 中设置的字段使用了默认值
+        assert_eq!(struct_instance.subtitle, None);
+        assert_eq!(struct_instance.weight, None);
+        assert_eq!(struct_instance.tags, None);
+        
+        // 验证自定义类型字段
+        // internal_id 应该是一个新生成的 UUID（因为 attrs 中没有设置）
+        assert_ne!(struct_instance.internal_id.to_string(), "");
+        
+        // cache_data 应该是空 Vec（因为 attrs 中没有设置）
+        assert!(struct_instance.cache_data.is_empty());
+
+        println!("包含所有字段的反向 From trait 实现测试通过");
+    }
+
+    /// 测试自定义类型字段的处理
+    #[test] 
+    fn test_custom_type_field_handling() {
+        // 测试包含 Uuid 和 Vec<u8> 自定义类型的结构体
+        let mut attrs_map = imbl::HashMap::new();
+        attrs_map.insert("title".to_string(), serde_json::json!("测试"));
+        
+        let node = mf_model::node::Node {
+            id: "test_custom".into(),
+            r#type: "rich_content".to_string(),
+            attrs: mf_model::attrs::Attrs {
+                attrs: attrs_map,
+            },
+            content: imbl::Vector::new(),
+            marks: imbl::Vector::new(),
+        };
+
+        // 转换应该成功
+        let struct_instance: FullNodeTest = node.into();
+        
+        // 验证基本字段
+        assert_eq!(struct_instance.title, "测试");
+        
+        // 验证自定义类型字段使用了默认值
+        // internal_id 应该是一个新生成的 UUID
+        assert_ne!(struct_instance.internal_id.to_string(), "");
+        
+        // cache_data 应该是空 Vec
+        assert!(struct_instance.cache_data.is_empty());
+
+        println!("自定义类型字段处理测试通过");
     }
 
 }
