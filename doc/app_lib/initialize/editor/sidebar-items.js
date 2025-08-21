@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["init_collab_editor","init_collab_options","init_editor","init_extension","init_options"]};

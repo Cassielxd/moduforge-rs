@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["ArrayEvent","ArrayIter","ArrayPrelim","ArrayRef"],"trait":["Array"]};

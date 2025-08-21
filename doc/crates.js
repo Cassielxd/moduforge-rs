@@ -1,0 +1,2 @@
+window.ALL_CRATES = ["app_lib","demo_app","devtool_rules_backend","mf_collab","mf_collab_client","mf_core","mf_derive","mf_engine","mf_expression","mf_file","mf_macro","mf_model","mf_persistence","mf_search","mf_state","mf_template","mf_transform"];
+//{"start":21,"fragment_lengths":[9,11,24,12,19,10,12,12,16,10,11,11,17,12,11,14,15]}

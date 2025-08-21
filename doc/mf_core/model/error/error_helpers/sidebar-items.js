@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["cannot_remove_root","child_not_found","cyclic_reference","duplicate_node","empty_pool","invalid_node_id","invalid_node_move","invalid_parenting","node_deleted","node_locked","node_not_found","orphan_node","parent_not_found","schema_error"]};

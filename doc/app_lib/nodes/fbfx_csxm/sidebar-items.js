@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["CSXM_STR","DE_RCJ_STR","DE_STR","FBFX_STR","FB_STR","QD_STR"],"fn":["init_fbfx_csxm_fields"],"struct":["CSXM","DE","FB","FBFX","QD","RCJ"]};

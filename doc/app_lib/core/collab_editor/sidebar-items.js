@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ChangeType","EntryChangeType","SyncEventType"],"struct":["CollabEditor","CollabEditorOptions","CollabSyncManager"]};

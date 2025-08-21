@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["BG_COLOR_STR","FOOTNOTE_STR"],"struct":["BG_COLOR","FOOTNOTE"]};

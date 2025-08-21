@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["HEADER_LEN","MAGIC","REC_HDR"],"fn":["crc32","read_u32_le","scan_logical_end","write_u32_le"],"struct":["Iter","Reader","Writer"]};

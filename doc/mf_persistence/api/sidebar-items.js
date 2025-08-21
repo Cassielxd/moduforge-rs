@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["CommitMode"],"struct":["LoadedState","PersistOptions","PersistedEvent","Snapshot"],"trait":["EventStore","Persistence"]};

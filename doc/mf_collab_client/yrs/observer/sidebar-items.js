@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["Callbacks","CallbacksMut","Observer","ObserverMut","Subscription"],"type":["Callback","CallbackMut"]};

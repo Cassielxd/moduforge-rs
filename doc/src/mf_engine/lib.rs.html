@@ -1,0 +1,136 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates\engine\src\lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1a91846b.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="mf_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.88.0 (6b00bc388 2025-06-23)" data-channel="1.88.0" data-search-js="search-f7877310.js" data-settings-js="settings-5514c975.js" ><script src="../../static.files/storage-4e99c027.js"></script><script defer src="../../static.files/src-script-63605ae7.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-7ef8a74a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">mf_engine/</div>lib.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! # moduforge-rules-engine
+<a href=#2 id=2 data-nosnippet>2</a>//!
+<a href=#3 id=3 data-nosnippet>3</a>//! moduforge-rules-engine 是一个对业务友好的开源业务规则引擎（BRE），用于根据 GoRules JSON 决策模型（JDM）标准执行决策模型。
+<a href=#4 id=4 data-nosnippet>4</a>//!
+<a href=#5 id=5 data-nosnippet>5</a>//! # 使用方法
+<a href=#6 id=6 data-nosnippet>6</a>//!
+<a href=#7 id=7 data-nosnippet>7</a>//! 要使用 Noop（默认）加载器执行简单决策，您可以使用以下代码：
+<a href=#8 id=8 data-nosnippet>8</a>//!
+<a href=#9 id=9 data-nosnippet>9</a>//! ```rust
+<a href=#10 id=10 data-nosnippet>10</a>//! use serde_json::json;
+<a href=#11 id=11 data-nosnippet>11</a>//! use mf_rules_engine::DecisionEngine;
+<a href=#12 id=12 data-nosnippet>12</a>//! use mf_rules_engine::model::DecisionContent;
+<a href=#13 id=13 data-nosnippet>13</a>//!
+<a href=#14 id=14 data-nosnippet>14</a>//! async fn evaluate() {
+<a href=#15 id=15 data-nosnippet>15</a>//!     let decision_content: DecisionContent = serde_json::from_str(include_str!("jdm_graph.json")).unwrap();
+<a href=#16 id=16 data-nosnippet>16</a>//!     let engine = DecisionEngine::default();
+<a href=#17 id=17 data-nosnippet>17</a>//!     let decision = engine.create_decision(decision_content.into());
+<a href=#18 id=18 data-nosnippet>18</a>//!
+<a href=#19 id=19 data-nosnippet>19</a>//!     let result = decision.evaluate(&amp;json!({ "input": 12 })).await;
+<a href=#20 id=20 data-nosnippet>20</a>//! }
+<a href=#21 id=21 data-nosnippet>21</a>//! ```
+<a href=#22 id=22 data-nosnippet>22</a>//!
+<a href=#23 id=23 data-nosnippet>23</a>//! 另外，您也可以使用 `Decision::from` 函数间接创建决策，而无需构建引擎。
+<a href=#24 id=24 data-nosnippet>24</a>//!
+<a href=#25 id=25 data-nosnippet>25</a>//! # 加载器
+<a href=#26 id=26 data-nosnippet>26</a>//!
+<a href=#27 id=27 data-nosnippet>27</a>//! 对于更高级的用例，当您需要加载多个决策并使用图时，您可以使用以下预制的加载器之一：
+<a href=#28 id=28 data-nosnippet>28</a>//! - FilesystemLoader - 使用给定路径作为根目录，尝试基于相对路径加载决策
+<a href=#29 id=29 data-nosnippet>29</a>//! - MemoryLoader - 作为 HashMap（键值存储）工作
+<a href=#30 id=30 data-nosnippet>30</a>//! - ClosureLoader - 允许定义简单的异步回调函数，该函数接收键作为参数并返回 `Arc&lt;DecisionContent&gt;` 实例
+<a href=#31 id=31 data-nosnippet>31</a>//! - NoopLoader - （默认）无法加载决策，允许使用 create_decision（主要用于跨语言统一 API）
+<a href=#32 id=32 data-nosnippet>32</a>//!
+<a href=#33 id=33 data-nosnippet>33</a>//! ## 文件系统加载器
+<a href=#34 id=34 data-nosnippet>34</a>//!
+<a href=#35 id=35 data-nosnippet>35</a>//! 假设您有一个位于 /app/decisions 下的决策模型文件夹（.json 文件），您可以按以下方式使用 FilesystemLoader：
+<a href=#36 id=36 data-nosnippet>36</a>//!
+<a href=#37 id=37 data-nosnippet>37</a>//! ```rust
+<a href=#38 id=38 data-nosnippet>38</a>//! use serde_json::json;
+<a href=#39 id=39 data-nosnippet>39</a>//! use mf_rules_engine::DecisionEngine;
+<a href=#40 id=40 data-nosnippet>40</a>//! use mf_rules_engine::loader::{FilesystemLoader, FilesystemLoaderOptions};
+<a href=#41 id=41 data-nosnippet>41</a>//!
+<a href=#42 id=42 data-nosnippet>42</a>//! async fn evaluate() {
+<a href=#43 id=43 data-nosnippet>43</a>//!     let engine = DecisionEngine::new(FilesystemLoader::new(FilesystemLoaderOptions {
+<a href=#44 id=44 data-nosnippet>44</a>//!         keep_in_memory: true, // 可选，保持在内存中以提高性能
+<a href=#45 id=45 data-nosnippet>45</a>//!         root: "/app/decisions"
+<a href=#46 id=46 data-nosnippet>46</a>//!     }));
+<a href=#47 id=47 data-nosnippet>47</a>//!     
+<a href=#48 id=48 data-nosnippet>48</a>//!     let context = json!({ "customer": { "joinedAt": "2022-01-01" } });
+<a href=#49 id=49 data-nosnippet>49</a>//!     // 如果您计划多次使用它，可以缓存 JDM 以获得轻微的性能提升
+<a href=#50 id=50 data-nosnippet>50</a>//!     // 在绑定（其他语言）的情况下，这种提升会更大
+<a href=#51 id=51 data-nosnippet>51</a>//!     {
+<a href=#52 id=52 data-nosnippet>52</a>//!         let promotion_decision = engine.get_decision("commercial/promotion.json").await.unwrap();
+<a href=#53 id=53 data-nosnippet>53</a>//!         let result = promotion_decision.evaluate(&amp;context).await.unwrap();
+<a href=#54 id=54 data-nosnippet>54</a>//!     }
+<a href=#55 id=55 data-nosnippet>55</a>//!     
+<a href=#56 id=56 data-nosnippet>56</a>//!     // 或者按需加载
+<a href=#57 id=57 data-nosnippet>57</a>//!     {
+<a href=#58 id=58 data-nosnippet>58</a>//!         let result = engine.evaluate("commercial/promotion.json", &amp;context).await.unwrap();
+<a href=#59 id=59 data-nosnippet>59</a>//!     }
+<a href=#60 id=60 data-nosnippet>60</a>//! }
+<a href=#61 id=61 data-nosnippet>61</a>//!
+<a href=#62 id=62 data-nosnippet>62</a>//!
+<a href=#63 id=63 data-nosnippet>63</a>//! ```
+<a href=#64 id=64 data-nosnippet>64</a>//!
+<a href=#65 id=65 data-nosnippet>65</a>//! ## 自定义加载器
+<a href=#66 id=66 data-nosnippet>66</a>//! 您可以通过实现 `DecisionLoader` trait 为 zen 引擎创建自定义加载器。
+<a href=#67 id=67 data-nosnippet>67</a>//! 以下是 MemoryLoader 的实现示例：
+<a href=#68 id=68 data-nosnippet>68</a>//! ```rust
+<a href=#69 id=69 data-nosnippet>69</a>//! use std::collections::HashMap;
+<a href=#70 id=70 data-nosnippet>70</a>//! use std::sync::{Arc, RwLock};
+<a href=#71 id=71 data-nosnippet>71</a>//! use zen_engine::loader::{DecisionLoader, LoaderError, LoaderResponse};
+<a href=#72 id=72 data-nosnippet>72</a>//! use zen_engine::model::DecisionContent;
+<a href=#73 id=73 data-nosnippet>73</a>//!
+<a href=#74 id=74 data-nosnippet>74</a>//! #[derive(Debug, Default)]
+<a href=#75 id=75 data-nosnippet>75</a>//! pub struct MemoryLoader {
+<a href=#76 id=76 data-nosnippet>76</a>//!     memory_refs: RwLock&lt;HashMap&lt;String, Arc&lt;DecisionContent&gt;&gt;&gt;,
+<a href=#77 id=77 data-nosnippet>77</a>//! }
+<a href=#78 id=78 data-nosnippet>78</a>//!
+<a href=#79 id=79 data-nosnippet>79</a>//! impl MemoryLoader {
+<a href=#80 id=80 data-nosnippet>80</a>//!     pub fn add&lt;K, D&gt;(&amp;self, key: K, content: D)
+<a href=#81 id=81 data-nosnippet>81</a>//!         where
+<a href=#82 id=82 data-nosnippet>82</a>//!             K: Into&lt;String&gt;,
+<a href=#83 id=83 data-nosnippet>83</a>//!             D: Into&lt;DecisionContent&gt;,
+<a href=#84 id=84 data-nosnippet>84</a>//!     {
+<a href=#85 id=85 data-nosnippet>85</a>//!         let mut mref = self.memory_refs.write().unwrap();
+<a href=#86 id=86 data-nosnippet>86</a>//!         mref.insert(key.into(), Arc::new(content.into()));
+<a href=#87 id=87 data-nosnippet>87</a>//!     }
+<a href=#88 id=88 data-nosnippet>88</a>//!
+<a href=#89 id=89 data-nosnippet>89</a>//!     pub fn get&lt;K&gt;(&amp;self, key: K) -&gt; Option&lt;Arc&lt;DecisionContent&gt;&gt;
+<a href=#90 id=90 data-nosnippet>90</a>//!         where
+<a href=#91 id=91 data-nosnippet>91</a>//!             K: AsRef&lt;str&gt;,
+<a href=#92 id=92 data-nosnippet>92</a>//!     {
+<a href=#93 id=93 data-nosnippet>93</a>//!         let mref = self.memory_refs.read().unwrap();
+<a href=#94 id=94 data-nosnippet>94</a>//!         mref.get(key.as_ref()).map(|r| r.clone())
+<a href=#95 id=95 data-nosnippet>95</a>//!     }
+<a href=#96 id=96 data-nosnippet>96</a>//!
+<a href=#97 id=97 data-nosnippet>97</a>//!     pub fn remove&lt;K&gt;(&amp;self, key: K) -&gt; bool
+<a href=#98 id=98 data-nosnippet>98</a>//!         where
+<a href=#99 id=99 data-nosnippet>99</a>//!             K: AsRef&lt;str&gt;,
+<a href=#100 id=100 data-nosnippet>100</a>//!     {
+<a href=#101 id=101 data-nosnippet>101</a>//!         let mut mref = self.memory_refs.write().unwrap();
+<a href=#102 id=102 data-nosnippet>102</a>//!         mref.remove(key.as_ref()).is_some()
+<a href=#103 id=103 data-nosnippet>103</a>//!     }
+<a href=#104 id=104 data-nosnippet>104</a>//! }
+<a href=#105 id=105 data-nosnippet>105</a>//!
+<a href=#106 id=106 data-nosnippet>106</a>//! impl DecisionLoader for MemoryLoader {
+<a href=#107 id=107 data-nosnippet>107</a>//! fn load&lt;'a&gt;(&amp;'a self, key: &amp;'a str) -&gt; impl Future&lt;Output = LoaderResponse&gt; + 'a {
+<a href=#108 id=108 data-nosnippet>108</a>//!     async move {
+<a href=#109 id=109 data-nosnippet>109</a>//!         self.get(&amp;key)
+<a href=#110 id=110 data-nosnippet>110</a>//!             .ok_or_else(|| LoaderError::NotFound(key.to_string()).into())
+<a href=#111 id=111 data-nosnippet>111</a>//!     }
+<a href=#112 id=112 data-nosnippet>112</a>//! }
+<a href=#113 id=113 data-nosnippet>113</a>//! ```
+<a href=#114 id=114 data-nosnippet>114</a>
+<a href=#115 id=115 data-nosnippet>115</a></span><span class="attr">#![deny(clippy::unwrap_used)]
+<a href=#116 id=116 data-nosnippet>116</a>#![allow(clippy::module_inception)]
+<a href=#117 id=117 data-nosnippet>117</a>
+<a href=#118 id=118 data-nosnippet>118</a></span><span class="kw">pub mod </span>config;
+<a href=#119 id=119 data-nosnippet>119</a><span class="kw">pub mod </span>decision;
+<a href=#120 id=120 data-nosnippet>120</a><span class="kw">pub mod </span>engine;
+<a href=#121 id=121 data-nosnippet>121</a><span class="kw">pub mod </span>error;
+<a href=#122 id=122 data-nosnippet>122</a><span class="kw">pub mod </span>handler;
+<a href=#123 id=123 data-nosnippet>123</a><span class="kw">pub mod </span>loader;
+<a href=#124 id=124 data-nosnippet>124</a><span class="attr">#[path = <span class="string">"model/mod.rs"</span>]
+<a href=#125 id=125 data-nosnippet>125</a></span><span class="kw">pub mod </span>model;
+<a href=#126 id=126 data-nosnippet>126</a><span class="kw">pub mod </span>util;
+<a href=#127 id=127 data-nosnippet>127</a>
+<a href=#128 id=128 data-nosnippet>128</a><span class="kw">pub use </span>config::ZEN_CONFIG;
+<a href=#129 id=129 data-nosnippet>129</a><span class="kw">pub use </span>decision::Decision;
+<a href=#130 id=130 data-nosnippet>130</a><span class="kw">pub use </span>engine::{DecisionEngine, EvaluationOptions};
+<a href=#131 id=131 data-nosnippet>131</a><span class="kw">pub use </span>error::EvaluationError;
+<a href=#132 id=132 data-nosnippet>132</a><span class="kw">pub use </span>handler::graph::DecisionGraphResponse;
+<a href=#133 id=133 data-nosnippet>133</a><span class="kw">pub use </span>handler::graph::DecisionGraphTrace;
+<a href=#134 id=134 data-nosnippet>134</a><span class="kw">pub use </span>handler::graph::DecisionGraphValidationError;
+<a href=#135 id=135 data-nosnippet>135</a><span class="kw">pub use </span>handler::node::NodeError;
+<a href=#136 id=136 data-nosnippet>136</a><span class="kw">pub use </span>mf_expression::Variable;</code></pre></div></section></main></body></html>

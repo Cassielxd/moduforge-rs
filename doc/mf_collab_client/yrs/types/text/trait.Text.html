@@ -1,0 +1,183 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `Text` trait in crate `mf_collab_client`."><title>Text in mf_collab_client::yrs::types::text - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-1a91846b.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="mf_collab_client" data-themes="" data-resource-suffix="" data-rustdoc-version="1.88.0 (6b00bc388 2025-06-23)" data-channel="1.88.0" data-search-js="search-f7877310.js" data-settings-js="settings-5514c975.js" ><script src="../../../../static.files/storage-4e99c027.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../../../static.files/main-7ef8a74a.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc trait"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../mf_collab_client/index.html">mf_<wbr>collab_<wbr>client</a><span class="version">0.5.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Text</a></h2><h3><a href="#provided-methods">Provided Methods</a></h3><ul class="block"><li><a href="#method.diff" title="diff">diff</a></li><li><a href="#method.diff_range" title="diff_range">diff_range</a></li><li><a href="#method.format" title="format">format</a></li><li><a href="#method.insert" title="insert">insert</a></li><li><a href="#method.insert_embed" title="insert_embed">insert_embed</a></li><li><a href="#method.insert_embed_with_attributes" title="insert_embed_with_attributes">insert_embed_with_attributes</a></li><li><a href="#method.insert_with_attributes" title="insert_with_attributes">insert_with_attributes</a></li><li><a href="#method.len" title="len">len</a></li><li><a href="#method.push" title="push">push</a></li><li><a href="#method.remove_range" title="remove_range">remove_range</a></li></ul><h3><a href="#dyn-compatibility">Dyn Compatibility</a></h3><h3><a href="#implementors">Implementors</a></h3></section><div id="rustdoc-modnav"><h2><a href="index.html">In mf_<wbr>collab_<wbr>client::<wbr>yrs::<wbr>types::<wbr>text</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../../index.html">mf_collab_client</a>::<wbr><a href="../../index.html">yrs</a>::<wbr><a href="../index.html">types</a>::<wbr><a href="index.html">text</a></div><h1>Trait <span class="trait">Text</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"></span></div><pre class="rust item-decl"><code>pub trait Text: <a class="trait" href="https://doc.rust-lang.org/1.88.0/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a> + <a class="trait" href="https://doc.rust-lang.org/1.88.0/core/convert/trait.AsRef.html" title="trait core::convert::AsRef">AsRef</a>&lt;<a class="struct" href="../../branch/struct.Branch.html" title="struct mf_collab_client::yrs::branch::Branch">Branch</a>&gt; {
+    // Provided methods
+    fn <a href="#method.len" class="fn">len</a>&lt;T&gt;(&amp;self, _txn: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.reference.html">&amp;T</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a>
+       <span class="where">where T: <a class="trait" href="../../trait.ReadTxn.html" title="trait mf_collab_client::yrs::ReadTxn">ReadTxn</a></span> { ... }
+<span class="item-spacer"></span>    fn <a href="#method.insert" class="fn">insert</a>(&amp;self, txn: &amp;mut <a class="struct" href="../../struct.TransactionMut.html" title="struct mf_collab_client::yrs::TransactionMut">TransactionMut</a>&lt;'_&gt;, index: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a>, chunk: &amp;<a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.str.html">str</a>) { ... }
+<span class="item-spacer"></span>    fn <a href="#method.insert_with_attributes" class="fn">insert_with_attributes</a>(
+        &amp;self,
+        txn: &amp;mut <a class="struct" href="../../struct.TransactionMut.html" title="struct mf_collab_client::yrs::TransactionMut">TransactionMut</a>&lt;'_&gt;,
+        index: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a>,
+        chunk: &amp;<a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.str.html">str</a>,
+        attributes: <a class="struct" href="https://doc.rust-lang.org/1.88.0/std/collections/hash/map/struct.HashMap.html" title="struct std::collections::hash::map::HashMap">HashMap</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.88.0/alloc/sync/struct.Arc.html" title="struct alloc::sync::Arc">Arc</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.str.html">str</a>&gt;, <a class="enum" href="../../enum.Any.html" title="enum mf_collab_client::yrs::Any">Any</a>&gt;,
+    ) { ... }
+<span class="item-spacer"></span>    fn <a href="#method.insert_embed" class="fn">insert_embed</a>&lt;V&gt;(
+        &amp;self,
+        txn: &amp;mut <a class="struct" href="../../struct.TransactionMut.html" title="struct mf_collab_client::yrs::TransactionMut">TransactionMut</a>&lt;'_&gt;,
+        index: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a>,
+        content: V,
+    ) -&gt; &lt;V as <a class="trait" href="../../block/trait.Prelim.html" title="trait mf_collab_client::yrs::block::Prelim">Prelim</a>&gt;::<a class="associatedtype" href="../../block/trait.Prelim.html#associatedtype.Return" title="type mf_collab_client::yrs::block::Prelim::Return">Return</a>
+       <span class="where">where V: <a class="trait" href="https://doc.rust-lang.org/1.88.0/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="../../block/enum.EmbedPrelim.html" title="enum mf_collab_client::yrs::block::EmbedPrelim">EmbedPrelim</a>&lt;V&gt;&gt; + <a class="trait" href="../../block/trait.Prelim.html" title="trait mf_collab_client::yrs::block::Prelim">Prelim</a></span> { ... }
+<span class="item-spacer"></span>    fn <a href="#method.insert_embed_with_attributes" class="fn">insert_embed_with_attributes</a>&lt;V&gt;(
+        &amp;self,
+        txn: &amp;mut <a class="struct" href="../../struct.TransactionMut.html" title="struct mf_collab_client::yrs::TransactionMut">TransactionMut</a>&lt;'_&gt;,
+        index: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a>,
+        embed: V,
+        attributes: <a class="struct" href="https://doc.rust-lang.org/1.88.0/std/collections/hash/map/struct.HashMap.html" title="struct std::collections::hash::map::HashMap">HashMap</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.88.0/alloc/sync/struct.Arc.html" title="struct alloc::sync::Arc">Arc</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.str.html">str</a>&gt;, <a class="enum" href="../../enum.Any.html" title="enum mf_collab_client::yrs::Any">Any</a>&gt;,
+    ) -&gt; &lt;V as <a class="trait" href="../../block/trait.Prelim.html" title="trait mf_collab_client::yrs::block::Prelim">Prelim</a>&gt;::<a class="associatedtype" href="../../block/trait.Prelim.html#associatedtype.Return" title="type mf_collab_client::yrs::block::Prelim::Return">Return</a>
+       <span class="where">where V: <a class="trait" href="https://doc.rust-lang.org/1.88.0/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="../../block/enum.EmbedPrelim.html" title="enum mf_collab_client::yrs::block::EmbedPrelim">EmbedPrelim</a>&lt;V&gt;&gt; + <a class="trait" href="../../block/trait.Prelim.html" title="trait mf_collab_client::yrs::block::Prelim">Prelim</a></span> { ... }
+<span class="item-spacer"></span>    fn <a href="#method.push" class="fn">push</a>(&amp;self, txn: &amp;mut <a class="struct" href="../../struct.TransactionMut.html" title="struct mf_collab_client::yrs::TransactionMut">TransactionMut</a>&lt;'_&gt;, chunk: &amp;<a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.str.html">str</a>) { ... }
+<span class="item-spacer"></span>    fn <a href="#method.remove_range" class="fn">remove_range</a>(&amp;self, txn: &amp;mut <a class="struct" href="../../struct.TransactionMut.html" title="struct mf_collab_client::yrs::TransactionMut">TransactionMut</a>&lt;'_&gt;, index: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a>, len: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a>) { ... }
+<span class="item-spacer"></span>    fn <a href="#method.format" class="fn">format</a>(
+        &amp;self,
+        txn: &amp;mut <a class="struct" href="../../struct.TransactionMut.html" title="struct mf_collab_client::yrs::TransactionMut">TransactionMut</a>&lt;'_&gt;,
+        index: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a>,
+        len: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a>,
+        attributes: <a class="struct" href="https://doc.rust-lang.org/1.88.0/std/collections/hash/map/struct.HashMap.html" title="struct std::collections::hash::map::HashMap">HashMap</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.88.0/alloc/sync/struct.Arc.html" title="struct alloc::sync::Arc">Arc</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.str.html">str</a>&gt;, <a class="enum" href="../../enum.Any.html" title="enum mf_collab_client::yrs::Any">Any</a>&gt;,
+    ) { ... }
+<span class="item-spacer"></span>    fn <a href="#method.diff" class="fn">diff</a>&lt;T, D, F&gt;(&amp;self, _txn: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.reference.html">&amp;T</a>, compute_ychange: F) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.88.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="struct.Diff.html" title="struct mf_collab_client::yrs::types::text::Diff">Diff</a>&lt;D&gt;&gt;
+       <span class="where">where T: <a class="trait" href="../../trait.ReadTxn.html" title="trait mf_collab_client::yrs::ReadTxn">ReadTxn</a>,
+             F: <a class="trait" href="https://doc.rust-lang.org/1.88.0/core/ops/function/trait.Fn.html" title="trait core::ops::function::Fn">Fn</a>(<a class="struct" href="struct.YChange.html" title="struct mf_collab_client::yrs::types::text::YChange">YChange</a>) -&gt; D</span> { ... }
+<span class="item-spacer"></span>    fn <a href="#method.diff_range" class="fn">diff_range</a>&lt;D, F&gt;(
+        &amp;self,
+        txn: &amp;mut <a class="struct" href="../../struct.TransactionMut.html" title="struct mf_collab_client::yrs::TransactionMut">TransactionMut</a>&lt;'_&gt;,
+        hi: <a class="enum" href="https://doc.rust-lang.org/1.88.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;<a class="struct" href="../../struct.Snapshot.html" title="struct mf_collab_client::yrs::Snapshot">Snapshot</a>&gt;,
+        lo: <a class="enum" href="https://doc.rust-lang.org/1.88.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;<a class="struct" href="../../struct.Snapshot.html" title="struct mf_collab_client::yrs::Snapshot">Snapshot</a>&gt;,
+        compute_ychange: F,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.88.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="struct.Diff.html" title="struct mf_collab_client::yrs::types::text::Diff">Diff</a>&lt;D&gt;&gt;
+       <span class="where">where F: <a class="trait" href="https://doc.rust-lang.org/1.88.0/core/ops/function/trait.Fn.html" title="trait core::ops::function::Fn">Fn</a>(<a class="struct" href="struct.YChange.html" title="struct mf_collab_client::yrs::types::text::YChange">YChange</a>) -&gt; D</span> { ... }
+}</code></pre><h2 id="provided-methods" class="section-header">Provided Methods<a href="#provided-methods" class="anchor">§</a></h2><div class="methods"><details class="toggle method-toggle" open><summary><section id="method.len" class="method"><h4 class="code-header">fn <a href="#method.len" class="fn">len</a>&lt;T&gt;(&amp;self, _txn: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.reference.html">&amp;T</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a><div class="where">where
+    T: <a class="trait" href="../../trait.ReadTxn.html" title="trait mf_collab_client::yrs::ReadTxn">ReadTxn</a>,</div></h4></section></summary><div class="docblock"><p>Returns a number of characters visible in a current text data structure.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.insert" class="method"><h4 class="code-header">fn <a href="#method.insert" class="fn">insert</a>(&amp;self, txn: &amp;mut <a class="struct" href="../../struct.TransactionMut.html" title="struct mf_collab_client::yrs::TransactionMut">TransactionMut</a>&lt;'_&gt;, index: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a>, chunk: &amp;<a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.str.html">str</a>)</h4></section></summary><div class="docblock"><p>Inserts a <code>chunk</code> of text at a given <code>index</code>.
+If <code>index</code> is <code>0</code>, this <code>chunk</code> will be inserted at the beginning of a current text.
+If <code>index</code> is equal to current data structure length, this <code>chunk</code> will be appended at
+the end of it.</p>
+<p>This method will panic if provided <code>index</code> is greater than the length of a current text.</p>
+<h5 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h5>
+<p>By default Document uses byte offset:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>yrs::{Doc, Text, GetString, Transact};
+
+<span class="kw">let </span>doc = Doc::new();
+<span class="kw">let </span>ytext = doc.get_or_insert_text(<span class="string">"text"</span>);
+<span class="kw">let </span>txn = <span class="kw-2">&amp;mut </span>doc.transact_mut();
+ytext.push(txn, <span class="string">"Hi ★ to you"</span>);
+
+<span class="comment">// The same as `String::len()`
+</span><span class="macro">assert_eq!</span>(ytext.len(txn), <span class="number">13</span>);
+
+<span class="comment">// To insert you have to count bytes and not chars.
+</span>ytext.insert(txn, <span class="number">6</span>, <span class="string">"!"</span>);
+<span class="macro">assert_eq!</span>(ytext.get_string(txn), <span class="string">"Hi ★! to you"</span>);</code></pre></div>
+<p>You can override how Yrs calculates the index with <a href="../../enum.OffsetKind.html" title="enum mf_collab_client::yrs::OffsetKind">OffsetKind</a>:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>yrs::{Doc, Options, Text, GetString, Transact, OffsetKind};
+
+<span class="kw">let </span>doc = Doc::with_options(Options {
+    offset_kind: OffsetKind::Utf16,
+    ..Default::default()
+});
+<span class="kw">let </span>ytext = doc.get_or_insert_text(<span class="string">"text"</span>);
+<span class="kw">let </span>txn = <span class="kw-2">&amp;mut </span>doc.transact_mut();
+ytext.push(txn, <span class="string">"Hi ★ to you"</span>);
+
+<span class="comment">// The same as `String::chars()::count()`
+</span><span class="macro">assert_eq!</span>(ytext.len(txn), <span class="number">11</span>);
+
+<span class="comment">// To insert you have to count chars.
+</span>ytext.insert(txn, <span class="number">4</span>, <span class="string">"!"</span>);
+<span class="macro">assert_eq!</span>(ytext.get_string(txn), <span class="string">"Hi ★! to you"</span>);</code></pre></div>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.insert_with_attributes" class="method"><h4 class="code-header">fn <a href="#method.insert_with_attributes" class="fn">insert_with_attributes</a>(
+    &amp;self,
+    txn: &amp;mut <a class="struct" href="../../struct.TransactionMut.html" title="struct mf_collab_client::yrs::TransactionMut">TransactionMut</a>&lt;'_&gt;,
+    index: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a>,
+    chunk: &amp;<a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.str.html">str</a>,
+    attributes: <a class="struct" href="https://doc.rust-lang.org/1.88.0/std/collections/hash/map/struct.HashMap.html" title="struct std::collections::hash::map::HashMap">HashMap</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.88.0/alloc/sync/struct.Arc.html" title="struct alloc::sync::Arc">Arc</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.str.html">str</a>&gt;, <a class="enum" href="../../enum.Any.html" title="enum mf_collab_client::yrs::Any">Any</a>&gt;,
+)</h4></section></summary><div class="docblock"><p>Inserts a <code>chunk</code> of text at a given <code>index</code>.
+If <code>index</code> is <code>0</code>, this <code>chunk</code> will be inserted at the beginning of a current text.
+If <code>index</code> is equal to current data structure length, this <code>chunk</code> will be appended at
+the end of it.
+Collection of supplied <code>attributes</code> will be used to wrap provided text <code>chunk</code> range with a
+formatting blocks.</p>
+<p>This method will panic if provided <code>index</code> is greater than the length of a current text.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.insert_embed" class="method"><h4 class="code-header">fn <a href="#method.insert_embed" class="fn">insert_embed</a>&lt;V&gt;(
+    &amp;self,
+    txn: &amp;mut <a class="struct" href="../../struct.TransactionMut.html" title="struct mf_collab_client::yrs::TransactionMut">TransactionMut</a>&lt;'_&gt;,
+    index: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a>,
+    content: V,
+) -&gt; &lt;V as <a class="trait" href="../../block/trait.Prelim.html" title="trait mf_collab_client::yrs::block::Prelim">Prelim</a>&gt;::<a class="associatedtype" href="../../block/trait.Prelim.html#associatedtype.Return" title="type mf_collab_client::yrs::block::Prelim::Return">Return</a><div class="where">where
+    V: <a class="trait" href="https://doc.rust-lang.org/1.88.0/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="../../block/enum.EmbedPrelim.html" title="enum mf_collab_client::yrs::block::EmbedPrelim">EmbedPrelim</a>&lt;V&gt;&gt; + <a class="trait" href="../../block/trait.Prelim.html" title="trait mf_collab_client::yrs::block::Prelim">Prelim</a>,</div></h4></section></summary><div class="docblock"><p>Inserts an embed <code>content</code> at a given <code>index</code>.</p>
+<p>If <code>index</code> is <code>0</code>, this <code>content</code> will be inserted at the beginning of a current text.
+If <code>index</code> is equal to current data structure length, this <code>embed</code> will be appended at
+the end of it.</p>
+<p>This method will panic if provided <code>index</code> is greater than the length of a current text.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.insert_embed_with_attributes" class="method"><h4 class="code-header">fn <a href="#method.insert_embed_with_attributes" class="fn">insert_embed_with_attributes</a>&lt;V&gt;(
+    &amp;self,
+    txn: &amp;mut <a class="struct" href="../../struct.TransactionMut.html" title="struct mf_collab_client::yrs::TransactionMut">TransactionMut</a>&lt;'_&gt;,
+    index: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a>,
+    embed: V,
+    attributes: <a class="struct" href="https://doc.rust-lang.org/1.88.0/std/collections/hash/map/struct.HashMap.html" title="struct std::collections::hash::map::HashMap">HashMap</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.88.0/alloc/sync/struct.Arc.html" title="struct alloc::sync::Arc">Arc</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.str.html">str</a>&gt;, <a class="enum" href="../../enum.Any.html" title="enum mf_collab_client::yrs::Any">Any</a>&gt;,
+) -&gt; &lt;V as <a class="trait" href="../../block/trait.Prelim.html" title="trait mf_collab_client::yrs::block::Prelim">Prelim</a>&gt;::<a class="associatedtype" href="../../block/trait.Prelim.html#associatedtype.Return" title="type mf_collab_client::yrs::block::Prelim::Return">Return</a><div class="where">where
+    V: <a class="trait" href="https://doc.rust-lang.org/1.88.0/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="../../block/enum.EmbedPrelim.html" title="enum mf_collab_client::yrs::block::EmbedPrelim">EmbedPrelim</a>&lt;V&gt;&gt; + <a class="trait" href="../../block/trait.Prelim.html" title="trait mf_collab_client::yrs::block::Prelim">Prelim</a>,</div></h4></section></summary><div class="docblock"><p>Inserts an embed <code>content</code> of text at a given <code>index</code>.
+If <code>index</code> is <code>0</code>, this <code>content</code> will be inserted at the beginning of a current text.
+If <code>index</code> is equal to current data structure length, this <code>chunk</code> will be appended at
+the end of it.
+Collection of supplied <code>attributes</code> will be used to wrap provided text <code>content</code> range with
+a formatting blocks.</p>
+<p>This method will panic if provided <code>index</code> is greater than the length of a current text.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.push" class="method"><h4 class="code-header">fn <a href="#method.push" class="fn">push</a>(&amp;self, txn: &amp;mut <a class="struct" href="../../struct.TransactionMut.html" title="struct mf_collab_client::yrs::TransactionMut">TransactionMut</a>&lt;'_&gt;, chunk: &amp;<a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.str.html">str</a>)</h4></section></summary><div class="docblock"><p>Appends a given <code>chunk</code> of text at the end of a current text structure.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.remove_range" class="method"><h4 class="code-header">fn <a href="#method.remove_range" class="fn">remove_range</a>(&amp;self, txn: &amp;mut <a class="struct" href="../../struct.TransactionMut.html" title="struct mf_collab_client::yrs::TransactionMut">TransactionMut</a>&lt;'_&gt;, index: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a>, len: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a>)</h4></section></summary><div class="docblock"><p>Removes up to a <code>len</code> characters from a current text structure, starting at given <code>index</code>.
+This method panics in case when not all expected characters were removed (due to
+insufficient number of characters to remove) or <code>index</code> is outside of the bounds of text.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.format" class="method"><h4 class="code-header">fn <a href="#method.format" class="fn">format</a>(
+    &amp;self,
+    txn: &amp;mut <a class="struct" href="../../struct.TransactionMut.html" title="struct mf_collab_client::yrs::TransactionMut">TransactionMut</a>&lt;'_&gt;,
+    index: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a>,
+    len: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.u32.html">u32</a>,
+    attributes: <a class="struct" href="https://doc.rust-lang.org/1.88.0/std/collections/hash/map/struct.HashMap.html" title="struct std::collections::hash::map::HashMap">HashMap</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.88.0/alloc/sync/struct.Arc.html" title="struct alloc::sync::Arc">Arc</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.str.html">str</a>&gt;, <a class="enum" href="../../enum.Any.html" title="enum mf_collab_client::yrs::Any">Any</a>&gt;,
+)</h4></section></summary><div class="docblock"><p>Wraps an existing piece of text within a range described by <code>index</code>-<code>len</code> parameters with
+formatting blocks containing provided <code>attributes</code> metadata.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.diff" class="method"><h4 class="code-header">fn <a href="#method.diff" class="fn">diff</a>&lt;T, D, F&gt;(&amp;self, _txn: <a class="primitive" href="https://doc.rust-lang.org/1.88.0/std/primitive.reference.html">&amp;T</a>, compute_ychange: F) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.88.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="struct.Diff.html" title="struct mf_collab_client::yrs::types::text::Diff">Diff</a>&lt;D&gt;&gt;<div class="where">where
+    T: <a class="trait" href="../../trait.ReadTxn.html" title="trait mf_collab_client::yrs::ReadTxn">ReadTxn</a>,
+    F: <a class="trait" href="https://doc.rust-lang.org/1.88.0/core/ops/function/trait.Fn.html" title="trait core::ops::function::Fn">Fn</a>(<a class="struct" href="struct.YChange.html" title="struct mf_collab_client::yrs::types::text::YChange">YChange</a>) -&gt; D,</div></h4></section></summary><div class="docblock"><p>Returns an ordered sequence of formatted chunks, current <a href="../../trait.Text.html" title="trait mf_collab_client::yrs::Text">Text</a> corresponds of. These chunks
+may contain inserted pieces of text or more complex elements like embedded binaries of
+shared objects. Chunks are organized by type of inserted value and formatting attributes
+wrapping it around. If formatting attributes are nested into each other, they will be split
+into separate <a href="struct.Diff.html" title="struct mf_collab_client::yrs::types::text::Diff">Diff</a> chunks.</p>
+<p><code>compute_ychange</code> callback is used to attach custom data to produced chunks.</p>
+<h5 id="example"><a class="doc-anchor" href="#example">§</a>Example</h5>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>yrs::{Doc, Text, Transact};
+<span class="kw">use </span>yrs::types::Attrs;
+<span class="kw">use </span>yrs::types::text::{Diff, YChange};
+
+<span class="kw">let </span>doc = Doc::new();
+<span class="kw">let </span>text = doc.get_or_insert_text(<span class="string">"article"</span>);
+<span class="kw">let </span><span class="kw-2">mut </span>txn = doc.transact_mut();
+
+<span class="kw">let </span>bold = Attrs::from([(<span class="string">"b"</span>.into(), <span class="bool-val">true</span>.into())]);
+<span class="kw">let </span>italic = Attrs::from([(<span class="string">"i"</span>.into(), <span class="bool-val">true</span>.into())]);
+
+text.insert_with_attributes(<span class="kw-2">&amp;mut </span>txn, <span class="number">0</span>, <span class="string">"hello world"</span>, italic.clone()); <span class="comment">// "&lt;i&gt;hello world&lt;/i&gt;"
+</span>text.format(<span class="kw-2">&amp;mut </span>txn, <span class="number">6</span>, <span class="number">5</span>, bold.clone()); <span class="comment">// "&lt;i&gt;hello &lt;b&gt;world&lt;/b&gt;&lt;/i&gt;"
+</span><span class="kw">let </span>image = <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>];
+text.insert_embed(<span class="kw-2">&amp;mut </span>txn, <span class="number">5</span>, image.clone()); <span class="comment">// insert binary after "hello"
+
+</span><span class="kw">let </span>italic_and_bold = Attrs::from([
+  (<span class="string">"b"</span>.into(), <span class="bool-val">true</span>.into()),
+  (<span class="string">"i"</span>.into(), <span class="bool-val">true</span>.into())
+]);
+<span class="kw">let </span>chunks = text.diff(<span class="kw-2">&amp;</span>txn, YChange::identity);
+<span class="macro">assert_eq!</span>(chunks, <span class="macro">vec!</span>[
+    Diff::new(<span class="string">"hello"</span>.into(), <span class="prelude-val">Some</span>(Box::new(italic.clone()))),
+    Diff::new(image.into(), <span class="prelude-val">Some</span>(Box::new(italic.clone()))),
+    Diff::new(<span class="string">" "</span>.into(), <span class="prelude-val">Some</span>(Box::new(italic))),
+    Diff::new(<span class="string">"world"</span>.into(), <span class="prelude-val">Some</span>(Box::new(italic_and_bold))),
+]);</code></pre></div>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.diff_range" class="method"><h4 class="code-header">fn <a href="#method.diff_range" class="fn">diff_range</a>&lt;D, F&gt;(
+    &amp;self,
+    txn: &amp;mut <a class="struct" href="../../struct.TransactionMut.html" title="struct mf_collab_client::yrs::TransactionMut">TransactionMut</a>&lt;'_&gt;,
+    hi: <a class="enum" href="https://doc.rust-lang.org/1.88.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;<a class="struct" href="../../struct.Snapshot.html" title="struct mf_collab_client::yrs::Snapshot">Snapshot</a>&gt;,
+    lo: <a class="enum" href="https://doc.rust-lang.org/1.88.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;<a class="struct" href="../../struct.Snapshot.html" title="struct mf_collab_client::yrs::Snapshot">Snapshot</a>&gt;,
+    compute_ychange: F,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.88.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="struct.Diff.html" title="struct mf_collab_client::yrs::types::text::Diff">Diff</a>&lt;D&gt;&gt;<div class="where">where
+    F: <a class="trait" href="https://doc.rust-lang.org/1.88.0/core/ops/function/trait.Fn.html" title="trait core::ops::function::Fn">Fn</a>(<a class="struct" href="struct.YChange.html" title="struct mf_collab_client::yrs::types::text::YChange">YChange</a>) -&gt; D,</div></h4></section></summary><div class="docblock"><p>Returns the Delta representation of this YText type.</p>
+</div></details></div><h2 id="dyn-compatibility" class="section-header">Dyn Compatibility<a href="#dyn-compatibility" class="anchor">§</a></h2><div class="dyn-compatibility-info"><p>This trait is <b>not</b> <a href="https://doc.rust-lang.org/1.88.0/reference/items/traits.html#dyn-compatibility">dyn compatible</a>.</p><p><i>In older versions of Rust, dyn compatibility was called "object safety", so this trait is not object safe.</i></p></div><h2 id="implementors" class="section-header">Implementors<a href="#implementors" class="anchor">§</a></h2><div id="implementors-list"><section id="impl-Text-for-TextRef" class="impl"><a href="#impl-Text-for-TextRef" class="anchor">§</a><h3 class="code-header">impl <a class="trait" href="../../trait.Text.html" title="trait mf_collab_client::yrs::Text">Text</a> for <a class="struct" href="../../struct.TextRef.html" title="struct mf_collab_client::yrs::TextRef">TextRef</a></h3></section><section id="impl-Text-for-XmlTextRef" class="impl"><a href="#impl-Text-for-XmlTextRef" class="anchor">§</a><h3 class="code-header">impl <a class="trait" href="../../trait.Text.html" title="trait mf_collab_client::yrs::Text">Text</a> for <a class="struct" href="../../struct.XmlTextRef.html" title="struct mf_collab_client::yrs::XmlTextRef">XmlTextRef</a></h3></section></div><script src="../../../../trait.impl/yrs/types/text/trait.Text.js" data-ignore-extern-crates="yrs" async></script></section></div></main></body></html>

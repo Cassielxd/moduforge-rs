@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ConnectionError","ConnectionStatus","ProtocolSyncState","SyncEvent"],"struct":["ConnectionRetryConfig","MarkData","NodeData","RoomSnapshot","StepResult","WebsocketProviderOptions"],"type":["SyncEventReceiver","SyncEventSender"]};

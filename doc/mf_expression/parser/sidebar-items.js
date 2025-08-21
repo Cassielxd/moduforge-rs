@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Node","ParserError"],"struct":["NodeMetadata","Parser","ParserResult","Standard","Unary"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["OffsetKind","TransactionAcqError"],"struct":["Doc","Options"],"trait":["Transact"]};

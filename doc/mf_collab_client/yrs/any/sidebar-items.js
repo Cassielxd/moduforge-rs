@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["F64_MAX_SAFE_INTEGER","F64_MIN_SAFE_INTEGER"],"enum":["Any"]};

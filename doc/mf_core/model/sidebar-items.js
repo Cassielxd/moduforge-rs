@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ContentEnum"],"mod":["attrs","content","error","id_generator","imbl","mark","mark_type","node","node_pool","node_type","ops","schema","tree","types"],"struct":["Attrs","AttrsRef","IdGenerator","Mark","MarkRef","MarkType","Node","NodePool","NodeRef","NodeType","Schema","Tree"],"type":["NodeId","PoolResult"]};

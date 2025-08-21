@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["collect_fbfx_csxm"]};

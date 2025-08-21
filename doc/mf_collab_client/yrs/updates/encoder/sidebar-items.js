@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["EncoderV1","EncoderV2"],"trait":["Encode","Encoder"]};

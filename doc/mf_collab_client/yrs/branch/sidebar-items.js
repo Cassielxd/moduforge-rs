@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["BranchID"],"struct":["Branch","BranchPtr","Hook","Nested","Root"]};

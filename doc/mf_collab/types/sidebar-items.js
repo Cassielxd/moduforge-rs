@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["MarkData","NodeData","RoomSnapshot","StepResult"]};

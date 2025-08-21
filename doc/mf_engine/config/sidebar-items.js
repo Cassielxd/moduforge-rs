@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"static":["ZEN_CONFIG"],"struct":["ZenConfig"]};

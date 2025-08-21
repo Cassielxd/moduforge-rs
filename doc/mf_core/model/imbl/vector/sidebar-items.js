@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Focus","FocusMut"],"struct":["Chunks","ChunksMut","ConsumingIter","GenericVector","Iter","IterMut"],"type":["Vector"]};

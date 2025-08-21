@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["export_zip_with_shards","for_each_snapshot_shard_raw","import_zip_with_shards","read_and_decode_snapshot_shards","read_snapshot_shards","write_snapshot_shards"],"mod":["formats"],"struct":["SnapshotShardMeta","ZipDocumentReader","ZipDocumentWriter"]};

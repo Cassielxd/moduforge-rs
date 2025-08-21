@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["Plugin","PluginSpec"],"trait":["PluginTrait","StateField"]};

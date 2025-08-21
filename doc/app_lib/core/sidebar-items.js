@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["collab_editor","demo_editor"]};

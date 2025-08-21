@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["convert_step_global","get_global_performance_stats","global_registry","register_global_converter"],"struct":["PerformanceStats","StaticConverterRegistry","TypeConversionStats"]};
