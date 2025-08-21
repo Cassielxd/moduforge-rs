@@ -31,18 +31,18 @@ edition = "2021"
 
 [dependencies]
 # 核心框架
-mf-core = "0.4.12"
-mf-model = "0.4.12"
-mf-state = "0.4.12"
-mf-transform = "0.4.12"
+moduforge-core = "0.5.0"
+moduforge-model = "0.5.0"
+moduforge-state = "0.5.0"
+moduforge-transform = "0.5.0"
 
 # 可选组件
-mf-engine = "0.4.12"           # 规则引擎
-mf-expression = "0.4.12"       # 表达式语言
-mf-collaboration = "0.4.12"    # 协作功能
-mf-file = "0.4.12"             # 文件处理
-mf-search = "0.4.12"           # 搜索功能
-mf-persistence = "0.4.12"      # 持久化
+moduforge-rules-engine = "0.5.0"      # 规则引擎
+moduforge-rules-expression = "0.5.0"  # 表达式语言
+moduforge-collaboration = "0.5.0"     # 协作功能
+moduforge-file = "0.5.0"              # 文件处理
+moduforge-search = "0.5.0"            # 搜索功能
+moduforge-persistence = "0.5.0"       # 持久化
 
 # 必需的异步运行时和工具
 tokio = { version = "1", features = ["full"] }
@@ -65,17 +65,18 @@ use std::sync::Arc;
 use anyhow::Result;
 use mf_core::{
     runtime::async_runtime::ForgeAsyncRuntime,
-    types::{RuntimeOptions, EditorOptionsBuilder, Content, NodePoolFnTrait}
+    types::{RuntimeOptions, Content, NodePoolFnTrait},
+    config::{ForgeConfig, Environment}
 };
-use mf_model::{node_pool::NodePool, Node, NodeType, Attrs};
-use mf_transform::node_step::AddNodeStep;
+use mf_core::model::{node_pool::NodePool, Node, NodeType, Attrs};
+use mf_core::transform::node_step::AddNodeStep;
 
 // 定义节点池创建函数
 struct DefaultNodePoolFn;
 
 impl NodePoolFnTrait for DefaultNodePoolFn {
-    fn call(&self) -> NodePool {
-        NodePool::default()
+    async fn create(&self, _config: &mf_core::state::StateConfig) -> mf_core::ForgeResult<NodePool> {
+        Ok(NodePool::default())
     }
 }
 
@@ -84,16 +85,18 @@ async fn main() -> Result<()> {
     // 初始化日志
     tracing_subscriber::fmt::init();
     
-    // 创建编辑器配置
+    // 创建运行时配置
+    let config = ForgeConfig::builder()
+        .environment(Environment::Development)
+        .build()
+        .map_err(|e| anyhow::anyhow!("配置创建失败: {}", e))?;
+    
     let create_callback: Arc<dyn NodePoolFnTrait> = Arc::new(DefaultNodePoolFn);
-    let mut builder = EditorOptionsBuilder::new();
-    let options = builder
-        .content(Content::NodePoolFn(create_callback))
-        .history_limit(20)
-        .build();
+    let options = RuntimeOptions::default()
+        .set_content(Content::NodePoolFn(create_callback));
     
     // 创建运行时
-    let runtime = ForgeAsyncRuntime::create(options).await?;
+    let runtime = ForgeAsyncRuntime::create_with_config(options, config).await?;
     
     println!("✅ ModuForge 运行时启动成功！");
     
@@ -123,7 +126,7 @@ async fn main() -> Result<()> {
     
     // 获取当前状态
     let state = runtime.get_state();
-    println!("📄 文档创建完成，节点数量: {}", state.doc().node_count());
+    println!("📄 文档创建完成，节点数量: {}", state.doc().size());
     
     Ok(())
 }
@@ -148,7 +151,7 @@ cargo run
 ```rust
 // src/nodes.rs
 use lazy_static::lazy_static;
-use mf_model::{Node, NodeType, Attrs, AttrValue};
+use mf_core::model::{Node, NodeType, Attrs, AttrValue};
 
 lazy_static! {
     // 文章节点
@@ -264,7 +267,7 @@ fn main() {
 // src/plugins/word_count.rs
 use std::sync::Arc;
 use async_trait::async_trait;
-use mf_state::{
+use mf_core::state::{
     plugin::{PluginTrait, StateField, PluginMetadata, PluginConfig, PluginSpec, Plugin},
     resource::Resource,
     State, StateConfig, Transaction,
@@ -322,12 +325,14 @@ impl WordCountStateField {
         let mut word_count = 0;
         let mut char_count = 0;
         
-        state.doc().traverse(|node| {
+        // 遍历节点池中的所有节点计算统计
+        let all_nodes = state.doc().filter_nodes(|_| true);
+        for node in all_nodes {
             if let Some(content) = &node.content {
                 word_count += content.split_whitespace().count();
                 char_count += content.len();
             }
-        });
+        }
         
         (word_count, char_count)
     }
@@ -367,7 +372,7 @@ impl PluginTrait for WordCountPlugin {
         new_state: &State,
     ) -> StateResult<Option<Transaction>> {
         // 获取统计数据
-        if let Some(word_data) = new_state.get_field("word_count")
+        if let Some(word_data) = new_state.get_field("word_count_data")
             .and_then(|state| state.downcast_ref::<WordCountData>()) {
             
             println!("📊 文档统计: {} 词, {} 字符", 

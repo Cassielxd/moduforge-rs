@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["for_each_snapshot_shard_cbor","read_and_decode_snapshot_shards_cbor","read_parent_map_cbor","write_parent_map_cbor","write_snapshot_shards_cbor"]};

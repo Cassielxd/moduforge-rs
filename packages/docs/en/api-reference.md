@@ -704,7 +704,7 @@ impl Tree {
     where F: Fn(&Arc<Node>) -> bool;
     
     // 获取节点数量
-    pub fn node_count(&self) -> usize;
+    pub fn size(&self) -> usize;
     
     // 获取树的深度
     pub fn depth(&self) -> usize;

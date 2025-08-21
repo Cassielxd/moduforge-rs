@@ -1,1 +1,0 @@
-searchState.loadedDescShard("mf_macro", 0, "ModuForge-RS 声明式宏\nExtension macro implementation for easier Extension …")

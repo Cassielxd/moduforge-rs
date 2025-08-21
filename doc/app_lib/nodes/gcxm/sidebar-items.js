@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["DWGC_STR","DXGC_STR","GCXM_STR"],"fn":["init_project_structure","init_project_structure_field","init_unit_structure_field"],"struct":["DWGC","DXGC","GCXM"]};

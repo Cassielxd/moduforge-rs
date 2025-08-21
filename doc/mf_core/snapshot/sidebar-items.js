@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["ExtensionType"],"struct":["CoreSnapshot","SerializableMarkType","SerializableNodeType","SerializableSchema","SnapshotBuilder","SnapshotManager"]};

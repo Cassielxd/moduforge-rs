@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["compute_attrs","default_attrs"],"struct":["Attribute","AttributeSpec","Schema","SchemaSpec"]};

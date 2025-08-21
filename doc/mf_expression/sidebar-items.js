@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["IsolateError"],"fn":["compile_expression","compile_unary_expression","evaluate_expression","evaluate_unary_expression"],"macro":["with_state"],"mod":["compiler","expression","functions","intellisense","lexer","parser","validate","variable","vm"],"struct":["Isolate"]};

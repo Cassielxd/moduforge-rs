@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["create_tantivy_index_plugin"],"struct":["TantivySearchIndexResource"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["XmlNode"],"struct":["Attributes","Siblings","TreeWalker","XmlElementPrelim","XmlElementRef","XmlEvent","XmlFragmentPrelim","XmlFragmentRef","XmlHookRef","XmlTextEvent","XmlTextPrelim","XmlTextRef"],"trait":["Xml","XmlFragment","XmlPrelim"]};

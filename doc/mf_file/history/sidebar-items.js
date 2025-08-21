@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["decode_history_frames","encode_history_frames"],"struct":["TypeWrapper"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["collect_node_ids_from_enum"],"struct":["IndexDoc"]};

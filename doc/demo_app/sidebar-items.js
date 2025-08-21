@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["handle_login_success","handle_logout","handle_tauri_error","handler_404","hide_tray_menu","main","quit_app","show_main_window","show_tray_menu"]};

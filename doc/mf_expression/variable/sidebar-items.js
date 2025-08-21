@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Variable","VariableType"],"struct":["VariableDeserializer"],"trait":["DynamicVariable"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["handle_msg"],"struct":["Connection","SyncTracker"]};

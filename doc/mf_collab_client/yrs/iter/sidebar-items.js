@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["AsIter","BlockIter","MoveIter"],"trait":["IntoBlockIter","TxnDoubleEndedIterator","TxnIterator"]};

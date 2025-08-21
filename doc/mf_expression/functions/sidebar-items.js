@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["ClosureFunction","DateMethod","DeprecatedFunction","FunctionKind","MethodKind"],"mod":["arguments","defs","internal","mf_function","state_guard"],"struct":["ClosureFunctionIter","FunctionRegistry","MethodRegistry"]};

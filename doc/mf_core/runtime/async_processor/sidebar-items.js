@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["ProcessorError","ProcessorState","TaskStatus"],"struct":["AsyncProcessor","ProcessorStats","TaskQueue","TaskResult"],"trait":["TaskProcessor"]};

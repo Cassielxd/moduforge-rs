@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["MiddlewareStack"],"trait":["Middleware"],"type":["ArcMiddleware"]};

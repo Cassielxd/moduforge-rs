@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["get_log_level","init_logging","set_log_level"]};

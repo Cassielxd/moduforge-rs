@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["IndexEvent","RebuildScope"],"fn":["event_from_transaction"],"struct":["IndexService"]};

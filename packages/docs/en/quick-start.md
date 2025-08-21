@@ -123,7 +123,7 @@ async fn main() -> Result<()> {
     
     // 获取当前状态
     let state = runtime.get_state();
-    println!("📄 文档创建完成，节点数量: {}", state.doc().node_count());
+    println!("📄 文档创建完成，节点数量: {}", state.doc().size());
     
     Ok(())
 }
@@ -322,12 +322,14 @@ impl WordCountStateField {
         let mut word_count = 0;
         let mut char_count = 0;
         
-        state.doc().traverse(|node| {
+        // 遍历节点池中的所有节点计算统计
+        let all_nodes = state.doc().filter_nodes(|_| true);
+        for node in all_nodes {
             if let Some(content) = &node.content {
                 word_count += content.split_whitespace().count();
                 char_count += content.len();
             }
-        });
+        }
         
         (word_count, char_count)
     }
@@ -367,7 +369,7 @@ impl PluginTrait for WordCountPlugin {
         new_state: &State,
     ) -> StateResult<Option<Transaction>> {
         // 获取统计数据
-        if let Some(word_data) = new_state.get_field("word_count")
+        if let Some(word_data) = new_state.get_field("word_count_data")
             .and_then(|state| state.downcast_ref::<WordCountData>()) {
             
             println!("📊 文档统计: {} 词, {} 字符", 

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["create_doc","get_schema_by_resolved_extensions"]};

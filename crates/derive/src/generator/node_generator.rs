@@ -330,7 +330,7 @@ impl<'a> NodeGenerator<'a> {
 
     /// 提取所有字段信息
     ///
-    /// 从 DeriveInput 中提取所有字段，包括有和没有 #[attr] 标记的字段。
+    /// 从 DeriveInput 中提取所有字段，包括有和没有 #[attr] 标记的字段，以及 #[id] 字段。
     ///
     /// # 返回值
     ///
@@ -347,8 +347,15 @@ impl<'a> NodeGenerator<'a> {
                         for field in &fields_named.named {
                             if let Some(field_name) = &field.ident {
                                 // 检查是否是有 #[attr] 标记的字段
-                                let field_config = self.config.attr_fields.iter()
+                                let attr_config = self.config.attr_fields.iter()
                                     .find(|config| &config.name == &field_name.to_string());
+
+                                // 检查是否是有 #[id] 标记的字段
+                                let id_config = self.config.id_field.as_ref()
+                                    .filter(|config| &config.name == &field_name.to_string());
+
+                                // 优先使用 id_config，然后是 attr_config
+                                let field_config = id_config.or(attr_config);
 
                                 let field_info = FieldInfo {
                                     name: field_name.to_string(),
@@ -771,7 +778,15 @@ impl<'a> NodeGenerator<'a> {
             
             // 生成字段的默认值
             let default_value = if let Some(config) = &field_info.config {
-                if config.default_value.is_some() {
+                // 检查是否是 ID 字段
+                let is_id_field = self.config.id_field.as_ref()
+                    .map(|id_config| &id_config.name == &config.name)
+                    .unwrap_or(false);
+                
+                if is_id_field {
+                    // ID 字段需要生成有意义的默认值
+                    self.generate_id_field_default_for_instance(&field_info.type_name)?
+                } else if config.default_value.is_some() {
                     self.generate_default_value_for_instance(config)?
                 } else {
                     self.generate_type_default_for_instance(&field_info.type_name)?
@@ -900,6 +915,41 @@ impl<'a> NodeGenerator<'a> {
         Ok(default_expr)
     }
 
+    /// 生成 ID 字段的默认值表达式（用于实例创建）
+    ///
+    /// 为 ID 字段生成有意义的默认值而不是空值。
+    /// ID 字段应该有可识别的默认值用于调试和错误恢复。
+    ///
+    /// # 参数
+    ///
+    /// * `type_name` - ID 字段类型名称
+    ///
+    /// # 返回值
+    ///
+    /// 返回 ID 字段默认值表达式
+    ///
+    /// # 支持的类型和默认值
+    ///
+    /// - String: "default_node_id"
+    /// - Option<String>: Some("default_node_id".to_string())
+    /// - 其他类型: 尝试从 "default_node_id" 解析
+    fn generate_id_field_default_for_instance(&self, type_name: &str) -> MacroResult<TokenStream2> {
+        let default_expr = match type_name {
+            "String" => quote! { "default_node_id".to_string() },
+            "Option<String>" => quote! { Some("default_node_id".to_string()) },
+            _ if type_name.starts_with("Option<") => {
+                quote! { Some("default_node_id".to_string()) }
+            },
+            _ => {
+                // 对于其他类型，尝试从字符串解析
+                // 如果类型不支持从字符串解析，编译时会报错
+                quote! { "default_node_id".parse().unwrap_or_default() }
+            }
+        };
+        
+        Ok(default_expr)
+    }
+
     /// 生成 from 方法的实现代码
     ///
     /// 根据配置信息生成 from 方法，该方法接受 mf_model::node::Node 参数
@@ -1005,6 +1055,160 @@ impl<'a> NodeGenerator<'a> {
         Ok(method_impl)
     }
 
+    /// 生成 to_node() 方法的实现代码
+    ///
+    /// 根据配置信息生成 to_node() 方法，该方法将结构体实例转换为 mf_model::node::Node。
+    /// 如果有 #[id] 字段，会将该字段的值设置为 Node 的 id。
+    ///
+    /// # 返回值
+    ///
+    /// 成功时返回生成的代码 TokenStream，失败时返回生成错误
+    pub fn generate_to_node_method(&self) -> MacroResult<TokenStream2> {
+        let node_type = self.config.node_type.as_ref()
+            .ok_or_else(|| MacroError::validation_error(
+                "Node 配置缺少必需的 node_type 属性",
+                self.input,
+            ))?;
+
+        // 生成节点 ID 设置代码
+        let id_code = if let Some(id_field) = &self.config.id_field {
+            let id_field_name = syn::parse_str::<syn::Ident>(&id_field.name)
+                .map_err(|_| MacroError::parse_error(
+                    &format!("无效的 ID 字段名称: {}", id_field.name),
+                    self.input,
+                ))?;
+            
+            match id_field.type_name.as_str() {
+                "String" => quote! {
+                    let node_id = self.#id_field_name.as_str();
+                },
+                "Option<String>" => quote! {
+                    let node_id = self.#id_field_name.as_deref().unwrap_or("default_id");
+                },
+                _ => quote! {
+                    let node_id = self.#id_field_name.to_string().as_str();
+                }
+            }
+        } else {
+            quote! {
+                let node_id = "default_id";
+            }
+        };
+
+        // 生成属性代码
+        let attrs_code = self.generate_to_node_attrs_code()?;
+
+        let method_impl = quote! {
+            /// 将结构体实例转换为 mf_model::node::Node
+            ///
+            /// 此方法由 #[derive(Node)] 宏自动生成，根据结构体实例的字段值
+            /// 创建相应的 Node 实例。
+            ///
+            /// # 返回值
+            /// 
+            /// 返回配置好的 `mf_model::node::Node` 实例
+            ///
+            /// # 设计说明
+            ///
+            /// - #[id] 字段会映射到 Node 的 id 属性
+            /// - #[attr] 字段会映射到 Node 的 attrs 属性
+            /// - 其他字段不会包含在生成的 Node 中
+            pub fn to_node(&self) -> mf_model::node::Node {
+                use mf_model::attrs::Attrs;
+                use serde_json::Value as JsonValue;
+                
+                #id_code
+                #attrs_code
+                
+                mf_model::node::Node::new(
+                    node_id,
+                    #node_type.to_string(),
+                    attrs,
+                    vec![],
+                    vec![],
+                )
+            }
+        };
+
+        Ok(method_impl)
+    }
+
+    /// 生成 to_node 方法的属性构建代码
+    ///
+    /// 只为标记了 #[attr] 的字段生成属性构建代码，从实例值提取属性。
+    ///
+    /// # 返回值
+    ///
+    /// 成功时返回属性构建代码，失败时返回生成错误
+    fn generate_to_node_attrs_code(&self) -> MacroResult<TokenStream2> {
+        // 只获取有 #[attr] 标记的字段
+        let attr_fields = &self.config.attr_fields;
+        
+        if attr_fields.is_empty() {
+            // 没有属性字段时，创建默认的 attrs
+            return Ok(quote! {
+                let attrs = Attrs::default();
+            });
+        }
+
+        let mut field_setters = Vec::new();
+
+        // 为每个属性字段生成设置代码
+        for field_config in attr_fields {
+            let field_setter = self.generate_to_node_field_code(field_config)?;
+            field_setters.push(field_setter);
+        }
+
+        // 生成完整的属性构建代码
+        let attrs_code = quote! {
+            let mut attrs_map = imbl::HashMap::new();
+            #(#field_setters)*
+            let attrs = Attrs::from(attrs_map);
+        };
+
+        Ok(attrs_code)
+    }
+
+    /// 生成单个属性字段的 to_node 设置代码
+    ///
+    /// 为单个属性字段生成从实例值到 Node 属性的设置代码。
+    ///
+    /// # 参数
+    ///
+    /// * `field_config` - 字段配置信息
+    ///
+    /// # 返回值
+    ///
+    /// 成功时返回字段设置代码，失败时返回生成错误
+    fn generate_to_node_field_code(&self, field_config: &FieldConfig) -> MacroResult<TokenStream2> {
+        let field_name = &field_config.name;
+        let field_ident = syn::parse_str::<syn::Ident>(field_name)
+            .map_err(|_| MacroError::parse_error(
+                &format!("无效的字段名称: {}", field_name),
+                self.input,
+            ))?;
+
+        // 根据字段类型生成不同的序列化代码
+        let value_expr = match field_config.type_name.as_str() {
+            "String" => quote! {
+                serde_json::to_value(&self.#field_ident).unwrap_or(JsonValue::Null)
+            },
+            "i32" | "i64" | "f64" | "bool" => quote! {
+                serde_json::to_value(self.#field_ident).unwrap_or(JsonValue::Null)
+            },
+            _ if field_config.type_name.starts_with("Option<") => quote! {
+                serde_json::to_value(&self.#field_ident).unwrap_or(JsonValue::Null)
+            },
+            _ => quote! {
+                serde_json::to_value(&self.#field_ident).unwrap_or(JsonValue::Null)
+            }
+        };
+
+        Ok(quote! {
+            attrs_map.insert(#field_name.to_string(), #value_expr);
+        })
+    }
+
     /// 生成字段初始化代码
     ///
     /// 为所有字段生成初始化代码，包括有和没有 #[attr] 标记的字段。
@@ -1030,7 +1234,7 @@ impl<'a> NodeGenerator<'a> {
 
     /// 基于字段信息生成字段初始化代码
     ///
-    /// 为任意字段（有或没有 #[attr] 标记）生成从 Node 属性中提取值的初始化代码。
+    /// 为任意字段（有或没有 #[attr]/#[id] 标记）生成从 Node 中提取值的初始化代码。
     ///
     /// # 参数
     ///
@@ -1049,10 +1253,21 @@ impl<'a> NodeGenerator<'a> {
 
         // 生成字段值提取代码
         let extraction_code = if let Some(config) = &field_info.config {
-            // 有 #[attr] 标记的字段，从 Node 的 attrs 中提取
-            self.generate_field_extraction_code(config)?
+            // 检查是否是 ID 字段
+            if let Some(id_config) = &self.config.id_field {
+                if &config.name == &id_config.name {
+                    // 这是 ID 字段，从 Node 的 id 字段提取
+                    self.generate_id_field_extraction_code(config)?
+                } else {
+                    // 这是普通 attr 字段，从 Node 的 attrs 中提取
+                    self.generate_field_extraction_code(config)?
+                }
+            } else {
+                // 没有 ID 字段配置，这是普通 attr 字段
+                self.generate_field_extraction_code(config)?
+            }
         } else {
-            // 没有 #[attr] 标记的字段，使用默认值
+            // 没有任何标记的字段，使用默认值
             self.generate_non_attr_field_default(&field_info.type_name)?
         };
 
@@ -1196,6 +1411,66 @@ impl<'a> NodeGenerator<'a> {
         Ok(extraction)
     }
 
+    /// 生成 ID 字段值提取代码
+    ///
+    /// 为标记了 #[id] 的字段生成从 Node 的 id 字段中提取值的代码。
+    /// ID 字段映射到 Node 的 id 属性，而不是 attrs 中的某个属性。
+    ///
+    /// # 参数
+    ///
+    /// * `field_config` - ID 字段配置信息
+    ///
+    /// # 返回值
+    ///
+    /// 成功时返回 ID 字段值提取代码，失败时返回转换错误
+    ///
+    /// # 支持的类型
+    ///
+    /// - String: 直接从 Node.id 提取
+    /// - Option<String>: 可选的字符串 ID
+    /// - 其他类型: 尝试字符串转换
+    ///
+    /// # 生成的代码示例
+    ///
+    /// ```rust
+    /// // String 类型
+    /// node.id.as_ref().to_string()
+    /// 
+    /// // Option<String> 类型
+    /// Some(node.id.as_ref().to_string())
+    /// 
+    /// // 其他类型（如果支持从字符串解析）
+    /// node.id.as_ref().parse().unwrap_or_default()
+    /// ```
+    fn generate_id_field_extraction_code(&self, field_config: &FieldConfig) -> MacroResult<TokenStream2> {
+        let type_name = &field_config.type_name;
+
+        // 为不同类型生成不同的 ID 提取逻辑
+        let extraction = match type_name.as_str() {
+            "String" => quote! {
+                node.id.as_ref().to_string()
+            },
+            "Option<String>" => quote! {
+                Some(node.id.as_ref().to_string())
+            },
+            // 对于其他类型，假设它们实现了 FromStr
+            _ if type_name.starts_with("Option<") => {
+                quote! {
+                    Some(node.id.as_ref().to_string())
+                }
+            },
+            _ => {
+                // 对于非字符串类型，尝试解析
+                // 这要求目标类型实现 FromStr trait
+                quote! {
+                    node.id.as_ref().parse().unwrap_or_default()
+                }
+            }
+        };
+
+        Ok(extraction)
+    }
+
     /// 提取 Option<T> 类型的内部类型
     ///
     /// 从 "Option<T>" 字符串中提取 "T" 部分。
@@ -1235,6 +1510,7 @@ impl<'a> CodeGenerator for NodeGenerator<'a> {
     fn generate(&self) -> MacroResult<TokenStream2> {
         let struct_name = &self.input.ident;
         let node_definition_method = self.generate_node_definition_method()?;
+        let to_node_method = self.generate_to_node_method()?;
         let from_method = self.generate_from_method()?;
         let default_instance_method = self.generate_default_instance_method()?;
         
@@ -1242,35 +1518,37 @@ impl<'a> CodeGenerator for NodeGenerator<'a> {
             impl #struct_name {
                 #node_definition_method
                 
+                #to_node_method
+                
                 #from_method
                 
                 #default_instance_method
             }
             
-            impl From<#struct_name> for mf_core::node::Node {
-                /// 将结构体实例转换为 mf_core::node::Node
+            impl From<#struct_name> for mf_model::node::Node {
+                /// 将结构体实例转换为 mf_model::node::Node
                 ///
                 /// 实现标准的 From trait，支持使用 `.into()` 方法进行转换。
                 /// 此实现由 #[derive(Node)] 宏自动生成。
                 ///
                 /// # 参数
                 ///
-                /// * `_value` - 结构体实例（当前实现中使用定义而非实例值）
+                /// * `value` - 结构体实例
                 ///
                 /// # 返回值
                 ///
-                /// 返回配置好的 `mf_core::node::Node` 定义
+                /// 返回配置好的 `mf_model::node::Node` 实例
                 ///
                 /// # 使用示例
                 ///
                 /// ```rust
                 /// let my_struct = MyStruct { /* fields */ };
-                /// let node: mf_core::node::Node = my_struct.into();
+                /// let node: mf_model::node::Node = my_struct.into();
                 /// // 或者
-                /// let node = mf_core::node::Node::from(my_struct);
+                /// let node = mf_model::node::Node::from(my_struct);
                 /// ```
-                fn from(_value: #struct_name) -> Self {
-                    #struct_name::node_definition()
+                fn from(value: #struct_name) -> Self {
+                    value.to_node()
                 }
             }
             

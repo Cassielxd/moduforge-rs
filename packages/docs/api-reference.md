@@ -6,15 +6,15 @@
 
 ### 核心 API
 
-#### [mf-core](#mf-core-api) - 核心运行时
+#### [moduforge-core](#mf-core-api) - 核心运行时
 ```rust
 // 主要 API
-ForgeAsyncRuntime::create(options) -> Result<Self>
-runtime.apply_transaction(transaction) -> Result<State>
+ForgeAsyncRuntime::create(config) -> Result<Self>
+runtime.apply_transaction(transaction) -> Result<Arc<State>>
 runtime.dispatch_flow(transaction) -> Result<()>
 ```
 
-#### [mf-state](#mf-state-api) - 状态管理  
+#### [moduforge-state](#mf-state-api) - 状态管理  
 ```rust
 // 主要 API
 State::new(config) -> Self
@@ -24,7 +24,7 @@ DependencyManager::add_dependency(dependent, dependency) -> Result<()>
 Plugin::new(spec) -> Self
 ```
 
-#### [mf-model](#mf-model-api) - 数据模型
+#### [moduforge-model](#mf-model-api) - 数据模型
 ```rust
 // 主要 API
 Node::new(id, node_type, attrs, content) -> Self
@@ -32,7 +32,7 @@ Mark::new(mark_type, attrs) -> Self
 Schema::new(nodes, marks) -> Self
 ```
 
-#### [mf-transform](#mf-transform-api) - 数据转换
+#### [moduforge-transform](#mf-transform-api) - 数据转换
 ```rust
 // 主要 API
 Transaction::new() -> Self
@@ -42,7 +42,7 @@ AddNodeStep::new(node, parent) -> Self
 
 ### 规则引擎 API
 
-#### [mf-engine](#mf-engine-api) - 规则引擎
+#### [moduforge-rules-engine](#mf-engine-api) - 规则引擎
 ```rust
 // 主要 API
 Engine::new(loader) -> Self
@@ -50,7 +50,7 @@ engine.evaluate(rule_name, input) -> Result<Variable>
 Decision::from_json(json) -> Result<Self>
 ```
 
-#### [mf-expression](#mf-expression-api) - 表达式语言
+#### [moduforge-rules-expression](#mf-expression-api) - 表达式语言
 ```rust
 // 主要 API
 Expression::compile(source) -> Result<Self>
@@ -60,7 +60,7 @@ Variable::from(value) -> Self
 
 ### 协作与数据 API
 
-#### [mf-collaboration](#mf-collaboration-api) - 协作系统
+#### [moduforge-collaboration](#mf-collaboration-api) - 协作系统
 ```rust
 // 主要 API
 SyncService::new() -> Self
@@ -68,7 +68,7 @@ sync_service.create_room(config) -> Result<()>
 YrsManager::new() -> Self
 ```
 
-#### [mf-file](#mf-file-api) - 文件处理
+#### [moduforge-file](#mf-file-api) - 文件处理
 ```rust
 // 主要 API
 ZipDocWriter::new() -> Self
@@ -87,8 +87,8 @@ ZipDocReader::from_file(path) -> Result<Self>
 #### 创建运行时
 
 ```rust
-use mf_core::runtime::async_runtime::ForgeAsyncRuntime;
-use mf_core::types::RuntimeOptions;
+use moduforge_core::runtime::async_runtime::ForgeAsyncRuntime;
+use moduforge_core::types::RuntimeOptions;
 
 // 创建运行时
 let options = RuntimeOptions::default();
@@ -704,7 +704,7 @@ impl Tree {
     where F: Fn(&Arc<Node>) -> bool;
     
     // 获取节点数量
-    pub fn node_count(&self) -> usize;
+    pub fn size(&self) -> usize;
     
     // 获取树的深度
     pub fn depth(&self) -> usize;
@@ -1164,10 +1164,10 @@ let result = operation()
 ### 基础使用流程
 
 ```rust
-use mf_core::runtime::async_runtime::ForgeAsyncRuntime;
-use mf_core::types::{RuntimeOptions, Content};
-use mf_model::{Node, NodeType, Attrs};
-use mf_transform::node_step::AddNodeStep;
+use moduforge_core::runtime::async_runtime::ForgeAsyncRuntime;
+use moduforge_core::types::{RuntimeOptions, Content};
+use moduforge_core::model::{Node, NodeType, Attrs};
+use moduforge_core::transform::node_step::AddNodeStep;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -1202,7 +1202,7 @@ async fn main() -> Result<()> {
 展示最新插件设计的完整实现：
 
 ```rust
-use mf_state::{
+use moduforge_core::state::{
     plugin::{Plugin, PluginSpec, PluginTrait, StateField, PluginMetadata, PluginConfig},
     resource::Resource,
     state::{State, StateConfig},
@@ -1311,8 +1311,8 @@ pub fn create_my_plugin() -> Arc<Plugin> {
 
 // 5. 在运行时中注册插件
 async fn setup_with_plugin() -> Result<()> {
-    use mf_core::runtime::async_runtime::ForgeAsyncRuntime;
-    use mf_core::types::RuntimeOptions;
+    use moduforge_core::runtime::async_runtime::ForgeAsyncRuntime;
+    use moduforge_core::types::RuntimeOptions;
     
     // 创建运行时
     let options = RuntimeOptions::default();

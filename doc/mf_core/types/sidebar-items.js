@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Content","Extensions","TransactionStatus"],"struct":["EditorOptionsBuilder","GlobalAttributeItem","HistoryEntryWithMeta","ProcessorResult","RuntimeOptions"],"trait":["NodePoolFnTrait"],"type":["GlobalAttributes","TaskParams"]};

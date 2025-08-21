@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["error","sync_service","types","ws_server","yrs_manager"]};

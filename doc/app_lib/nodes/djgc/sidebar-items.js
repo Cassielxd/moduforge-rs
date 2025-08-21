@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["init_nodes"],"struct":["DJGC","DJGC_NODE"]};

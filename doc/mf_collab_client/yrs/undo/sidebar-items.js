@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["EventKind"],"struct":["Event","Options","StackItem","UndoManager"]};

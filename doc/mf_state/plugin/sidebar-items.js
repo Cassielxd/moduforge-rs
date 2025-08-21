@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["dependency","manager","plugin"],"struct":["PluginConfig","PluginMetadata"]};

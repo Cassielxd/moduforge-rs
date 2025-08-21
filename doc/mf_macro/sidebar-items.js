@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"macro":["derive_plugin_state","impl_command","impl_extension","impl_plugin","impl_state_field","mark","node"],"mod":["command","extension","mark","node","plugin"]};

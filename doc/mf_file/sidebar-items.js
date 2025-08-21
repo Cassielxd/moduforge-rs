@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["document","error","history","record","zipdoc"]};

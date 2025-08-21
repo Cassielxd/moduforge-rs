@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["get_schema_by_resolved_extensions"]};

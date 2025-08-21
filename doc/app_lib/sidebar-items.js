@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"macro":["res"],"mod":["commands","controller","core","error","exetensions","initialize","marks","middleware","nodes","plugins","response","router","serve","types","utils"],"struct":["ContextHelper"],"type":["ResponseResult"]};

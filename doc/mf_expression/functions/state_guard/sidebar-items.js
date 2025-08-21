@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["with_state_async"],"struct":["StateGuard"]};

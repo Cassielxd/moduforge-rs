@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["CompositeFunction","FunctionSignature","FunctionTypecheck","StaticFunction"],"trait":["FunctionDefinition"]};

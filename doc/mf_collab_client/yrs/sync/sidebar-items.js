@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Error","Message","SyncMessage"],"mod":["awareness","protocol"],"struct":["Awareness","AwarenessUpdate","DefaultProtocol","MessageReader"],"trait":["Protocol"]};

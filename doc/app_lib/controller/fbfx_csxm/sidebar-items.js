@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["add_fbfx_csxm","build_app","delete_fbfx_csxm","get_fbfx_csxm_tree"],"struct":["FbfxCsxmPost"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["create_tantivy_service","create_tantivy_service_in_temp_root"],"mod":["backend","indexer","model","service","state_plugin","step_registry"]};

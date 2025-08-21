@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["Keys","MapEvent","MapIter","MapPrelim","MapRef","Values"],"trait":["Map"]};

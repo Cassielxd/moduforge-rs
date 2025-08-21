@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["deserialize_optional_bool","deserialize_optional_value"],"struct":["XmlAttr","XmlAttrs","XmlGlobalAttribute","XmlGlobalAttributes","XmlImport","XmlImports","XmlInclude","XmlIncludes","XmlMark","XmlMarks","XmlNode","XmlNodes","XmlSchema","XmlSchemaWithReferences"]};

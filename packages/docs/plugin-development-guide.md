@@ -12,7 +12,7 @@ ModuForge-RS 的插件系统基于三个核心组件：
 ### 第一步：定义插件状态资源
 
 ```rust
-use mf_state::resource::Resource;
+use mf_core::state::resource::Resource;
 
 #[derive(Debug, Clone)]
 pub struct MyPluginState {
@@ -45,7 +45,7 @@ impl MyPluginState {
 ### 第二步：实现状态字段管理器
 
 ```rust
-use mf_state::{
+use mf_core::state::{
     plugin::StateField,
     resource::Resource,
     state::{State, StateConfig},
@@ -135,7 +135,7 @@ impl StateField for MyStateField {
 ### 第三步：实现插件行为
 
 ```rust
-use mf_state::{
+use mf_core::state::{
     plugin::{PluginTrait, PluginMetadata, PluginConfig},
     transaction::Transaction,
     state::State,
@@ -249,7 +249,7 @@ impl PluginTrait for MyPlugin {
 
 ```rust
 use mf_core::extension::Extension;
-use mf_state::plugin::{Plugin, PluginSpec};
+use mf_core::state::plugin::{Plugin, PluginSpec};
 use std::sync::Arc;
 
 /// 创建我的插件扩展
@@ -500,7 +500,7 @@ impl PluginTrait for PermissionPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mf_state::{State, StateConfig};
+    use mf_core::state::{State, StateConfig};
     use tokio_test;
 
     #[tokio::test]
@@ -566,7 +566,7 @@ mod tests {
 mod integration_tests {
     use super::*;
     use mf_core::{async_runtime::AsyncRuntime, types::RuntimeOptions};
-    use mf_state::StateConfig;
+    use mf_core::state::StateConfig;
 
     #[tokio::test]
     async fn test_plugin_integration() {
@@ -629,7 +629,7 @@ impl MyStateField {
 ### 错误处理
 
 ```rust
-use mf_state::error::{StateError, StateResult};
+use mf_core::state::error::{StateError, StateResult};
 use thiserror::Error;
 
 #[derive(Error, Debug)]

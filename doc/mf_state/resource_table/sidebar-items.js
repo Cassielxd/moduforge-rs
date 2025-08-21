@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["ResourceError"],"struct":["ResourceTable"],"type":["ResourceId"]};

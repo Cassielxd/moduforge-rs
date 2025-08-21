@@ -2,7 +2,16 @@
 
 ## 🏗️ 总体架构
 
-ModuForge-RS 是一个模块化的 Rust 框架，由 14 个核心 crates 组成，每个 crate 都有明确的职责和边界。
+ModuForge-RS 是一个模块化的 Rust 框架，由多个核心 crates 组成，每个 crate 都有明确的职责和边界。主要包括：
+- **moduforge-core**: 核心运行时
+- **moduforge-model**: 数据模型  
+- **moduforge-state**: 状态管理
+- **moduforge-transform**: 数据转换
+- **moduforge-rules-engine**: 业务规则引擎
+- **moduforge-rules-expression**: 表达式语言
+- **moduforge-collaboration**: 实时协作
+- **moduforge-file**: 文件处理
+- 及其他支持模块
 
 ```mermaid
 graph TB
@@ -12,29 +21,29 @@ graph TB
     end
     
     subgraph "框架核心层"
-        CORE[mf-core<br/>核心运行时]
-        STATE[mf-state<br/>状态管理]
-        TRANSFORM[mf-transform<br/>数据转换]
-        MODEL[mf-model<br/>数据模型]
+        CORE[moduforge-core<br/>核心运行时]
+        STATE[moduforge-state<br/>状态管理]
+        TRANSFORM[moduforge-transform<br/>数据转换]
+        MODEL[moduforge-model<br/>数据模型]
     end
     
     subgraph "规则引擎层"
-        ENGINE[mf-engine<br/>业务规则引擎]
-        EXPRESSION[mf-expression<br/>表达式语言]
-        TEMPLATE[mf-template<br/>模板系统]
+        ENGINE[moduforge-rules-engine<br/>业务规则引擎]
+        EXPRESSION[moduforge-rules-expression<br/>表达式语言]
+        TEMPLATE[moduforge-rules-template<br/>模板系统]
     end
     
     subgraph "协作与数据层"
-        COLLAB[mf-collaboration<br/>协作服务器]
-        CLIENT[mf-collaboration-client<br/>协作客户端]
-        FILE[mf-file<br/>文件处理]
-        SEARCH[mf-search<br/>搜索引擎]
-        PERSIST[mf-persistence<br/>数据持久化]
+        COLLAB[moduforge-collaboration<br/>协作服务器]
+        CLIENT[moduforge-collaboration-client<br/>协作客户端]
+        FILE[moduforge-file<br/>文件处理]
+        SEARCH[moduforge-search<br/>搜索引擎]
+        PERSIST[moduforge-persistence<br/>数据持久化]
     end
     
     subgraph "开发工具层"
-        MACRO[mf-macro<br/>过程宏]
-        DERIVE[mf-derive<br/>派生宏]
+        MACRO[moduforge-macros<br/>过程宏]
+        DERIVE[moduforge-macros-derive<br/>派生宏]
     end
     
     APP --> CORE
@@ -60,7 +69,7 @@ graph TB
 
 ### 核心架构层
 
-#### 🎯 mf-core - 核心运行时
+#### 🎯 moduforge-core - 核心运行时
 **职责**: 框架的核心运行时环境，提供异步处理、事件系统、扩展管理等基础功能。
 
 **关键组件**:
@@ -77,7 +86,7 @@ graph TB
 - 中间件处理链
 - 历史记录和撤销重做
 
-#### 🏪 mf-state - 状态管理
+#### 🏪 moduforge-state - 状态管理
 **职责**: 应用状态的集中管理，包括插件状态、资源管理、事务处理。
 
 **关键组件**:
@@ -94,7 +103,7 @@ graph TB
 - 插件冲突检测
 - 线程安全的资源共享
 
-#### 🔄 mf-transform - 数据转换
+#### 🔄 moduforge-transform - 数据转换
 **职责**: 定义和执行数据转换操作，提供事务性的数据变更能力。
 
 **关键组件**:
@@ -111,7 +120,7 @@ graph TB
 - 批量操作优化
 - 操作历史追踪
 
-#### 🧬 mf-model - 数据模型
+#### 🧬 moduforge-model - 数据模型
 **职责**: 定义框架的核心数据结构，包括节点、标记、属性等。
 
 **关键组件**:
@@ -130,7 +139,7 @@ graph TB
 
 ### 规则引擎层
 
-#### ⚙️ mf-engine - 业务规则引擎
+#### ⚙️ moduforge-rules-engine - 业务规则引擎
 **职责**: 提供强大的业务规则执行引擎，支持决策表、决策图等多种规则形式。
 
 **关键组件**:
@@ -147,7 +156,7 @@ graph TB
 - 自定义函数扩展
 - 规则验证和调试
 
-#### 📝 mf-expression - 表达式语言
+#### 📝 moduforge-rules-expression - 表达式语言
 **职责**: 高性能的表达式解析和执行引擎，支持 WASM 编译。
 
 **关键组件**:
@@ -164,7 +173,7 @@ graph TB
 - 类型推导和检查
 - 自定义函数注册
 
-#### 🎨 mf-template - 模板系统
+#### 🎨 moduforge-rules-template - 模板系统
 **职责**: 模板解析和渲染引擎，支持动态内容生成。
 
 **关键组件**:
@@ -180,7 +189,7 @@ graph TB
 
 ### 协作与数据层
 
-#### 🤝 mf-collaboration - 协作服务器
+#### 🤝 moduforge-collaboration - 协作服务器
 **职责**: 实时协作功能的服务器端实现，基于 CRDT 技术。
 
 **关键组件**:
@@ -194,7 +203,7 @@ graph TB
 - 多用户会话管理
 - 状态同步机制
 
-#### 👥 mf-collaboration-client - 协作客户端
+#### 👥 moduforge-collaboration-client - 协作客户端
 **职责**: 协作功能的客户端实现，提供状态映射和同步能力。
 
 **关键组件**:
@@ -208,7 +217,7 @@ graph TB
 - 类型安全的状态转换
 - 连接管理和重连机制
 
-#### 📁 mf-file - 文件处理
+#### 📁 moduforge-file - 文件处理
 **职责**: 文档的序列化、反序列化和文件格式支持。
 
 **关键组件**:
@@ -222,7 +231,7 @@ graph TB
 - 增量导入导出
 - 格式转换和兼容性
 
-#### 🔍 mf-search - 搜索引擎
+#### 🔍 moduforge-search - 搜索引擎
 **职责**: 全文搜索和索引功能，支持复杂查询。
 
 **关键组件**:
@@ -236,7 +245,7 @@ graph TB
 - 结果排序和过滤
 - 实时索引更新
 
-#### 💾 mf-persistence - 数据持久化
+#### 💾 moduforge-persistence - 数据持久化
 **职责**: 数据持久化和恢复机制，支持多种存储后端。
 
 **关键组件**:
@@ -252,7 +261,7 @@ graph TB
 
 ### 开发工具层
 
-#### 🔧 mf-macro - 过程宏
+#### 🔧 moduforge-macros - 过程宏
 **职责**: 提供过程宏定义，简化节点、插件、扩展的定义。
 
 **主要宏**:
@@ -261,7 +270,7 @@ graph TB
 - `#[plugin]`: 插件定义宏
 - `#[extension]`: 扩展定义宏
 
-#### 📋 mf-derive - 派生宏
+#### 📋 moduforge-macros-derive - 派生宏
 **职责**: 提供派生宏，自动生成常用的 trait 实现。
 
 **主要派生**:
@@ -274,29 +283,29 @@ graph TB
 ```mermaid
 graph LR
     subgraph "Layer 1: 基础层"
-        MODEL[mf-model]
-        DERIVE[mf-derive]
-        MACRO[mf-macro]
+        MODEL[moduforge-model]
+        DERIVE[moduforge-macros-derive]
+        MACRO[moduforge-macros]
     end
     
     subgraph "Layer 2: 核心层" 
-        TRANSFORM[mf-transform]
-        STATE[mf-state]
-        EXPRESSION[mf-expression]
-        TEMPLATE[mf-template]
+        TRANSFORM[moduforge-transform]
+        STATE[moduforge-state]
+        EXPRESSION[moduforge-rules-expression]
+        TEMPLATE[moduforge-rules-template]
     end
     
     subgraph "Layer 3: 业务层"
-        CORE[mf-core]
-        ENGINE[mf-engine]
-        FILE[mf-file]
-        SEARCH[mf-search]
-        PERSIST[mf-persistence]
+        CORE[moduforge-core]
+        ENGINE[moduforge-rules-engine]
+        FILE[moduforge-file]
+        SEARCH[moduforge-search]
+        PERSIST[moduforge-persistence]
     end
     
     subgraph "Layer 4: 服务层"
-        COLLAB[mf-collaboration]
-        CLIENT[mf-collaboration-client]
+        COLLAB[moduforge-collaboration]
+        CLIENT[moduforge-collaboration-client]
     end
     
     MODEL --> TRANSFORM
@@ -326,10 +335,10 @@ graph LR
 ```mermaid
 sequenceDiagram
     participant App as 应用层
-    participant Core as mf-core
-    participant State as mf-state
-    participant Transform as mf-transform
-    participant Model as mf-model
+    participant Core as moduforge-core
+    participant State as moduforge-state
+    participant Transform as moduforge-transform
+    participant Model as moduforge-model
     
     App->>Core: 提交事务
     Core->>State: 验证状态

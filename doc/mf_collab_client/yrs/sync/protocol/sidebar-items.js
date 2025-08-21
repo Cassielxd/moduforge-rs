@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["MSG_AUTH","MSG_AWARENESS","MSG_QUERY_AWARENESS","MSG_SYNC","MSG_SYNC_STEP_1","MSG_SYNC_STEP_2","MSG_SYNC_UPDATE","PERMISSION_DENIED","PERMISSION_GRANTED"],"enum":["Error","Message","SyncMessage"],"struct":["DefaultProtocol","MessageReader"],"trait":["Protocol"]};

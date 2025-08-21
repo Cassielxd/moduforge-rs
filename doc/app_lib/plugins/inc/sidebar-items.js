@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Operation"],"struct":["IncState","IncStateField","IncStatePlugin","Operations"]};

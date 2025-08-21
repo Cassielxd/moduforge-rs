@@ -33,6 +33,11 @@ pub struct NodeConfig {
     /// 
     /// 包含所有带有 #[attr] 标记的字段信息
     pub attr_fields: Vec<FieldConfig>,
+    
+    /// 标记为 ID 映射的字段（可选）
+    /// 
+    /// 包含带有 #[id] 标记的字段信息，用于映射 Node 的 id 字段
+    pub id_field: Option<FieldConfig>,
 }
 
 /// Mark 属性配置
@@ -167,6 +172,9 @@ impl AttributeParser {
         
         // 解析字段级别的属性
         config.attr_fields = Self::parse_field_attributes(input)?;
+        
+        // 解析 ID 字段
+        config.id_field = Self::parse_id_field(input)?;
         
         Ok(config)
     }
@@ -702,6 +710,169 @@ impl AttributeParser {
         }
         
         Ok(fields)
+    }
+
+    /// 解析 ID 字段
+    ///
+    /// 查找带有 #[id] 标记的字段，用于映射 Node 的 id 属性。
+    /// 每个结构体最多只能有一个 #[id] 字段。
+    ///
+    /// # 参数
+    ///
+    /// * `input` - 派生宏的输入，包含结构体定义
+    ///
+    /// # 返回值
+    ///
+    /// 成功时返回 ID 字段配置（如果有），失败时返回解析错误
+    ///
+    /// # 设计原则体现
+    ///
+    /// - **单一职责**: 只负责 ID 字段的解析
+    /// - **接口隔离**: 提供专门的 ID 字段解析接口
+    /// - **错误安全**: 防止多个 ID 字段冲突
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// let input = parse_quote! {
+    ///     struct Example {
+    ///         #[id]
+    ///         node_id: String,
+    ///         
+    ///         #[attr]
+    ///         content: String,
+    ///     }
+    /// };
+    ///
+    /// let id_field = AttributeParser::parse_id_field(&input)?;
+    /// assert!(id_field.is_some());
+    /// assert_eq!(id_field.unwrap().name, "node_id");
+    /// ```
+    fn parse_id_field(input: &DeriveInput) -> MacroResult<Option<FieldConfig>> {
+        let mut id_field = None;
+
+        // 只处理结构体类型
+        match &input.data {
+            syn::Data::Struct(data_struct) => {
+                match &data_struct.fields {
+                    syn::Fields::Named(named_fields) => {
+                        // 遍历所有具名字段
+                        for field in &named_fields.named {
+                            if let Some(field_name) = &field.ident {
+                                // 检查是否有 #[id] 属性
+                                let has_id_attr = Self::check_id_attribute(field)?;
+                                
+                                if has_id_attr {
+                                    // 确保不能有多个 ID 字段
+                                    if id_field.is_some() {
+                                        return Err(MacroError::parse_error(
+                                            "一个结构体只能有一个 #[id] 字段",
+                                            field,
+                                        ));
+                                    }
+
+                                    // 提取类型信息
+                                    let field_ty = &field.ty;
+                                    let type_name = quote::quote! { #field_ty }.to_string().replace(" ", "");
+                                    let is_optional = crate::common::utils::is_option_type(&field.ty);
+                                    
+                                    id_field = Some(FieldConfig {
+                                        name: field_name.to_string(),
+                                        type_name,
+                                        is_optional,
+                                        is_attr: false, // ID 字段不是普通属性
+                                        field: field.clone(),
+                                        default_value: None, // ID 字段不支持默认值
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    syn::Fields::Unnamed(_) => {
+                        return Err(MacroError::parse_error(
+                            "不支持元组结构体，请使用具名字段的结构体",
+                            input,
+                        ));
+                    }
+                    syn::Fields::Unit => {
+                        // 单元结构体没有字段，直接返回 None
+                    }
+                }
+            }
+            syn::Data::Enum(_) => {
+                return Err(MacroError::parse_error(
+                    "不支持枚举类型，请使用结构体",
+                    input,
+                ));
+            }
+            syn::Data::Union(_) => {
+                return Err(MacroError::parse_error(
+                    "不支持联合体类型，请使用结构体",
+                    input,
+                ));
+            }
+        }
+
+        Ok(id_field)
+    }
+
+    /// 检查字段是否有 #[id] 属性
+    ///
+    /// 检查字段的属性列表中是否包含 #[id] 标记。
+    ///
+    /// # 参数
+    ///
+    /// * `field` - 要检查的字段
+    ///
+    /// # 返回值
+    ///
+    /// 如果字段有 #[id] 属性返回 true，否则返回 false
+    ///
+    /// # 设计原则体现
+    ///
+    /// - **单一职责**: 只负责检查 ID 属性的存在
+    /// - **接口隔离**: 提供简单的布尔查询接口
+    fn check_id_attribute(field: &Field) -> MacroResult<bool> {
+        let mut id_count = 0;
+        
+        // 遍历字段的所有属性
+        for attr in &field.attrs {
+            // 检查是否为 id 属性
+            if let Some(ident) = attr.path().get_ident() {
+                if ident == "id" {
+                    id_count += 1;
+                    
+                    // 防止重复的 id 属性
+                    if id_count > 1 {
+                        return Err(MacroError::parse_error(
+                            "字段不能有多个 #[id] 属性",
+                            field,
+                        ));
+                    }
+                    
+                    // 验证 id 属性格式（应该是简单的 #[id]，不支持参数）
+                    match &attr.meta {
+                        syn::Meta::Path(_) => {
+                            // #[id] - 正确格式
+                        }
+                        syn::Meta::List(_) => {
+                            return Err(MacroError::parse_error(
+                                "#[id] 属性不支持参数，请使用简单的 #[id] 格式",
+                                field,
+                            ));
+                        }
+                        syn::Meta::NameValue(_) => {
+                            return Err(MacroError::parse_error(
+                                "#[id] 属性不支持赋值，请使用简单的 #[id] 格式",
+                                field,
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        
+        Ok(id_count > 0)
     }
 }
 
@@ -1354,6 +1525,246 @@ mod tests {
         let default_val = default_value.unwrap();
         assert_eq!(default_val.raw_value, "true");
         assert!(matches!(default_val.value_type, DefaultValueType::Boolean(true)));
+    }
+
+    /// 测试 ID 字段解析功能
+    #[test]
+    fn test_parse_id_field() {
+        use syn::parse_quote;
+        
+        // 测试有 ID 字段的情况
+        let input: DeriveInput = parse_quote! {
+            #[derive(Node)]
+            #[node_type = "test_node"]
+            struct TestNode {
+                #[id]
+                node_id: String,
+                
+                #[attr]
+                content: String,
+            }
+        };
+        
+        let config = AttributeParser::parse_node_attributes(&input).unwrap();
+        assert!(config.id_field.is_some());
+        
+        let id_field = config.id_field.unwrap();
+        assert_eq!(id_field.name, "node_id");
+        assert_eq!(id_field.type_name, "String");
+        assert!(!id_field.is_optional);
+        assert!(!id_field.is_attr); // ID 字段不是 attr
+        assert!(id_field.default_value.is_none()); // ID 字段不支持默认值
+    }
+
+    /// 测试 Option<String> 类型的 ID 字段
+    #[test]
+    fn test_parse_optional_id_field() {
+        use syn::parse_quote;
+        
+        let input: DeriveInput = parse_quote! {
+            #[derive(Node)]
+            #[node_type = "test_node"]
+            struct TestNode {
+                #[id]
+                node_id: Option<String>,
+                
+                #[attr]
+                content: String,
+            }
+        };
+        
+        let config = AttributeParser::parse_node_attributes(&input).unwrap();
+        assert!(config.id_field.is_some());
+        
+        let id_field = config.id_field.unwrap();
+        assert_eq!(id_field.name, "node_id");
+        assert_eq!(id_field.type_name, "Option<String>");
+        assert!(id_field.is_optional);
+    }
+
+    /// 测试没有 ID 字段的情况
+    #[test]
+    fn test_parse_no_id_field() {
+        use syn::parse_quote;
+        
+        let input: DeriveInput = parse_quote! {
+            #[derive(Node)]
+            #[node_type = "test_node"]
+            struct TestNode {
+                #[attr]
+                content: String,
+            }
+        };
+        
+        let config = AttributeParser::parse_node_attributes(&input).unwrap();
+        assert!(config.id_field.is_none());
+    }
+
+    /// 测试多个 ID 字段的错误处理
+    #[test]
+    fn test_multiple_id_fields_error() {
+        use syn::parse_quote;
+        
+        let input: DeriveInput = parse_quote! {
+            #[derive(Node)]
+            #[node_type = "test_node"]
+            struct TestNode {
+                #[id]
+                node_id1: String,
+                
+                #[id]
+                node_id2: String,
+                
+                #[attr]
+                content: String,
+            }
+        };
+        
+        let result = AttributeParser::parse_node_attributes(&input);
+        assert!(result.is_err());
+        
+        if let Err(error) = result {
+            let error_msg = format!("{:?}", error);
+            assert!(error_msg.contains("一个结构体只能有一个"));
+        }
+    }
+
+    /// 测试 ID 字段的重复属性错误
+    #[test]
+    fn test_duplicate_id_attribute_error() {
+        use syn::parse_quote;
+        
+        let input: DeriveInput = parse_quote! {
+            #[derive(Node)]
+            #[node_type = "test_node"]
+            struct TestNode {
+                #[id]
+                #[id]
+                node_id: String,
+                
+                #[attr]
+                content: String,
+            }
+        };
+        
+        let result = AttributeParser::parse_node_attributes(&input);
+        assert!(result.is_err());
+        
+        if let Err(error) = result {
+            let error_msg = format!("{:?}", error);
+            assert!(error_msg.contains("多个 #[id] 属性"));
+        }
+    }
+
+    /// 测试 ID 属性不支持参数的错误处理
+    #[test]
+    fn test_id_attribute_with_params_error() {
+        use syn::parse_quote;
+        
+        let input: DeriveInput = parse_quote! {
+            #[derive(Node)]
+            #[node_type = "test_node"]
+            struct TestNode {
+                #[id(param = "value")]
+                node_id: String,
+                
+                #[attr]
+                content: String,
+            }
+        };
+        
+        let result = AttributeParser::parse_node_attributes(&input);
+        assert!(result.is_err());
+        
+        if let Err(error) = result {
+            let error_msg = format!("{:?}", error);
+            assert!(error_msg.contains("不支持参数"));
+        }
+    }
+
+    /// 测试 ID 属性不支持赋值的错误处理
+    #[test]
+    fn test_id_attribute_with_value_error() {
+        use syn::parse_quote;
+        
+        let input: DeriveInput = parse_quote! {
+            #[derive(Node)]
+            #[node_type = "test_node"]
+            struct TestNode {
+                #[id = "value"]
+                node_id: String,
+                
+                #[attr]
+                content: String,
+            }
+        };
+        
+        let result = AttributeParser::parse_node_attributes(&input);
+        assert!(result.is_err());
+        
+        if let Err(error) = result {
+            let error_msg = format!("{:?}", error);
+            assert!(error_msg.contains("不支持赋值"));
+        }
+    }
+
+    /// 测试同时有 ID 字段和属性字段的完整解析
+    #[test]
+    fn test_complete_parsing_with_id_and_attr_fields() {
+        use syn::parse_quote;
+        
+        let input: DeriveInput = parse_quote! {
+            #[derive(Node)]
+            #[node_type = "complex_node"]
+            #[marks = "bold italic"]
+            #[content = "text*"]
+            struct ComplexNode {
+                #[id]
+                node_id: String,
+                
+                #[attr]
+                title: String,
+                
+                #[attr(default = "default content")]
+                content: String,
+                
+                #[attr]
+                optional_field: Option<String>,
+                
+                // 普通字段（无标记）
+                internal_data: Vec<u8>,
+            }
+        };
+        
+        let config = AttributeParser::parse_node_attributes(&input).unwrap();
+        
+        // 验证基本配置
+        assert_eq!(config.node_type, Some("complex_node".to_string()));
+        assert_eq!(config.marks, Some("bold italic".to_string()));
+        assert_eq!(config.content, Some("text*".to_string()));
+        
+        // 验证 ID 字段
+        assert!(config.id_field.is_some());
+        let id_field = config.id_field.unwrap();
+        assert_eq!(id_field.name, "node_id");
+        assert_eq!(id_field.type_name, "String");
+        
+        // 验证属性字段
+        assert_eq!(config.attr_fields.len(), 3);
+        
+        let title_field = config.attr_fields.iter().find(|f| f.name == "title").unwrap();
+        assert_eq!(title_field.type_name, "String");
+        assert!(!title_field.has_default_value());
+        
+        let content_field = config.attr_fields.iter().find(|f| f.name == "content").unwrap();
+        assert_eq!(content_field.type_name, "String");
+        assert!(content_field.has_default_value());
+        assert_eq!(content_field.get_default_value().unwrap().raw_value, "default content");
+        
+        let optional_field = config.attr_fields.iter().find(|f| f.name == "optional_field").unwrap();
+        assert_eq!(optional_field.type_name, "Option<String>");
+        assert!(optional_field.is_optional);
+        assert!(!optional_field.has_default_value());
     }
     
     /// 测试字段属性解析的错误处理

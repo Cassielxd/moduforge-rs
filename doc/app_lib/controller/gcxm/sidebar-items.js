@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["add_footnote","build_app","create_collab_editor","create_editor","delete_gcxm","get_gcxm_tree","insert_child","new_project"],"struct":["GcxmPost"]};

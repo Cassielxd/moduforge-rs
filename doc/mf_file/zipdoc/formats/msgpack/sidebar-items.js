@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["for_each_snapshot_shard_msgpack","read_and_decode_snapshot_shards_msgpack","read_parent_map_msgpack","write_parent_map_msgpack","write_snapshot_shards_msgpack"]};

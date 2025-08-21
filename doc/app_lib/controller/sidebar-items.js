@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["get_data_tree","get_history","get_inc_data"],"mod":["djgc","fbfx_csxm","gcxm","rcj"],"struct":["GcxmTreeItem","GetDataTreeRequest","GetHistoryVersionCammand","HistoryEntry"]};

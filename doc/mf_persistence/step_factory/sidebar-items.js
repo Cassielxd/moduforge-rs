@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["AddMarkStepFactory","AddNodeStepFactory","AttrStepFactory","MoveNodeStepFactory","RemoveNodeStepFactory","StepFactoryRegistry"],"trait":["StepFactory"]};

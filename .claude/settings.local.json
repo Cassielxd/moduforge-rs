@@ -15,13 +15,15 @@
       "Bash(rustc:*)",
       "Bash(timeout 60 cargo test -p moduforge-macros-derive)",
       "Bash(timeout 30 cargo test -p moduforge-macros-derive integration_tests)",
-      "Bash(timeout 30 cargo test -p moduforge-macros-derive)"
+      "Bash(timeout 30 cargo test -p moduforge-macros-derive)",
+      "Bash(cargo build:*)"
     ],
     "deny": [],
     "ask": [],
     "additionalDirectories": [
       "D:\\mnt\\d\\workspace\\rust2025\\moduforge-rs\\crates",
-      "D:\\d\\workspace\\rust2025\\moduforge-rs\\crates"
+      "D:\\d\\workspace\\rust2025\\moduforge-rs\\crates",
+      "D:\\d\\workspace\\rust2025\\moduforge-rs\\packages"
     ]
   }
 }

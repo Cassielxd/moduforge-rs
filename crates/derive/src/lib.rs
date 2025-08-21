@@ -87,7 +87,7 @@ pub fn derive_plugin_state(input: TokenStream) -> TokenStream {
 /// - **单一职责**: 只负责 Node 相关的派生宏功能
 /// - **开闭原则**: 通过属性配置支持扩展，无需修改代码
 /// - **接口隔离**: 提供专门的 Node 转换接口
-#[proc_macro_derive(Node, attributes(node_type, marks, content, attr))]
+#[proc_macro_derive(Node, attributes(node_type, marks, content, attr, id))]
 pub fn derive_node(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     

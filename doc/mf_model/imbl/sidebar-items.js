@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"macro":["get_in","hashmap","hashset","ordmap","ordset","update_in","vector"],"mod":["hashmap","hashset","iter","ordmap","ordset","shared_ptr","vector"],"struct":["GenericHashMap","GenericHashSet","GenericOrdMap","GenericOrdSet","GenericVector"],"type":["HashMap","HashSet","OrdMap","OrdSet","Vector"]};

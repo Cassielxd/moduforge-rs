@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["DiffItem","Entry"],"struct":["ConsumingIter","DiffIter","GenericOrdMap","Iter","Keys","OccupiedEntry","RangedIter","VacantEntry","Values"],"type":["OrdMap"]};

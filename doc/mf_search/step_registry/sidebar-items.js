@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["ensure_default_step_indexers","global_registry","register_step_indexer"],"struct":["StepIndexContext","StepIndexerRegistry"],"trait":["TypedStepIndexer"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Entry"],"struct":["ConsumingIter","GenericHashMap","Iter","IterMut","Keys","OccupiedEntry","VacantEntry","Values"],"type":["HashMap"]};

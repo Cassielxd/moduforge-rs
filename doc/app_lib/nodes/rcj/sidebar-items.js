@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["RCJ_STR"],"fn":["init_rcj_fields"],"struct":["RCJ"]};

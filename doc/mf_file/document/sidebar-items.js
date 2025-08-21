@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["SegmentType"],"struct":["Directory","DocumentReader","DocumentWriter","SegmentEntry"]};
