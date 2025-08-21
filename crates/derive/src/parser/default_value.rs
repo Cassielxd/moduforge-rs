@@ -351,11 +351,12 @@ impl DefaultValueParser {
     
     /// 检测是否为自定义类型表达式
     ///
-    /// 自定义类型表达式的识别规则：
-    /// - 包含 `::` （模块路径分隔符）
-    /// - 以 `()` 结尾（方法调用）
-    /// - 常见的构造函数模式：`new()`, `default()`, `with_default()`
-    /// - 允许链式调用：`Builder::new().build()`
+    /// 自定义类型表达式的识别规则（满足任一即可）：
+    /// 1. 包含 `::` 且有方法调用 - 模块路径 + 构造函数
+    /// 2. 包含常见的构造函数模式
+    /// 3. 包含链式调用模式
+    ///
+    /// 要求最终表达式结果实现 Default + Serialize traits。
     ///
     /// # 参数
     ///
@@ -365,24 +366,48 @@ impl DefaultValueParser {
     ///
     /// 如果字符串看起来像自定义类型表达式，返回 true
     ///
-    /// # 识别的模式
+    /// # 识别的模式示例
     ///
+    /// **模块路径 + 构造函数:**
     /// - `CustomStruct::new()`
     /// - `CustomStruct::default()`
-    /// - `CustomStruct::with_capacity(10)`
     /// - `some_module::CustomStruct::new()`
-    /// - `Builder::new().with_field("value").build()`
+    /// - `std::collections::HashMap::with_capacity(10)`
+    ///
+    /// **常见构造函数模式:**
+    /// - `::new()` - 最常用的构造函数
+    /// - `::default()` - 默认构造函数
+    /// - `::with_default()` - 带默认参数的构造函数
+    /// - `::with_capacity(` - 带容量的构造函数
+    /// - `::empty()` - 创建空实例
+    /// - `::create()` - 通用创建方法
+    ///
+    /// **链式调用模式:**
+    /// - `Builder::new().build()`
+    /// - `Config::new().with_field("value").finalize()`
+    /// - `CustomStruct::builder().field(value).build()`
     ///
     /// # 使用示例
     ///
     /// ```rust
+    /// // 模块路径 + 构造函数
     /// assert!(DefaultValueParser::is_custom_type_expression("MyStruct::new()"));
     /// assert!(DefaultValueParser::is_custom_type_expression("std::collections::HashMap::new()"));
+    /// 
+    /// // 链式调用
     /// assert!(DefaultValueParser::is_custom_type_expression("Builder::new().build()"));
+    /// 
+    /// // 不是自定义类型表达式
     /// assert!(!DefaultValueParser::is_custom_type_expression("simple string"));
     /// assert!(!DefaultValueParser::is_custom_type_expression("42"));
     /// assert!(!DefaultValueParser::is_custom_type_expression("true"));
     /// ```
+    ///
+    /// # 注意事项
+    ///
+    /// - 此方法只进行启发式检测，不验证 Rust 语法正确性
+    /// - 实际的语法验证在编译时进行
+    /// - 用户需要确保表达式结果实现 Default + Serialize traits
     fn is_custom_type_expression(value: &str) -> bool {
         let trimmed = value.trim();
         

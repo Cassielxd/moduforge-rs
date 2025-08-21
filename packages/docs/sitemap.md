@@ -10,6 +10,8 @@
 
 ### 开发指南
 - [插件开发指南](/plugin-development-guide) - 插件开发详细教程
+- [宏系统开发指南](/macro-system-guide) - Node和Mark派生宏使用指南
+- [宏展开示例](/macro-expansion-example) - 完整的宏展开结果展示
 - [性能优化指南](/performance-guide) - 性能优化最佳实践
 - [外部项目集成](/setup-external-project) - 集成到现有项目
 - [集成示例项目](/example-integration-project) - 完整集成示例

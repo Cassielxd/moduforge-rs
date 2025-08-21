@@ -1,7 +1,8 @@
 //! Node 代码生成器实现
 //!
-//! 专门负责为 #[derive(Node)] 宏生成 to_node() 方法的代码。
+//! 专门负责为 #[derive(Node)] 宏生成 node_definition()、from() 等方法的代码。
 //! 严格遵循单一职责原则，只负责 Node 相关的代码生成逻辑。
+//! 支持自定义类型表达式和泛型类型处理，要求自定义类型实现 Default + Serialize traits。
 
 use proc_macro2::{TokenStream as TokenStream2, Ident};
 use quote::quote;
@@ -71,14 +72,31 @@ impl<'a> NodeGenerator<'a> {
     /// let input = parse_quote! {
     ///     #[derive(Node)]
     ///     #[node_type = "paragraph"]
+    ///     #[marks = "bold italic"]
+    ///     #[content = "text*"]
     ///     struct MyNode {
     ///         #[attr]
+    ///         title: String,
+    ///         
+    ///         #[attr(default="Hello World")]
     ///         content: String,
+    ///         
+    ///         #[attr(default="CustomStruct::new()")]
+    ///         custom_field: CustomStruct,  // 需要实现 Default + Serialize
+    ///         
+    ///         // 非属性字段，在 from() 中使用默认值，不出现在 node_definition() 中
+    ///         non_attr_field: String,
     ///     }
     /// };
     ///
     /// let config = AttributeParser::parse_node_attributes(&input).unwrap();
     /// let generator = NodeGenerator::new(&input, &config);
+    /// 
+    /// // 生成的代码包含：
+    /// // - node_definition() 静态方法（只包含 #[attr] 字段的 AttributeSpec）
+    /// // - from() 方法（处理所有字段，支持类型验证和错误处理）
+    /// // - default_instance() 方法（失败时的降级方法）
+    /// // - From trait 实现（双向转换）
     /// ```
     pub fn new(input: &'a DeriveInput, config: &'a NodeConfig) -> Self {
         Self {
@@ -91,6 +109,7 @@ impl<'a> NodeGenerator<'a> {
     ///
     /// 根据配置信息生成完整的 node_definition() 方法实现。
     /// 此方法是代码生成器的核心功能，返回节点定义而不是具体实例。
+    /// **重要**: 只为标记了 #[attr] 的字段生成属性定义。
     ///
     /// # 返回值
     ///
@@ -106,12 +125,15 @@ impl<'a> NodeGenerator<'a> {
     ///         use std::collections::HashMap;
     ///         use serde_json::Value as JsonValue;
     ///         
-    ///         // 构建属性映射
-    ///         let mut attrs = HashMap::with_capacity(field_count);
-    ///         // ... 属性设置代码 ...
+    ///         // 只为 #[attr] 字段构建属性映射
+    ///         let mut attrs_map = std::collections::HashMap::new();
+    ///         // 支持自定义类型表达式 (需要实现 Default + Serialize)
+    ///         attrs_map.insert("field_name".to_string(), AttributeSpec {
+    ///             default: Some(serde_json::to_value(CustomType::new()).unwrap_or(null))
+    ///         });
     ///         
     ///         // 构建 NodeSpec
-    ///         let spec = NodeSpec { ... };
+    ///         let spec = NodeSpec { attrs: Some(attrs_map), ... };
     ///         
     ///         // 创建并返回 Node 定义
     ///         mf_core::node::Node::create("node_type", spec)
@@ -122,8 +144,9 @@ impl<'a> NodeGenerator<'a> {
     /// # 设计原则体现
     ///
     /// - **单一职责**: 只负责生成 node_definition() 方法代码
-    /// - **开闭原则**: 通过配置和转换器支持扩展
+    /// - **开闭原则**: 支持自定义类型表达式和转换器扩展
     /// - **语义清晰**: 方法名明确表示返回的是定义而非实例
+    /// - **属性精确性**: 只包含 #[attr] 标记的字段，符合节点定义语义
     pub fn generate_node_definition_method(&self) -> MacroResult<TokenStream2> {
         let struct_name = &self.input.ident;
         let node_type = self.config.node_type.as_ref()
@@ -241,6 +264,7 @@ impl<'a> NodeGenerator<'a> {
     ///
     /// 只为添加了 #[attr] 标记的字段生成 NodeSpec 的属性映射构建代码。
     /// 这是节点定义的核心逻辑，只有标记为属性的字段才会成为节点的属性。
+    /// 支持自定义类型表达式，要求实现 Default + Serialize traits。
     ///
     /// # 返回值
     ///
@@ -250,16 +274,31 @@ impl<'a> NodeGenerator<'a> {
     ///
     /// ```rust
     /// let mut attrs_map = std::collections::HashMap::new();
-    /// attrs_map.insert("field1".to_string(), AttributeSpec { default: Some(default_value) });
-    /// // ... 更多 #[attr] 字段 ...
+    /// 
+    /// // 基本类型默认值
+    /// attrs_map.insert("title".to_string(), AttributeSpec { 
+    ///     default: Some(serde_json::json!(String::default())) 
+    /// });
+    /// 
+    /// // 自定义类型表达式 (from #[attr(default="CustomType::new()")])
+    /// attrs_map.insert("custom_field".to_string(), AttributeSpec { 
+    ///     default: Some(serde_json::to_value(CustomType::new()).unwrap_or(serde_json::json!(null)))
+    /// });
+    /// 
+    /// // Option 类型
+    /// attrs_map.insert("optional_field".to_string(), AttributeSpec { 
+    ///     default: Some(serde_json::json!(null))
+    /// });
+    /// 
     /// let attrs = Some(attrs_map);
     /// ```
     ///
     /// # 设计原则体现
     ///
     /// - **单一职责**: 只负责属性映射代码生成
-    /// - **开闭原则**: 通过转换器系统支持新的字段类型
+    /// - **开闭原则**: 支持自定义类型表达式和新的字段类型扩展
     /// - **精确性**: 只处理有 #[attr] 标记的字段，符合节点定义语义
+    /// - **类型安全**: 自定义类型必须实现 Default + Serialize
     fn generate_attrs_spec_code(&self) -> MacroResult<TokenStream2> {
         // 只获取有 #[attr] 标记的字段
         let attr_fields = &self.config.attr_fields;
@@ -343,7 +382,37 @@ impl<'a> NodeGenerator<'a> {
         Ok(all_fields)
     }
 
-    /// 从类型中提取类型名称
+    /// 从类型中提取完整类型名称（包含泛型参数）
+    ///
+    /// 递归解析类型结构，构建包含完整泛型信息的类型名称字符串。
+    /// 这对于正确处理 Option<String>、Vec<u8> 等泛型类型至关重要。
+    ///
+    /// # 参数
+    ///
+    /// * `ty` - syn::Type 类型引用
+    ///
+    /// # 返回值
+    ///
+    /// 包含完整泛型信息的类型名称字符串
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// // 基本类型
+    /// String -> "String"
+    /// i32 -> "i32"
+    /// 
+    /// // 泛型类型
+    /// Option<String> -> "Option<String>"
+    /// Vec<u8> -> "Vec<u8>"
+    /// HashMap<String, i32> -> "HashMap<String, i32>"
+    /// 
+    /// // 嵌套泛型
+    /// Option<Vec<String>> -> "Option<Vec<String>>"
+    /// 
+    /// // 模块路径
+    /// std::collections::HashMap<String, i32> -> "std::collections::HashMap<String, i32>"
+    /// ```
     fn extract_type_name(&self, ty: &syn::Type) -> String {
         use syn::{Type, TypePath, PathArguments, GenericArgument, AngleBracketedGenericArguments};
 
@@ -548,14 +617,32 @@ impl<'a> NodeGenerator<'a> {
     /// 生成类型的默认值表达式
     ///
     /// 为没有 default 属性的字段生成类型默认值的 JSON 表达式。
+    /// 支持泛型类型（如 Option<String>、Vec<u8>）和自定义类型。
+    /// 自定义类型必须实现 Default + Serialize traits。
     ///
     /// # 参数
     ///
-    /// * `type_name` - 字段类型名称
+    /// * `type_name` - 字段类型名称（支持泛型，如 "Option<String>"）
     ///
     /// # 返回值
     ///
     /// 返回类型默认值的 JSON 表达式代码
+    ///
+    /// # 支持的类型示例
+    ///
+    /// ```rust
+    /// // 基本类型
+    /// "String" => serde_json::json!(String::default())
+    /// "i32" => serde_json::json!(0)
+    /// "bool" => serde_json::json!(false)
+    /// 
+    /// // 泛型类型
+    /// "Option<String>" => serde_json::json!(null)
+    /// "Vec<u8>" => serde_json::json!(Vec::<u8>::new())
+    /// 
+    /// // 自定义类型 (需要 Default + Serialize)
+    /// "CustomStruct" => serde_json::to_value(<CustomStruct as Default>::default())
+    /// ```
     fn generate_type_default_value(&self, type_name: &str) -> MacroResult<TokenStream2> {
         let default_expr = match type_name {
             "String" => quote! { serde_json::json!(String::default()) },
@@ -594,10 +681,11 @@ impl<'a> NodeGenerator<'a> {
     ///
     /// 为没有 #[attr] 标记的字段生成默认值表达式。
     /// 这些字段不会从 Node 的 attrs 中提取，而是使用类型默认值。
+    /// 支持泛型类型和自定义类型的类型安全处理。
     ///
     /// # 参数
     ///
-    /// * `type_name` - 字段类型名称
+    /// * `type_name` - 字段类型名称（支持泛型，如 "Option<String>"）
     ///
     /// # 返回值
     ///
@@ -607,8 +695,29 @@ impl<'a> NodeGenerator<'a> {
     ///
     /// 对于没有 #[attr] 标记的字段：
     /// 1. 使用类型的默认值（如 String::default()）
-    /// 2. 对于自定义类型，尝试调用 Default::default()
+    /// 2. 对于自定义类型，使用类型安全的 <Type as Default>::default()
     /// 3. 对于特殊类型（如 PhantomData），提供特定的处理
+    /// 4. 优雅降级：类型解析失败时使用通用 Default::default()
+    ///
+    /// # 支持的类型示例
+    ///
+    /// ```rust
+    /// // 基本类型
+    /// "String" => String::default()
+    /// "i32" => 0
+    /// "bool" => false
+    /// 
+    /// // 泛型类型
+    /// "Option<String>" => None
+    /// "Vec<u8>" => Vec::new()
+    /// 
+    /// // 自定义类型 (需要 Default trait)
+    /// "CustomStruct" => <CustomStruct as Default>::default()
+    /// 
+    /// // 特殊类型
+    /// "PhantomData<T>" => std::marker::PhantomData
+    /// "uuid::Uuid" => uuid::Uuid::new_v4()
+    /// ```
     fn generate_non_attr_field_default(&self, type_name: &str) -> MacroResult<TokenStream2> {
         let default_expr = match type_name {
             "String" => quote! { String::default() },
@@ -794,7 +903,7 @@ impl<'a> NodeGenerator<'a> {
     /// 生成 from 方法的实现代码
     ///
     /// 根据配置信息生成 from 方法，该方法接受 mf_model::node::Node 参数
-    /// 并返回当前结构体的实例。
+    /// 并返回当前结构体的实例。处理所有字段（包括有和没有 #[attr] 标记的）。
     ///
     /// # 返回值
     ///
@@ -804,13 +913,35 @@ impl<'a> NodeGenerator<'a> {
     ///
     /// ```rust
     /// impl StructName {
-    ///     pub fn from(node: &mf_model::node::Node) -> Self {
-    ///         // 从 node.attrs 中提取字段值
-    ///         Self {
-    ///             field1: extract_field_value(&node.attrs, "field1").unwrap_or_default(),
-    ///             field2: extract_field_value(&node.attrs, "field2").unwrap_or_default(),
-    ///             ...
+    ///     pub fn from(node: &mf_model::node::Node) -> Result<Self, String> {
+    ///         use serde_json::Value as JsonValue;
+    ///         
+    ///         // 验证节点类型匹配
+    ///         if node.r#type != "expected_type" {
+    ///             return Err(format!("节点类型不匹配: 期望 '{}', 实际 '{}'", 
+    ///                 "expected_type", node.r#type));
     ///         }
+    ///         
+    ///         Ok(Self {
+    ///             // #[attr] 字段：从 node.attrs 中提取
+    ///             attr_field: node.attrs.attrs.get("attr_field")
+    ///                 .and_then(|v| v.as_str())
+    ///                 .map(|s| s.to_string())
+    ///                 .unwrap_or_default(),
+    ///                 
+    ///             // 非 #[attr] 字段：使用默认值
+    ///             non_attr_field: <FieldType as Default>::default(),
+    ///             
+    ///             // Option 类型处理
+    ///             optional_field: node.attrs.attrs.get("optional_field")
+    ///                 .and_then(|v| v.as_str())
+    ///                 .map(|s| s.to_string()),
+    ///                 
+    ///             // 自定义类型处理
+    ///             custom_field: node.attrs.attrs.get("custom_field")
+    ///                 .and_then(|v| serde_json::from_value(v.clone()).ok())
+    ///                 .unwrap_or_else(|| <CustomType as Default>::default()),
+    ///         })
     ///     }
     /// }
     /// ```
@@ -818,7 +949,9 @@ impl<'a> NodeGenerator<'a> {
     /// # 设计原则体现
     ///
     /// - **单一职责**: 只负责生成 from 方法代码
-    /// - **开闭原则**: 通过配置和转换器支持扩展
+    /// - **错误安全**: 返回 Result 类型，处理类型不匹配错误
+    /// - **字段分离**: #[attr] 字段从 attrs 提取，非 #[attr] 字段使用默认值
+    /// - **类型安全**: 支持泛型类型和自定义类型的安全转换
     pub fn generate_from_method(&self) -> MacroResult<TokenStream2> {
         let struct_name = &self.input.ident;
         let node_type = self.config.node_type.as_ref()

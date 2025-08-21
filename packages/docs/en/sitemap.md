@@ -10,6 +10,8 @@
 
 ### Development Guide
 - [Plugin Development Guide](/en/plugin-development-guide) - Detailed plugin development tutorial
+- [Macro System Guide](/en/macro-system-guide) - Node and Mark derive macro usage guide
+- [Macro Expansion Example](/en/macro-expansion-example) - Complete macro expansion results showcase
 - [Performance Guide](/en/performance-guide) - Performance optimization best practices
 - [External Project Integration](/en/setup-external-project) - Integrate into existing projects
 - [Integration Example](/en/example-integration-project) - Complete integration example

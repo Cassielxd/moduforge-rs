@@ -40,6 +40,10 @@ features:
     title: Real-time Collaboration
     details: Conflict-free collaborative system based on Yrs CRDT with WebSocket real-time synchronization.
   
+  - icon: ⚡
+    title: Powerful Macro System
+    details: Provides Node and Mark derive macros with support for custom type expressions, JSON defaults, and type-safe conversions.
+  
   - icon: 🎯
     title: Business Neutral
     details: Zero business logic coupling, adaptable to editors, pricing, workflow, and other scenarios through extensions.
