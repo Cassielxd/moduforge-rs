@@ -1,8 +1,8 @@
-# 项目结构设计 - ModuForge-RS 宏模块扩展
+# ModuForge-RS 宏扩展项目结构设计
 
 ## 目录结构
 
-### mf-derive Crate 结构
+### moduforge-macros-derive 扩展结构
 ```
 crates/derive/
 ├── Cargo.toml                      # 依赖配置和元数据

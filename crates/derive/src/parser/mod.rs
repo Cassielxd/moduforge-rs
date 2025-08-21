@@ -8,6 +8,7 @@
 //! - `attribute_parser`: 属性解析器，负责解析宏属性并构建配置对象
 //! - `field_analyzer`: 字段分析器，负责分析结构体字段的类型和属性信息
 //! - `validation`: 验证器，负责验证配置的正确性和完整性
+//! - `default_value`: 默认值处理器，负责解析和处理字段默认值
 //!
 //! # 设计原则体现
 //!
@@ -67,6 +68,12 @@ pub mod field_analyzer;
 /// 遵循开闭原则，支持扩展新的验证规则。
 pub mod validation;
 
+/// 默认值处理器模块
+/// 
+/// 提供默认值的解析、验证和类型化表示功能。
+/// 遵循单一职责原则，专门负责默认值相关的所有逻辑。
+pub mod default_value;
+
 // 重新导出核心类型和函数，遵循接口隔离原则
 pub use attribute_parser::{
     AttributeParser, NodeConfig, MarkConfig, FieldConfig
@@ -75,3 +82,6 @@ pub use field_analyzer::{
     FieldAnalyzer, FieldTypeInfo, FieldAnalysis
 };
 pub use validation::Validator;
+pub use default_value::{
+    DefaultValue, DefaultValueType, DefaultValueParser
+};

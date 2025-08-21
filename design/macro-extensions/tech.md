@@ -1,107 +1,124 @@
-# 技术栈规划 - ModuForge-RS 宏模块扩展
+# ModuForge-RS 宏扩展技术栈规划
 
 ## ModuForge-RS 模块选择
 
 ### 核心依赖模块
-- **mf-core**: 提供 `Node` 和 `Mark` 结构体定义及其构造方法
-- **mf-model**: 提供 `NodeSpec` 和 `MarkSpec` 类型定义
-- **mf-derive**: 主要扩展目标，实现派生宏功能
+- **mf-derive (moduforge-macros-derive)**: 主要扩展目标，现有的派生宏实现
+- **mf-core**: 提供 Node 和 Mark 结构体定义及其构造方法
+- **mf-model**: 提供 NodeSpec 和 AttributeSpec 类型定义
+- **serde_json**: 用于 JSON 格式默认值解析和验证
 
 ### 技术架构层次
 ```
-用户结构体 (User Struct)
-    ↓ (应用宏)
-mf-derive 派生宏 (Procedural Macros)  
-    ↓ (生成代码调用)
+用户结构体 (User Struct with #[attr(default="value")])
+    ↓ (应用扩展宏)
+mf-derive 扩展派生宏 (Enhanced Procedural Macros)
+    ↓ (编译时验证 + 代码生成)
 mf-core API (Node::create, Mark::new)
     ↓ (使用类型)
-mf-model 类型定义 (NodeSpec, MarkSpec)
+mf-model 类型定义 (NodeSpec, AttributeSpec)
+    ↓ (默认值处理)
+serde_json::Value (默认值存储)
 ```
 
 ## 技术栈决策
 
-### 1. 宏系统技术选型
+### 1. 宏系统扩展策略
 
-#### 派生宏 (Derive Macros) - 主选方案
+#### 基于现有派生宏扩展 - 主选方案
 **选择理由**：
-- **类型安全**：能够访问结构体的完整类型信息
-- **IDE 支持**：现代 IDE 对派生宏有良好支持
-- **维护性**：代码生成逻辑集中，易于维护
-- **扩展性**：可以轻松添加新的派生目标
+- **向后兼容**：保持现有 API 完全不变
+- **渐进式改进**：在现有架构基础上增加新功能
+- **类型安全**：利用现有的类型检查和验证机制
+- **开发效率**：复用现有代码和测试
 
-**技术实现**：
+**扩展实现**：
 ```rust
-// 在 mf-derive/src/lib.rs 中实现
-use proc_macro::TokenStream;
-use quote::quote;
-use syn::{parse_macro_input, DeriveInput};
-
+// 扩展现有的 derive 宏，添加 default 参数支持
 #[proc_macro_derive(Node, attributes(node_type, marks, content, attr))]
 pub fn derive_node(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    // 实现 Node 生成逻辑
+    
+    // 扩展现有的处理流程支持 default 属性
+    node::derive_impl::process_derive_node_with_defaults(input)
 }
 
-#[proc_macro_derive(Mark, attributes(mark_type, attr))]
-pub fn derive_mark(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    // 实现 Mark 生成逻辑
-}
+// 新增 default 属性支持：#[attr(default="value")]
 ```
 
-### 2. 代码生成技术
+### 2. 默认值处理技术
 
-#### proc-macro2 + syn + quote 技术栈
+#### 编译时默认值解析和验证
 **核心组件**：
-- **syn**: 解析 Rust 代码为 AST
-- **quote**: 生成 Rust 代码的模板引擎
-- **proc-macro2**: 提供更好的测试和开发体验
+- **默认值解析器**: 解析 `default="value"` 参数
+- **类型推断引擎**: 从字面量推断目标类型
+- **兼容性验证器**: 验证默认值与字段类型的兼容性
+- **JSON 验证器**: 对 JSON 格式默认值的专用验证
 
 **选择理由**：
-- **成熟生态**：Rust 生态标准的宏开发工具链
-- **类型安全**：编译时验证生成的代码正确性
-- **性能优化**：零运行时开销，纯编译时处理
-- **错误处理**：提供详细的编译时错误信息
+- **编译时安全**：所有验证在编译时完成，运行时零风险
+- **类型一致性**：强制保证默认值与字段类型匹配
+- **JSON 支持**：特殊处理 JSON 格式，强制要求 serde_json::Value 类型
+- **友好错误**：提供明确的编译错误信息和修复建议
 
-### 3. 属性解析技术
+### 3. 扩展属性解析技术
 
-#### 自定义属性解析器
+#### 增强的属性解析器
 ```rust
-// 属性解析结构
-#[derive(Debug)]
-pub struct NodeAttributes {
-    pub node_type: Option<String>,      // #[node_type = "GCXM"]
-    pub marks: Option<String>,          // #[marks = "color"]  
-    pub content: Option<String>,        // #[content = "DCXM"]
+// 扩展现有的 FieldConfig 结构
+#[derive(Debug, Clone)]
+pub struct FieldConfig {
+    pub name: String,
+    pub type_name: String,
+    pub is_optional: bool,
+    pub is_attr: bool,
+    pub field: Field,
+    // 新增：默认值支持
+    pub default_value: Option<DefaultValue>,
 }
 
-#[derive(Debug)]  
-pub struct FieldAttributes {
-    pub is_attr: bool,                  // #[attr]
-    pub custom_name: Option<String>,    // #[attr(name = "custom")]
+// 新增：默认值类型定义
+#[derive(Debug, Clone)]
+pub enum DefaultValue {
+    String(String),
+    Number(f64),
+    Boolean(bool),
+    Json(String),  // JSON 格式的字符串
 }
 ```
 
-### 4. 类型转换系统
+### 4. 默认值类型转换系统
 
-#### 智能类型映射
-**基本类型转换**：
-- `String` → `serde_json::Value::String`
-- `i32`, `i64`, `f32`, `f64` → `serde_json::Value::Number`
-- `bool` → `serde_json::Value::Bool`
-- `Option<T>` → `serde_json::Value::Null` 或转换后的 `T`
+#### 编译时类型验证和转换
+**支持的默认值类型**：
+- `String` 类型字段 ← `default="string_value"`
+- `i32`, `i64`, `f32`, `f64` 类型字段 ← `default="42"`
+- `bool` 类型字段 ← `default="true"`
+- `serde_json::Value` 类型字段 ← `default="{\"key\":\"value\"}"`
+- `Option<T>` 类型字段 ← 任意上述类型的默认值
 
-**实现策略**：
+**编译时验证策略**：
 ```rust
-/// 类型转换 trait，支持自定义转换逻辑
-pub trait ToJsonValue {
-    fn to_json_value(&self) -> serde_json::Value;
-}
+/// 编译时类型兼容性验证器
+pub struct DefaultValueValidator;
 
-// 为常用类型提供默认实现
-impl ToJsonValue for String {
-    fn to_json_value(&self) -> serde_json::Value {
-        serde_json::Value::String(self.clone())
+impl DefaultValueValidator {
+    pub fn validate_compatibility(
+        field_type: &Type, 
+        default_value: &DefaultValue
+    ) -> MacroResult<()> {
+        match (field_type, default_value) {
+            // 验证 JSON 默认值只能用于 serde_json::Value 类型
+            (Type::Path(path), DefaultValue::Json(_)) => {
+                if !is_serde_json_value_type(path) {
+                    return Err(MacroError::type_mismatch(
+                        "JSON 格式默认值只能用于 serde_json::Value 类型字段"
+                    ));
+                }
+            }
+            // 其他类型验证...
+        }
+        Ok(())
     }
 }
 ```
@@ -110,84 +127,131 @@ impl ToJsonValue for String {
 
 ### 1. 单一职责原则 (SRP) 应用
 
-#### 模块职责划分
+#### 模块职责划分（扩展现有架构）
 ```rust
-// mf-derive/src/lib.rs - 宏入口点
-pub mod node_derive;      // Node 派生宏实现
-pub mod mark_derive;      // Mark 派生宏实现
-pub mod attr_parser;      // 属性解析器
-pub mod code_generator;   // 代码生成器
-pub mod type_converter;   // 类型转换器
-pub mod validator;        // 编译时验证器
+// 现有模块保持不变
+src/
+├── parser/
+│   ├── attribute_parser.rs     // 扩展：支持 default 属性解析
+│   ├── field_analyzer.rs       // 扩展：增加默认值分析
+│   ├── validation.rs          // 扩展：添加默认值验证
+│   └── default_value_parser.rs // 新增：默认值解析器
+├── generator/
+│   ├── node_generator.rs      // 扩展：支持默认值代码生成
+│   ├── mark_generator.rs      // 扩展：支持默认值代码生成
+│   └── default_value_generator.rs // 新增：默认值代码生成器
+├── converter/
+│   ├── type_converter.rs      // 扩展：支持默认值转换
+│   ├── builtin_converters.rs  // 扩展：增加默认值转换器
+│   └── json_converter.rs      // 新增：JSON 默认值专用转换器
+└── common/
+    ├── error.rs               // 扩展：添加默认值相关错误类型
+    └── default_value_types.rs // 新增：默认值类型定义
 ```
 
-**职责边界**：
-- `node_derive`: 仅负责 Node 相关的宏逻辑
-- `mark_derive`: 仅负责 Mark 相关的宏逻辑  
-- `attr_parser`: 专门处理属性解析
-- `code_generator`: 专门负责代码生成
-- `type_converter`: 专门处理类型转换
-- `validator`: 专门进行编译时验证
+**新增模块职责**：
+- `default_value_parser`: 专门解析 `default="value"` 属性
+- `default_value_generator`: 专门生成默认值处理代码
+- `json_converter`: 专门处理 JSON 格式默认值转换和验证
+- `default_value_types`: 定义默认值相关的所有类型
 
 ### 2. 接口隔离原则 (ISP) 应用
 
-#### 精简接口设计
+#### 默认值专用接口设计
 ```rust
-/// Node 生成器接口 - 只暴露 Node 相关方法
-pub trait NodeGenerator {
-    fn generate_to_node_method(&self, input: &DeriveInput) -> Result<TokenStream2>;
+/// 默认值解析器接口 - 只处理默认值解析
+pub trait DefaultValueParser {
+    fn parse_default_value(&self, attr: &Attribute) -> MacroResult<Option<DefaultValue>>;
+    fn supports_attribute(&self, attr: &Attribute) -> bool;
 }
 
-/// Mark 生成器接口 - 只暴露 Mark 相关方法  
-pub trait MarkGenerator {
-    fn generate_to_mark_method(&self, input: &DeriveInput) -> Result<TokenStream2>;
+/// 默认值验证器接口 - 只处理类型兼容性验证
+pub trait DefaultValueValidator {
+    fn validate_type_compatibility(
+        &self, 
+        field_type: &Type, 
+        default_value: &DefaultValue
+    ) -> MacroResult<()>;
 }
 
-/// 属性验证器接口 - 只暴露验证方法
-pub trait AttributeValidator {
-    fn validate_node_attributes(&self, attrs: &NodeAttributes) -> Result<()>;
-    fn validate_mark_attributes(&self, attrs: &MarkAttributes) -> Result<()>;
+/// JSON 默认值处理器接口 - 专门处理 JSON 格式
+pub trait JsonDefaultValueHandler {
+    fn validate_json_syntax(&self, json_str: &str) -> MacroResult<()>;
+    fn ensure_serde_json_value_type(&self, field_type: &Type) -> MacroResult<()>;
+}
+
+/// 默认值代码生成器接口 - 只生成默认值处理代码
+pub trait DefaultValueCodeGenerator {
+    fn generate_default_value_assignment(
+        &self, 
+        field: &FieldConfig
+    ) -> MacroResult<TokenStream2>;
 }
 ```
 
 ### 3. 开闭原则 (OCP) 应用
 
-#### 可扩展的转换器系统
+#### 可扩展的默认值处理系统
 ```rust
-/// 类型转换器 trait - 对扩展开放
-pub trait TypeConverter: Send + Sync {
-    fn convert_type(&self, rust_type: &Type) -> Option<TokenStream2>;
-    fn supports_type(&self, rust_type: &Type) -> bool;
+/// 默认值处理器 trait - 对新类型扩展开放
+pub trait DefaultValueHandler: Send + Sync {
+    fn handle_default_value(
+        &self, 
+        field_type: &Type, 
+        default_value: &DefaultValue
+    ) -> MacroResult<TokenStream2>;
+    
+    fn supports_type(&self, field_type: &Type) -> bool;
+    fn priority(&self) -> i32;  // 处理器优先级
 }
 
-/// 转换器注册表 - 支持注册新的转换器
-pub struct ConverterRegistry {
-    converters: Vec<Box<dyn TypeConverter>>,
+/// 默认值处理器注册表 - 支持注册新的处理器
+pub struct DefaultValueHandlerRegistry {
+    handlers: Vec<Box<dyn DefaultValueHandler>>,
 }
 
-impl ConverterRegistry {
-    pub fn register<T: TypeConverter + 'static>(&mut self, converter: T) {
-        self.converters.push(Box::new(converter));
+impl DefaultValueHandlerRegistry {
+    pub fn register<T: DefaultValueHandler + 'static>(&mut self, handler: T) {
+        self.handlers.push(Box::new(handler));
+        // 按优先级排序
+        self.handlers.sort_by_key(|h| -h.priority());
+    }
+    
+    pub fn find_handler(&self, field_type: &Type) -> Option<&dyn DefaultValueHandler> {
+        self.handlers.iter()
+            .find(|h| h.supports_type(field_type))
+            .map(|h| h.as_ref())
     }
 }
 ```
 
 ### 4. 里氏替换原则 (LSP) 应用
 
-#### 一致的接口契约
+#### 一致的默认值处理契约
 ```rust
-/// 所有代码生成器必须遵循相同的契约
-pub trait CodeGenerator {
-    type Input;
-    type Output;
-    type Error;
+/// 所有默认值处理器必须遵循相同的契约
+pub trait DefaultValueProcessor {
+    /// 处理默认值，必须返回合法的 TokenStream 或明确的错误
+    fn process(
+        &self, 
+        field: &FieldConfig, 
+        default_value: &DefaultValue
+    ) -> MacroResult<TokenStream2>;
     
-    /// 生成代码，必须返回合法的 TokenStream 或明确的错误
-    fn generate(&self, input: Self::Input) -> Result<Self::Output, Self::Error>;
+    /// 验证默认值，所有处理器都必须实现一致的验证逻辑
+    fn validate(
+        &self, 
+        field_type: &Type, 
+        default_value: &DefaultValue
+    ) -> MacroResult<()>;
 }
 
-// 具体实现必须保证可替换性
-impl CodeGenerator for NodeCodeGenerator {
+// 所有具体实现都必须保证可替换性
+impl DefaultValueProcessor for StringDefaultProcessor {
+    // 实现必须满足 LSP 契约
+}
+
+impl DefaultValueProcessor for JsonDefaultProcessor {
     // 实现必须满足 LSP 契约
 }
 ```
@@ -195,102 +259,130 @@ impl CodeGenerator for NodeCodeGenerator {
 ## 性能要求
 
 ### 编译时性能目标
-- **宏展开时间**: < 100ms (对于包含 50 个字段的结构体)
-- **内存使用**: < 10MB (在宏展开过程中的峰值内存)
-- **增量编译**: 支持增量编译，只重新处理变更的结构体
+- **默认值验证时间**: < 50ms (对于包含 20 个默认值字段的结构体)
+- **JSON 解析验证**: < 10ms (对于 1KB 的 JSON 默认值)
+- **类型兼容性检查**: < 5ms (每个字段)
+- **总编译时间增加**: < 10% (相比不使用默认值功能)
 
 ### 生成代码性能目标
-- **方法调用开销**: 与手写代码相同的性能
-- **内存分配**: 最小化不必要的内存分配
-- **二进制大小**: 生成的代码不显著增加二进制大小
+- **默认值处理开销**: 运行时零额外开销
+- **内存使用**: 生成的默认值不增加运行时内存占用
+- **二进制大小**: 默认值功能不显著增加编译后二进制大小
 
 ### 性能优化策略
 
-#### 1. 编译时优化
+#### 1. 默认值验证优化
 ```rust
-// 使用 once_cell 缓存重复计算
+// 使用 once_cell 缓存默认值验证结果
 use once_cell::sync::Lazy;
 
-static TYPE_CACHE: Lazy<HashMap<String, TokenStream2>> = Lazy::new(HashMap::new);
+static DEFAULT_VALUE_CACHE: Lazy<HashMap<(String, String), bool>> = 
+    Lazy::new(HashMap::new);
 
-// 避免重复的类型分析
-fn get_cached_type_conversion(rust_type: &str) -> Option<&TokenStream2> {
-    TYPE_CACHE.get(rust_type)
+// 缓存默认值类型兼容性检查结果
+fn is_compatible_cached(
+    field_type: &str, 
+    default_value_type: &str
+) -> bool {
+    let key = (field_type.to_string(), default_value_type.to_string());
+    *DEFAULT_VALUE_CACHE.entry(key)
+        .or_insert_with(|| validate_type_compatibility(field_type, default_value_type))
 }
 ```
 
-#### 2. 生成代码优化
+#### 2. 默认值代码生成优化
 ```rust
-// 生成高效的属性构建代码
-fn generate_optimized_attrs_building() -> TokenStream2 {
+// 生成高效的默认值处理代码
+fn generate_optimized_default_handling() -> TokenStream2 {
     quote! {
-        // 预分配 HashMap 容量，减少重新分配
-        let mut attrs = std::collections::HashMap::with_capacity(#field_count);
-        #(#field_insertions)*
-        attrs
+        // 编译时常量折叠，运行时零开销
+        const DEFAULT_VALUES: &[(&str, serde_json::Value)] = &[
+            #(#default_value_pairs),*
+        ];
+        
+        // 直接使用预计算的默认值，避免运行时解析
+        #(#field_assignments)*
     }
 }
 ```
 
 ## 扩展性考虑
 
-### 1. 插件化属性处理
+### 1. 默认值类型扩展
 ```rust
-/// 支持自定义属性处理器
-pub trait AttributeProcessor: Send + Sync {
-    fn process_attribute(&self, attr: &Attribute) -> Option<AttributeResult>;
-    fn attribute_name(&self) -> &'static str;
+/// 支持自定义默认值类型处理器
+pub trait CustomDefaultValueHandler: Send + Sync {
+    fn handle_custom_type(
+        &self, 
+        field_type: &Type, 
+        default_value: &str
+    ) -> MacroResult<TokenStream2>;
+    
+    fn supports_type(&self, field_type: &Type) -> bool;
+    fn type_name(&self) -> &'static str;
 }
 
-// 支持注册自定义处理器
-pub struct MacroExtensionRegistry {
-    processors: HashMap<String, Box<dyn AttributeProcessor>>,
+// 支持注册自定义默认值处理器
+pub struct DefaultValueExtensionRegistry {
+    handlers: HashMap<String, Box<dyn CustomDefaultValueHandler>>,
 }
 ```
 
-### 2. 自定义代码生成钩子
+### 2. 默认值格式扩展
 ```rust
-/// 允许用户自定义代码生成逻辑
-pub trait CodeGenHook {
-    fn pre_generate(&self, input: &DeriveInput) -> Result<()>;
-    fn post_generate(&self, output: &mut TokenStream2) -> Result<()>;
+/// 允许扩展新的默认值格式
+pub trait DefaultValueFormat {
+    fn parse_format(&self, input: &str) -> MacroResult<DefaultValue>;
+    fn format_name(&self) -> &'static str;
+    fn validate_syntax(&self, input: &str) -> MacroResult<()>;
 }
+
+// 支持 YAML、TOML 等其他格式
+pub struct YamlDefaultValueFormat;
+pub struct TomlDefaultValueFormat;
 ```
 
 ### 3. 未来功能扩展预留
 
-#### 计划中的扩展点
-1. **批量操作支持**: `#[derive(NodeBatch)]` 用于批量创建节点
-2. **模板系统集成**: 与 mf-template 集成生成模板化节点
-3. **验证规则扩展**: 支持自定义的编译时验证规则
-4. **序列化优化**: 与 mf-file 集成优化序列化性能
+#### 计划中的默认值扩展点
+1. **复杂类型默认值**: 支持自定义 struct 和 enum 的默认值
+2. **条件默认值**: `#[attr(default_if="condition")]` 用于条件默认值
+3. **动态默认值**: 支持运行时计算的默认值
+4. **默认值继承**: 从父类或 trait 继承默认值
 
 #### 架构预留接口
 ```rust
-// 为未来扩展预留的 trait
-pub trait FutureExtension {
+// 为未来默认值扩展预留的 trait
+pub trait DefaultValueExtension {
     type Config;
-    fn apply_extension(&self, config: Self::Config) -> Result<TokenStream2>;
+    type Context;
+    
+    fn extend_default_value(
+        &self, 
+        config: Self::Config, 
+        context: Self::Context
+    ) -> MacroResult<DefaultValue>;
 }
 ```
 
 ## 技术风险评估
 
 ### 高风险项
-1. **编译时间影响**: 复杂宏可能显著增加编译时间
-   - **缓解策略**: 实现增量编译缓存，优化宏逻辑
-2. **IDE 支持兼容性**: 生成的代码可能不被所有 IDE 正确识别
-   - **缓解策略**: 生成标准化代码，添加必要的类型注解
+1. **默认值类型推断复杂性**: JSON 默认值的编译时验证可能很复杂
+   - **缓解策略**: 使用简化的验证规则，只验证 JSON 语法正确性
+2. **向后兼容性破坏**: 新增功能可能影响现有代码
+   - **缓解策略**: 严格的回归测试，全面的兼容性检查
 
 ### 中风险项
-1. **错误信息质量**: 宏错误可能难以理解
-   - **缓解策略**: 实现详细的错误消息和修复建议
-2. **版本兼容性**: 依赖的 proc-macro 生态版本更新
-   - **缓解策略**: 固定版本范围，定期升级测试
+1. **JSON 默认值验证性能**: 大量 JSON 默认值可能影响编译性能
+   - **缓解策略**: 实现缓存机制，优化 JSON 解析性能
+2. **错误信息复杂性**: 默认值错误可能产生复杂的错误信息
+   - **缓解策略**: 设计精简、清晰的错误消息模板
 
 ### 技术债务控制
-- **代码覆盖率**: 保持 90% 以上的测试覆盖率
-- **文档完整性**: 所有公开 API 必须有完整文档
-- **性能基准**: 建立性能基准测试，监控回归
+- **默认值测试覆盖率**: 保持 95% 以上的测试覆盖率
+- **类型安全性测试**: 建立全面的类型兼容性测试套件
+- **性能基准监控**: 监控默认值处理对编译性能的影响
+- **文档完整性**: 所有新增功能都必须有完整的中文文档
 
-通过这个技术架构设计，mf-derive 将成为一个高性能、可扩展、符合设计原则的宏系统，为 ModuForge-RS 生态提供强大的代码生成能力。
+通过这个技术架构扩展设计，moduforge-macros-derive 将在保持现有架构优势的基础上，新增默认值支持功能，为 ModuForge-RS 生态提供更强大、更安全的代码生成能力。
