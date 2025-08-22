@@ -164,10 +164,10 @@ struct NodeWithOptionalIdTest {
     #[id]
     section_id: Option<String>,
     
-    #[attr]
+    #[attr(default="1")]
     name: String,
     
-    #[attr]
+    #[attr(default="0")]
     order: i32,
 }
 

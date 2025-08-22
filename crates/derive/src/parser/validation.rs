@@ -790,10 +790,104 @@ impl Validator {
     /// # 返回值
     ///
     /// 配置一致时返回 Ok(())，否则返回一致性错误
-    fn validate_node_config_consistency(_config: &NodeConfig) -> MacroResult<()> {
-        // 这里可以添加配置一致性检查
-        // 例如：验证 marks 和字段类型的兼容性
-        // 暂时返回 Ok，为将来的一致性检查预留接口
+    ///
+    /// # 一致性检查内容
+    ///
+    /// - ID 字段与普通属性字段的名称冲突检查
+    /// - marks 列表与节点类型的兼容性验证
+    /// - 属性字段的类型一致性检查
+    /// - 默认值与字段类型的兼容性验证
+    /// - 特殊字段命名规范检查
+    /// - 节点类型与内容约束的兼容性验证
+    /// - 字段描述一致性验证
+    fn validate_node_config_consistency(config: &NodeConfig) -> MacroResult<()> {
+        // 1. 检查 ID 字段与属性字段名称冲突
+        if let Some(id_field) = &config.id_field {
+            for attr_field in &config.attr_fields {
+                if id_field.name == attr_field.name {
+                    return Err(MacroError::ValidationError {
+                        message: format!(
+                            "字段 '{}' 既标记为 #[id] 又标记为 #[attr]，这是不允许的",
+                            id_field.name
+                        ),
+                        span: Some(attr_field.field.span()),
+                    });
+                }
+            }
+
+            // 验证 ID 字段类型的合理性
+            if !utils::is_supported_type(&id_field.field.ty) {
+                return Err(MacroError::ValidationError {
+                    message: format!(
+                        "ID 字段 '{}' 的类型 '{}' 不受支持，建议使用 String 或 Option<String>",
+                        id_field.name, id_field.type_name
+                    ),
+                    span: Some(id_field.field.ty.span()),
+                });
+            }
+
+            // ID 字段通常应该是字符串类型
+            if !id_field.type_name.contains("String") {
+                return Err(MacroError::ValidationError {
+                    message: format!(
+                        "ID 字段 '{}' 建议使用 String 或 Option<String> 类型，当前是 '{}'",
+                        id_field.name, id_field.type_name
+                    ),
+                    span: Some(id_field.field.ty.span()),
+                });
+            }
+        }
+
+        // 2. 验证属性字段的类型一致性
+        for field in &config.attr_fields {
+
+            // 检查字段类型是否与其标记一致
+            if field.is_attr && !utils::is_supported_type(&field.field.ty) {
+                return Err(MacroError::ValidationError {
+                    message: format!(
+                        "属性字段 '{}' 的类型 '{}' 不受支持，请使用基本类型或其 Option 包装版本",
+                        field.name, field.type_name
+                    ),
+                    span: Some(field.field.ty.span()),
+                });
+            }
+
+            // 3. 验证默认值与字段类型的兼容性
+            if let Some(default_value) = &field.default_value {
+                Self::validate_default_value_type_compatibility(field, default_value)?;
+            }
+        }
+
+        // 4. 验证内容约束的基本语法
+        if let Some(content) = &config.content {
+            Self::validate_content_syntax_only(content)?;
+        }
+
+        // 5. 验证标记列表的基本语法  
+        if let Some(marks) = &config.marks {
+            Self::validate_marks_syntax_only(marks)?;
+        }
+
+        // 6. 验证描述字段的合理性
+        if let Some(desc) = &config.desc {
+            if desc.trim().is_empty() {
+                return Err(MacroError::ValidationError {
+                    message: "desc 描述不能为空字符串，如果不需要描述请移除 desc 属性".to_string(),
+                    span: None,
+                });
+            }
+
+            if desc.len() > limits::MAX_ATTRIBUTE_VALUE_LENGTH * 2 {
+                return Err(MacroError::ValidationError {
+                    message: format!(
+                        "desc 描述太长，最多允许 {} 个字符，当前有 {} 个",
+                        limits::MAX_ATTRIBUTE_VALUE_LENGTH * 2, desc.len()
+                    ),
+                    span: None,
+                });
+            }
+        }
+
         Ok(())
     }
     
@@ -809,10 +903,391 @@ impl Validator {
     /// # 返回值
     ///
     /// 配置一致时返回 Ok(())，否则返回一致性错误
-    fn validate_mark_config_consistency(_config: &MarkConfig) -> MacroResult<()> {
-        // 这里可以添加配置一致性检查
-        // 例如：验证标记类型与字段的兼容性
-        // 暂时返回 Ok，为将来的一致性检查预留接口
+    ///
+    /// # 一致性检查内容
+    ///
+    /// - 标记类型与属性字段的兼容性验证
+    /// - 属性字段的类型一致性检查
+    /// - 默认值与字段类型的兼容性验证
+    /// - 特殊字段命名规范检查
+    /// - 标记类型的语义验证
+    /// - 字段数量的合理性检查
+    /// - 标记类型与字段组合的逻辑验证
+    fn validate_mark_config_consistency(config: &MarkConfig) -> MacroResult<()> {
+        let mark_type = config.mark_type.as_ref().unwrap(); // 已在前面验证存在性
+
+        // 1. 验证标记类型与属性字段的兼容性
+        for field in &config.attr_fields {
+
+            // 检查字段类型是否与其标记一致
+            if field.is_attr && !utils::is_supported_type(&field.field.ty) {
+                return Err(MacroError::ValidationError {
+                    message: format!(
+                        "标记属性字段 '{}' 的类型 '{}' 不受支持，请使用基本类型或其 Option 包装版本",
+                        field.name, field.type_name
+                    ),
+                    span: Some(field.field.ty.span()),
+                });
+            }
+
+            // 2. 验证默认值与字段类型的兼容性
+            if let Some(default_value) = &field.default_value {
+                Self::validate_default_value_type_compatibility(field, default_value)?;
+            }
+
+            // 3. 验证字段的基本语法合理性
+            Self::validate_mark_field_basic_syntax(field)?;
+        }
+
+        // 4. 验证字段数量的基本限制
+        Self::validate_mark_field_count_basic(mark_type, &config.attr_fields)?;
+
+        Ok(())
+    }
+
+    /// 验证默认值与字段类型的兼容性
+    ///
+    /// 检查字段配置中的默认值是否与字段类型兼容。
+    /// 遵循单一职责原则，专门验证类型兼容性。
+    ///
+    /// # 参数
+    ///
+    /// * `field_config` - 字段配置
+    /// * `default_value` - 默认值
+    ///
+    /// # 返回值
+    ///
+    /// 兼容时返回 Ok(())，否则返回兼容性错误
+    fn validate_default_value_type_compatibility(
+        field_config: &FieldConfig,
+        default_value: &crate::parser::default_value::DefaultValue,
+    ) -> MacroResult<()> {
+        use crate::parser::default_value::DefaultValueType;
+
+        // 获取字段的基础类型（去除 Option 包装）
+        let base_type = if field_config.is_optional {
+            // 对于 Option<T>，提取内部类型 T
+            if let Some(inner) = utils::extract_option_inner_type(&field_config.field.ty) {
+                utils::extract_type_name(inner)
+            } else {
+                field_config.type_name.clone()
+            }
+        } else {
+            field_config.type_name.clone()
+        };
+
+        // 根据默认值类型检查兼容性（支持类型转换）
+        match &default_value.value_type {
+            DefaultValueType::String(_) => {
+                if !base_type.contains("String") && !base_type.contains("str") {
+                    return Err(MacroError::ValidationError {
+                        message: format!(
+                            "字段 '{}' 的类型是 '{}' 但默认值是字符串类型，类型不兼容",
+                            field_config.name, field_config.type_name
+                        ),
+                        span: Some(field_config.field.span()),
+                    });
+                }
+            }
+            DefaultValueType::Integer(_) => {
+                let int_types = ["i8", "i16", "i32", "i64", "i128", "isize", "u8", "u16", "u32", "u64", "u128", "usize"];
+                let is_string_type = base_type.contains("String") || base_type.contains("str");
+                
+                // 允许整数默认值用于字符串类型字段（数字可以转换为字符串）
+                if !int_types.iter().any(|&t| base_type.contains(t)) && !is_string_type {
+                    return Err(MacroError::ValidationError {
+                        message: format!(
+                            "字段 '{}' 的类型是 '{}' 但默认值是整数类型，类型不兼容",
+                            field_config.name, field_config.type_name
+                        ),
+                        span: Some(field_config.field.span()),
+                    });
+                }
+            }
+            DefaultValueType::Float(_) => {
+                let is_float_type = base_type.contains("f32") || base_type.contains("f64");
+                let is_string_type = base_type.contains("String") || base_type.contains("str");
+                
+                // 允许浮点数默认值用于字符串类型字段（数字可以转换为字符串）
+                if !is_float_type && !is_string_type {
+                    return Err(MacroError::ValidationError {
+                        message: format!(
+                            "字段 '{}' 的类型是 '{}' 但默认值是浮点数类型，类型不兼容",
+                            field_config.name, field_config.type_name
+                        ),
+                        span: Some(field_config.field.span()),
+                    });
+                }
+            }
+            DefaultValueType::Boolean(_) => {
+                let is_bool_type = base_type.contains("bool");
+                let is_string_type = base_type.contains("String") || base_type.contains("str");
+                
+                // 允许布尔默认值用于字符串类型字段（布尔值可以转换为字符串）
+                if !is_bool_type && !is_string_type {
+                    return Err(MacroError::ValidationError {
+                        message: format!(
+                            "字段 '{}' 的类型是 '{}' 但默认值是布尔类型，类型不兼容",
+                            field_config.name, field_config.type_name
+                        ),
+                        span: Some(field_config.field.span()),
+                    });
+                }
+            }
+            DefaultValueType::Null => {
+                if !field_config.is_optional {
+                    return Err(MacroError::ValidationError {
+                        message: format!(
+                            "字段 '{}' 不是 Option 类型，不能设置 null 作为默认值",
+                            field_config.name
+                        ),
+                        span: Some(field_config.field.span()),
+                    });
+                }
+            }
+            DefaultValueType::Json(_) => {
+                // JSON 类型比较灵活，这里进行基本检查
+                if !base_type.contains("Value") && !base_type.contains("String") {
+                    return Err(MacroError::ValidationError {
+                        message: format!(
+                            "字段 '{}' 的类型是 '{}' 但默认值是 JSON 对象，建议使用 serde_json::Value 或 String 类型",
+                            field_config.name, field_config.type_name
+                        ),
+                        span: Some(field_config.field.span()),
+                    });
+                }
+            }
+            DefaultValueType::CustomType(_) => {
+                // 自定义类型默认值，暂时允许
+            }
+        }
+
+        Ok(())
+    }
+
+    /// 验证标记类型的语义一致性
+    ///
+    /// 检查标记类型名称与其属性字段的语义一致性。
+    /// 遵循单一职责原则，专门验证语义一致性。
+    ///
+    /// # 参数
+    ///
+    /// * `mark_type` - 标记类型名称
+    /// * `attr_fields` - 属性字段列表
+    ///
+    /// # 返回值
+    ///
+    /// 语义一致时返回 Ok(())，否则返回语义错误
+    fn validate_mark_type_semantic_consistency(
+        mark_type: &str,
+        attr_fields: &[FieldConfig],
+    ) -> MacroResult<()> {
+        // 检查标记名称的语义一致性
+        let field_names: Vec<&str> = attr_fields.iter().map(|f| f.name.as_str()).collect();
+
+        match mark_type {
+            "color" => {
+                // 颜色标记应该有颜色相关的字段
+                let color_fields = ["color", "value", "red", "green", "blue", "alpha", "hex", "rgb", "rgba"];
+                if !field_names.iter().any(|&name| color_fields.contains(&name)) {
+                    return Err(MacroError::ValidationError {
+                        message: "颜色标记 (color) 应该至少包含一个颜色相关的属性字段，如 color, value, red, green, blue 等".to_string(),
+                        span: None,
+                    });
+                }
+            }
+            "link" => {
+                // 链接标记应该有链接地址字段
+                let link_fields = ["href", "url", "link"];
+                if !field_names.iter().any(|&name| link_fields.contains(&name)) {
+                    return Err(MacroError::ValidationError {
+                        message: "链接标记 (link) 应该至少包含一个链接地址字段，如 href, url 等".to_string(),
+                        span: None,
+                    });
+                }
+            }
+            "font_size" => {
+                // 字体大小标记应该有大小字段
+                let size_fields = ["size", "fontSize", "font_size"];
+                if !field_names.iter().any(|&name| size_fields.contains(&name)) {
+                    return Err(MacroError::ValidationError {
+                        message: "字体大小标记 (font_size) 应该至少包含一个大小字段，如 size, fontSize 等".to_string(),
+                        span: None,
+                    });
+                }
+            }
+            "font_family" => {
+                // 字体族标记应该有字体名称字段
+                let font_fields = ["family", "fontFamily", "font", "name"];
+                if !field_names.iter().any(|&name| font_fields.contains(&name)) {
+                    return Err(MacroError::ValidationError {
+                        message: "字体族标记 (font_family) 应该至少包含一个字体名称字段，如 family, fontFamily 等".to_string(),
+                        span: None,
+                    });
+                }
+            }
+            _ => {
+                // 其他标记类型的语义检查可以在这里添加
+            }
+        }
+
+        Ok(())
+    }
+
+    /// 验证内容约束的基本语法
+    ///
+    /// 检查内容约束表达式的基本语法正确性，不涉及业务语义。
+    /// 遵循单一职责原则，专门验证语法正确性。
+    ///
+    /// # 参数
+    ///
+    /// * `content` - 内容约束表达式
+    ///
+    /// # 返回值
+    ///
+    /// 语法正确时返回 Ok(())，否则返回语法错误
+    fn validate_content_syntax_only(content: &str) -> MacroResult<()> {
+        // 只进行基本的语法检查，不涉及业务逻辑
+        if content.trim().is_empty() {
+            return Err(MacroError::ValidationError {
+                message: "内容约束不能为空字符串".to_string(),
+                span: None,
+            });
+        }
+
+        // 检查是否包含明显的语法错误
+        let mut paren_count = 0;
+        for ch in content.chars() {
+            match ch {
+                '(' => paren_count += 1,
+                ')' => {
+                    paren_count -= 1;
+                    if paren_count < 0 {
+                        return Err(MacroError::ValidationError {
+                            message: "内容约束表达式中的括号不匹配".to_string(),
+                            span: None,
+                        });
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        if paren_count != 0 {
+            return Err(MacroError::ValidationError {
+                message: "内容约束表达式中存在未闭合的括号".to_string(),
+                span: None,
+            });
+        }
+
+        Ok(())
+    }
+
+    /// 验证标记列表的基本语法
+    ///
+    /// 检查标记列表的基本语法正确性，不涉及业务语义。
+    /// 遵循单一职责原则，专门验证语法正确性。
+    ///
+    /// # 参数
+    ///
+    /// * `marks` - 标记列表（空格分隔）
+    ///
+    /// # 返回值
+    ///
+    /// 语法正确时返回 Ok(())，否则返回语法错误
+    fn validate_marks_syntax_only(marks: &str) -> MacroResult<()> {
+        if marks.trim().is_empty() {
+            return Err(MacroError::ValidationError {
+                message: "标记列表不能为空字符串".to_string(),
+                span: None,
+            });
+        }
+
+        let mark_list: Vec<&str> = marks.split_whitespace().collect();
+
+        // 验证每个标记名称的基本语法
+        for mark in mark_list {
+            if !utils::is_valid_identifier(mark) {
+                return Err(MacroError::ValidationError {
+                    message: format!("标记名称 '{}' 不是有效的标识符格式", mark),
+                    span: None,
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    /// 验证标记字段的基本语法
+    ///
+    /// 验证字段的基本语法正确性，不涉及业务语义。
+    /// 遵循单一职责原则，专门验证字段的语法正确性。
+    ///
+    /// # 参数
+    ///
+    /// * `field` - 字段配置
+    ///
+    /// # 返回值
+    ///
+    /// 语法正确时返回 Ok(())，否则返回语法错误
+    fn validate_mark_field_basic_syntax(field: &FieldConfig) -> MacroResult<()> {
+        // 检查字段名是否符合基本命名规范
+        if field.name.starts_with('_') || field.name.ends_with('_') {
+            return Err(MacroError::ValidationError {
+                message: format!("标记字段 '{}' 不应以下划线开头或结尾", field.name),
+                span: Some(field.field.span()),
+            });
+        }
+
+        // 检查字段名是否为空或包含非法字符
+        if !utils::is_valid_identifier(&field.name) {
+            return Err(MacroError::ValidationError {
+                message: format!("标记字段名 '{}' 不是有效的标识符", field.name),
+                span: Some(field.field.span()),
+            });
+        }
+
+        // 检查字段名是否过长
+        if field.name.len() > limits::MAX_IDENTIFIER_LENGTH {
+            return Err(MacroError::ValidationError {
+                message: format!(
+                    "标记字段名 '{}' 太长，最多允许 {} 个字符",
+                    field.name, limits::MAX_IDENTIFIER_LENGTH
+                ),
+                span: Some(field.field.span()),
+            });
+        }
+
+        Ok(())
+    }
+
+    /// 验证标记字段数量的基本限制
+    ///
+    /// 检查标记字段数量是否在合理范围内。
+    /// 只进行基本的数量限制检查，不涉及业务逻辑。
+    ///
+    /// # 参数
+    ///
+    /// * `_mark_type` - 标记类型名称（用于将来扩展）
+    /// * `attr_fields` - 属性字段列表
+    ///
+    /// # 返回值
+    ///
+    /// 数量合理时返回 Ok(())，否则返回验证错误
+    fn validate_mark_field_count_basic(_mark_type: &str, attr_fields: &[FieldConfig]) -> MacroResult<()> {
+        let field_count = attr_fields.len();
+
+        // 基本的字段数量限制检查
+        if field_count > limits::MAX_FIELD_ATTRIBUTES {
+            return Err(MacroError::ValidationError {
+                message: format!(
+                    "标记字段数量过多 ({} 个)，最多允许 {} 个字段",
+                    field_count, limits::MAX_FIELD_ATTRIBUTES
+                ),
+                span: None,
+            });
+        }
+
         Ok(())
     }
 }
@@ -952,7 +1427,7 @@ mod tests {
     fn test_unsupported_field_type_validation() {
         let field: syn::Field = parse_quote! {
             #[attr]
-            data: Vec<String>
+            data: std::collections::HashMap<String, i32>
         };
         
         let analysis = FieldAnalyzer::analyze_field(&field).unwrap();
@@ -982,6 +1457,72 @@ mod tests {
         assert!(result.is_err());
     }
     
+    /// 测试数字到字符串的类型转换兼容性
+    #[test]
+    fn test_numeric_to_string_compatibility() {
+        use crate::parser::default_value::{DefaultValue, DefaultValueType};
+        use syn::parse_quote;
+
+        let field: syn::Field = parse_quote! {
+            #[attr]
+            title: String
+        };
+        
+        let field_config = FieldConfig {
+            name: "title".to_string(),
+            field: field.clone(),
+            type_name: "String".to_string(),
+            is_attr: true,
+            is_optional: false,
+            default_value: Some(DefaultValue {
+                raw_value: "42".to_string(),
+                value_type: DefaultValueType::Integer(42),
+                is_json: false,
+                span: None,
+            }),
+        };
+
+        // 整数默认值应该可以用于字符串类型字段
+        let result = Validator::validate_default_value_type_compatibility(&field_config, &field_config.default_value.as_ref().unwrap());
+        assert!(result.is_ok());
+
+        // 测试浮点数到字符串的转换
+        let float_config = FieldConfig {
+            name: "price".to_string(),
+            field: field.clone(),
+            type_name: "String".to_string(),
+            is_attr: true,
+            is_optional: false,
+            default_value: Some(DefaultValue {
+                raw_value: "3.14".to_string(),
+                value_type: DefaultValueType::Float(3.14),
+                is_json: false,
+                span: None,
+            }),
+        };
+
+        let result = Validator::validate_default_value_type_compatibility(&float_config, &float_config.default_value.as_ref().unwrap());
+        assert!(result.is_ok());
+
+        // 测试布尔值到字符串的转换
+        let bool_config = FieldConfig {
+            name: "enabled".to_string(),
+            field: field.clone(),
+            type_name: "String".to_string(),
+            is_attr: true,
+            is_optional: false,
+            default_value: Some(DefaultValue {
+                raw_value: "true".to_string(),
+                value_type: DefaultValueType::Boolean(true),
+                is_json: false,
+                span: None,
+            }),
+        };
+
+        let result = Validator::validate_default_value_type_compatibility(&bool_config, &bool_config.default_value.as_ref().unwrap());
+        assert!(result.is_ok());
+    }
+
     /// 测试长度限制验证
     #[test]
     fn test_length_limit_validation() {
