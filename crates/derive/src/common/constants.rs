@@ -265,7 +265,7 @@ pub mod validation {
     pub const MAX_MARKS_COUNT: usize = 10;
     
     /// 字段属性最大数量
-    pub const MAX_FIELD_ATTRIBUTES: usize = 20;
+    pub const MAX_FIELD_ATTRIBUTES: usize = 100;
 }
 
 /// 性能优化相关常量

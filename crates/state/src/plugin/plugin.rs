@@ -13,18 +13,7 @@ use crate::transaction::Transaction;
 #[async_trait]
 pub trait PluginTrait: Send + Sync + Debug {
     /// 获取插件元数据（静态信息）- 提供默认实现
-    fn metadata(&self) -> PluginMetadata {
-        PluginMetadata {
-            name: "default_plugin".to_string(),
-            version: "1.0.0".to_string(),
-            description: "默认插件".to_string(),
-            author: "系统".to_string(),
-            dependencies: vec![],
-            conflicts: vec![],
-            state_fields: vec![],
-            tags: vec![],
-        }
-    }
+    fn metadata(&self) -> PluginMetadata ;
 
     /// 获取插件配置（静态配置）- 提供默认实现
     fn config(&self) -> PluginConfig {
