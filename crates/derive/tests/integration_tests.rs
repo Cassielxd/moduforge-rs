@@ -58,6 +58,7 @@ struct BasicNodeTest {
 #[node_type = "rich_content"]
 #[marks = "bold italic underline"]
 #[content = "text*"]
+#[desc = "这是一个测试"]
 struct FullNodeTest {
     #[attr]
     title: String,
@@ -158,6 +159,7 @@ struct NodeWithIdTest {
 /// 测试 Option<String> 类型的 ID 字段
 #[derive(Node, Debug)]
 #[node_type = "section"]
+#[desc = "测试"]
 struct NodeWithOptionalIdTest {
     #[id]
     section_id: Option<String>,

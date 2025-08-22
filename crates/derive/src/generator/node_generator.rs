@@ -242,6 +242,9 @@ impl<'a> NodeGenerator<'a> {
         let marks = self.config.marks_string().map(|m| quote! { Some(#m.to_string()) })
             .unwrap_or_else(|| quote! { None });
 
+        let desc = self.config.desc.as_ref().map(|c| quote! { Some(#c.to_string()) })
+            .unwrap_or_else(|| quote! { None });
+
         // 生成属性映射构建代码
         let attrs_code = self.generate_attrs_spec_code()?;
 
@@ -253,7 +256,7 @@ impl<'a> NodeGenerator<'a> {
                 marks: #marks,
                 attrs,
                 group: None,
-                desc: None,
+                desc: #desc,
             };
         };
 

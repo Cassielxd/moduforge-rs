@@ -18,6 +18,8 @@ pub struct NodeConfig {
     /// 
     /// 对应 #[node_type = "类型名"] 属性
     pub node_type: Option<String>,
+    ///描述
+    pub desc: Option<String>,
     
     /// 支持的标记类型列表（可选）
     /// 
@@ -158,6 +160,9 @@ impl AttributeParser {
                 }
                 Some("content") => {
                     config.content = Some(Self::parse_string_attribute(attr)?);
+                }
+                Some("desc") => {
+                    config.desc = Some(Self::parse_string_attribute(attr)?);
                 }
                 _ => {
                     // 忽略不相关的属性
