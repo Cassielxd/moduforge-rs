@@ -48,36 +48,10 @@ export function useWindowModal() {
       height: 100%;
       background-color: rgba(0, 0, 0, 0.3);
       z-index: 9999;
-      cursor: not-allowed;
       backdrop-filter: blur(2px);
     `
     
-    // 添加提示信息
-    const message = document.createElement('div')
-    message.style.cssText = `
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 20px 30px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      font-size: 14px;
-      color: #666;
-      text-align: center;
-      max-width: 300px;
-    `
-    message.innerHTML = `
-      <div style="margin-bottom: 8px; font-size: 16px; color: #1890ff;">🔒 窗口已锁定</div>
-      <div>请先关闭模态窗口才能继续操作</div>
-    `
-    
-    overlay.appendChild(message)
     document.body.appendChild(overlay)
-    
-    // 禁用所有交互元素
-    disableInteractiveElements()
   }
 
   // 启用窗口交互
@@ -87,33 +61,6 @@ export function useWindowModal() {
     if (overlay) {
       overlay.remove()
     }
-    
-    // 启用所有交互元素
-    enableInteractiveElements()
-  }
-
-  // 禁用交互元素
-  const disableInteractiveElements = () => {
-    const elements = document.querySelectorAll('button, input, select, textarea, a, [tabindex]')
-    elements.forEach(element => {
-      if (!element.hasAttribute('data-modal-disabled')) {
-        element.setAttribute('data-modal-disabled', 'true')
-        element.setAttribute('tabindex', '-1')
-        element.style.pointerEvents = 'none'
-        element.style.opacity = '0.6'
-      }
-    })
-  }
-
-  // 启用交互元素
-  const enableInteractiveElements = () => {
-    const elements = document.querySelectorAll('[data-modal-disabled]')
-    elements.forEach(element => {
-      element.removeAttribute('data-modal-disabled')
-      element.removeAttribute('tabindex')
-      element.style.pointerEvents = ''
-      element.style.opacity = ''
-    })
   }
 
   // 手动设置窗口状态
@@ -142,9 +89,6 @@ export function useWindowModal() {
     if (overlay) {
       overlay.remove()
     }
-    
-    // 恢复所有元素状态
-    enableInteractiveElements()
   }
 
   // 组件挂载时初始化

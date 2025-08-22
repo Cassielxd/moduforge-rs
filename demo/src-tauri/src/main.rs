@@ -323,6 +323,41 @@ async fn create_module_window(
 
     println!("模块窗口创建成功: {}", window_label);
 
+    // 注册到窗口管理系统中（作为独立的主窗口）
+    register_window(&window_label, None);
+
+    // 设置模块窗口事件监听
+    let app_handle = app.clone();
+    let window_id_clone = window_label.clone();
+    
+    module_window.on_window_event(move |event| {
+        match event {
+            tauri::WindowEvent::CloseRequested { .. } => {
+                println!("模块窗口即将关闭: {}", window_id_clone);
+                
+                // 获取所有子窗口并关闭
+                let child_windows = get_child_windows(&window_id_clone);
+                for child_id in child_windows {
+                    if let Some(child_window) = app_handle.get_webview_window(&child_id) {
+                        unregister_window(&child_id);
+                        let _ = child_window.close();
+                        println!("已关闭子窗口: {}", child_id);
+                    }
+                }
+                
+                // 注销模块窗口
+                unregister_window(&window_id_clone);
+            }
+            tauri::WindowEvent::Resized(_) => {
+                // 处理窗口大小变化
+            }
+            tauri::WindowEvent::Moved(_) => {
+                // 处理窗口位置变化
+            }
+            _ => {}
+        }
+    });
+
     // 强制显示和聚焦窗口
     module_window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
     module_window.set_focus().map_err(|e| format!("设置焦点失败: {}", e))?;
@@ -348,11 +383,14 @@ async fn create_child_window(
     parent_window: Option<String>,
 ) -> Result<(), String> {
     println!("创建子窗口: {} - {} - URL: {} - Modal: {:?}", window_id, title, url, modal);
+    println!("父窗口参数: {:?}", parent_window);
 
     let is_modal = modal.unwrap_or(false);
     let window_width = width.unwrap_or(800.0);
     let window_height = height.unwrap_or(600.0);
     let parent_id = parent_window.clone().unwrap_or_else(|| "main".to_string());
+    
+    println!("处理后的父窗口ID: {} (模态: {})", parent_id, is_modal);
 
     // 检查窗口是否已存在
     if let Some(existing_window) = app.get_webview_window(&window_id) {
@@ -370,11 +408,11 @@ async fn create_child_window(
                 // 通过发送事件来禁用父窗口
                 let _ = parent_win.emit("window-disabled", true);
                 println!("已禁用父窗口: {}", parent_label);
+            } else {
+                println!("警告：指定的父窗口不存在: {}", parent_label);
             }
-        } else if let Some(main_window) = app.get_webview_window("main") {
-            // 默认禁用主窗口
-            let _ = main_window.emit("window-disabled", true);
-            println!("已禁用主窗口");
+        } else {
+            println!("警告：模态窗口未指定父窗口，跳过禁用操作");
         }
     }
 
@@ -405,10 +443,8 @@ async fn create_child_window(
     .center()
     .skip_taskbar(true); // 子窗口不在状态栏显示
 
-    // 如果是模态窗口，设置为总是在顶部
-    if is_modal {
-        window_builder = window_builder.always_on_top(true);
-    }
+    // 模态窗口不设置always_on_top，而是通过父窗口禁用来实现模态效果
+    // 这样用户仍然可以在窗口间切换，但无法与被禁用的父窗口交互
 
     let child_window = window_builder
         .build()
@@ -504,9 +540,9 @@ async fn minimize_window_with_children(
     let child_windows = get_child_windows(&window_id);
     for child_id in child_windows {
         if let Some(child_window) = app.get_webview_window(&child_id) {
-            child_window.hide().map_err(|e| format!("隐藏子窗口失败: {}", e))?;
+            child_window.minimize().map_err(|e| format!("最小化子窗口失败: {}", e))?;
             set_window_minimized(&child_id, true);
-            println!("已隐藏子窗口: {}", child_id);
+            println!("已最小化子窗口: {}", child_id);
         }
     }
 
@@ -532,9 +568,10 @@ async fn restore_window_with_children(
     let child_windows = get_child_windows(&window_id);
     for child_id in child_windows {
         if let Some(child_window) = app.get_webview_window(&child_id) {
+            child_window.unminimize().map_err(|e| format!("恢复子窗口失败: {}", e))?;
             child_window.show().map_err(|e| format!("显示子窗口失败: {}", e))?;
             set_window_minimized(&child_id, false);
-            println!("已显示子窗口: {}", child_id);
+            println!("已恢复并显示子窗口: {}", child_id);
         }
     }
 
@@ -568,6 +605,90 @@ async fn close_window_with_children(
         println!("已关闭主窗口: {}", window_id);
     }
 
+    Ok(())
+}
+
+// 获取父窗口ID的命令
+#[tauri::command]
+async fn get_parent_window(window_id: String) -> Result<Option<String>, String> {
+    let manager = WINDOW_MANAGER.lock().unwrap();
+    let parent_id = manager.get(&window_id)
+        .and_then(|relation| relation.parent.clone());
+    
+    println!("获取父窗口: {} -> {:?}", window_id, parent_id);
+    Ok(parent_id)
+}
+
+// 显示已存在窗口的命令
+#[tauri::command]
+async fn show_existing_window(
+    app: AppHandle,
+    window_id: String,
+) -> Result<(), String> {
+    println!("尝试显示现有窗口: {}", window_id);
+
+    if let Some(window) = app.get_webview_window(&window_id) {
+        // 窗口存在，显示并聚焦
+        window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
+        window.set_focus().map_err(|e| format!("设置焦点失败: {}", e))?;
+        window.unminimize().map_err(|e| format!("取消最小化失败: {}", e))?;
+        
+        println!("已显示现有窗口: {}", window_id);
+        Ok(())
+    } else {
+        println!("窗口不存在: {}", window_id);
+        Err(format!("窗口不存在: {}", window_id))
+    }
+}
+
+// 发送窗口消息的命令
+#[tauri::command]
+async fn send_window_message(
+    app: AppHandle,
+    target_window_id: String,
+    payload: serde_json::Value,
+) -> Result<(), String> {
+    println!("发送消息到窗口: {} -> {:?}", target_window_id, payload);
+
+    if let Some(target_window) = app.get_webview_window(&target_window_id) {
+        target_window.emit("data-exchange", &payload)
+            .map_err(|e| format!("发送消息失败: {}", e))?;
+        println!("消息已发送到窗口: {}", target_window_id);
+    } else {
+        println!("目标窗口不存在: {}", target_window_id);
+        return Err(format!("窗口不存在: {}", target_window_id));
+    }
+
+    Ok(())
+}
+
+// 向所有子窗口广播消息的命令
+#[tauri::command]
+async fn broadcast_to_children(
+    app: AppHandle,
+    window_id: String,
+    payload: serde_json::Value,
+) -> Result<(), String> {
+    println!("向子窗口广播消息: {} -> {:?}", window_id, payload);
+
+    let child_windows = get_child_windows(&window_id);
+    let mut success_count = 0;
+
+    for child_id in child_windows {
+        if let Some(child_window) = app.get_webview_window(&child_id) {
+            match child_window.emit("data-exchange", &payload) {
+                Ok(_) => {
+                    success_count += 1;
+                    println!("消息已发送到子窗口: {}", child_id);
+                },
+                Err(e) => {
+                    println!("发送到子窗口失败: {} - {}", child_id, e);
+                }
+            }
+        }
+    }
+
+    println!("广播完成，成功发送到 {} 个子窗口", success_count);
     Ok(())
 }
 
@@ -640,7 +761,11 @@ async fn main() -> anyhow::Result<()> {
             close_child_window,
             minimize_window_with_children,
             restore_window_with_children,
-            close_window_with_children
+            close_window_with_children,
+            get_parent_window,
+            show_existing_window,
+            send_window_message,
+            broadcast_to_children
         ])
         .run(tauri::generate_context!())
         .map_err(|e| {

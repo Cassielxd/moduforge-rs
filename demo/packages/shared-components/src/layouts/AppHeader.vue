@@ -157,7 +157,7 @@ const handleMinimize = async () => {
         // 子窗口直接最小化
         await currentWindow.value.minimize()
       } else {
-        // 主窗口使用自定义逻辑
+        // 主窗口使用自定义逻辑，包括子窗口联动
         const { invoke } = await import('@tauri-apps/api/core')
         const windowLabel = currentWindow.value.label || 'main'
         await invoke('minimize_window_with_children', { windowId: windowLabel })
@@ -204,7 +204,7 @@ const handleClose = async () => {
         // 子窗口直接关闭
         await currentWindow.value.close()
       } else {
-        // 主窗口使用自定义逻辑
+        // 主窗口使用自定义逻辑，包括子窗口联动关闭
         const { invoke } = await import('@tauri-apps/api/core')
         const windowLabel = currentWindow.value.label || 'main'
         await invoke('close_window_with_children', { windowId: windowLabel })

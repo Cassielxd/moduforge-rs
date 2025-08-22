@@ -119,6 +119,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
+import { useMainWindowManagement } from '@cost-app/shared-components'
 import {
   UserOutlined,
   CalculatorOutlined,
@@ -133,7 +134,7 @@ import {
   CloseOutlined
 } from '@ant-design/icons-vue'
 import { invoke } from '@tauri-apps/api/core'
-import { getCurrentWindow } from '@tauri-apps/api/window'
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import ChildWindowDemo from '../components/ChildWindowDemo.vue'
 
 // 窗口状态
@@ -307,7 +308,7 @@ const closeWindow = async () => {
 // 初始化
 onMounted(async () => {
   try {
-    currentWindow.value = getCurrentWindow()
+    currentWindow.value = getCurrentWebviewWindow()
     console.log('窗口对象已初始化:', currentWindow.value)
 
     // 获取初始窗口状态
@@ -315,12 +316,10 @@ onMounted(async () => {
     console.log('初始最大化状态:', isMaximized.value)
 
     // 监听窗口状态变化
-    await currentWindow.value.onResized(() => {
+    await currentWindow.value.listen('tauri://resize', async () => {
       // 窗口大小改变时更新状态
-      currentWindow.value.isMaximized().then(maximized => {
-        isMaximized.value = maximized
-        console.log('窗口状态更新:', maximized ? '最大化' : '正常')
-      })
+      isMaximized.value = await currentWindow.value.isMaximized()
+      console.log('窗口状态更新:', isMaximized.value ? '最大化' : '正常')
     })
 
   } catch (error) {

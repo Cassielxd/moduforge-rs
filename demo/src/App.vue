@@ -1,6 +1,5 @@
 <script setup>
 import { ref } from 'vue'
-import { useWindowModal } from './composables/useWindowModal.js'
 
 const theme = ref({
   token: {
@@ -8,9 +7,6 @@ const theme = ref({
     borderRadius: 6,
   },
 })
-
-// 初始化窗口模态管理
-const { isWindowDisabled } = useWindowModal()
 </script>
 
 <template>
