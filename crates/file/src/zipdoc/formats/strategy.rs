@@ -28,9 +28,24 @@ impl SnapshotFormat {
         T: Serialize,
     {
         match self {
-            SnapshotFormat::Json => json::write_snapshot_shards_json(zw, meta, get_shard_value, zstd_level),
-            SnapshotFormat::Cbor => cbor::write_snapshot_shards_cbor(zw, meta, get_shard_value, zstd_level),
-            SnapshotFormat::MsgPack => msgpack::write_snapshot_shards_msgpack(zw, meta, get_shard_value, zstd_level),
+            SnapshotFormat::Json => json::write_snapshot_shards_json(
+                zw,
+                meta,
+                get_shard_value,
+                zstd_level,
+            ),
+            SnapshotFormat::Cbor => cbor::write_snapshot_shards_cbor(
+                zw,
+                meta,
+                get_shard_value,
+                zstd_level,
+            ),
+            SnapshotFormat::MsgPack => msgpack::write_snapshot_shards_msgpack(
+                zw,
+                meta,
+                get_shard_value,
+                zstd_level,
+            ),
         }
     }
 
@@ -43,9 +58,15 @@ impl SnapshotFormat {
         T: DeserializeOwned,
     {
         match self {
-            SnapshotFormat::Json => json::read_and_decode_snapshot_shards_json(zr),
-            SnapshotFormat::Cbor => cbor::read_and_decode_snapshot_shards_cbor(zr),
-            SnapshotFormat::MsgPack => msgpack::read_and_decode_snapshot_shards_msgpack(zr),
+            SnapshotFormat::Json => {
+                json::read_and_decode_snapshot_shards_json(zr)
+            },
+            SnapshotFormat::Cbor => {
+                cbor::read_and_decode_snapshot_shards_cbor(zr)
+            },
+            SnapshotFormat::MsgPack => {
+                msgpack::read_and_decode_snapshot_shards_msgpack(zr)
+            },
         }
     }
 
@@ -60,9 +81,15 @@ impl SnapshotFormat {
         F: FnMut(usize, T) -> io::Result<()>,
     {
         match self {
-            SnapshotFormat::Json => json::for_each_snapshot_shard_json(zr, on_shard),
-            SnapshotFormat::Cbor => cbor::for_each_snapshot_shard_cbor(zr, on_shard),
-            SnapshotFormat::MsgPack => msgpack::for_each_snapshot_shard_msgpack(zr, on_shard),
+            SnapshotFormat::Json => {
+                json::for_each_snapshot_shard_json(zr, on_shard)
+            },
+            SnapshotFormat::Cbor => {
+                cbor::for_each_snapshot_shard_cbor(zr, on_shard)
+            },
+            SnapshotFormat::MsgPack => {
+                msgpack::for_each_snapshot_shard_msgpack(zr, on_shard)
+            },
         }
     }
 
@@ -77,13 +104,22 @@ impl SnapshotFormat {
         T: Serialize,
     {
         match self {
-            SnapshotFormat::Json => json::write_parent_map_json(zw, parent_map, zstd_level),
-            SnapshotFormat::Cbor => cbor::write_parent_map_cbor(zw, parent_map, zstd_level),
-            SnapshotFormat::MsgPack => msgpack::write_parent_map_msgpack(zw, parent_map, zstd_level),
+            SnapshotFormat::Json => {
+                json::write_parent_map_json(zw, parent_map, zstd_level)
+            },
+            SnapshotFormat::Cbor => {
+                cbor::write_parent_map_cbor(zw, parent_map, zstd_level)
+            },
+            SnapshotFormat::MsgPack => {
+                msgpack::write_parent_map_msgpack(zw, parent_map, zstd_level)
+            },
         }
     }
 
-    pub fn read_parent_map<R, T>(&self, zr: &mut ZipDocumentReader<R>) -> io::Result<T>
+    pub fn read_parent_map<R, T>(
+        &self,
+        zr: &mut ZipDocumentReader<R>,
+    ) -> io::Result<T>
     where
         R: Read + Seek,
         T: DeserializeOwned,
@@ -98,7 +134,11 @@ impl SnapshotFormat {
 
 impl SnapshotFormat {
     pub fn as_str(&self) -> &'static str {
-        match self { SnapshotFormat::Json => "json", SnapshotFormat::Cbor => "cbor", SnapshotFormat::MsgPack => "msgpack" }
+        match self {
+            SnapshotFormat::Json => "json",
+            SnapshotFormat::Cbor => "cbor",
+            SnapshotFormat::MsgPack => "msgpack",
+        }
     }
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_ascii_lowercase().as_str() {
@@ -109,10 +149,19 @@ impl SnapshotFormat {
         }
     }
     pub fn from_extension<P: AsRef<Path>>(path: P) -> Option<Self> {
-        match path.as_ref().extension().and_then(|e| e.to_str()).map(|s| s.to_ascii_lowercase()) {
+        match path
+            .as_ref()
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|s| s.to_ascii_lowercase())
+        {
             Some(ext) if ext == "json" => Some(SnapshotFormat::Json),
-            Some(ext) if ext == "cbor" || ext == "cbr" => Some(SnapshotFormat::Cbor),
-            Some(ext) if ext == "msgpack" || ext == "rmp" || ext == "msg" => Some(SnapshotFormat::MsgPack),
+            Some(ext) if ext == "cbor" || ext == "cbr" => {
+                Some(SnapshotFormat::Cbor)
+            },
+            Some(ext) if ext == "msgpack" || ext == "rmp" || ext == "msg" => {
+                Some(SnapshotFormat::MsgPack)
+            },
             _ => None,
         }
     }
@@ -152,7 +201,13 @@ pub fn import_zip_with_format<P, T, PM>(
     path: P,
     format: SnapshotFormat,
     read_parent_map: bool,
-) -> io::Result<(serde_json::Value, Vec<u8>, SnapshotShardMeta, Vec<T>, Option<PM>)>
+) -> io::Result<(
+    serde_json::Value,
+    Vec<u8>,
+    SnapshotShardMeta,
+    Vec<T>,
+    Option<PM>,
+)>
 where
     P: AsRef<Path>,
     T: DeserializeOwned,
@@ -172,5 +227,3 @@ where
     };
     Ok((meta_val, schema_xml, shard_meta, decoded, parent_map))
 }
-
-

@@ -17,7 +17,7 @@ use crate::{
         gcxm::{init_project_structure, DWGC_STR},
         rcj::{init_rcj_fields, RCJ_STR},
     },
-    plugins::inc::IncStateField,
+    plugins::inc::{IncStateField, IncStatePlugin},
 };
 //获取编辑器
 pub async fn init_editor(options: DemoEditorOptions) -> DemoEditor {
@@ -103,10 +103,8 @@ pub fn init_extension() -> Vec<Extensions> {
     extensions.push(Extensions::N(rcj_node));
     let mut extension = Extension::new();
     let inc_plugin = Plugin::new(PluginSpec {
-        key: ("inc_plugin".to_string(), "增量数据插件".to_string()),
         state_field: Some(Arc::new(IncStateField)),
-        tr: None,
-        priority: 10,
+        tr: Arc::new(IncStatePlugin),
     });
     extension.add_plugin(Arc::new(inc_plugin));
     extensions.push(Extensions::E(extension));

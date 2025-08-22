@@ -53,7 +53,8 @@ pub struct EventBus<T: Send + Sync + Clone + 'static> {
     /// 使用 ArcSwap 实现无锁读取的事件处理器列表
     event_handlers: Arc<ArcSwap<Vec<Arc<dyn EventHandler<T> + Send + Sync>>>>,
     /// 使用 DashMap 快速查找事件处理器
-    handler_registry: Arc<DashMap<HandlerId, Arc<dyn EventHandler<T> + Send + Sync>>>,
+    handler_registry:
+        Arc<DashMap<HandlerId, Arc<dyn EventHandler<T> + Send + Sync>>>,
     /// 原子计数器生成唯一 ID
     next_handler_id: Arc<AtomicU64>,
     shutdown: (Sender<()>, Receiver<()>),

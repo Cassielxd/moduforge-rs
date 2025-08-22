@@ -69,9 +69,18 @@ export default withMermaid(defineConfig({
       themeConfig: {
         nav: [
           { text: '首页', link: '/' },
-          { text: '指南', link: '/plugin-development-guide' },
-          { text: '架构', link: '/architecture-design' },
-          { text: '示例', link: '/demo-showcase' },
+          { text: '快速入门', link: '/quick-start' },
+          { text: 'API 参考', link: '/api-reference' },
+          { text: '架构概览', link: '/architecture-overview' },
+          { text: '站点地图', link: '/sitemap' },
+          { 
+            text: '开发指南',
+            items: [
+              { text: '插件开发', link: '/plugin-development-guide' },
+              { text: '性能优化', link: '/performance-guide' },
+              { text: '外部项目集成', link: '/setup-external-project' }
+            ]
+          },
           {
             text: '更多',
             items: [
@@ -84,29 +93,30 @@ export default withMermaid(defineConfig({
         sidebar: {
           '/': [
             {
-              text: '开始使用',
+              text: '📚 开始使用',
               collapsed: false,
               items: [
                 { text: '项目概述', link: '/' },
-                { text: '外部项目集成', link: '/setup-external-project' },
-                { text: '集成示例', link: '/example-integration-project' }
+                { text: '快速入门', link: '/quick-start' },
+                { text: '架构概览', link: '/architecture-overview' },
+                { text: 'API 参考', link: '/api-reference' }
               ]
             },
             {
-              text: '开发指南',
+              text: '🔧 开发指南',
               collapsed: false,
               items: [
                 { text: '插件开发指南', link: '/plugin-development-guide' },
-                { text: '自定义函数', link: '/CUSTOM_FUNCTIONS' },
-                { text: '节点预算映射', link: '/node-budget-mapping' }
+                { text: '性能优化指南', link: '/performance-guide' },
+                { text: '外部项目集成', link: '/setup-external-project' },
+                { text: '集成示例项目', link: '/example-integration-project' }
               ]
             },
             {
-              text: '架构设计',
+              text: '🏗️ 架构设计',
               collapsed: false,
               items: [
                 { text: '架构设计总览', link: '/architecture-design' },
-                { text: '协作系统', link: '/collaboration-system' },
                 { text: '应用场景分析', link: '/architecture_use_cases' },
                 { text: '架构限制分析', link: '/architecture_limitations_analysis' },
                 { text: '业务依赖设计', link: '/business_dependency_design' },
@@ -114,18 +124,28 @@ export default withMermaid(defineConfig({
               ]
             },
             {
-              text: '示例和演示',
+              text: '💼 业务应用',
               collapsed: false,
               items: [
-                { text: '功能演示', link: '/demo-showcase' },
-                { text: '历史增强', link: '/simple_enhanced_history' }
+                { text: '节点预算映射', link: '/node-budget-mapping' },
+                { text: '自定义函数开发', link: '/CUSTOM_FUNCTIONS' },
+                { text: '历史增强功能', link: '/simple_enhanced_history' }
               ]
             },
             {
-              text: '故障排查',
+              text: '🤝 协作与部署',
               collapsed: false,
               items: [
-                { text: 'WebSocket 错误排查', link: '/websocket-error-troubleshooting' },
+                { text: '协作系统', link: '/collaboration-system' },
+                { text: '部署指南', link: '/DEPLOYMENT' },
+                { text: 'WebSocket 故障排查', link: '/websocket-error-troubleshooting' }
+              ]
+            },
+            {
+              text: '🎯 演示与分析',
+              collapsed: false,
+              items: [
+                { text: '功能演示', link: '/demo-showcase' },
                 { text: '项目分析', link: '/ANALYSIS' }
               ]
             }
@@ -164,9 +184,18 @@ export default withMermaid(defineConfig({
       themeConfig: {
         nav: [
           { text: 'Home', link: '/en/' },
-          { text: 'Guide', link: '/en/plugin-development-guide' },
-          { text: 'Architecture', link: '/en/architecture-design' },
-          { text: 'Examples', link: '/en/demo-showcase' },
+          { text: 'Quick Start', link: '/en/quick-start' },
+          { text: 'API Reference', link: '/en/api-reference' },
+          { text: 'Architecture', link: '/en/architecture-overview' },
+          { text: 'Sitemap', link: '/en/sitemap' },
+          { 
+            text: 'Development',
+            items: [
+              { text: 'Plugin Development', link: '/en/plugin-development-guide' },
+              { text: 'Performance Guide', link: '/en/performance-guide' },
+              { text: 'External Integration', link: '/en/setup-external-project' }
+            ]
+          },
           {
             text: 'More',
             items: [
@@ -179,29 +208,30 @@ export default withMermaid(defineConfig({
         sidebar: {
           '/en/': [
             {
-              text: 'Getting Started',
+              text: '📚 Getting Started',
               collapsed: false,
               items: [
-                { text: 'Overview', link: '/en/' },
+                { text: 'Project Overview', link: '/en/' },
+                { text: 'Quick Start', link: '/en/quick-start' },
+                { text: 'Architecture Overview', link: '/en/architecture-overview' },
+                { text: 'API Reference', link: '/en/api-reference' }
+              ]
+            },
+            {
+              text: '🔧 Development Guide',
+              collapsed: false,
+              items: [
+                { text: 'Plugin Development Guide', link: '/en/plugin-development-guide' },
+                { text: 'Performance Guide', link: '/en/performance-guide' },
                 { text: 'External Project Setup', link: '/en/setup-external-project' },
                 { text: 'Integration Example', link: '/en/example-integration-project' }
               ]
             },
             {
-              text: 'Development Guide',
-              collapsed: false,
-              items: [
-                { text: 'Plugin Development', link: '/en/plugin-development-guide' },
-                { text: 'Custom Functions', link: '/en/CUSTOM_FUNCTIONS' },
-                { text: 'Node Budget Mapping', link: '/en/node-budget-mapping' }
-              ]
-            },
-            {
-              text: 'Architecture',
+              text: '🏗️ Architecture Design',
               collapsed: false,
               items: [
                 { text: 'Architecture Design Overview', link: '/en/architecture-design' },
-                { text: 'Collaboration System', link: '/en/collaboration-system' },
                 { text: 'Use Cases Analysis', link: '/en/architecture_use_cases' },
                 { text: 'Limitations Analysis', link: '/en/architecture_limitations_analysis' },
                 { text: 'Business Dependency Design', link: '/en/business_dependency_design' },
@@ -209,18 +239,28 @@ export default withMermaid(defineConfig({
               ]
             },
             {
-              text: 'Examples & Demos',
+              text: '💼 Business Applications',
               collapsed: false,
               items: [
-                { text: 'Feature Showcase', link: '/en/demo-showcase' },
+                { text: 'Node Budget Mapping', link: '/en/node-budget-mapping' },
+                { text: 'Custom Functions', link: '/en/CUSTOM_FUNCTIONS' },
                 { text: 'Enhanced History', link: '/en/simple_enhanced_history' }
               ]
             },
             {
-              text: 'Troubleshooting',
+              text: '🤝 Collaboration & Deployment',
               collapsed: false,
               items: [
-                { text: 'WebSocket Error Troubleshooting', link: '/en/websocket-error-troubleshooting' },
+                { text: 'Collaboration System', link: '/en/collaboration-system' },
+                { text: 'Deployment Guide', link: '/en/DEPLOYMENT' },
+                { text: 'WebSocket Troubleshooting', link: '/en/websocket-error-troubleshooting' }
+              ]
+            },
+            {
+              text: '🎯 Demos & Analysis',
+              collapsed: false,
+              items: [
+                { text: 'Feature Showcase', link: '/en/demo-showcase' },
                 { text: 'Project Analysis', link: '/en/ANALYSIS' }
               ]
             }

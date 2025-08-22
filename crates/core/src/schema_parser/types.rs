@@ -129,7 +129,7 @@ pub struct XmlAttr {
 // -------- 自定义反序列化器 --------
 
 pub fn deserialize_optional_value<'de, D>(
-    deserializer: D,
+    deserializer: D
 ) -> Result<Option<Value>, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -144,7 +144,8 @@ where
                     if let Ok(num) = s.parse::<i64>() {
                         Value::Number(serde_json::Number::from(num))
                     } else if let Ok(num) = s.parse::<f64>() {
-                        if let Some(json_num) = serde_json::Number::from_f64(num)
+                        if let Some(json_num) =
+                            serde_json::Number::from_f64(num)
                         {
                             Value::Number(json_num)
                         } else {
@@ -165,7 +166,7 @@ where
 }
 
 pub fn deserialize_optional_bool<'de, D>(
-    deserializer: D,
+    deserializer: D
 ) -> Result<Option<bool>, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -184,5 +185,3 @@ where
         None => Ok(Some(false)),
     }
 }
-
-

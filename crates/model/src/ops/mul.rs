@@ -13,8 +13,7 @@ impl<'a> Mul<usize> for NodeRef<'a> {
         count: usize,
     ) -> Self::Output {
         // 获取当前节点
-        if let Some(current_node) = self.tree.get_node(&self.key.clone())
-        {
+        if let Some(current_node) = self.tree.get_node(&self.key.clone()) {
             let mut nodes = Vec::new();
             for _ in 0..count {
                 // 创建节点的副本
@@ -24,8 +23,7 @@ impl<'a> Mul<usize> for NodeRef<'a> {
                 nodes.push(node);
             }
             // 添加到当前节点的父节点中
-            if let Some(parent) = self.tree.get_parent_node(&self.key.clone())
-            {
+            if let Some(parent) = self.tree.get_parent_node(&self.key.clone()) {
                 self.tree.add_node(&parent.id, &nodes)?;
             }
         }

@@ -13,10 +13,10 @@ name = "mf_macro"
 path="./src/lib.rs"
 
 [dependencies]
-moduforge-model = {version = "0.4.12", path = "../model"}
-moduforge-state = {version = "0.4.12", path = "../state"}
-moduforge-transform = {version = "0.4.12", path = "../transform"}
-moduforge-core = {version = "0.4.12", path = "../core"}
+moduforge-model = { workspace = true }
+moduforge-state ={ workspace = true }
+moduforge-transform = { workspace = true }
+moduforge-core = { workspace = true }
 anyhow = {workspace=true}
 async-trait = {workspace=true}
 

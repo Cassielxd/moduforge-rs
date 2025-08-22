@@ -230,10 +230,14 @@ impl NodeType {
                     // 对每个需要的类型名称，从 schema 中获取完整的 NodeType 并创建节点
                     for type_name in needed_type_names {
                         // 从 schema 中获取完整的 NodeType
-                        let complete_node_type = match schema.nodes.get(&type_name) {
-                            Some(nt) => nt,
-                            None => panic!("无法在 schema 中找到节点类型: {}", type_name),
-                        };
+                        let complete_node_type =
+                            match schema.nodes.get(&type_name) {
+                                Some(nt) => nt,
+                                None => panic!(
+                                    "无法在 schema 中找到节点类型: {}",
+                                    type_name
+                                ),
+                            };
 
                         // 在content中查找同类型的节点
                         let existing_node =

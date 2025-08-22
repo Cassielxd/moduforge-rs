@@ -12,6 +12,7 @@ use std::{
     time::Instant,
 };
 
+use crate::plugin::PluginManager;
 use crate::{ops::GlobalResourceManager, resource::Resource};
 
 use super::{
@@ -64,10 +65,12 @@ impl State {
             state_config.plugins.clone(),
             state_config.doc.clone(),
             state_config.resource_manager.clone(),
-        )?;
+        )
+        .await?;
         let mut instance = State::new(Arc::new(config))?;
         let mut field_values = Vec::new();
-        for plugin in &instance.config.plugins {
+        for plugin in instance.config.plugin_manager.get_sorted_plugins().await
+        {
             if let Some(field) = &plugin.spec.state_field {
                 tracing::debug!("正在初始化插件状态: {}", plugin.key);
                 let value = field.init(&state_config, &instance).await;
@@ -125,15 +128,15 @@ impl State {
         Arc::clone(&self.config.schema)
     }
     /// 获取插件列表
-    pub fn plugins(&self) -> &Vec<Arc<Plugin>> {
-        &self.config.plugins
+    pub async fn plugins(&self) -> Vec<Arc<Plugin>> {
+        self.config.plugin_manager.get_sorted_plugins().await
     }
 
     /// 获取已排序的插件列表
     /// 按照优先级排序，优先级低的先执行
-    pub fn sorted_plugins(&self) -> &Vec<Arc<Plugin>> {
+    pub async fn sorted_plugins(&self) -> Vec<Arc<Plugin>> {
         // 由于在 Configuration::new 中已经排序，这里直接返回即可
-        &self.config.plugins
+        self.config.plugin_manager.get_sorted_plugins().await
     }
 
     /// 异步应用事务到当前状态
@@ -158,7 +161,7 @@ impl State {
         ignore: Option<usize>,
     ) -> StateResult<bool> {
         // 获取已排序的插件列表
-        let sorted_plugins = self.sorted_plugins();
+        let sorted_plugins = self.sorted_plugins().await;
 
         for (i, plugin) in sorted_plugins.iter().enumerate() {
             if Some(i) != ignore
@@ -190,7 +193,7 @@ impl State {
         let mut seen: Option<Vec<SeenState>> = None;
 
         // 获取排序后的插件列表
-        let sorted_plugins = self.sorted_plugins();
+        let sorted_plugins = self.sorted_plugins().await;
 
         loop {
             let mut have_new = false;
@@ -208,7 +211,7 @@ impl State {
                         .await?
                     {
                         if new_state.filter_transaction(&tr, Some(i)).await? {
-                            tr.set_meta("appendedTransaction", root_tr.clone());
+                            tr.set_meta("rootTr", root_tr.clone());
                             if seen.is_none() {
                                 let mut s: Vec<SeenState> = Vec::new();
                                 for j in 0..sorted_plugins.len() {
@@ -225,7 +228,7 @@ impl State {
                             }
                             tracing::debug!(
                                 "插件 {} 添加了新事务",
-                                plugin.spec.key.1
+                                plugin.spec.tr.metadata().name.clone()
                             );
                             new_state = new_state.apply_inner(&tr).await?;
                             trs.push(tr);
@@ -259,7 +262,7 @@ impl State {
         let mut new_instance = State::new(Arc::new(config))?;
 
         // 获取已排序的插件列表
-        let sorted_plugins = self.sorted_plugins();
+        let sorted_plugins = self.sorted_plugins().await;
 
         for plugin in sorted_plugins.iter() {
             if let Some(field) = &plugin.spec.state_field {
@@ -289,10 +292,12 @@ impl State {
             state_config.plugins.clone(),
             state_config.doc.clone(),
             state_config.resource_manager.clone(),
-        )?;
+        )
+        .await?;
         let mut instance = State::new(Arc::new(config))?;
         let mut field_values = Vec::new();
-        for plugin in &instance.config.plugins {
+        for plugin in &instance.config.plugin_manager.get_sorted_plugins().await
+        {
             if let Some(field) = &plugin.spec.state_field {
                 let key = plugin.key.clone();
                 tracing::debug!("正在重新配置插件: {}", key);
@@ -347,9 +352,9 @@ impl State {
         self.fields_instances.contains_key(name)
     }
     /// 序列化状态
-    pub fn serialize(&self) -> StateResult<StateSerialize> {
+    pub async fn serialize(&self) -> StateResult<StateSerialize> {
         let mut state_fields: HashMap<String, Vec<u8>> = HashMap::new();
-        for plugin in self.plugins() {
+        for plugin in self.plugins().await {
             if let Some(state_field) = &plugin.spec.state_field {
                 if let Some(value) = self.get_field(&plugin.key) {
                     if let Some(json) = state_field.serialize(value) {
@@ -372,7 +377,7 @@ impl State {
         })
     }
     /// 反序列化状态
-    pub fn deserialize(
+    pub async fn deserialize(
         s: &StateSerialize,
         configuration: &Configuration,
     ) -> StateResult<State> {
@@ -395,7 +400,7 @@ impl State {
         let mut state = State::new(Arc::new(config))?;
 
         let mut map_instances = ImHashMap::new();
-        for plugin in &configuration.plugins {
+        for plugin in &configuration.plugin_manager.get_sorted_plugins().await {
             if let Some(state_field) = &plugin.spec.state_field {
                 if let Some(value) = state_fields.get(&plugin.key) {
                     if let Some(p_state) = state_field.deserialize(value) {
@@ -445,46 +450,32 @@ pub struct TransactionResult {
 /// - 结构定义: 文档结构定义
 #[derive(Clone, Debug)]
 pub struct Configuration {
-    plugins: Vec<Arc<Plugin>>,
-    plugins_by_key: HashMap<String, Arc<Plugin>>,
+    pub plugin_manager: PluginManager,
     pub doc: Option<Arc<NodePool>>,
     schema: Arc<Schema>,
     pub resource_manager: Arc<GlobalResourceManager>,
 }
 
 impl Configuration {
-    pub fn new(
+    pub async fn new(
         schema: Arc<Schema>,
         plugins: Option<Vec<Arc<Plugin>>>,
         doc: Option<Arc<NodePool>>,
         resource_manager: Option<Arc<GlobalResourceManager>>,
     ) -> StateResult<Self> {
-        let mut config = Configuration {
+        let config = Configuration {
             doc,
-            plugins: Vec::new(),
-            plugins_by_key: HashMap::new(),
+            plugin_manager: PluginManager::new(),
             schema,
             resource_manager: resource_manager
                 .unwrap_or_else(|| Arc::new(GlobalResourceManager::default())),
         };
 
         if let Some(plugin_list) = plugins {
-            // 按照优先级排序插件
-            let mut sorted_plugins = plugin_list;
-            sorted_plugins
-                .sort_by(|a, b| a.spec.priority.cmp(&b.spec.priority));
-
-            for plugin in sorted_plugins {
-                let key = plugin.key.clone();
-                if config.plugins_by_key.contains_key(&key) {
-                    return Err(anyhow::anyhow!(format!(
-                        "插件请不要重复添加{:?}",
-                        key
-                    )));
-                }
-                config.plugins.push(plugin.clone());
-                config.plugins_by_key.insert(key, plugin);
+            for plugin in plugin_list {
+                config.plugin_manager.register_plugin(plugin).await?
             }
+            config.plugin_manager.finalize_registration().await?;
         }
         Ok(config)
     }

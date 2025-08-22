@@ -8,17 +8,17 @@
 //! - node!: 创建Node实例
 //!
 //! ## 注意
-//! 
+//!
 //! 此crate现在是普通的库crate，不是proc-macro crate，
 //! 所以可以正常导出声明式宏。
 //!
 //! ## 使用方法
-//! 
+//!
 //! ```toml
 //! [dependencies]
 //! mf-macro = { path = "../macro" }
 //! ```
-//! 
+//!
 //! ```rust
 //! use mf_macro::{impl_command, mark, node, impl_plugin};
 //! ```

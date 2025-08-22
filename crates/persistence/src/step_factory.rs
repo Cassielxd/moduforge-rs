@@ -9,7 +9,10 @@ use mf_transform::{
 use std::fmt::Debug;
 
 pub trait StepFactory: Send + Sync + Debug {
-    fn create_from_bytes(&self, bytes: &[u8]) -> Arc<dyn Step>;
+    fn create_from_bytes(
+        &self,
+        bytes: &[u8],
+    ) -> Arc<dyn Step>;
 }
 
 #[derive(Debug)]
@@ -18,7 +21,9 @@ pub struct StepFactoryRegistry {
 }
 
 impl Default for StepFactoryRegistry {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl StepFactoryRegistry {
@@ -37,11 +42,19 @@ impl StepFactoryRegistry {
         registry
     }
 
-    pub fn register(&mut self, type_id: &str, factory: Arc<dyn StepFactory>) {
+    pub fn register(
+        &mut self,
+        type_id: &str,
+        factory: Arc<dyn StepFactory>,
+    ) {
         self.factories.insert(type_id.to_string(), factory);
     }
 
-    pub fn create(&self, type_id: &str, bytes: &[u8]) -> Arc<dyn Step> {
+    pub fn create(
+        &self,
+        type_id: &str,
+        bytes: &[u8],
+    ) -> Arc<dyn Step> {
         self.factories
             .get(type_id)
             .expect("Unknown step type")
@@ -52,7 +65,10 @@ impl StepFactoryRegistry {
 #[derive(Debug)]
 pub struct AttrStepFactory;
 impl StepFactory for AttrStepFactory {
-    fn create_from_bytes(&self, bytes: &[u8]) -> Arc<dyn Step> {
+    fn create_from_bytes(
+        &self,
+        bytes: &[u8],
+    ) -> Arc<dyn Step> {
         let step: AttrStep = serde_json::from_slice(bytes).unwrap();
         Arc::new(step)
     }
@@ -61,7 +77,10 @@ impl StepFactory for AttrStepFactory {
 #[derive(Debug)]
 pub struct AddMarkStepFactory;
 impl StepFactory for AddMarkStepFactory {
-    fn create_from_bytes(&self, bytes: &[u8]) -> Arc<dyn Step> {
+    fn create_from_bytes(
+        &self,
+        bytes: &[u8],
+    ) -> Arc<dyn Step> {
         let step: AddMarkStep = serde_json::from_slice(bytes).unwrap();
         Arc::new(step)
     }
@@ -70,7 +89,10 @@ impl StepFactory for AddMarkStepFactory {
 #[derive(Debug)]
 pub struct AddNodeStepFactory;
 impl StepFactory for AddNodeStepFactory {
-    fn create_from_bytes(&self, bytes: &[u8]) -> Arc<dyn Step> {
+    fn create_from_bytes(
+        &self,
+        bytes: &[u8],
+    ) -> Arc<dyn Step> {
         let step: AddNodeStep = serde_json::from_slice(bytes).unwrap();
         Arc::new(step)
     }
@@ -79,7 +101,10 @@ impl StepFactory for AddNodeStepFactory {
 #[derive(Debug)]
 pub struct RemoveNodeStepFactory;
 impl StepFactory for RemoveNodeStepFactory {
-    fn create_from_bytes(&self, bytes: &[u8]) -> Arc<dyn Step> {
+    fn create_from_bytes(
+        &self,
+        bytes: &[u8],
+    ) -> Arc<dyn Step> {
         let step: RemoveNodeStep = serde_json::from_slice(bytes).unwrap();
         Arc::new(step)
     }
@@ -88,10 +113,11 @@ impl StepFactory for RemoveNodeStepFactory {
 #[derive(Debug)]
 pub struct MoveNodeStepFactory;
 impl StepFactory for MoveNodeStepFactory {
-    fn create_from_bytes(&self, bytes: &[u8]) -> Arc<dyn Step> {
+    fn create_from_bytes(
+        &self,
+        bytes: &[u8],
+    ) -> Arc<dyn Step> {
         let step: MoveNodeStep = serde_json::from_slice(bytes).unwrap();
         Arc::new(step)
     }
 }
-
-

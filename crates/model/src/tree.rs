@@ -21,7 +21,11 @@ use crate::{
 
 // 全局LRU缓存用于存储NodeId到分片索引的映射
 static SHARD_INDEX_CACHE: Lazy<RwLock<LruCache<NodeId, usize>>> =
-    Lazy::new(|| RwLock::new(LruCache::new(NonZeroUsize::new(10000).expect("cache size > 0"))));
+    Lazy::new(|| {
+        RwLock::new(LruCache::new(
+            NonZeroUsize::new(10000).expect("cache size > 0"),
+        ))
+    });
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tree {
@@ -301,8 +305,8 @@ impl Tree {
                 let current_node_id = child_node.id.clone();
 
                 // 收集孙节点的ID并添加到子节点的content中
-        let grand_children_ids: Vector<NodeId> =
-            grand_children.iter().map(|n| n.0.id.clone()).collect();
+                let grand_children_ids: Vector<NodeId> =
+                    grand_children.iter().map(|n| n.0.id.clone()).collect();
                 let mut new_content = imbl::Vector::new();
                 for id in grand_children_ids {
                     if !child_node.content.contains(&id) {
@@ -689,9 +693,7 @@ impl Index<&NodeId> for Tree {
         index: &NodeId,
     ) -> &Self::Output {
         let shard_index = self.get_shard_index(index);
-        self.nodes[shard_index]
-            .get(index)
-            .expect("Node not found")
+        self.nodes[shard_index].get(index).expect("Node not found")
     }
 }
 
@@ -703,9 +705,7 @@ impl Index<&str> for Tree {
     ) -> &Self::Output {
         let node_id = NodeId::from(index);
         let shard_index = self.get_shard_index(&node_id);
-        self.nodes[shard_index]
-            .get(&node_id)
-            .expect("Node not found")
+        self.nodes[shard_index].get(&node_id).expect("Node not found")
     }
 }
 

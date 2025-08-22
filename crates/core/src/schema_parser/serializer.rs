@@ -5,7 +5,11 @@ use std::sync::Arc;
 
 use mf_model::schema::{AttributeSpec, SchemaSpec};
 
-use crate::{mark::Mark, node::Node, types::{Extensions, GlobalAttributeItem}};
+use crate::{
+    mark::Mark,
+    node::Node,
+    types::{Extensions, GlobalAttributeItem},
+};
 
 use super::error::{XmlSchemaError, XmlSchemaResult};
 
@@ -14,7 +18,9 @@ pub struct XmlSchemaSerializer;
 
 impl XmlSchemaSerializer {
     /// 将 `SchemaSpec` 序列化为 XML 字符串（基础版本，不包含全局属性）
-    pub fn schema_spec_to_string(schema: &SchemaSpec) -> XmlSchemaResult<String> {
+    pub fn schema_spec_to_string(
+        schema: &SchemaSpec
+    ) -> XmlSchemaResult<String> {
         let mut writer = Writer::new(Cursor::new(Vec::<u8>::new()));
 
         // <schema>
@@ -129,10 +135,12 @@ impl XmlSchemaSerializer {
 
         let buf = writer.into_inner().into_inner();
         let xml = String::from_utf8(buf).map_err(|e| {
-            XmlSchemaError::XmlParseError(quick_xml::Error::Io(Arc::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                e.utf8_error().to_string(),
-            ))))
+            XmlSchemaError::XmlParseError(quick_xml::Error::Io(Arc::new(
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    e.utf8_error().to_string(),
+                ),
+            )))
         })?;
         Ok(xml)
     }
@@ -160,7 +168,9 @@ impl XmlSchemaSerializer {
             match ext {
                 Extensions::N(n) => nodes.push(n),
                 Extensions::M(m) => marks.push(m),
-                Extensions::E(e) => global_attrs_sets.push(e.get_global_attributes()),
+                Extensions::E(e) => {
+                    global_attrs_sets.push(e.get_global_attributes())
+                },
             }
         }
 
@@ -258,7 +268,9 @@ impl XmlSchemaSerializer {
             }
             if !wrote_global {
                 writer
-                    .write_event(Event::Start(BytesStart::new("global_attributes")))
+                    .write_event(Event::Start(BytesStart::new(
+                        "global_attributes",
+                    )))
                     .map_err(map_io)?;
                 wrote_global = true;
             }
@@ -278,10 +290,12 @@ impl XmlSchemaSerializer {
 
         let buf = writer.into_inner().into_inner();
         let xml = String::from_utf8(buf).map_err(|e| {
-            XmlSchemaError::XmlParseError(quick_xml::Error::Io(Arc::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                e.utf8_error().to_string(),
-            ))))
+            XmlSchemaError::XmlParseError(quick_xml::Error::Io(Arc::new(
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    e.utf8_error().to_string(),
+                ),
+            )))
         })?;
         Ok(xml)
     }
@@ -321,14 +335,18 @@ fn write_global_attribute(
         }
     }
 
-    writer.write_event(Event::End(BytesEnd::new("global_attribute"))).map_err(map_io)?;
+    writer
+        .write_event(Event::End(BytesEnd::new("global_attribute")))
+        .map_err(map_io)?;
     Ok(())
 }
 
 fn value_to_attr_string(value: &serde_json::Value) -> String {
     match value {
         serde_json::Value::Null => "null".to_string(),
-        serde_json::Value::Bool(b) => if *b { "true" } else { "false" }.to_string(),
+        serde_json::Value::Bool(b) => {
+            if *b { "true" } else { "false" }.to_string()
+        },
         serde_json::Value::Number(n) => n.to_string(),
         serde_json::Value::String(s) => s.clone(),
         other => serde_json::to_string(other).unwrap_or_default(),
@@ -338,5 +356,3 @@ fn value_to_attr_string(value: &serde_json::Value) -> String {
 fn map_io(err: quick_xml::Error) -> XmlSchemaError {
     XmlSchemaError::XmlParseError(err)
 }
-
-

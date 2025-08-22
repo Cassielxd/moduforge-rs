@@ -61,18 +61,17 @@ impl ForgeRuntime {
         SnapshotManager::validate_snapshot(&snapshot)?;
 
         // 2. 从快照恢复扩展管理器
-        let extension_manager = SnapshotManager::restore_extension_manager(&snapshot)?;
+        let extension_manager =
+            SnapshotManager::restore_extension_manager(&snapshot)?;
 
         // 3. 使用快照中的配置，可选择与运行时选项合并
         let config = snapshot.config;
         let options = options.unwrap_or_default();
 
         // 4. 快速构建运行时（跳过耗时的初始化步骤）
-        let runtime = Self::create_from_snapshot_data(
-            options,
-            config,
-            extension_manager,
-        ).await?;
+        let runtime =
+            Self::create_from_snapshot_data(options, config, extension_manager)
+                .await?;
 
         info!("快照编辑器实例创建成功");
         metrics::snapshot_runtime_creation_duration(start_time.elapsed());
@@ -324,8 +323,13 @@ impl ForgeRuntime {
     async fn init(&mut self) -> ForgeResult<()> {
         debug!("正在初始化编辑器");
         // 适配新的事件处理器 trait 约束（Send + Sync）
-        let handlers: Vec<Arc<dyn crate::event::EventHandler<crate::event::Event> + Send + Sync>> =
-            self.options.get_event_handlers();
+        let handlers: Vec<
+            Arc<
+                dyn crate::event::EventHandler<crate::event::Event>
+                    + Send
+                    + Sync,
+            >,
+        > = self.options.get_event_handlers();
         self.event_bus.add_event_handlers(handlers)?;
         self.event_bus.start_event_loop();
         debug!("事件总线已启动");
@@ -498,7 +502,7 @@ impl ForgeRuntime {
             config,
         };
         runtime.init().await?;
-        
+
         debug!("快照运行时创建耗时: {:?}", start_time.elapsed());
         Ok(runtime)
     }
@@ -751,7 +755,7 @@ impl ForgeRuntime {
                 schema: Some(self.get_schema()),
                 doc: Some(self.get_state().doc()),
                 stored_marks: None,
-                plugins: Some(self.get_state().plugins().clone()),
+                plugins: Some(self.get_state().plugins().await),
                 resource_manager: Some(
                     self.get_state().resource_manager().clone(),
                 ),
@@ -770,6 +774,7 @@ impl ForgeRuntime {
         let ps = self
             .get_state()
             .plugins()
+            .await
             .iter()
             .filter(|p| p.key != plugin_key)
             .cloned()

@@ -27,7 +27,6 @@ pub struct GlobalAttributeItem {
     pub attributes: HashMap<String, AttributeSpec>,
 }
 
-
 #[derive(Clone)]
 pub enum Extensions {
     N(Node),
@@ -135,7 +134,9 @@ impl RuntimeOptions {
         self
     }
 
-    pub fn get_event_handlers(&self) -> Vec<Arc<dyn EventHandler<Event> + Send + Sync>> {
+    pub fn get_event_handlers(
+        &self
+    ) -> Vec<Arc<dyn EventHandler<Event> + Send + Sync>> {
         self.event_handlers.clone()
     }
     pub fn set_event_handlers(

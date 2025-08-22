@@ -42,5 +42,3 @@ pub enum XmlSchemaError {
 
 /// XML Schema 解析结果类型
 pub type XmlSchemaResult<T> = Result<T, XmlSchemaError>;
-
-

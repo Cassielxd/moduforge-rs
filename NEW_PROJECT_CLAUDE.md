@@ -633,143 +633,105 @@ impl Middleware for CollectFbfxCsxmMiddleware {
 }
 ```
 
-### 4. 插件编写 (StateField)
+### 4. 插件系统完整实现
+
+#### 4.1 插件元数据和配置
+
+```rust
+use mf_state::plugin::{PluginMetadata, PluginConfig, PluginTrait, StateField, PluginSpec, Plugin};
+use async_trait::async_trait;
+use std::collections::HashMap;
+use serde_json::Value;
+
+/// 定义插件元数据
+fn create_plugin_metadata() -> PluginMetadata {
+    PluginMetadata {
+        name: "price_calculator".to_string(),
+        version: "1.0.0".to_string(),
+        description: "价格计算插件，支持复杂的定价规则".to_string(),
+        author: "ModuForge Team".to_string(),
+        dependencies: vec!["base_calculator".to_string()], // 依赖基础计算插件
+        conflicts: vec!["legacy_pricer".to_string()],      // 与旧版定价插件冲突
+        state_fields: vec!["calculation_cache".to_string(), "price_history".to_string()],
+        tags: vec!["calculation".to_string(), "pricing".to_string(), "core".to_string()],
+    }
+}
+
+/// 定义插件配置
+fn create_plugin_config() -> PluginConfig {
+    let mut settings = HashMap::new();
+    settings.insert("max_cache_size".to_string(), Value::Number(1000.into()));
+    settings.insert("enable_history".to_string(), Value::Bool(true));
+    settings.insert("calculation_timeout".to_string(), Value::Number(5000.into()));
+    
+    PluginConfig {
+        enabled: true,
+        priority: 10, // 高优先级，较早执行
+        settings,
+    }
+}
+```
+
+#### 4.2 插件状态字段实现
 
 ```rust
 use std::sync::Arc;
 use async_trait::async_trait;
-use mf_model::{attrs::Attrs, mark::Mark, node::Node, NodeId};
-use mf_state::{
-    plugin::StateField, resource::Resource, State, StateConfig, Transaction,
-};
-use mf_transform::{
-    attr_step::AttrStep,
-    mark_step::{AddMarkStep, RemoveMarkStep},
-    node_step::{AddNodeStep, RemoveNodeStep},
-};
+use mf_state::{plugin::StateField, resource::Resource, State, StateConfig, Transaction};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use chrono::{DateTime, Utc};
 
-// 定义增量数据资源
-pub struct IncState;
-impl Resource for IncState {}
-
-// 定义操作类型
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub enum Operation {
-    RemoveMark(NodeId, Vec<String>),
-    AddMark(NodeId, Vec<Mark>),
-    UpdateAttrs(NodeId, Attrs),
-    UpdateNode(Vec<Arc<Node>>),
-    RemoveNode(Vec<NodeId>),
+/// 价格计算缓存数据
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PriceCalculationData {
+    pub node_id: String,
+    pub base_price: f64,
+    pub calculated_price: f64,
+    pub formula: String,
+    pub calculated_at: DateTime<Utc>,
+    pub is_valid: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Operations(pub Vec<Operation>);
-impl Resource for Operations {}
+/// 插件状态：价格计算器缓存
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PriceCalculatorState {
+    pub cache: HashMap<String, PriceCalculationData>,
+    pub total_calculations: u64,
+    pub cache_hits: u64,
+    pub last_cleanup: Option<DateTime<Utc>>,
+    pub max_cache_size: usize,
+}
 
-/// 增量数据状态字段管理器
+impl Resource for PriceCalculatorState {}
+
+/// 价格计算状态字段管理器
 #[derive(Debug)]
-pub struct IncStateField;
-
-const INC_DATA_KEY: &str = "inc_data";
-
-impl IncStateField {
-    /// 收集增量的数据更新
-    pub fn collect_tr(tr: &Transaction, new_state: &State) {
-        if tr.steps.is_empty() {
-            return;
-        }
-        
-        let manager = new_state.resource_manager();
-        let mut operations: Vec<Operation> = Vec::new();
-
-        // 遍历事务步骤，收集增量数据
-        for (index, step) in tr.steps.iter().enumerate() {
-            // 添加节点
-            if let Some(add_step) = step.downcast_ref::<AddNodeStep>() {
-                let mut node_ids = Vec::new();
-                for node_enum in add_step.nodes.iter() {
-                    node_ids.extend(AddNodeStep::collect_node_ids(node_enum));
-                }
-                
-                let mut nodes = Vec::new();
-                for node_id in node_ids.iter() {
-                    if let Some(node) = tr.doc().get_node(node_id) {
-                        nodes.push(node);
-                    }
-                }
-                
-                if !nodes.is_empty() {
-                    operations.push(Operation::UpdateNode(nodes));
-                }
-            }
-            
-            // 删除节点
-            if let Some(_) = step.downcast_ref::<RemoveNodeStep>() {
-                let mut node_ids = Vec::new();
-                // 获取反向操作的节点 ID
-                if let Some(add_step) = tr.invert_steps[index].downcast_ref::<AddNodeStep>() {
-                    for node_enum in add_step.nodes.iter() {
-                        node_ids.extend(AddNodeStep::collect_node_ids(node_enum));
-                    }
-                }
-                
-                if !node_ids.is_empty() {
-                    operations.push(Operation::RemoveNode(node_ids));
-                }
-            }
-            
-            // 更新节点属性
-            if let Some(attr_step) = step.downcast_ref::<AttrStep>() {
-                if let Some(node) = tr.doc().get_node(&attr_step.id) {
-                    operations.push(Operation::UpdateAttrs(
-                        attr_step.id.clone(),
-                        node.attrs.clone(),
-                    ));
-                }
-            }
-            
-            // 添加标记
-            if let Some(add_mark_step) = step.downcast_ref::<AddMarkStep>() {
-                if tr.doc().get_node(&add_mark_step.id).is_some() {
-                    operations.push(Operation::AddMark(
-                        add_mark_step.id.clone(),
-                        add_mark_step.marks.clone(),
-                    ));
-                }
-            }
-            
-            // 删除标记
-            if let Some(remove_mark_step) = step.downcast_ref::<RemoveMarkStep>() {
-                if tr.doc().get_node(&remove_mark_step.id).is_some() {
-                    operations.push(Operation::RemoveMark(
-                        remove_mark_step.id.clone(),
-                        remove_mark_step.mark_types.clone(),
-                    ));
-                }
-            }
-        }
-        
-        // 保存增量数据到资源表
-        if !operations.is_empty() {
-            manager
-                .resource_table
-                .add(INC_DATA_KEY.to_string(), Operations(operations));
-        }
-    }
-}
+pub struct PriceCalculatorStateField;
 
 #[async_trait]
-impl StateField for IncStateField {
+impl StateField for PriceCalculatorStateField {
+    /// 初始化插件状态
     async fn init(
         &self,
-        _config: &StateConfig,
+        config: &StateConfig,
         _instance: &State,
     ) -> Arc<dyn Resource> {
-        Arc::new(IncState)
+        // 从配置中读取缓存大小
+        let max_cache_size = config.get_plugin_setting("price_calculator", "max_cache_size")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(1000) as usize;
+        
+        Arc::new(PriceCalculatorState {
+            cache: HashMap::new(),
+            total_calculations: 0,
+            cache_hits: 0,
+            last_cleanup: None,
+            max_cache_size,
+        })
     }
     
+    /// 应用状态变更
     async fn apply(
         &self,
         tr: &Transaction,
@@ -777,8 +739,383 @@ impl StateField for IncStateField {
         _old_state: &State,
         new_state: &State,
     ) -> Arc<dyn Resource> {
-        IncStateField::collect_tr(tr, new_state);
-        value
+        let mut state = value.downcast_ref::<PriceCalculatorState>()
+            .expect("状态类型错误")
+            .clone();
+        
+        // 检查是否需要计算价格
+        if let Some(node_ids) = tr.get_meta::<Vec<String>>("nodes_to_calculate") {
+            for node_id in node_ids {
+                if let Some(node) = new_state.doc().get_node(&node_id) {
+                    // 检查缓存
+                    if let Some(cached) = state.cache.get(&node_id) {
+                        if cached.is_valid && self.is_cache_fresh(cached) {
+                            state.cache_hits += 1;
+                            continue;
+                        }
+                    }
+                    
+                    // 执行价格计算
+                    let calculation_data = self.calculate_price(&node, &state).await;
+                    state.cache.insert(node_id, calculation_data);
+                    state.total_calculations += 1;
+                    
+                    // 清理过期缓存
+                    if state.cache.len() > state.max_cache_size {
+                        self.cleanup_cache(&mut state);
+                    }
+                }
+            }
+        }
+        
+        Arc::new(state)
+    }
+    
+    /// 序列化插件状态
+    fn serialize(&self, value: Arc<dyn Resource>) -> Option<Vec<u8>> {
+        value.downcast_ref::<PriceCalculatorState>()
+            .and_then(|state| serde_json::to_vec(state).ok())
+    }
+    
+    /// 反序列化插件状态
+    fn deserialize(&self, data: &Vec<u8>) -> Option<Arc<dyn Resource>> {
+        serde_json::from_slice::<PriceCalculatorState>(data)
+            .ok()
+            .map(|state| Arc::new(state) as Arc<dyn Resource>)
+    }
+}
+
+impl PriceCalculatorStateField {
+    async fn calculate_price(
+        &self, 
+        node: Arc<Node>, 
+        _state: &PriceCalculatorState
+    ) -> PriceCalculationData {
+        let base_price = node.attrs.get("base_price")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+        let quantity = node.attrs.get("quantity")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(1.0);
+        let rate = node.attrs.get("rate")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(1.0);
+        
+        let calculated_price = base_price * quantity * rate;
+        
+        PriceCalculationData {
+            node_id: node.id.clone(),
+            base_price,
+            calculated_price,
+            formula: "base_price * quantity * rate".to_string(),
+            calculated_at: Utc::now(),
+            is_valid: calculated_price > 0.0,
+        }
+    }
+    
+    fn is_cache_fresh(&self, data: &PriceCalculationData) -> bool {
+        let now = Utc::now();
+        let age = now.signed_duration_since(data.calculated_at);
+        age.num_minutes() < 30 // 30分钟内有效
+    }
+    
+    fn cleanup_cache(&self, state: &mut PriceCalculatorState) {
+        let now = Utc::now();
+        state.cache.retain(|_, data| {
+            let age = now.signed_duration_since(data.calculated_at);
+            age.num_hours() < 24 // 保留24小时内的数据
+        });
+        state.last_cleanup = Some(now);
+    }
+}
+```
+
+#### 4.3 插件业务逻辑实现
+
+```rust
+use mf_state::{plugin::PluginTrait, error::StateResult, State, Transaction};
+
+/// 价格计算插件
+#[derive(Debug)]
+pub struct PriceCalculatorPlugin;
+
+#[async_trait]
+impl PluginTrait for PriceCalculatorPlugin {
+    /// 获取插件元数据
+    fn metadata(&self) -> PluginMetadata {
+        create_plugin_metadata()
+    }
+    
+    /// 获取插件配置
+    fn config(&self) -> PluginConfig {
+        create_plugin_config()
+    }
+    
+    /// 事务过滤：决定是否处理特定事务
+    async fn filter_transaction(&self, tr: &Transaction, _state: &State) -> bool {
+        // 只处理包含价格计算标识的事务
+        tr.has_meta("calculate_prices") || tr.has_meta("nodes_to_calculate")
+    }
+    
+    /// 追加事务：在主事务后生成额外的通知事务
+    async fn append_transaction(
+        &self,
+        transactions: &[Transaction],
+        _old_state: &State,
+        new_state: &State,
+    ) -> StateResult<Option<Transaction>> {
+        // 检查是否有需要通知的计算完成事件
+        for tr in transactions {
+            if tr.has_meta("nodes_to_calculate") {
+                // 从插件状态中获取计算结果
+                if let Some(plugin_state) = new_state.get_field("price_calculator") {
+                    if let Some(calc_state) = plugin_state.downcast_ref::<PriceCalculatorState>() {
+                        // 检查是否有新的计算结果
+                        let recent_calculations: Vec<&PriceCalculationData> = calc_state.cache
+                            .values()
+                            .filter(|data| {
+                                let age = Utc::now().signed_duration_since(data.calculated_at);
+                                age.num_seconds() < 60 // 最近1分钟的计算
+                            })
+                            .collect();
+                        
+                        if !recent_calculations.is_empty() {
+                            // 创建通知事务
+                            let mut notification_tx = new_state.tr();
+                            notification_tx.set_meta("price_calculation_completed", true);
+                            notification_tx.set_meta("calculated_nodes", 
+                                recent_calculations.iter()
+                                    .map(|data| data.node_id.clone())
+                                    .collect::<Vec<String>>()
+                            );
+                            notification_tx.set_meta("total_calculations", calc_state.total_calculations);
+                            notification_tx.set_meta("cache_hit_rate", 
+                                if calc_state.total_calculations > 0 {
+                                    calc_state.cache_hits as f64 / calc_state.total_calculations as f64
+                                } else {
+                                    0.0
+                                }
+                            );
+                            
+                            return Ok(Some(notification_tx));
+                        }
+                    }
+                }
+            }
+        }
+        
+        Ok(None)
+    }
+}
+```
+
+#### 4.4 插件注册和管理器使用
+
+```rust
+use mf_state::plugin::{PluginManager, Plugin, PluginSpec};
+use anyhow::Result;
+
+/// 插件注册和初始化
+pub async fn setup_plugin_system() -> Result<PluginManager> {
+    let plugin_manager = PluginManager::new();
+    
+    // 创建价格计算插件
+    let price_plugin_spec = PluginSpec {
+        state_field: Some(Arc::new(PriceCalculatorStateField)),
+        tr: Arc::new(PriceCalculatorPlugin),
+    };
+    let price_plugin = Arc::new(Plugin::new(price_plugin_spec));
+    
+    // 注册插件
+    plugin_manager.register_plugin(price_plugin).await?;
+    
+    // 创建验证插件（依赖于价格计算插件）
+    let validation_plugin_spec = PluginSpec {
+        state_field: Some(Arc::new(ValidationStateField)),
+        tr: Arc::new(ValidationPlugin),
+    };
+    let validation_plugin = Arc::new(Plugin::new(validation_plugin_spec));
+    plugin_manager.register_plugin(validation_plugin).await?;
+    
+    // 完成插件注册（会进行依赖检查、冲突检测等）
+    plugin_manager.finalize_registration().await?;
+    
+    // 验证插件系统是否正确初始化
+    assert!(plugin_manager.is_initialized().await);
+    
+    Ok(plugin_manager)
+}
+
+/// 获取插件执行顺序
+pub async fn get_plugin_execution_order(plugin_manager: &PluginManager) {
+    let sorted_plugins = plugin_manager.get_sorted_plugins().await;
+    
+    println!("插件执行顺序:");
+    for (index, plugin) in sorted_plugins.iter().enumerate() {
+        let metadata = plugin.get_metadata();
+        println!("{}. {} v{} (优先级: {})", 
+            index + 1, 
+            metadata.name, 
+            metadata.version,
+            plugin.get_config().priority
+        );
+        
+        if !metadata.dependencies.is_empty() {
+            println!("   依赖: {:?}", metadata.dependencies);
+        }
+        if !metadata.conflicts.is_empty() {
+            println!("   冲突: {:?}", metadata.conflicts);
+        }
+    }
+}
+
+/// 验证插件
+#[derive(Debug)]
+pub struct ValidationPlugin;
+
+#[async_trait]
+impl PluginTrait for ValidationPlugin {
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "data_validator".to_string(),
+            version: "1.0.0".to_string(),
+            description: "数据验证插件，验证计算结果的合理性".to_string(),
+            author: "ModuForge Team".to_string(),
+            dependencies: vec!["price_calculator".to_string()], // 依赖价格计算插件
+            conflicts: vec![],
+            state_fields: vec!["validation_results".to_string()],
+            tags: vec!["validation".to_string(), "quality".to_string()],
+        }
+    }
+    
+    fn config(&self) -> PluginConfig {
+        let mut settings = HashMap::new();
+        settings.insert("max_price_threshold".to_string(), Value::Number(1000000.into()));
+        settings.insert("min_price_threshold".to_string(), Value::Number(0.into()));
+        
+        PluginConfig {
+            enabled: true,
+            priority: 20, // 较低优先级，在价格计算后执行
+            settings,
+        }
+    }
+    
+    async fn filter_transaction(&self, tr: &Transaction, _state: &State) -> bool {
+        // 只处理价格计算完成的事务
+        tr.has_meta("price_calculation_completed")
+    }
+    
+    async fn append_transaction(
+        &self,
+        transactions: &[Transaction],
+        _old_state: &State,
+        new_state: &State,
+    ) -> StateResult<Option<Transaction>> {
+        for tr in transactions {
+            if tr.has_meta("price_calculation_completed") {
+                if let Some(calculated_nodes) = tr.get_meta::<Vec<String>>("calculated_nodes") {
+                    // 验证计算结果
+                    let validation_results = self.validate_calculations(&calculated_nodes, new_state).await;
+                    
+                    if !validation_results.is_empty() {
+                        let mut validation_tx = new_state.tr();
+                        validation_tx.set_meta("validation_completed", true);
+                        validation_tx.set_meta("validation_results", validation_results);
+                        
+                        return Ok(Some(validation_tx));
+                    }
+                }
+            }
+        }
+        Ok(None)
+    }
+}
+
+impl ValidationPlugin {
+    async fn validate_calculations(
+        &self, 
+        node_ids: &[String], 
+        state: &State
+    ) -> Vec<ValidationResult> {
+        let mut results = Vec::new();
+        
+        if let Some(calc_state) = state.get_field("price_calculator")
+            .and_then(|s| s.downcast_ref::<PriceCalculatorState>()) {
+            
+            for node_id in node_ids {
+                if let Some(calc_data) = calc_state.cache.get(node_id) {
+                    let is_valid = calc_data.calculated_price >= 0.0 
+                        && calc_data.calculated_price <= 1_000_000.0;
+                    
+                    results.push(ValidationResult {
+                        node_id: node_id.clone(),
+                        is_valid,
+                        calculated_price: calc_data.calculated_price,
+                        validation_message: if is_valid {
+                            "价格计算结果正常".to_string()
+                        } else {
+                            "价格超出合理范围".to_string()
+                        },
+                    });
+                }
+            }
+        }
+        
+        results
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidationResult {
+    pub node_id: String,
+    pub is_valid: bool,
+    pub calculated_price: f64,
+    pub validation_message: String,
+}
+
+/// 验证插件状态
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidationState {
+    pub total_validations: u64,
+    pub failed_validations: u64,
+    pub last_validation: Option<DateTime<Utc>>,
+}
+
+impl Resource for ValidationState {}
+
+#[derive(Debug)]
+pub struct ValidationStateField;
+
+#[async_trait]
+impl StateField for ValidationStateField {
+    async fn init(&self, _config: &StateConfig, _instance: &State) -> Arc<dyn Resource> {
+        Arc::new(ValidationState {
+            total_validations: 0,
+            failed_validations: 0,
+            last_validation: None,
+        })
+    }
+    
+    async fn apply(
+        &self,
+        tr: &Transaction,
+        value: Arc<dyn Resource>,
+        _old_state: &State,
+        _new_state: &State,
+    ) -> Arc<dyn Resource> {
+        let mut state = value.downcast_ref::<ValidationState>()
+            .expect("状态类型错误")
+            .clone();
+        
+        if let Some(validation_results) = tr.get_meta::<Vec<ValidationResult>>("validation_results") {
+            state.total_validations += validation_results.len() as u64;
+            state.failed_validations += validation_results.iter()
+                .filter(|r| !r.is_valid)
+                .count() as u64;
+            state.last_validation = Some(Utc::now());
+        }
+        
+        Arc::new(state)
     }
 }
 ```
@@ -1282,69 +1619,71 @@ impl Resource for SummaryReport {}
 #### 插件注册和优先级配置
 
 ```rust
-/// 配置插件的依赖关系和执行顺序
-/// ✅ 使用 Transaction Meta 方式的插件配置
-pub fn init_dependent_extensions() -> Vec<Extensions> {
+/// 配置插件的依赖关系和执行顺序 
+/// ✅ 使用新的插件管理器 API
+pub async fn init_dependent_extensions() -> Result<Vec<Extensions>> {
     let mut extensions = Vec::new();
     
-    // 创建扩展容器
+    // 初始化插件管理器
+    let plugin_manager = PluginManager::new();
+    
+    // 注册插件（插件管理器会自动处理依赖关系）
+    let plugins = vec![
+        create_price_calculator_plugin(),
+        create_validation_plugin(), 
+        create_report_plugin(),
+    ];
+    
+    for plugin in plugins {
+        plugin_manager.register_plugin(plugin).await?;
+    }
+    
+    // 完成注册并验证依赖关系
+    plugin_manager.finalize_registration().await?;
+    
+    // 获取排序后的插件
+    let sorted_plugins = plugin_manager.get_sorted_plugins().await;
+    
+    // 创建扩展容器并添加插件
     let mut extension = Extension::new();
-    
-    // 按照依赖关系配置插件优先级
-    // 数字越小，优先级越高（越早执行）
-    
-    // 插件 A: 价格计算 (最高优先级，最先执行)
-    let calc_plugin = Plugin::new(PluginSpec {
-        key: ("price_calculation".to_string(), "价格计算插件".to_string()),
-        state_field: Some(Arc::new(PriceCalculationStateField)), // 只存储缓存和统计
-        tr: Some(Arc::new(PriceCalculationPlugin)),              // 通过 meta 传递数据
-        priority: 10,  // 最高优先级
-    });
-    
-    // 插件 B: 数据验证 (依赖于计算结果)
-    let validation_plugin = Plugin::new(PluginSpec {
-        key: ("validation".to_string(), "数据验证插件".to_string()),
-        state_field: Some(Arc::new(ValidationStateField)),  // 只存储统计信息
-        tr: Some(Arc::new(ValidationPlugin)),               // 从 transactions 获取数据
-        priority: 20,  // 中等优先级
-    });
-    
-    // 插件 C: 汇总报告 (依赖于计算和验证结果)
-    let summary_plugin = Plugin::new(PluginSpec {
-        key: ("summary".to_string(), "汇总报告插件".to_string()),
-        state_field: Some(Arc::new(SummaryStateField)),  // 只存储统计信息
-        tr: Some(Arc::new(SummaryPlugin)),               // 从 transactions 收集所有数据
-        priority: 30,  // 最低优先级，最后执行
-    });
-    
-    // 按顺序添加插件
-    extension.add_plugin(Arc::new(calc_plugin));
-    extension.add_plugin(Arc::new(validation_plugin));
-    extension.add_plugin(Arc::new(summary_plugin));
+    for plugin in sorted_plugins {
+        extension.add_plugin(plugin);
+    }
     
     extensions.push(Extensions::E(extension));
-    extensions
+    Ok(extensions)
 }
 
-/// 完整的插件依赖流程说明
+/// 新插件系统的完整流程说明
 /// 
-/// 1. 用户提交原始事务，包含 meta: "nodes_to_calculate"
-/// 2. 框架按优先级顺序执行插件：
-///    - PriceCalculationStateField.apply() 处理原始事务，执行计算
-///    - PriceCalculationPlugin.append_transaction() 返回通知事务₁
-/// 3. 框架处理通知事务₁：
-///    - ValidationStateField.apply() 接收通知事务₁，执行验证  
-///    - ValidationPlugin.append_transaction() 返回通知事务₂
-/// 4. 框架处理通知事务₂：
-///    - SummaryStateField.apply() 接收通知事务₂，生成汇总
-///    - SummaryPlugin.append_transaction() 可选择返回最终通知
+/// 1. **插件注册阶段**：
+///    - 调用 plugin_manager.register_plugin() 注册各个插件
+///    - 系统收集插件元数据（名称、版本、依赖、冲突等）
+///    - 构建插件依赖图
 /// 
-/// 关键机制：
-/// - StateField.apply(): 处理状态变更，存储插件数据
-/// - PluginTrait.append_transaction(): 提交新事务，触发下游插件
-/// - Meta 数据: 在事务间传递轻量级信息
-/// - Resource Table: 存储复杂的计算结果数据
-/// - Priority: 控制插件执行顺序，确保依赖关系正确
+/// 2. **验证阶段**：
+///    - 调用 plugin_manager.finalize_registration()
+///    - 检查循环依赖（自动检测并报告）
+///    - 检查缺失依赖（验证所有依赖是否满足）
+///    - 检查插件冲突（防止冲突插件同时加载）
+///    - 生成拓扑排序的执行顺序
+/// 
+/// 3. **执行阶段**：
+///    - 按依赖关系排序后的顺序执行插件
+///    - StateField.apply() 处理状态变更，更新插件私有数据
+///    - PluginTrait.append_transaction() 产生新事务，触发下游插件
+/// 
+/// 4. **状态管理**：
+///    - 每个插件拥有独立的状态空间
+///    - 支持状态序列化/反序列化
+///    - 插件间通过事务 Meta 进行轻量级通信
+/// 
+/// 关键优势：
+/// - 🔍 智能依赖管理：自动检测循环依赖和缺失依赖
+/// - ⚡ 冲突防护：自动验证并防止冲突插件加载
+/// - 📋 元数据驱动：丰富的插件元信息支持
+/// - 🔄 完整生命周期：从注册到执行的完整管理
+/// - 💾 状态持久化：内置的序列化/反序列化支持
 ```
 
 #### Transaction Meta vs State 存储的设计权衡

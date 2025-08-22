@@ -3,7 +3,9 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use mf_model::node_pool::NodePool;
-use mf_state::plugin::{Plugin, PluginSpec, StateField};
+use mf_state::plugin::{
+    Plugin, PluginMetadata, PluginSpec, PluginTrait, StateField,
+};
 use mf_state::state::State;
 use mf_state::transaction::Transaction;
 
@@ -13,15 +15,20 @@ use crate::step_registry::ensure_default_step_indexers;
 use crate::create_tantivy_service;
 
 // Resource wrappers
-pub struct TantivySearchIndexResource { pub service: Arc<IndexService> }
+pub struct TantivySearchIndexResource {
+    pub service: Arc<IndexService>,
+}
 impl mf_state::resource::Resource for TantivySearchIndexResource {}
 
-
-struct TantivyIndexStateField { service: Arc<IndexService> }
-
+struct TantivyIndexStateField {
+    service: Arc<IndexService>,
+}
 
 impl std::fmt::Debug for TantivyIndexStateField {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
         f.debug_struct("TantivyIndexStateField").finish()
     }
 }
@@ -30,7 +37,11 @@ impl std::fmt::Debug for TantivyIndexStateField {
 
 #[async_trait]
 impl StateField for TantivyIndexStateField {
-    async fn init(&self, _config: &mf_state::state::StateConfig, _instance: &State) -> Arc<dyn mf_state::resource::Resource> {
+    async fn init(
+        &self,
+        _config: &mf_state::state::StateConfig,
+        _instance: &State,
+    ) -> Arc<dyn mf_state::resource::Resource> {
         Arc::new(TantivySearchIndexResource { service: self.service.clone() })
     }
 
@@ -43,7 +54,8 @@ impl StateField for TantivyIndexStateField {
     ) -> Arc<dyn mf_state::resource::Resource> {
         if let Some(res) = value.downcast_arc::<TantivySearchIndexResource>() {
             let svc = res.service.clone();
-            let steps: Vec<Arc<dyn mf_transform::step::Step>> = tr.steps.iter().cloned().collect();
+            let steps: Vec<Arc<dyn mf_transform::step::Step>> =
+                tr.steps.iter().cloned().collect();
             let pool_before: Arc<NodePool> = old_state.doc();
             let pool_after: Arc<NodePool> = new_state.doc();
             let _ = svc.handle(IndexEvent::TransactionCommitted {
@@ -55,20 +67,34 @@ impl StateField for TantivyIndexStateField {
         value
     }
 }
+#[derive(Debug)]
+struct TantivyIndexPluginTrait {}
 
-
+impl PluginTrait for TantivyIndexPluginTrait {
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "tantivy_index".to_string(),
+            version: "1.0.0".to_string(),
+            description: "Tantivy 索引插件".to_string(),
+            author: "Tantivy".to_string(),
+            dependencies: vec![],
+            conflicts: vec![],
+            state_fields: vec![],
+            tags: vec![],
+        }
+    }
+}
 // Create a plugin that maintains a Tantivy index and updates it on each transaction.
-pub fn create_tantivy_index_plugin(key: (&str, &str), index_dir: &std::path::Path) -> Result<Arc<Plugin>> {
+pub fn create_tantivy_index_plugin(
+    index_dir: &std::path::Path
+) -> Result<Arc<Plugin>> {
     ensure_default_step_indexers();
     let service = Arc::new(create_tantivy_service(index_dir)?);
-    let field: Arc<dyn StateField> = Arc::new(TantivyIndexStateField { service });
+    let field: Arc<dyn StateField> =
+        Arc::new(TantivyIndexStateField { service });
     let spec = PluginSpec {
         state_field: Some(field),
-        key: (key.0.to_string(), key.1.to_string()),
-        tr: None,
-        priority: 100,
+        tr: Arc::new(TantivyIndexPluginTrait {}),
     };
     Ok(Arc::new(Plugin::new(spec)))
 }
-
-

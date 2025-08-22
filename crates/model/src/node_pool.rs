@@ -26,7 +26,6 @@ pub struct NodePool {
     key: String,
 }
 
-
 impl NodePool {
     pub fn new(inner: Arc<Tree>) -> Arc<NodePool> {
         let id = POOL_ID_COUNTER.fetch_add(1, Ordering::SeqCst);
@@ -846,7 +845,11 @@ impl OptimizedQueryEngine {
         let mut engine = Self {
             pool: Arc::new(pool.clone()),
             cache: if config.enabled {
-                Some(LruCache::new(NonZeroUsize::new(config.capacity).ok_or_else(|| anyhow::anyhow!("query cache capacity must be > 0"))?))
+                Some(LruCache::new(
+                    NonZeroUsize::new(config.capacity).ok_or_else(|| {
+                        anyhow::anyhow!("query cache capacity must be > 0")
+                    })?,
+                ))
             } else {
                 None
             },
@@ -1241,19 +1244,23 @@ impl LazyQueryEngine {
             pool: Arc::new(pool.clone()),
             query_cache: if config.cache_enabled {
                 Some(LruCache::new(
-                    NonZeroUsize::new(config.cache_capacity).expect("cache_capacity > 0"),
+                    NonZeroUsize::new(config.cache_capacity)
+                        .expect("cache_capacity > 0"),
                 ))
             } else {
                 None
             },
             type_index_cache: LruCache::new(
-                NonZeroUsize::new(config.index_cache_capacity).expect("index_cache_capacity > 0"),
+                NonZeroUsize::new(config.index_cache_capacity)
+                    .expect("index_cache_capacity > 0"),
             ),
             depth_index_cache: LruCache::new(
-                NonZeroUsize::new(config.index_cache_capacity).expect("index_cache_capacity > 0"),
+                NonZeroUsize::new(config.index_cache_capacity)
+                    .expect("index_cache_capacity > 0"),
             ),
             mark_index_cache: LruCache::new(
-                NonZeroUsize::new(config.index_cache_capacity).expect("index_cache_capacity > 0"),
+                NonZeroUsize::new(config.index_cache_capacity)
+                    .expect("index_cache_capacity > 0"),
             ),
             type_query_stats: HashMap::new(),
             depth_query_stats: HashMap::new(),

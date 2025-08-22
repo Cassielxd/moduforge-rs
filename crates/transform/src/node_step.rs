@@ -62,7 +62,10 @@ impl Step for AddNodeStep {
         }
 
         if !all_node_ids.is_empty() {
-            return Some(Arc::new(RemoveNodeStep::new(self.parent_id.clone(), all_node_ids)));
+            return Some(Arc::new(RemoveNodeStep::new(
+                self.parent_id.clone(),
+                all_node_ids,
+            )));
         }
         None
     }
@@ -275,8 +278,7 @@ mod tests {
         let node = create_test_node("test");
         tree.add_node(&"root".into(), &vec![node]).unwrap();
 
-        let step =
-            RemoveNodeStep::new("root".into(), vec!["test".into()]);
+        let step = RemoveNodeStep::new("root".into(), vec!["test".into()]);
         let result = step.apply(&mut tree, schema.clone());
         assert!(result.is_ok());
 

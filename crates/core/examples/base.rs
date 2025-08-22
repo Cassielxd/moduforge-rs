@@ -7,7 +7,7 @@ use mf_core::{
 use mf_model::{imbl::HashMap, NodeId};
 use mf_state::{
     error::StateResult,
-    plugin::{Plugin, PluginSpec, PluginTrait},
+    plugin::{Plugin, PluginMetadata, PluginSpec, PluginTrait},
     State, Transaction,
 };
 use mf_transform::node_step::AddNodeStep;
@@ -42,6 +42,18 @@ use mf_transform::node_step::AddNodeStep;
 struct APlugin;
 #[async_trait::async_trait]
 impl PluginTrait for APlugin {
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "a_plugin".to_string(),
+            version: "1.0.0".to_string(),
+            description: "工程项目 汇总".to_string(),
+            author: "a_plugin".to_string(),
+            dependencies: vec![],
+            conflicts: vec![],
+            state_fields: vec![],
+            tags: vec![],
+        }
+    }
     async fn append_transaction(
         &self,
         trs: &[Transaction],
@@ -87,6 +99,18 @@ struct BPlugin;
 
 #[async_trait::async_trait]
 impl PluginTrait for BPlugin {
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "b_plugin".to_string(),
+            version: "1.0.0".to_string(),
+            description: "新增单位项目  之后的计算".to_string(),
+            author: "b_plugin".to_string(),
+            dependencies: vec![],
+            conflicts: vec![],
+            state_fields: vec![],
+            tags: vec![],
+        }
+    }
     async fn append_transaction(
         &self,
         trs: &[Transaction],
@@ -163,18 +187,11 @@ fn get_ops() -> RuntimeOptions {
             let mut ext = Extension::new();
             ext.add_plugin(Arc::new(Plugin::new(PluginSpec {
                 state_field: None,
-                key: ("a_plugin".to_string(), "工程项目 汇总".to_string()),
-                tr: Some(Arc::new(APlugin)),
-                priority: 2,
+                tr: Arc::new(APlugin),
             })));
             ext.add_plugin(Arc::new(Plugin::new(PluginSpec {
                 state_field: None,
-                key: (
-                    "b_plugin".to_string(),
-                    "新增单位项目  之后的计算".to_string(),
-                ),
-                tr: Some(Arc::new(BPlugin)),
-                priority: 1,
+                tr: Arc::new(BPlugin),
             })));
 
             // 添加一个全局的资源管理器

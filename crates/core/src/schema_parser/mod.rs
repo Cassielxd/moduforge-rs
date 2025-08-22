@@ -12,12 +12,10 @@
 //! - `XmlSchemaError`、`XmlSchemaResult`
 
 pub mod error;
-pub mod types;
 pub mod parser;
 pub mod serializer;
+pub mod types;
 
 pub use error::{XmlSchemaError, XmlSchemaResult};
 pub use parser::{MultiFileParseContext, XmlSchemaParser};
 pub use serializer::XmlSchemaSerializer;
-
-

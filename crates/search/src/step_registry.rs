@@ -20,8 +20,17 @@ pub trait TypedStepIndexer<T>: Send + Sync + 'static
 where
     T: Step + 'static,
 {
-    fn index_step(&self, step: &T, ctx: &StepIndexContext) -> Vec<IndexMutation>;
-    fn name() -> &'static str where Self: Sized { std::any::type_name::<Self>() }
+    fn index_step(
+        &self,
+        step: &T,
+        ctx: &StepIndexContext,
+    ) -> Vec<IndexMutation>;
+    fn name() -> &'static str
+    where
+        Self: Sized,
+    {
+        std::any::type_name::<Self>()
+    }
 }
 
 /// 类型擦除的转换器
@@ -40,13 +49,19 @@ impl ErasedIndexer {
             type_id: TypeId::of::<T>(),
             index_fn: |step_any, ctx| {
                 let converter = C::default();
-                let step = step_any.downcast_ref::<T>().expect("Type mismatch in step indexer");
+                let step = step_any
+                    .downcast_ref::<T>()
+                    .expect("Type mismatch in step indexer");
                 converter.index_step(step, ctx)
             },
         }
     }
 
-    fn try_index(&self, step: &dyn Step, ctx: &StepIndexContext) -> Option<Vec<IndexMutation>> {
+    fn try_index(
+        &self,
+        step: &dyn Step,
+        ctx: &StepIndexContext,
+    ) -> Option<Vec<IndexMutation>> {
         if step.type_id() != self.type_id {
             return None;
         }
@@ -61,7 +76,9 @@ pub struct StepIndexerRegistry {
 }
 
 impl StepIndexerRegistry {
-    pub fn new() -> Self { Self { by_type: HashMap::new() } }
+    pub fn new() -> Self {
+        Self { by_type: HashMap::new() }
+    }
 
     pub fn register<T, C>(&mut self) -> &mut Self
     where
@@ -69,11 +86,17 @@ impl StepIndexerRegistry {
         C: TypedStepIndexer<T> + Default + 'static,
     {
         let type_id = TypeId::of::<T>();
-        self.by_type.entry(type_id).or_insert_with(|| Arc::new(ErasedIndexer::new::<T, C>()));
+        self.by_type
+            .entry(type_id)
+            .or_insert_with(|| Arc::new(ErasedIndexer::new::<T, C>()));
         self
     }
 
-    pub fn index_step(&self, step: &dyn Step, ctx: &StepIndexContext) -> Option<Vec<IndexMutation>> {
+    pub fn index_step(
+        &self,
+        step: &dyn Step,
+        ctx: &StepIndexContext,
+    ) -> Option<Vec<IndexMutation>> {
         let type_id = step.type_id();
         self.by_type.get(&type_id).and_then(|e| e.try_index(step, ctx))
     }
@@ -104,9 +127,16 @@ use serde::Deserialize;
 #[derive(Default)]
 struct AttrIndexer;
 impl TypedStepIndexer<AttrStep> for AttrIndexer {
-    fn index_step(&self, step: &AttrStep, ctx: &StepIndexContext) -> Vec<IndexMutation> {
+    fn index_step(
+        &self,
+        step: &AttrStep,
+        ctx: &StepIndexContext,
+    ) -> Vec<IndexMutation> {
         if let Some(node) = ctx.pool_after.get_node(&step.id) {
-            vec![IndexMutation::Upsert(IndexDoc::from_node(ctx.pool_after, &node))]
+            vec![IndexMutation::Upsert(IndexDoc::from_node(
+                ctx.pool_after,
+                &node,
+            ))]
         } else {
             Vec::new()
         }
@@ -116,9 +146,16 @@ impl TypedStepIndexer<AttrStep> for AttrIndexer {
 #[derive(Default)]
 struct AddMarkIndexer;
 impl TypedStepIndexer<AddMarkStep> for AddMarkIndexer {
-    fn index_step(&self, step: &AddMarkStep, ctx: &StepIndexContext) -> Vec<IndexMutation> {
+    fn index_step(
+        &self,
+        step: &AddMarkStep,
+        ctx: &StepIndexContext,
+    ) -> Vec<IndexMutation> {
         if let Some(node) = ctx.pool_after.get_node(&step.id) {
-            vec![IndexMutation::Upsert(IndexDoc::from_node(ctx.pool_after, &node))]
+            vec![IndexMutation::Upsert(IndexDoc::from_node(
+                ctx.pool_after,
+                &node,
+            ))]
         } else {
             Vec::new()
         }
@@ -128,9 +165,16 @@ impl TypedStepIndexer<AddMarkStep> for AddMarkIndexer {
 #[derive(Default)]
 struct RemoveMarkIndexer;
 impl TypedStepIndexer<RemoveMarkStep> for RemoveMarkIndexer {
-    fn index_step(&self, step: &RemoveMarkStep, ctx: &StepIndexContext) -> Vec<IndexMutation> {
+    fn index_step(
+        &self,
+        step: &RemoveMarkStep,
+        ctx: &StepIndexContext,
+    ) -> Vec<IndexMutation> {
         if let Some(node) = ctx.pool_after.get_node(&step.id) {
-            vec![IndexMutation::Upsert(IndexDoc::from_node(ctx.pool_after, &node))]
+            vec![IndexMutation::Upsert(IndexDoc::from_node(
+                ctx.pool_after,
+                &node,
+            ))]
         } else {
             Vec::new()
         }
@@ -140,7 +184,11 @@ impl TypedStepIndexer<RemoveMarkStep> for RemoveMarkIndexer {
 #[derive(Default)]
 struct AddNodeIndexer;
 impl TypedStepIndexer<AddNodeStep> for AddNodeIndexer {
-    fn index_step(&self, step: &AddNodeStep, ctx: &StepIndexContext) -> Vec<IndexMutation> {
+    fn index_step(
+        &self,
+        step: &AddNodeStep,
+        ctx: &StepIndexContext,
+    ) -> Vec<IndexMutation> {
         let mut muts = Vec::new();
         for ne in &step.nodes {
             collect_adds_for_node_enum(ctx.pool_after, ne, &mut muts);
@@ -152,11 +200,21 @@ impl TypedStepIndexer<AddNodeStep> for AddNodeIndexer {
 #[derive(Default)]
 struct RemoveNodeIndexer;
 impl TypedStepIndexer<RemoveNodeStep> for RemoveNodeIndexer {
-    fn index_step(&self, step: &RemoveNodeStep, ctx: &StepIndexContext) -> Vec<IndexMutation> {
+    fn index_step(
+        &self,
+        step: &RemoveNodeStep,
+        ctx: &StepIndexContext,
+    ) -> Vec<IndexMutation> {
         let mut all_ids: Vec<String> = Vec::new();
         for id in &step.node_ids {
-            if let Some(enum_subtree) = ctx.pool_before.get_inner().all_children(id, None) {
-                all_ids.extend(collect_ids_from_enum(&enum_subtree).into_iter().map(|id| id.to_string()));
+            if let Some(enum_subtree) =
+                ctx.pool_before.get_inner().all_children(id, None)
+            {
+                all_ids.extend(
+                    collect_ids_from_enum(&enum_subtree)
+                        .into_iter()
+                        .map(|id| id.to_string()),
+                );
             } else {
                 all_ids.push(id.to_string());
             }
@@ -168,17 +226,33 @@ impl TypedStepIndexer<RemoveNodeStep> for RemoveNodeIndexer {
 #[derive(Default)]
 struct MoveNodeIndexer;
 impl TypedStepIndexer<MoveNodeStep> for MoveNodeIndexer {
-    fn index_step(&self, step: &MoveNodeStep, ctx: &StepIndexContext) -> Vec<IndexMutation> {
+    fn index_step(
+        &self,
+        step: &MoveNodeStep,
+        ctx: &StepIndexContext,
+    ) -> Vec<IndexMutation> {
         // MoveNodeStep 的字段为私有，使用序列化提取 node_id
         #[derive(Deserialize)]
-        struct MoveNodeSerde { node_id: NodeId }
+        struct MoveNodeSerde {
+            node_id: NodeId,
+        }
         if let Some(bytes) = Step::serialize(step) {
             if let Ok(ms) = serde_json::from_slice::<MoveNodeSerde>(&bytes) {
                 let mut muts = Vec::new();
-                if let Some(enum_subtree) = ctx.pool_after.get_inner().all_children(&ms.node_id, None) {
-                    collect_upserts_for_enum(ctx.pool_after, &enum_subtree, &mut muts);
-                } else if let Some(node) = ctx.pool_after.get_node(&ms.node_id) {
-                    muts.push(IndexMutation::Upsert(IndexDoc::from_node(ctx.pool_after, &node)));
+                if let Some(enum_subtree) =
+                    ctx.pool_after.get_inner().all_children(&ms.node_id, None)
+                {
+                    collect_upserts_for_enum(
+                        ctx.pool_after,
+                        &enum_subtree,
+                        &mut muts,
+                    );
+                } else if let Some(node) = ctx.pool_after.get_node(&ms.node_id)
+                {
+                    muts.push(IndexMutation::Upsert(IndexDoc::from_node(
+                        ctx.pool_after,
+                        &node,
+                    )));
                 }
                 return muts;
             }
@@ -189,7 +263,9 @@ impl TypedStepIndexer<MoveNodeStep> for MoveNodeIndexer {
 
 fn collect_ids_from_enum(ne: &NodeEnum) -> Vec<NodeId> {
     let mut ids = vec![ne.0.id.clone()];
-    for c in &ne.1 { ids.extend(collect_ids_from_enum(c)); }
+    for c in &ne.1 {
+        ids.extend(collect_ids_from_enum(c));
+    }
     ids
 }
 
@@ -200,7 +276,9 @@ fn collect_adds_for_node_enum(
 ) {
     let node = std::sync::Arc::new(ne.0.clone());
     out.push(IndexMutation::Add(IndexDoc::from_node(pool, &node)));
-    for c in &ne.1 { collect_adds_for_node_enum(pool, c, out); }
+    for c in &ne.1 {
+        collect_adds_for_node_enum(pool, c, out);
+    }
 }
 
 fn collect_upserts_for_enum(
@@ -210,7 +288,9 @@ fn collect_upserts_for_enum(
 ) {
     let node = std::sync::Arc::new(ne.0.clone());
     out.push(IndexMutation::Upsert(IndexDoc::from_node(pool, &node)));
-    for c in &ne.1 { collect_upserts_for_enum(pool, c, out); }
+    for c in &ne.1 {
+        collect_upserts_for_enum(pool, c, out);
+    }
 }
 
 use std::sync::OnceLock as _OnceLock;
@@ -226,5 +306,3 @@ pub fn ensure_default_step_indexers() {
         register_step_indexer::<MoveNodeStep, MoveNodeIndexer>();
     });
 }
-
-

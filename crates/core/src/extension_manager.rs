@@ -422,7 +422,10 @@ impl ExtensionManager {
     }
 
     /// 添加从快照恢复的插件
-    pub fn add_restored_plugins(&mut self, plugins: Vec<std::sync::Arc<mf_state::plugin::Plugin>>) -> ForgeResult<()> {
+    pub fn add_restored_plugins(
+        &mut self,
+        plugins: Vec<std::sync::Arc<mf_state::plugin::Plugin>>,
+    ) -> ForgeResult<()> {
         self.plugins.extend(plugins);
         Ok(())
     }

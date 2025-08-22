@@ -13,5 +13,3 @@ pub enum FileError {
 }
 
 pub type Result<T> = std::result::Result<T, FileError>;
-
-

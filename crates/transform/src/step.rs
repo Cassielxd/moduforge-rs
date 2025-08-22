@@ -1,4 +1,7 @@
-use std::{any::{type_name, Any, TypeId}, sync::Arc};
+use std::{
+    any::{type_name, Any, TypeId},
+    sync::Arc,
+};
 
 use mf_model::{schema::Schema, tree::Tree};
 use std::fmt::Debug;

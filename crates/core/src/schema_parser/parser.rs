@@ -17,8 +17,8 @@ use crate::{
 use super::error::{XmlSchemaError, XmlSchemaResult};
 use super::types::{
     deserialize_optional_bool, deserialize_optional_value, XmlAttr, XmlAttrs,
-    XmlGlobalAttribute, XmlGlobalAttributes, XmlInclude, XmlIncludes, XmlImport,
-    XmlImports, XmlMark, XmlMarks, XmlNode, XmlNodes, XmlSchema,
+    XmlGlobalAttribute, XmlGlobalAttributes, XmlInclude, XmlIncludes,
+    XmlImport, XmlImports, XmlMark, XmlMarks, XmlNode, XmlNodes, XmlSchema,
     XmlSchemaWithReferences,
 };
 
@@ -47,18 +47,24 @@ impl XmlSchemaParser {
         Self::parse_from_str(&xml_content)
     }
 
-    pub fn parse_to_extensions(xml_content: &str) -> XmlSchemaResult<Vec<Extensions>> {
+    pub fn parse_to_extensions(
+        xml_content: &str
+    ) -> XmlSchemaResult<Vec<Extensions>> {
         if let Ok(xml_schema_with_refs) =
             quick_xml::de::from_str::<XmlSchemaWithReferences>(xml_content)
         {
-            Self::convert_xml_schema_with_refs_to_extensions(xml_schema_with_refs)
+            Self::convert_xml_schema_with_refs_to_extensions(
+                xml_schema_with_refs,
+            )
         } else {
             let xml_schema: XmlSchema = quick_xml::de::from_str(xml_content)?;
             Self::convert_to_extensions(xml_schema)
         }
     }
 
-    pub fn parse_extensions_from_file(file_path: &str) -> XmlSchemaResult<Vec<Extensions>> {
+    pub fn parse_extensions_from_file(
+        file_path: &str
+    ) -> XmlSchemaResult<Vec<Extensions>> {
         let xml_content = std::fs::read_to_string(file_path).map_err(|e| {
             XmlSchemaError::XmlParseError(quick_xml::Error::Io(e.into()))
         })?;
@@ -66,9 +72,13 @@ impl XmlSchemaParser {
     }
 
     pub fn parse_multi_file(file_path: &str) -> XmlSchemaResult<SchemaSpec> {
-        let root_path = std::path::Path::new(file_path).canonicalize().map_err(|e| {
-            XmlSchemaError::FileNotFound(format!("无法找到文件 {}: {}", file_path, e))
-        })?;
+        let root_path =
+            std::path::Path::new(file_path).canonicalize().map_err(|e| {
+                XmlSchemaError::FileNotFound(format!(
+                    "无法找到文件 {}: {}",
+                    file_path, e
+                ))
+            })?;
 
         let mut context = MultiFileParseContext {
             base_path: root_path
@@ -111,11 +121,16 @@ impl XmlSchemaParser {
         context.parsed_files.insert(canonical_path.clone());
         context.current_depth += 1;
 
-        let xml_content = std::fs::read_to_string(&canonical_path).map_err(|e| {
-            XmlSchemaError::FileNotFound(format!("无法读取文件 {:?}: {}", canonical_path, e))
-        })?;
+        let xml_content =
+            std::fs::read_to_string(&canonical_path).map_err(|e| {
+                XmlSchemaError::FileNotFound(format!(
+                    "无法读取文件 {:?}: {}",
+                    canonical_path, e
+                ))
+            })?;
 
-        let xml_schema: XmlSchemaWithReferences = quick_xml::de::from_str(&xml_content)?;
+        let xml_schema: XmlSchemaWithReferences =
+            quick_xml::de::from_str(&xml_content)?;
 
         let mut merged_spec = SchemaSpec {
             nodes: HashMap::new(),
@@ -130,16 +145,28 @@ impl XmlSchemaParser {
 
         if let Some(imports) = xml_schema.imports {
             for import in imports.imports {
-                let import_path = Self::resolve_relative_path(&context.base_path, &import.src)?;
-                let imported_spec = Self::parse_file_with_context_new(&import_path, context)?;
-                Self::merge_schema_spec(&mut merged_spec, imported_spec, false)?;
+                let import_path = Self::resolve_relative_path(
+                    &context.base_path,
+                    &import.src,
+                )?;
+                let imported_spec =
+                    Self::parse_file_with_context_new(&import_path, context)?;
+                Self::merge_schema_spec(
+                    &mut merged_spec,
+                    imported_spec,
+                    false,
+                )?;
             }
         }
 
         if let Some(includes) = xml_schema.includes {
             for include in includes.includes {
-                let include_path = Self::resolve_relative_path(&context.base_path, &include.src)?;
-                let included_spec = Self::parse_file_with_context_new(&include_path, context)?;
+                let include_path = Self::resolve_relative_path(
+                    &context.base_path,
+                    &include.src,
+                )?;
+                let included_spec =
+                    Self::parse_file_with_context_new(&include_path, context)?;
                 Self::merge_schema_spec(&mut merged_spec, included_spec, true)?;
             }
         }
@@ -177,11 +204,15 @@ impl XmlSchemaParser {
     }
 
     pub fn parse_multi_file_to_extensions(
-        file_path: &str,
+        file_path: &str
     ) -> XmlSchemaResult<Vec<Extensions>> {
-        let root_path = std::path::Path::new(file_path).canonicalize().map_err(|e| {
-            XmlSchemaError::FileNotFound(format!("无法找到文件 {}: {}", file_path, e))
-        })?;
+        let root_path =
+            std::path::Path::new(file_path).canonicalize().map_err(|e| {
+                XmlSchemaError::FileNotFound(format!(
+                    "无法找到文件 {}: {}",
+                    file_path, e
+                ))
+            })?;
 
         let mut context = MultiFileParseContext {
             base_path: root_path
@@ -193,7 +224,10 @@ impl XmlSchemaParser {
             current_depth: 0,
         };
 
-        Self::parse_file_to_extensions_with_context_new(&root_path, &mut context)
+        Self::parse_file_to_extensions_with_context_new(
+            &root_path,
+            &mut context,
+        )
     }
 
     fn parse_file_to_extensions_with_context_new(
@@ -224,11 +258,16 @@ impl XmlSchemaParser {
         context.parsed_files.insert(canonical_path.clone());
         context.current_depth += 1;
 
-        let xml_content = std::fs::read_to_string(&canonical_path).map_err(|e| {
-            XmlSchemaError::FileNotFound(format!("无法读取文件 {:?}: {}", canonical_path, e))
-        })?;
+        let xml_content =
+            std::fs::read_to_string(&canonical_path).map_err(|e| {
+                XmlSchemaError::FileNotFound(format!(
+                    "无法读取文件 {:?}: {}",
+                    canonical_path, e
+                ))
+            })?;
 
-        let xml_schema: XmlSchemaWithReferences = quick_xml::de::from_str(&xml_content)?;
+        let xml_schema: XmlSchemaWithReferences =
+            quick_xml::de::from_str(&xml_content)?;
 
         let mut all_extensions = Vec::new();
 
@@ -239,22 +278,30 @@ impl XmlSchemaParser {
 
         if let Some(imports) = &xml_schema.imports {
             for import in &imports.imports {
-                let import_path = Self::resolve_relative_path(&context.base_path, &import.src)?;
-                let imported_extensions = Self::parse_file_to_extensions_with_context_new(
-                    &import_path,
-                    context,
+                let import_path = Self::resolve_relative_path(
+                    &context.base_path,
+                    &import.src,
                 )?;
+                let imported_extensions =
+                    Self::parse_file_to_extensions_with_context_new(
+                        &import_path,
+                        context,
+                    )?;
                 all_extensions.extend(imported_extensions);
             }
         }
 
         if let Some(includes) = &xml_schema.includes {
             for include in &includes.includes {
-                let include_path = Self::resolve_relative_path(&context.base_path, &include.src)?;
-                let included_extensions = Self::parse_file_to_extensions_with_context_new(
-                    &include_path,
-                    context,
+                let include_path = Self::resolve_relative_path(
+                    &context.base_path,
+                    &include.src,
                 )?;
+                let included_extensions =
+                    Self::parse_file_to_extensions_with_context_new(
+                        &include_path,
+                        context,
+                    )?;
                 all_extensions.extend(included_extensions);
             }
         }
@@ -273,7 +320,9 @@ impl XmlSchemaParser {
             let mut extension = Extension::new();
             for xml_global_attr in &xml_global_attrs.global_attributes {
                 let global_attr_item =
-                    Self::convert_xml_global_attribute_to_item(xml_global_attr.clone())?;
+                    Self::convert_xml_global_attribute_to_item(
+                        xml_global_attr.clone(),
+                    )?;
                 extension.add_global_attribute(global_attr_item);
             }
             all_extensions.push(Extensions::E(extension));
@@ -301,7 +350,10 @@ impl XmlSchemaParser {
         };
 
         let canonical_path = file_path_buf.canonicalize().map_err(|e| {
-            XmlSchemaError::FileNotFound(format!("无法解析文件路径 {}: {}", file_path, e))
+            XmlSchemaError::FileNotFound(format!(
+                "无法解析文件路径 {}: {}",
+                file_path, e
+            ))
         })?;
 
         if context.parsed_files.contains(&canonical_path) {
@@ -314,11 +366,16 @@ impl XmlSchemaParser {
         context.parsed_files.insert(canonical_path.clone());
         context.current_depth += 1;
 
-        let xml_content = std::fs::read_to_string(&canonical_path).map_err(|e| {
-            XmlSchemaError::FileNotFound(format!("无法读取文件 {:?}: {}", canonical_path, e))
-        })?;
+        let xml_content =
+            std::fs::read_to_string(&canonical_path).map_err(|e| {
+                XmlSchemaError::FileNotFound(format!(
+                    "无法读取文件 {:?}: {}",
+                    canonical_path, e
+                ))
+            })?;
 
-        let xml_schema: XmlSchemaWithReferences = quick_xml::de::from_str(&xml_content)?;
+        let xml_schema: XmlSchemaWithReferences =
+            quick_xml::de::from_str(&xml_content)?;
 
         let mut all_extensions = Vec::new();
 
@@ -330,7 +387,10 @@ impl XmlSchemaParser {
         if let Some(imports) = &xml_schema.imports {
             for import in &imports.imports {
                 let imported_extensions =
-                    Self::parse_file_to_extensions_with_context(&import.src, context)?;
+                    Self::parse_file_to_extensions_with_context(
+                        &import.src,
+                        context,
+                    )?;
                 all_extensions.extend(imported_extensions);
             }
         }
@@ -338,7 +398,10 @@ impl XmlSchemaParser {
         if let Some(includes) = &xml_schema.includes {
             for include in &includes.includes {
                 let included_extensions =
-                    Self::parse_file_to_extensions_with_context(&include.src, context)?;
+                    Self::parse_file_to_extensions_with_context(
+                        &include.src,
+                        context,
+                    )?;
                 all_extensions.extend(included_extensions);
             }
         }
@@ -357,7 +420,9 @@ impl XmlSchemaParser {
             let mut extension = Extension::new();
             for xml_global_attr in &xml_global_attrs.global_attributes {
                 let global_attr_item =
-                    Self::convert_xml_global_attribute_to_item(xml_global_attr.clone())?;
+                    Self::convert_xml_global_attribute_to_item(
+                        xml_global_attr.clone(),
+                    )?;
                 extension.add_global_attribute(global_attr_item);
             }
             all_extensions.push(Extensions::E(extension));
@@ -385,7 +450,10 @@ impl XmlSchemaParser {
         };
 
         let canonical_path = file_path_buf.canonicalize().map_err(|e| {
-            XmlSchemaError::FileNotFound(format!("无法解析文件路径 {}: {}", file_path, e))
+            XmlSchemaError::FileNotFound(format!(
+                "无法解析文件路径 {}: {}",
+                file_path, e
+            ))
         })?;
 
         if context.parsed_files.contains(&canonical_path) {
@@ -398,11 +466,16 @@ impl XmlSchemaParser {
         context.parsed_files.insert(canonical_path.clone());
         context.current_depth += 1;
 
-        let xml_content = std::fs::read_to_string(&canonical_path).map_err(|e| {
-            XmlSchemaError::FileNotFound(format!("无法读取文件 {:?}: {}", canonical_path, e))
-        })?;
+        let xml_content =
+            std::fs::read_to_string(&canonical_path).map_err(|e| {
+                XmlSchemaError::FileNotFound(format!(
+                    "无法读取文件 {:?}: {}",
+                    canonical_path, e
+                ))
+            })?;
 
-        let xml_schema: XmlSchemaWithReferences = quick_xml::de::from_str(&xml_content)?;
+        let xml_schema: XmlSchemaWithReferences =
+            quick_xml::de::from_str(&xml_content)?;
 
         let mut merged_spec = SchemaSpec {
             nodes: HashMap::new(),
@@ -417,14 +490,20 @@ impl XmlSchemaParser {
 
         if let Some(imports) = xml_schema.imports {
             for import in imports.imports {
-                let imported_spec = Self::parse_file_with_context(&import.src, context)?;
-                Self::merge_schema_spec(&mut merged_spec, imported_spec, false)?;
+                let imported_spec =
+                    Self::parse_file_with_context(&import.src, context)?;
+                Self::merge_schema_spec(
+                    &mut merged_spec,
+                    imported_spec,
+                    false,
+                )?;
             }
         }
 
         if let Some(includes) = xml_schema.includes {
             for include in includes.includes {
-                let included_spec = Self::parse_file_with_context(&include.src, context)?;
+                let included_spec =
+                    Self::parse_file_with_context(&include.src, context)?;
                 Self::merge_schema_spec(&mut merged_spec, included_spec, true)?;
             }
         }
@@ -443,7 +522,7 @@ impl XmlSchemaParser {
     }
 
     pub fn convert_to_extensions_from_spec(
-        schema_spec: SchemaSpec,
+        schema_spec: SchemaSpec
     ) -> XmlSchemaResult<Vec<Extensions>> {
         let xml_schema = XmlSchema {
             top_node: schema_spec.top_node,
@@ -528,16 +607,21 @@ impl XmlSchemaParser {
         Ok(())
     }
 
-    fn convert_xml_schema_to_spec(xml_schema: XmlSchema) -> XmlSchemaResult<SchemaSpec> {
+    fn convert_xml_schema_to_spec(
+        xml_schema: XmlSchema
+    ) -> XmlSchemaResult<SchemaSpec> {
         Self::convert_to_schema_spec(xml_schema)
     }
 
-    fn convert_to_extensions(xml_schema: XmlSchema) -> XmlSchemaResult<Vec<Extensions>> {
+    fn convert_to_extensions(
+        xml_schema: XmlSchema
+    ) -> XmlSchemaResult<Vec<Extensions>> {
         let mut extensions = Vec::new();
 
         if let Some(xml_nodes) = xml_schema.nodes {
             for xml_node in xml_nodes.nodes {
-                let mut node = Node::create(&xml_node.name, NodeSpec::default());
+                let mut node =
+                    Node::create(&xml_node.name, NodeSpec::default());
                 if let Some(group) = xml_node.group {
                     node.r#type.group = Some(group);
                 }
@@ -551,7 +635,8 @@ impl XmlSchemaParser {
                     node.set_marks(marks);
                 }
                 if let Some(xml_attrs) = xml_node.attrs {
-                    let attrs = Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?;
+                    let attrs =
+                        Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?;
                     node.set_attrs(attrs);
                 }
                 extensions.push(Extensions::N(node));
@@ -574,7 +659,8 @@ impl XmlSchemaParser {
                     mark.r#type.spanning = Some(spanning);
                 }
                 if let Some(xml_attrs) = xml_mark.attrs {
-                    let attrs = Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?;
+                    let attrs =
+                        Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?;
                     mark.set_attrs(attrs);
                 }
                 extensions.push(Extensions::M(mark));
@@ -588,13 +674,14 @@ impl XmlSchemaParser {
     }
 
     fn convert_xml_schema_with_refs_to_extensions(
-        xml_schema: XmlSchemaWithReferences,
+        xml_schema: XmlSchemaWithReferences
     ) -> XmlSchemaResult<Vec<Extensions>> {
         let mut extensions = Vec::new();
 
         if let Some(xml_nodes) = xml_schema.nodes {
             for xml_node in xml_nodes.nodes {
-                let mut node = Node::create(&xml_node.name, NodeSpec::default());
+                let mut node =
+                    Node::create(&xml_node.name, NodeSpec::default());
                 if let Some(group) = xml_node.group {
                     node.r#type.group = Some(group);
                 }
@@ -608,7 +695,8 @@ impl XmlSchemaParser {
                     node.set_marks(marks);
                 }
                 if let Some(xml_attrs) = xml_node.attrs {
-                    let attrs = Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?;
+                    let attrs =
+                        Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?;
                     node.set_attrs(attrs);
                 }
                 extensions.push(Extensions::N(node));
@@ -631,7 +719,8 @@ impl XmlSchemaParser {
                     mark.r#type.spanning = Some(spanning);
                 }
                 if let Some(xml_attrs) = xml_mark.attrs {
-                    let attrs = Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?;
+                    let attrs =
+                        Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?;
                     mark.set_attrs(attrs);
                 }
                 extensions.push(Extensions::M(mark));
@@ -641,7 +730,10 @@ impl XmlSchemaParser {
         if let Some(xml_global_attrs) = xml_schema.global_attributes {
             let mut extension = Extension::new();
             for xml_global_attr in xml_global_attrs.global_attributes {
-                let global_attr_item = Self::convert_xml_global_attribute_to_item(xml_global_attr)?;
+                let global_attr_item =
+                    Self::convert_xml_global_attribute_to_item(
+                        xml_global_attr,
+                    )?;
                 extension.add_global_attribute(global_attr_item);
             }
             extensions.push(Extensions::E(extension));
@@ -653,14 +745,18 @@ impl XmlSchemaParser {
         Ok(extensions)
     }
 
-    fn convert_to_schema_spec(xml_schema: XmlSchema) -> XmlSchemaResult<SchemaSpec> {
+    fn convert_to_schema_spec(
+        xml_schema: XmlSchema
+    ) -> XmlSchemaResult<SchemaSpec> {
         let mut nodes = HashMap::new();
         let mut marks = HashMap::new();
 
         if let Some(xml_nodes) = xml_schema.nodes {
             for xml_node in xml_nodes.nodes {
                 if nodes.contains_key(&xml_node.name) {
-                    return Err(XmlSchemaError::DuplicateNodeName(xml_node.name.clone()));
+                    return Err(XmlSchemaError::DuplicateNodeName(
+                        xml_node.name.clone(),
+                    ));
                 }
                 let node_name = xml_node.name.clone();
                 let node_spec = Self::convert_xml_node_to_spec(xml_node)?;
@@ -671,7 +767,9 @@ impl XmlSchemaParser {
         if let Some(xml_marks) = xml_schema.marks {
             for xml_mark in xml_marks.marks {
                 if marks.contains_key(&xml_mark.name) {
-                    return Err(XmlSchemaError::DuplicateMarkName(xml_mark.name.clone()));
+                    return Err(XmlSchemaError::DuplicateMarkName(
+                        xml_mark.name.clone(),
+                    ));
                 }
                 let mark_name = xml_mark.name.clone();
                 let mark_spec = Self::convert_xml_mark_to_spec(xml_mark)?;
@@ -682,7 +780,9 @@ impl XmlSchemaParser {
         Ok(SchemaSpec { nodes, marks, top_node: xml_schema.top_node })
     }
 
-    fn convert_xml_node_to_spec(xml_node: XmlNode) -> XmlSchemaResult<NodeSpec> {
+    fn convert_xml_node_to_spec(
+        xml_node: XmlNode
+    ) -> XmlSchemaResult<NodeSpec> {
         let attrs = if let Some(xml_attrs) = xml_node.attrs {
             Some(Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?)
         } else {
@@ -698,18 +798,26 @@ impl XmlSchemaParser {
         })
     }
 
-    fn convert_xml_mark_to_spec(xml_mark: XmlMark) -> XmlSchemaResult<MarkSpec> {
+    fn convert_xml_mark_to_spec(
+        xml_mark: XmlMark
+    ) -> XmlSchemaResult<MarkSpec> {
         let attrs = if let Some(xml_attrs) = xml_mark.attrs {
             Some(Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?)
         } else {
             None
         };
 
-        Ok(MarkSpec { attrs, excludes: xml_mark.excludes, group: xml_mark.group, spanning: xml_mark.spanning, desc: xml_mark.desc })
+        Ok(MarkSpec {
+            attrs,
+            excludes: xml_mark.excludes,
+            group: xml_mark.group,
+            spanning: xml_mark.spanning,
+            desc: xml_mark.desc,
+        })
     }
 
     fn convert_xml_attrs_to_spec(
-        xml_attrs: Vec<XmlAttr>,
+        xml_attrs: Vec<XmlAttr>
     ) -> XmlSchemaResult<HashMap<String, AttributeSpec>> {
         let mut attrs = HashMap::new();
         for xml_attr in xml_attrs {
@@ -719,7 +827,10 @@ impl XmlSchemaParser {
                 None
             };
 
-            attrs.insert(xml_attr.name.clone(), AttributeSpec { default: default_value });
+            attrs.insert(
+                xml_attr.name.clone(),
+                AttributeSpec { default: default_value },
+            );
         }
         Ok(attrs)
     }
@@ -732,7 +843,7 @@ impl XmlSchemaParser {
     }
 
     fn convert_xml_global_attribute_to_item(
-        xml_global_attr: XmlGlobalAttribute,
+        xml_global_attr: XmlGlobalAttribute
     ) -> XmlSchemaResult<GlobalAttributeItem> {
         let types = if xml_global_attr.types.trim() == "*" {
             vec!["*".to_string()]
@@ -744,7 +855,8 @@ impl XmlSchemaParser {
                 .collect()
         };
 
-        let attributes = Self::convert_xml_attrs_to_spec(xml_global_attr.attrs)?;
+        let attributes =
+            Self::convert_xml_attrs_to_spec(xml_global_attr.attrs)?;
         Ok(GlobalAttributeItem { types, attributes })
     }
 }
@@ -776,5 +888,3 @@ mod tests {
         assert!(schema_spec.nodes.contains_key("text"));
     }
 }
-
-

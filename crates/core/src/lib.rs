@@ -73,7 +73,9 @@ pub use extension::Extension;
 pub use extension_manager::{ExtensionManager, ExtensionManagerBuilder};
 pub use history_manager::{History, HistoryManager};
 pub use runtime::runtime::ForgeRuntime;
-pub use schema_parser::{XmlSchemaParser, XmlSchemaSerializer, XmlSchemaError, XmlSchemaResult};
+pub use schema_parser::{
+    XmlSchemaParser, XmlSchemaSerializer, XmlSchemaError, XmlSchemaResult,
+};
 pub use runtime::sync_processor::{
     SyncProcessor, TaskProcessor as SyncTaskProcessor,
 };

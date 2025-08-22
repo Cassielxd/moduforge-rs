@@ -16,7 +16,12 @@ mod tests {
     async fn roundtrip_json() -> ForgeResult<()> {
         let options = EditorOptionsBuilder::new().build();
         let xml_path = "../../schema/main.xml";
-        let editor = ForgeAsyncRuntime::from_xml_schema_path(xml_path, Some(options), None).await?;
+        let editor = ForgeAsyncRuntime::from_xml_schema_path(
+            xml_path,
+            Some(options),
+            None,
+        )
+        .await?;
         let state = editor.get_state();
         let tree = state.doc().get_inner().clone();
         let schema_bytes = std::fs::read(xml_path).map_err(|e| anyhow!(e))?;
@@ -25,9 +30,14 @@ mod tests {
         let zip_path = "./data/demo_doc_json.ysf";
         {
             let num_shards = tree.nodes.len();
-            let shard_counts: Vec<usize> = tree.nodes.iter().map(|m| m.len()).collect();
+            let shard_counts: Vec<usize> =
+                tree.nodes.iter().map(|m| m.len()).collect();
             let meta_json = serde_json::json!({"title":"demo document","version":state.version});
-            let shard_meta = SnapshotShardMeta { root_id: tree.root_id.clone(), num_shards, counts: shard_counts };
+            let shard_meta = SnapshotShardMeta {
+                root_id: tree.root_id.clone(),
+                num_shards,
+                counts: shard_counts,
+            };
             export_zip_with_format(
                 zip_path,
                 &meta_json,
@@ -37,7 +47,8 @@ mod tests {
                 Some(&tree.parent_map),
                 1,
                 SnapshotFormat::Json,
-            ).map_err(|e| anyhow!(e))?;
+            )
+            .map_err(|e| anyhow!(e))?;
         }
 
         // read back via strategy
@@ -48,17 +59,21 @@ mod tests {
                 SnapshotShardMeta,
                 Vec<ImHashMap<String, Arc<Node>>>,
                 Option<ImHashMap<String, String>>,
-            ) = import_zip_with_format(zip_path, SnapshotFormat::Json, true).map_err(|e| anyhow!(e))?;
+            ) = import_zip_with_format(zip_path, SnapshotFormat::Json, true)
+                .map_err(|e| anyhow!(e))?;
             let meta_len = _meta_json.to_string().len();
             let schema_len = _schema_xml.len();
-            let total_nodes: usize = maps.iter().map(|m| m.len()).sum::<usize>();
+            let total_nodes: usize =
+                maps.iter().map(|m| m.len()).sum::<usize>();
             println!(
                 "read zip (json): meta={}B, schema={}B, shards={}, nodes={}, parent_map_entries={}",
-                meta_len, schema_len, meta.num_shards, total_nodes, parent_map.unwrap().len()
+                meta_len,
+                schema_len,
+                meta.num_shards,
+                total_nodes,
+                parent_map.unwrap().len()
             );
         }
         Ok(())
     }
 }
-
-

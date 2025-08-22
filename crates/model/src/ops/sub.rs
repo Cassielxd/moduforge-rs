@@ -53,8 +53,7 @@ impl<'a> Sub<Mark> for MarkRef<'a> {
         self,
         mark: Mark,
     ) -> Self::Output {
-        self.tree
-            .remove_mark(&self.key.clone(), &[mark.r#type.clone()])?;
+        self.tree.remove_mark(&self.key.clone(), &[mark.r#type.clone()])?;
         Ok(MarkRef::new(self.tree, self.key.clone()))
     }
 }
