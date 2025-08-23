@@ -3,8 +3,11 @@ use std::sync::Arc;
 use mf_state::{ops::GlobalResourceManager, plugin::Plugin};
 
 use crate::{types::GlobalAttributeItem, ForgeResult};
+use crate::node::Node;
+
 pub type OpFn =
     Vec<Arc<dyn Fn(&GlobalResourceManager) -> ForgeResult<()> + Send + Sync>>;
+pub type NodeFn =Arc<dyn Fn(&Node) -> Option<Node>+ Send + Sync>;
 ///扩展实现
 /// 组装全局属性和插件
 #[derive(Clone, Default)]
@@ -12,6 +15,7 @@ pub struct Extension {
     global_attributes: Vec<GlobalAttributeItem>,
     plugins: Vec<Arc<Plugin>>,
     op_fn: Option<OpFn>,
+    node_disable:Option<NodeFn>,
 }
 
 impl Extension {
@@ -20,7 +24,20 @@ impl Extension {
             global_attributes: vec![],
             plugins: vec![],
             op_fn: Some(vec![]),
+            node_disable: None,
         }
+    }
+    pub fn add_node_disable(
+        &mut self,
+        node_fn: NodeFn,
+    ) -> &mut Self {
+        self.node_disable=Some(node_fn);
+        self
+    }
+    pub fn get_node_disable(
+        &self
+    ) -> Option<NodeFn> {
+        self.node_disable.clone()
     }
     pub fn add_op_fn(
         &mut self,

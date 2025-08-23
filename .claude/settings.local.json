@@ -19,7 +19,9 @@
       "Bash(cargo build:*)",
       "Bash(cargo expand:*)",
       "Bash(.targetdebugexamplesminimal_plugin.exe)",
-      "Bash(targetdebugexamplesminimal_plugin.exe)"
+      "Bash(targetdebugexamplesminimal_plugin.exe)",
+      "Bash(./target/debug/examples/minimal_plugin.exe)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": [],
