@@ -16,7 +16,10 @@
       "Bash(timeout 60 cargo test -p moduforge-macros-derive)",
       "Bash(timeout 30 cargo test -p moduforge-macros-derive integration_tests)",
       "Bash(timeout 30 cargo test -p moduforge-macros-derive)",
-      "Bash(cargo build:*)"
+      "Bash(cargo build:*)",
+      "Bash(cargo expand:*)",
+      "Bash(.targetdebugexamplesminimal_plugin.exe)",
+      "Bash(targetdebugexamplesminimal_plugin.exe)"
     ],
     "deny": [],
     "ask": [],
