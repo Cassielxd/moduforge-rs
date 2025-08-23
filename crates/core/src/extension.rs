@@ -7,7 +7,7 @@ use crate::node::Node;
 
 pub type OpFn =
     Vec<Arc<dyn Fn(&GlobalResourceManager) -> ForgeResult<()> + Send + Sync>>;
-pub type NodeFn =Arc<dyn Fn(&Node) -> Option<Node>+ Send + Sync>;
+pub type NodeTransformFn = Arc<dyn Fn(&Node) -> Option<Node> + Send + Sync>;
 ///扩展实现
 /// 组装全局属性和插件
 #[derive(Clone, Default)]
@@ -15,7 +15,7 @@ pub struct Extension {
     global_attributes: Vec<GlobalAttributeItem>,
     plugins: Vec<Arc<Plugin>>,
     op_fn: Option<OpFn>,
-    node_disable:Option<NodeFn>,
+    node_transform: Option<NodeTransformFn>,
 }
 
 impl Extension {
@@ -24,20 +24,20 @@ impl Extension {
             global_attributes: vec![],
             plugins: vec![],
             op_fn: Some(vec![]),
-            node_disable: None,
+            node_transform: None,
         }
     }
-    pub fn add_node_disable(
+    pub fn add_node_transform(
         &mut self,
-        node_fn: NodeFn,
+        node_fn: NodeTransformFn,
     ) -> &mut Self {
-        self.node_disable=Some(node_fn);
+        self.node_transform = Some(node_fn);
         self
     }
-    pub fn get_node_disable(
+    pub fn get_node_transform(
         &self
-    ) -> Option<NodeFn> {
-        self.node_disable.clone()
+    ) -> Option<NodeTransformFn> {
+        self.node_transform.clone()
     }
     pub fn add_op_fn(
         &mut self,

@@ -122,11 +122,25 @@ macro_rules! mf_ops {
 ///     Ok(())
 /// }
 /// 
-/// // 创建包含操作的扩展
+/// // 定义节点转换函数
+/// fn node_transformer(node: &mf_core::node::Node) -> Option<mf_core::node::Node> {
+///     // 对特定节点类型进行二次修改
+///     if node.name() == "paragraph" {
+///         let mut new_node = node.clone();
+///         // 添加默认样式或属性
+///         new_node.add_attribute("class", "enhanced-paragraph");
+///         Some(new_node)
+///     } else {
+///         Some(node.clone())  // 其他节点保持不变
+///     }
+/// }
+/// 
+/// // 创建包含操作和节点禁用的扩展
 /// mf_extension!(
 ///     logging_extension,
 ///     ops = [ setup_logging, cleanup_resources ],
-///     docs = "用于日志记录和资源管理的扩展"
+///     node_transform = node_transformer,
+///     docs = "用于日志记录、资源管理和节点转换的扩展"
 /// );
 /// 
 /// // 使用方法
@@ -138,6 +152,7 @@ macro_rules! mf_ops {
 /// - `ops`: 操作函数列表，函数签名为 `fn(&GlobalResourceManager) -> ForgeResult<()>`
 /// - `plugins`: 要包含的插件实例列表
 /// - `global_attributes`: 全局属性项列表
+/// - `node_transform`: 节点转换函数，签名为 `fn(&Node) -> Option<Node>`
 /// - `docs`: 扩展的文档字符串
 #[macro_export]
 macro_rules! mf_extension {
@@ -146,6 +161,7 @@ macro_rules! mf_extension {
         $(, ops = [ $( $op:ident ),+ $(,)? ] )?
         $(, plugins = [ $( $plugin:expr ),+ $(,)? ] )?
         $(, global_attributes = [ $( $attr:expr ),+ $(,)? ] )?
+        $(, node_transform = $node_transform_fn:expr )?
         $(, docs = $docs:expr )?
         $(,)?
     ) => {
@@ -194,6 +210,11 @@ macro_rules! mf_extension {
                     $(
                         ext.add_global_attribute($attr);
                     )+
+                )?
+
+                // 添加节点转换函数
+                $(
+                    ext.add_node_transform(std::sync::Arc::new($node_transform_fn));
                 )?
                 
                 ext
@@ -276,6 +297,21 @@ macro_rules! mf_op {
     };
     ($name:ident, |$manager:ident| $body:block) => {
         fn $name($manager: &mf_state::ops::GlobalResourceManager) -> mf_core::ForgeResult<()> {
+            $body
+        }
+    };
+}
+
+/// 用于创建节点转换函数的辅助宏
+#[macro_export]
+macro_rules! mf_node_transform {
+    ($name:ident, $body:block) => {
+        fn $name(_node: &mf_core::node::Node) -> Option<mf_core::node::Node> {
+            $body
+        }
+    };
+    ($name:ident, |$node:ident| $body:block) => {
+        fn $name($node: &mf_core::node::Node) -> Option<mf_core::node::Node> {
             $body
         }
     };

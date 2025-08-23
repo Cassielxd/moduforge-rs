@@ -26,14 +26,14 @@ pub fn get_schema_by_resolved_extensions(
 ) -> ForgeResult<Schema> {
     // 收集所有扩展中定义的全局属性
     let mut extension_attributes = vec![];
-    let mut node_disables = vec![];
+    let mut node_transforms = vec![];
     for extension in extensions {
         if let Extensions::E(extension) = extension {
             for item in extension.get_global_attributes().iter() {
                 extension_attributes.push(item);
             }
-            if let Some(t)=extension.get_node_disable(){
-                node_disables.push(t);
+            if let Some(t)=extension.get_node_transform(){
+                node_transforms.push(t);
             }
         }
     }
@@ -50,7 +50,7 @@ pub fn get_schema_by_resolved_extensions(
             Extensions::N(node_old) => {
                 let  node = {
                     let mut newn =node_old.clone();
-                  for n_fn in  &node_disables{
+                  for n_fn in  &node_transforms{
                       if let Some(n) = n_fn(&newn){
                           newn = n;
                       }
