@@ -56,7 +56,7 @@ pub fn get_schema_by_resolved_extensions(
                       }
                   }
                     newn
-                }
+                };
                 let name = node.name.clone();
                 // 检查是否为顶层节点
                 if node.is_top_node() {
