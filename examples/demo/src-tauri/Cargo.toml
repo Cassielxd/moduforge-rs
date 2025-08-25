@@ -38,18 +38,18 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2"
 # 核心模块
-moduforge-model =  {path = "../../crates/model"}
-moduforge-state =    {path = "../../crates/state"}
-moduforge-transform = {path = "../../crates/transform"}
-moduforge-core = {path = "../../crates/core"}
-moduforge-macros = {path = "../../crates/macro"}
-moduforge-macros-derive = {path = "../../crates/derive"}
-moduforge-collaboration-client = {path = "../../crates/collaboration_client"}
+moduforge-model =  {path = "../../../crates/model"}
+moduforge-state =    {path = "../../../crates/state"}
+moduforge-transform = {path = "../../../crates/transform"}
+moduforge-core = {path = "../../../crates/core"}
+moduforge-macros = {path = "../../../crates/macro"}
+moduforge-macros-derive = {path = "../../../crates/derive"}
+moduforge-collaboration-client = {path = "../../../crates/collaboration_client"}
 
 # 规则引擎
-moduforge-rules-engine = {path = "../../crates/engine"}
-moduforge-rules-expression = {path = "../../crates/expression"}
-moduforge-rules-template = {path = "../../crates/template"}
+moduforge-rules-engine = {path = "../../../crates/engine"}
+moduforge-rules-expression = {path = "../../../crates/expression"}
+moduforge-rules-template = {path = "../../../crates/template"}
 chrono = "0.4.41"
 
 
