@@ -42,6 +42,7 @@
         :scroll="{ x: 1200, y: 400 }"
         size="middle"
         bordered
+        row-key="id"
         @change="handleTableChange"
       >
       

@@ -56,6 +56,7 @@
                   placeholder="状态筛选"
                   style="width: 100%"
                   @change="handleStatusFilter"
+                  allow-clear
                 >
                   <a-select-option value="">全部状态</a-select-option>
                   <a-select-option value="draft">草稿</a-select-option>
@@ -84,7 +85,6 @@
               </a-col>
             </a-row>
           </a-card>
-          <!-- {{ filteredData}} -->
           <!-- 数据表格 -->
           <a-card class="table-card" :bordered="false">
             <CostTable
@@ -156,7 +156,7 @@ const windowManager = useChildAppWindowManager()
 // 数据状态
 const loading = ref(false)
 const searchText = ref('')
-const statusFilter = ref('')
+const statusFilter = ref('') // 确保默认为空，显示全部数据
 const dateFilter = ref(null)
 
 // 表格配置（Ant Table 用）
@@ -268,81 +268,123 @@ const pagination = ref({
   showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
 })
 
-// 使用共享状态管理
-const {
-  projects: estimateData,
-  selectedItems,
-  filters,
-  filteredProjects,
-  totalProjects,
-  selectedCount,
-  addProject,
-  updateProject,
-  deleteProject,
-  setProjects,
-  selectItems,
-  clearSelection,
-  setFilter,
-  clearFilters
-} = useEstimate()
+// 使用本地数据而不是共享状态（暂时修复）
+const estimateData = ref([
+  {
+    id: 1,
+    name: '办公楼建设项目',
+    type: 'building',
+    amount: 5000000,
+    status: 'approved',
+    createTime: '2024-01-15',
+    creator: '张三',
+    description: '新建办公楼项目，包含主体建筑和配套设施',
+    manager: '张三',
+    startDate: '2024-02-01',
+    endDate: '2024-12-31'
+  },
+  {
+    id: 2,
+    name: '道路改造工程',
+    type: 'infrastructure',
+    amount: 3200000,
+    status: 'reviewing',
+    createTime: '2024-01-20',
+    creator: '李四',
+    description: '城市主干道改造升级工程',
+    manager: '李四',
+    startDate: '2024-03-01',
+    endDate: '2024-10-31'
+  },
+  {
+    id: 3,
+    name: '绿化景观项目',
+    type: 'landscape',
+    amount: 1800000,
+    status: 'draft',
+    createTime: '2024-01-25',
+    creator: '王五',
+    description: '公园绿化和景观设计项目',
+    manager: '王五',
+    startDate: '2024-04-01',
+    endDate: '2024-08-31'
+  },
+  {
+    id: 4,
+    name: '装修改造工程',
+    type: 'renovation',
+    amount: 800000,
+    status: 'approved',
+    createTime: '2024-02-01',
+    creator: '赵六',
+    description: '办公区域装修改造项目',
+    manager: '赵六',
+    startDate: '2024-03-15',
+    endDate: '2024-06-30'
+  },
+  {
+    id: 5,
+    name: '水电安装工程',
+    type: 'installation',
+    amount: 1200000,
+    status: 'reviewing',
+    creator: '孙七',
+    createTime: '2024-02-05',
+    description: '综合楼水电管线安装工程'
+  },
+  {
+    id: 6,
+    name: '停车场建设',
+    type: 'infrastructure',
+    amount: 2500000,
+    status: 'draft',
+    creator: '周八',
+    createTime: '2024-02-10',
+    description: '地下停车场建设项目'
+  },
+  {
+    id: 7,
+    name: '消防系统改造',
+    type: 'safety',
+    amount: 900000,
+    status: 'approved',
+    creator: '吴九',
+    createTime: '2024-02-15',
+    description: '建筑消防系统升级改造'
+  },
+  {
+    id: 8,
+    name: '智能化系统集成',
+    type: 'technology',
+    amount: 1500000,
+    status: 'reviewing',
+    creator: '郑十',
+    createTime: '2024-02-20',
+    description: '楼宇智能化管理系统集成项目'
+  }
+])
 
-// 初始化数据（如果没有数据的话）
-if (!estimateData.value || estimateData.value.length === 0) {
-  setProjects([
-    {
-      id: 1,
-      name: '办公楼建设项目',
-      type: 'building',
-      amount: 5000000,
-      status: 'approved',
-      createTime: '2024-01-15',
-      creator: '张三',
-      description: '新建办公楼项目，包含主体建筑和配套设施',
-      manager: '张三',
-      startDate: '2024-02-01',
-      endDate: '2024-12-31'
-    },
-    {
-      id: 2,
-      name: '道路改造工程',
-      type: 'infrastructure',
-      amount: 3200000,
-      status: 'reviewing',
-      createTime: '2024-01-20',
-      creator: '李四',
-      description: '城市主干道改造升级工程',
-      manager: '李四',
-      startDate: '2024-03-01',
-      endDate: '2024-10-31'
-    },
-    {
-      id: 3,
-      name: '绿化景观项目',
-      type: 'landscape',
-      amount: 1800000,
-      status: 'draft',
-      createTime: '2024-01-25',
-      creator: '王五',
-      description: '公园绿化和景观设计项目',
-      manager: '王五',
-      startDate: '2024-04-01',
-      endDate: '2024-08-31'
-    },
-    {
-      id: 4,
-      name: '装修改造工程',
-      type: 'renovation',
-      amount: 800000,
-      status: 'approved',
-      createTime: '2024-02-01',
-      creator: '赵六',
-      description: '办公区域装修改造项目',
-      manager: '赵六',
-      startDate: '2024-03-15',
-      endDate: '2024-06-30'
-    }
-  ])
+// 本地操作方法
+const addProject = (project) => {
+  estimateData.value.push(project)
 }
+
+const updateProject = (id, updates) => {
+  const index = estimateData.value.findIndex(p => p.id === id)
+  if (index > -1) {
+    Object.assign(estimateData.value[index], updates)
+  }
+}
+
+const deleteProject = (id) => {
+  const index = estimateData.value.findIndex(p => p.id === id)
+  if (index > -1) {
+    estimateData.value.splice(index, 1)
+  }
+}
+
+console.log('本地数据初始化完成，数据长度:', estimateData.value.length)
+
 
 // 使用共享状态的过滤数据，确保状态同步
 const filteredData = computed(() => {
@@ -521,8 +563,7 @@ const handleSearch = () => {
 
 const handleStatusFilter = () => {
   console.log('状态筛选:', statusFilter.value)
-  // 同步到共享状态过滤器
-  setFilter('status', statusFilter.value)
+  // 本地筛选，不需要同步到共享状态
 }
 
 const handleDateFilter = () => {
