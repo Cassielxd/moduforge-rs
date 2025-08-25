@@ -2,15 +2,15 @@
 resolver = "2"
 members = [
    "crates/*",
-   "demo/src-tauri",
+   "examples/demo/src-tauri",
    "devtool-rules"
    ]
 exclude = [
-   "demo",
    "examples/*"
 ]
 [workspace.package]
-version = "0.5.0"
+name = "moduforge"
+version = "0.5.1"
 edition = "2024"
 authors = ["String <348040933@qq.com>"]
 license = "MIT"

@@ -7,7 +7,7 @@ use crate::node::Node;
 
 pub type OpFn =
     Vec<Arc<dyn Fn(&GlobalResourceManager) -> ForgeResult<()> + Send + Sync>>;
-pub type NodeTransformFn = Arc<dyn Fn(&Node) -> Option<Node> + Send + Sync>;
+pub type NodeTransformFn = Arc<dyn Fn(&mut Node) -> ForgeResult<()> + Send + Sync>;
 ///扩展实现
 /// 组装全局属性和插件
 #[derive(Clone, Default)]
