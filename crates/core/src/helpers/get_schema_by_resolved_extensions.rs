@@ -51,11 +51,11 @@ pub fn get_schema_by_resolved_extensions(
                 let  node = {
                     let mut newn =node_old.clone();
                   for n_fn in  &node_transforms{
-                      if let Some(n) = n_fn(&newn){
-                          newn = n;
+                      if let Err(e) = n_fn(&mut newn){
+                          return Err(e);
                       }
                   }
-                    newn
+                  newn
                 };
                 let name = node.name.clone();
                 // 检查是否为顶层节点
