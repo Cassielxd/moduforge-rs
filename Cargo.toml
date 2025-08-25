@@ -2,11 +2,10 @@
 resolver = "2"
 members = [
    "crates/*",
-   "demo/src-tauri",
+   "examples/demo/src-tauri",
    "devtool-rules"
    ]
 exclude = [
-   "demo",
    "examples/*"
 ]
 [workspace.package]
