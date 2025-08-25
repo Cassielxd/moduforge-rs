@@ -5,6 +5,7 @@
       <SimpleHeader
         :title="headerTitle"
         :show-window-controls="true"
+        :is-maximized="isMaximized"
         @minimize="onMinimize"
         @maximize="onMaximize"
         @close="onClose"
@@ -24,7 +25,11 @@
                 <template #icon><ExportOutlined /></template>
                 导出数据
               </a-button>
-              <a-tag v-if="windowReady" color="green">{{ windowLabel }}</a-tag>
+              <a-button type="dashed" @click="showWindowManager">
+                <template #icon><WindowsOutlined /></template>
+                窗体管理演示
+              </a-button>
+              <a-tag v-if="isReady" color="green">{{ windowLabel }}</a-tag>
               <a-tag v-else color="orange">初始化中...</a-tag>
             </a-space>
           </div>
@@ -79,7 +84,7 @@
               </a-col>
             </a-row>
           </a-card>
-
+          <!-- {{ filteredData}} -->
           <!-- 数据表格 -->
           <a-card class="table-card" :bordered="false">
             <CostTable
@@ -107,22 +112,33 @@ import { message } from 'ant-design-vue'
 import {
   PlusOutlined,
   ImportOutlined,
-  ExportOutlined
+  ExportOutlined,
+  WindowsOutlined
 } from '@ant-design/icons-vue'
-import { CostTable, useEstimate, useGlobalStore, SimpleHeader, useParentWindowDataExchange } from '@cost-app/shared-components'
+import { CostTable, useEstimate, SimpleHeader, useParentWindowDataExchange, useChildAppWindowManager } from '@cost-app/shared-components'
 import { invoke } from '@tauri-apps/api/core'
-import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
+import { useChildWindowManagement } from '@cost-app/shared-components'
 
 // 标题
 const headerTitle = ref('概算管理系统')
 
-// 窗口状态管理
-const currentWindow = ref(null)
-const windowInfo = ref({
-  label: '',
-  isMaximized: false,
-  isReady: false
-})
+// 使用新的窗口管理封装
+const {
+  currentWindow,
+  isMaximized,
+  isReady,
+  windowLabel,
+  minimizeWindow,
+  toggleMaximize,
+  closeWindow
+} = useChildWindowManagement()
+
+// 兼容现有代码的 windowInfo
+const windowInfo = computed(() => ({
+  label: windowLabel.value,
+  isMaximized: isMaximized.value,
+  isReady: isReady.value
+}))
 
 // 使用数据交换系统
 const dataExchange = useParentWindowDataExchange()
@@ -132,10 +148,10 @@ const {
   onDataRefreshRequest
 } = dataExchange
 
-// 兼容性：保持原有的引用
-const isMaximized = computed(() => windowInfo.value.isMaximized)
-const windowReady = computed(() => windowInfo.value.isReady)
-const windowLabel = computed(() => windowInfo.value.label || '未知')
+// 使用子应用窗体管理器
+const windowManager = useChildAppWindowManager()
+
+// windowReady、windowLabel、isMaximized 等都已从 useChildWindowManagement 获取
 
 // 数据状态
 const loading = ref(false)
@@ -271,7 +287,7 @@ const {
 } = useEstimate()
 
 // 初始化数据（如果没有数据的话）
-if (estimateData.length === 0) {
+if (!estimateData.value || estimateData.value.length === 0) {
   setProjects([
     {
       id: 1,
@@ -328,11 +344,11 @@ if (estimateData.length === 0) {
   ])
 }
 
-// 使用共享状态的过滤数据，同时支持本地筛选
+// 使用共享状态的过滤数据，确保状态同步
 const filteredData = computed(() => {
-  let data = filteredProjects.value
+  let data = estimateData.value || []
 
-  // 本地搜索文本筛选
+  // 搜索文本筛选
   if (searchText.value) {
     data = data.filter(item =>
       item.name.toLowerCase().includes(searchText.value.toLowerCase()) ||
@@ -340,7 +356,7 @@ const filteredData = computed(() => {
     )
   }
 
-  // 本地状态筛选
+  // 状态筛选
   if (statusFilter.value) {
     data = data.filter(item => item.status === statusFilter.value)
   }
@@ -385,6 +401,21 @@ const importData = () => {
 
 const exportData = () => {
   message.success('数据导出成功！')
+}
+
+// 窗体管理演示 - 打开工作台的窗体管理演示页面
+const showWindowManager = async () => {
+  try {
+    // 打开工作台的窗体管理演示页面，建立父子窗口关系
+    await windowManager.openWindow('window-manager-demo', {
+      width: 1000,
+      height: 700
+    })
+    message.success('窗体管理演示窗口已打开')
+  } catch (error) {
+    console.error('打开窗体管理演示失败:', error)
+    message.error('打开窗体管理演示失败')
+  }
 }
 
 // 打开表单窗口
@@ -449,7 +480,7 @@ const openFormWindow = async (mode = 'create', data = null) => {
       windowId,
       title,
       url: fullUrl,  // 使用完整URL而不是相对路径
-      modal: isModal,
+      modal: !isModal,
       width: isModal ? 700 : 800,  // 比概算窗口更小
       height: isModal ? 500 : 600,  // 比概算窗口更小
       parentWindow: windowInfo.value.label  // 确保使用概算窗口的label作为父窗口
@@ -490,6 +521,8 @@ const handleSearch = () => {
 
 const handleStatusFilter = () => {
   console.log('状态筛选:', statusFilter.value)
+  // 同步到共享状态过滤器
+  setFilter('status', statusFilter.value)
 }
 
 const handleDateFilter = () => {
@@ -538,53 +571,28 @@ const removeDisabledOverlay = () => {
 }
 
 // 窗口控制方法
+// 使用新封装的窗口操作函数，添加用户反馈
 const onMinimize = async () => {
-  console.log('概算窗口最小化')
   try {
-    // 使用后端统一处理，连同子窗口一起最小化
-    await invoke('minimize_window_with_children', {
-      windowId: windowInfo.value.label
-    })
-    console.log('窗口及子窗口已最小化')
+    await minimizeWindow()
+    message.success('窗口已最小化')
   } catch (error) {
-    console.error('最小化窗口失败:', error)
     message.error('最小化失败')
   }
 }
 
 const onMaximize = async () => {
-  console.log('概算窗口最大化/还原')
   try {
-    if (currentWindow.value) {
-      if (windowInfo.value.isMaximized) {
-        await currentWindow.value.unmaximize()
-        windowInfo.value.isMaximized = false
-        console.log('窗口已还原')
-      } else {
-        await currentWindow.value.maximize()
-        windowInfo.value.isMaximized = true
-        console.log('窗口已最大化')
-      }
-    } else {
-      console.error('窗口对象未初始化')
-      message.error('窗口未初始化')
-    }
+    await toggleMaximize()
   } catch (error) {
-    console.error('切换最大化状态失败:', error)
     message.error('窗口操作失败')
   }
 }
 
 const onClose = async () => {
-  console.log('概算窗口关闭')
   try {
-    // 使用后端统一处理，连同子窗口一起关闭
-    await invoke('close_window_with_children', {
-      windowId: windowInfo.value.label
-    })
-    console.log('窗口及子窗口已关闭')
+    await closeWindow()
   } catch (error) {
-    console.error('关闭窗口失败:', error)
     message.error('关闭失败')
   }
 }
@@ -611,25 +619,11 @@ onMounted(async () => {
   console.log('头部标题:', headerTitle.value)
   pagination.value.total = estimateData.value?.length
   
-  // 初始化窗口管理
+  // 窗口管理通过 useChildWindowManagement 自动初始化
+  
+  // 保留模态窗口监听（这部分功能暂时保持独立）
   try {
-    currentWindow.value = getCurrentWebviewWindow()
-    windowInfo.value.label = currentWindow.value?.label || 'module-rough-estimate'
-    windowInfo.value.isMaximized = await currentWindow.value?.isMaximized() || false
-    windowInfo.value.isReady = true
-    
-    console.log('概算窗口初始化成功:', {
-      label: windowInfo.value.label,
-      isMaximized: windowInfo.value.isMaximized,
-      realLabel: currentWindow.value?.label
-    })
-    
-    // 监听窗口状态变化
     if (currentWindow.value) {
-      const unlisten1 = await currentWindow.value.listen('tauri://resize', async () => {
-        windowInfo.value.isMaximized = await currentWindow.value.isMaximized()
-      })
-      
       // 监听窗口禁用/启用事件（用于模态窗口）
       const unlisten2 = await currentWindow.value.listen('window-disabled', () => {
         console.log('概算窗口被禁用')
@@ -644,7 +638,7 @@ onMounted(async () => {
       })
     }
   } catch (error) {
-    console.error('窗口初始化失败:', error)
+    console.error('设置模态窗口监听失败:', error)
   }
 
   // 设置数据交换事件处理

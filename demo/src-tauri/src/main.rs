@@ -561,6 +561,7 @@ async fn restore_window_with_children(
     if let Some(window) = app.get_webview_window(&window_id) {
         window.unminimize().map_err(|e| format!("恢复窗口失败: {}", e))?;
         window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
+        window.set_focus().map_err(|e| format!("设置窗口焦点失败: {}", e))?;
         set_window_minimized(&window_id, false);
     }
 
@@ -570,6 +571,7 @@ async fn restore_window_with_children(
         if let Some(child_window) = app.get_webview_window(&child_id) {
             child_window.unminimize().map_err(|e| format!("恢复子窗口失败: {}", e))?;
             child_window.show().map_err(|e| format!("显示子窗口失败: {}", e))?;
+            // 注意：子窗口通常不需要立即获取焦点，让用户决定
             set_window_minimized(&child_id, false);
             println!("已恢复并显示子窗口: {}", child_id);
         }

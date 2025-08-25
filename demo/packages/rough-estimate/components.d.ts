@@ -22,5 +22,6 @@ declare module 'vue' {
     ATag: typeof import('ant-design-vue/es')['Tag']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    WindowManagerExample: typeof import('./src/components/WindowManagerExample.vue')['default']
   }
 }

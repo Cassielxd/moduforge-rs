@@ -145,7 +145,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { message } from 'ant-design-vue'
-import { useChildWindowManagement } from '../composables/useWindowManagement.js'
+import { useChildWindowManagement } from '../composables/useSimpleWindowManagement.js'
 import { useChildWindowDataExchange } from '../composables/useWindowDataExchange.js'
 import AppHeader from '../layouts/AppHeader.vue'
 

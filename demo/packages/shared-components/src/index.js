@@ -15,16 +15,24 @@ export { default as ModalWindowHeader } from './components/ModalWindowHeader.vue
 // 导出共享的composables
 export { useCostCalculation } from './composables/useCostCalculation.js'
 export { useTableOperations } from './composables/useTableOperations.js'
+
+// 窗口管理 - 新的简化稳定版本
 export { 
-  useWindowManagement, 
-  useChildWindowManagement, 
-  useMainWindowManagement 
-} from './composables/useWindowManagement.js'
+  useSimpleWindowManagement,
+  useMainWindowManagement, 
+  useChildWindowManagement
+} from './composables/useSimpleWindowManagement.js'
 export {
   useWindowDataExchange,
   useChildWindowDataExchange,
   useParentWindowDataExchange
 } from './composables/useWindowDataExchange.js'
+export {
+  useUniversalWindowManager,
+  useGlobalWindowManager,
+  useChildAppWindowManager,
+  useMainAppWindowManager
+} from './composables/useUniversalWindowManager.js'
 
 // 导出状态管理
 export {

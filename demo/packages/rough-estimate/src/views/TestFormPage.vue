@@ -25,11 +25,17 @@
         </div>
       </div>
     </div>
+
+    <!-- 检查是否为窗体管理演示模式 -->
+    <div v-if="isWindowManagerDemo" class="window-manager-demo">
+      <WindowManagerExample />
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import WindowManagerExample from '../components/WindowManagerExample.vue'
 
 const currentURL = ref('')
 const currentPort = ref('')
@@ -37,6 +43,12 @@ const currentTime = ref('')
 const testData = ref({
   name: '测试项目',
   amount: 1000000
+})
+
+// 检查是否为窗体管理演示模式
+const isWindowManagerDemo = computed(() => {
+  const urlParams = new URLSearchParams(window.location.search)
+  return urlParams.get('demo') === 'windowManager'
 })
 
 const handleSave = () => {

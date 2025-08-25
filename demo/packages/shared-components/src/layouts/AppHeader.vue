@@ -43,7 +43,7 @@
             :disabled="loading"
           >
             <svg width="12" height="12" viewBox="0 0 12 12">
-              <path v-if="!isMaximized" d="M2 2h8v8H2z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+              <path v-if="!props.isMaximized" d="M2 2h8v8H2z" stroke="currentColor" stroke-width="1.5" fill="none"/>
               <path v-else d="M2 3h6v6H2z M4 1h6v6" stroke="currentColor" stroke-width="1.5" fill="none"/>
             </svg>
           </button>
@@ -100,6 +100,10 @@ const props = defineProps({
   useChildWindow: {
     type: Boolean,
     default: false
+  },
+  isMaximized: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -108,7 +112,6 @@ const emit = defineEmits(['minimize', 'maximize', 'close', 'window-state-change'
 
 // State
 const loading = ref(false)
-const isMaximized = ref(false)
 const currentWindow = ref(null)
 
 // 检测是否在 Tauri 环境中
@@ -116,31 +119,16 @@ const isTauri = computed(() => {
   return typeof window !== 'undefined' && window.__TAURI__
 })
 
-// 初始化窗口管理
+// 初始化窗口管理（简化版，只用于获取窗口引用，状态管理由外部处理）
 const initWindowManager = async () => {
   if (!isTauri.value) return
 
   try {
     const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow')
     currentWindow.value = getCurrentWebviewWindow()
-    
-    // 监听窗口状态变化
-    if (currentWindow.value) {
-      // 检查当前窗口状态
-      const isMaximizedState = await currentWindow.value.isMaximized()
-      isMaximized.value = isMaximizedState
-      
-      // 监听窗口状态变化事件
-      const unlisten = await currentWindow.value.listen('tauri://resize', async () => {
-        const maximized = await currentWindow.value.isMaximized()
-        isMaximized.value = maximized
-        emit('window-state-change', { maximized })
-      })
-      
-      return unlisten
-    }
+    console.log('AppHeader 获取到窗口引用:', currentWindow.value?.label)
   } catch (error) {
-    console.error('初始化窗口管理器失败:', error)
+    console.error('AppHeader 初始化窗口引用失败:', error)
   }
 }
 
@@ -151,20 +139,10 @@ const handleMinimize = async () => {
   loading.value = true
   try {
     emit('minimize')
-    
-    if (isTauri.value && currentWindow.value) {
-      if (props.useChildWindow) {
-        // 子窗口直接最小化
-        await currentWindow.value.minimize()
-      } else {
-        // 主窗口使用自定义逻辑，包括子窗口联动
-        const { invoke } = await import('@tauri-apps/api/core')
-        const windowLabel = currentWindow.value.label || 'main'
-        await invoke('minimize_window_with_children', { windowId: windowLabel })
-      }
-    }
+    // AppHeader 组件只负责发出事件，实际的窗口操作由外部组件处理
+    // 这样避免了重复的窗口管理逻辑和初始化问题
   } catch (error) {
-    console.error('最小化窗口失败:', error)
+    console.error('最小化窗口事件处理失败:', error)
   } finally {
     loading.value = false
   }
@@ -176,17 +154,10 @@ const handleMaximize = async () => {
   loading.value = true
   try {
     emit('maximize')
-    
-    if (isTauri.value && currentWindow.value) {
-      if (isMaximized.value) {
-        await currentWindow.value.unmaximize()
-      } else {
-        await currentWindow.value.maximize()
-      }
-      isMaximized.value = !isMaximized.value
-    }
+    // AppHeader 组件只负责发出事件，实际的窗口操作由外部组件处理
+    // 窗口状态更新也由外部组件管理
   } catch (error) {
-    console.error('切换窗口最大化状态失败:', error)
+    console.error('最大化窗口事件处理失败:', error)
   } finally {
     loading.value = false
   }
@@ -198,36 +169,17 @@ const handleClose = async () => {
   loading.value = true
   try {
     emit('close')
-    
-    if (isTauri.value && currentWindow.value) {
-      if (props.useChildWindow) {
-        // 子窗口直接关闭
-        await currentWindow.value.close()
-      } else {
-        // 主窗口使用自定义逻辑，包括子窗口联动关闭
-        const { invoke } = await import('@tauri-apps/api/core')
-        const windowLabel = currentWindow.value.label || 'main'
-        await invoke('close_window_with_children', { windowId: windowLabel })
-      }
-    }
+    // AppHeader 组件只负责发出事件，实际的窗口操作由外部组件处理
   } catch (error) {
-    console.error('关闭窗口失败:', error)
+    console.error('关闭窗口事件处理失败:', error)
   } finally {
     loading.value = false
   }
 }
 
 // 生命周期
-let unlistenResize = null
-
 onMounted(async () => {
-  unlistenResize = await initWindowManager()
-})
-
-onUnmounted(() => {
-  if (unlistenResize) {
-    unlistenResize()
-  }
+  await initWindowManager()
 })
 </script>
 

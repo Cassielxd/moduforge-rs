@@ -183,18 +183,30 @@ const handleMinimize = async () => {
     return
   }
 
-  // 先发出事件，让外部组件处理
-  emit('minimize')
+  loading.value = true
   
-  // 如果是非 Tauri 环境，执行 Web 模拟
-  if (!isTauri.value) {
-    await webWindowController.minimize()
-    return
-  }
+  try {
+    // 先发出事件，让外部组件处理
+    emit('minimize')
+    
+    // 如果是非 Tauri 环境，执行 Web 模拟
+    if (!isTauri.value) {
+      await webWindowController.minimize()
+      return
+    }
 
-  // 在 Tauri 环境下，如果外部组件监听了事件，就不再执行内部逻辑
-  // 这里简单地不执行任何操作，让外部处理
-  console.log('已发出最小化事件，等待外部处理')
+    // 在 Tauri 环境下，执行实际的最小化操作
+    if (currentWindow.value) {
+      await currentWindow.value.minimize()
+      console.log('窗口已最小化')
+    } else {
+      console.warn('无法获取当前窗口实例，最小化失败')
+    }
+  } catch (error) {
+    console.error('最小化窗口失败:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleMaximize = async () => {
@@ -203,20 +215,42 @@ const handleMaximize = async () => {
     return
   }
 
-  // 先发出事件，让外部组件处理
-  emit('maximize')
+  loading.value = true
+  
+  try {
+    // 先发出事件，让外部组件处理
+    emit('maximize')
 
-  // 如果是非 Tauri 环境，执行 Web 模拟
-  if (!isTauri.value) {
-    const result = await webWindowController.toggleMaximize()
-    if (result.success) {
-      isMaximized.value = result.isMaximized
+    // 如果是非 Tauri 环境，执行 Web 模拟
+    if (!isTauri.value) {
+      const result = await webWindowController.toggleMaximize()
+      if (result.success) {
+        isMaximized.value = result.isMaximized
+      }
+      return
     }
-    return
-  }
 
-  // 在 Tauri 环境下，让外部处理
-  console.log('已发出最大化事件，等待外部处理')
+    // 在 Tauri 环境下，执行实际的最大化操作
+    if (currentWindow.value) {
+      if (isMaximized.value) {
+        await currentWindow.value.unmaximize()
+        console.log('窗口已还原')
+      } else {
+        await currentWindow.value.maximize()
+        console.log('窗口已最大化')
+      }
+      
+      // 更新状态
+      isMaximized.value = await currentWindow.value.isMaximized()
+      emit('window-state-change', { maximized: isMaximized.value })
+    } else {
+      console.warn('无法获取当前窗口实例，最大化操作失败')
+    }
+  } catch (error) {
+    console.error('最大化切换失败:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleClose = async () => {
@@ -225,17 +259,40 @@ const handleClose = async () => {
     return
   }
 
-  // 先发出事件，让外部组件处理
-  emit('close')
+  loading.value = true
+  
+  try {
+    // 先发出事件，让外部组件处理
+    emit('close')
 
-  // 如果是非 Tauri 环境，执行 Web 模拟
-  if (!isTauri.value) {
-    await webWindowController.close()
-    return
+    // 如果是非 Tauri 环境，执行 Web 模拟
+    if (!isTauri.value) {
+      await webWindowController.close()
+      return
+    }
+
+    // 在 Tauri 环境下，执行实际的关闭操作
+    if (currentWindow.value) {
+      // 对于子窗口，直接关闭
+      if (isChildWindow.value) {
+        await currentWindow.value.close()
+        console.log('子窗口已关闭')
+      } else {
+        // 对于主窗口，使用后端命令处理子窗口
+        const { invoke } = await import('@tauri-apps/api/core')
+        await invoke('close_window_with_children', {
+          windowId: currentWindow.value.label
+        })
+        console.log('主窗口及所有子窗口已关闭')
+      }
+    } else {
+      console.warn('无法获取当前窗口实例，关闭失败')
+    }
+  } catch (error) {
+    console.error('关闭窗口失败:', error)
+  } finally {
+    loading.value = false
   }
-
-  // 在 Tauri 环境下，让外部处理
-  console.log('已发出关闭事件，等待外部处理')
 }
 
 // 生命周期

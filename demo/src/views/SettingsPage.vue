@@ -164,7 +164,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
-import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
+import { useChildWindowManagement } from '@cost-app/shared-components'
 
 const activeTab = ref('general')
 const saving = ref(false)
@@ -235,12 +235,14 @@ const resetSettings = () => {
   message.success('设置已重置为默认值')
 }
 
+const { closeCurrentWindow } = useChildWindowManagement()
+
 const closeWindow = async () => {
   try {
-    const currentWindow = getCurrentWebviewWindow()
-    await currentWindow.close()
+    await closeCurrentWindow()
   } catch (error) {
     console.error('关闭窗口失败:', error)
+    message.error('关闭窗口失败')
   }
 }
 

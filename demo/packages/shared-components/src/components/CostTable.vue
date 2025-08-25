@@ -31,10 +31,13 @@
     </div>
 
     <div class="table-content">
+      <!-- {{ filteredData }} -->
       <s-table
         :columns="tableColumns"
         :data-source="filteredData"
-        :row-selection="rowSelection"
+        :delay="200"
+        :animateRows="false"
+        :pagination="false"
         :loading="loading"
         :scroll="{ x: 1200, y: 400 }"
         size="middle"

@@ -67,13 +67,13 @@ function checkDependencies() {
   }
 }
 
-// 启动 shared-components 开发模式
+// 启动 shared-components 开发模式 - 使用 build:watch 进行热更新
 function startSharedComponents() {
   logSection('启动 Shared Components 热更新')
   
   const sharedComponentsPath = join(__dirname, 'packages/shared-components')
   
-  const sharedDev = spawn('npm', ['run', 'dev'], {
+  const sharedDev = spawn('npm', ['run', 'build:watch'], {
     cwd: sharedComponentsPath,
     stdio: 'pipe',
     shell: true

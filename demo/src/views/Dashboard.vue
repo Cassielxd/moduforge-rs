@@ -1,59 +1,26 @@
 <template>
   <div class="dashboard">
     <a-layout class="layout">
-      <!-- 顶部导航 -->
-      <a-layout-header class="header">
-        <div class="header-content" data-tauri-drag-region>
-          <div class="logo">
-            <h2>造价管理系统</h2>
+      <!-- 使用共享头部组件 -->
+      <AppHeader
+        title="造价管理系统"
+        :show-window-controls="true"
+        :is-maximized="isMaximized"
+        @minimize="minimizeWindow"
+        @maximize="toggleMaximize"
+        @close="closeWindow"
+      >
+        <template #right>
+          <div class="user-info">
+            <a-space>
+              <a-avatar :size="32" style="background-color: rgba(255, 255, 255, 0.2); color: white;">
+                <template #icon><UserOutlined /></template>
+              </a-avatar>
+              <span style="color: white; font-weight: 500;">管理员</span>
+            </a-space>
           </div>
-          <div class="header-center" data-tauri-drag-region>
-            <!-- 可拖动区域 -->
-          </div>
-          <div class="header-right">
-            <div class="user-info">
-              <a-space>
-                <a-avatar :size="32" style="background-color: rgba(255, 255, 255, 0.2); color: white;">
-                  <template #icon><UserOutlined /></template>
-                </a-avatar>
-                <span style="color: white; font-weight: 500;">管理员</span>
-              </a-space>
-            </div>
-            <div class="window-controls">
-              <a-button
-                type="text"
-                size="small"
-                class="window-control-btn"
-                @click="minimizeWindow"
-                title="最小化"
-              >
-                <template #icon><MinusOutlined /></template>
-              </a-button>
-              <a-button
-                type="text"
-                size="small"
-                class="window-control-btn"
-                @click="toggleMaximize"
-                :title="isMaximized ? '还原' : '最大化'"
-              >
-                <template #icon>
-                  <BorderOutlined v-if="!isMaximized" />
-                  <ShrinkOutlined v-else />
-                </template>
-              </a-button>
-              <a-button
-                type="text"
-                size="small"
-                class="window-control-btn close-btn"
-                @click="closeWindow"
-                title="关闭"
-              >
-                <template #icon><CloseOutlined /></template>
-              </a-button>
-            </div>
-          </div>
-        </div>
-      </a-layout-header>
+        </template>
+      </AppHeader>
 
       <!-- 主内容区 -->
       <a-layout-content class="content">
@@ -91,7 +58,7 @@
           </div>
 
           <!-- 子窗口演示 -->
-          <ChildWindowDemo />
+          <!-- 演示区域可以根据需要添加内容 -->
 
           <!-- 系统状态 -->
           <a-card title="系统状态" class="status-card">
@@ -117,9 +84,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { useMainWindowManagement } from '@cost-app/shared-components'
+import { invoke } from '@tauri-apps/api/core'
+import { AppHeader, useMainWindowManagement } from '@cost-app/shared-components'
 import {
   UserOutlined,
   CalculatorOutlined,
@@ -128,18 +96,41 @@ import {
   FileTextOutlined,
   AuditOutlined,
   SettingOutlined,
-  MinusOutlined,
-  BorderOutlined,
-  ShrinkOutlined,
-  CloseOutlined
+  BorderOutlined
 } from '@ant-design/icons-vue'
-import { invoke } from '@tauri-apps/api/core'
-import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
-import ChildWindowDemo from '../components/ChildWindowDemo.vue'
+// 使用新的简化窗口管理
+const {
+  isMaximized,
+  minimizeWindow: minimize,
+  toggleMaximize: toggle,
+  closeWindow: close
+} = useMainWindowManagement()
 
-// 窗口状态
-const isMaximized = ref(false)
-const currentWindow = ref(null)
+// 包装窗口操作函数以添加用户反馈
+const minimizeWindow = async () => {
+  try {
+    await minimize()
+    message.success('窗口已最小化')
+  } catch (error) {
+    message.error('窗口操作失败')
+  }
+}
+
+const toggleMaximize = async () => {
+  try {
+    await toggle()
+  } catch (error) {
+    message.error('窗口操作失败')
+  }
+}
+
+const closeWindow = async () => {
+  try {
+    await close()
+  } catch (error) {
+    message.error('窗口操作失败')
+  }
+}
 
 const modules = ref([
   {
@@ -253,79 +244,8 @@ const openModule = async (module) => {
     message.error(`打开${module.title}模块失败: ${error}`)
   }
 }
-// 窗口控制方法
-const minimizeWindow = async () => {
-  console.log(currentWindow.value)
-  try {
-    if (currentWindow.value) {
-      await currentWindow.value.minimize()
-      console.log('窗口已最小化')
-    } else {
-      console.error('窗口对象未初始化')
-    }
-  } catch (error) {
-    console.error('最小化窗口失败:', error)
-    message.error('最小化失败')
-  }
-}
 
-const toggleMaximize = async () => {
-  console.log(currentWindow.value)
-  try {
-    if (currentWindow.value) {
-      if (isMaximized.value) {
-        await currentWindow.value.unmaximize()
-        isMaximized.value = false
-        console.log('窗口已还原')
-      } else {
-        await currentWindow.value.maximize()
-        isMaximized.value = true
-        console.log('窗口已最大化')
-      }
-    } else {
-      console.error('窗口对象未初始化')
-    }
-  } catch (error) {
-    console.error('切换最大化状态失败:', error)
-    message.error('窗口操作失败')
-  }
-}
-
-const closeWindow = async () => {
-  try {
-    if (currentWindow.value) {
-      await currentWindow.value.close()
-      console.log('窗口已关闭')
-    } else {
-      console.error('窗口对象未初始化')
-    }
-  } catch (error) {
-    console.error('关闭窗口失败:', error)
-    message.error('关闭失败')
-  }
-}
-
-// 初始化
-onMounted(async () => {
-  try {
-    currentWindow.value = getCurrentWebviewWindow()
-    console.log('窗口对象已初始化:', currentWindow.value)
-
-    // 获取初始窗口状态
-    isMaximized.value = await currentWindow.value.isMaximized()
-    console.log('初始最大化状态:', isMaximized.value)
-
-    // 监听窗口状态变化
-    await currentWindow.value.listen('tauri://resize', async () => {
-      // 窗口大小改变时更新状态
-      isMaximized.value = await currentWindow.value.isMaximized()
-      console.log('窗口状态更新:', isMaximized.value ? '最大化' : '正常')
-    })
-
-  } catch (error) {
-    console.error('初始化窗口状态失败:', error)
-  }
-})
+// 窗口管理通过 useMainWindowManagement 自动初始化
 </script>
 
 <style scoped>

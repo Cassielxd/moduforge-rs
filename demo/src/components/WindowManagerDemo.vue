@@ -1,8 +1,12 @@
 <template>
   <div class="window-manager-demo">
     <div class="demo-header">
-      <h2>窗体管理演示</h2>
-      <p>演示 Tauri 中类似 Electron 的父子窗体关系管理</p>
+      <h2>通用窗体管理演示</h2>
+      <p>演示工作台和子应用之间的窗体管理功能</p>
+      <div class="current-info">
+        <span>当前环境: <strong>工作台主应用</strong></span>
+        <span>打开窗口数: <strong>{{ universalWindowManager.windowCount.value }}</strong></span>
+      </div>
     </div>
     
     <div class="demo-content">
@@ -50,9 +54,32 @@
         </div>
       </div>
       
+      <!-- 通用窗体管理演示 -->
+      <div class="universal-window-controls">
+        <h3>通用窗体管理功能</h3>
+        <div class="control-group">
+          <button @click="openEstimateDemo">打开概算演示</button>
+          <button @click="openTableTest">打开表格测试</button>
+          <button @click="openDataViewer">打开数据查看器</button>
+          <button @click="openRoughEstimate">打开概算子应用</button>
+          <button @click="openSettings">打开设置（模态）</button>
+          <button @click="closeAllUniversalWindows" class="danger">关闭所有通用窗口</button>
+        </div>
+        
+        <div v-if="universalWindowManager.hasOpenWindows.value" class="universal-window-list">
+          <h4>通用窗体管理器打开的窗口：</h4>
+          <ul>
+            <li v-for="window in universalWindowManager.openWindowList.value" :key="window.id">
+              <span>{{ window.title }} ({{ window.type }})</span>
+              <button @click="closeUniversalWindow(window.id)" class="close-btn">关闭</button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
       <!-- 子窗口创建 -->
       <div class="child-window-controls">
-        <h3>创建子窗口</h3>
+        <h3>底层窗口管理（原生创建）</h3>
         
         <div class="create-form">
           <div class="form-group">
@@ -129,23 +156,27 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useWindowManager } from '../composables/useWindowManager.js'
+import { useMainAppWindowManager, useMainWindowManagement } from '@cost-app/shared-components'
 
-// 使用窗体管理器
+// 使用底层窗体管理器
 const {
   currentWindow,
+  windowLabel,
   isMinimized,
   children,
-  initWindowManager,
+  windowInfo,
+  initializeWindow,
   createChildWindow: createChild,
   closeChildWindow,
   minimizeWindow: minimize,
   restoreWindow: restore,
   closeWindow: close,
   createModalDialog: createModal,
-  createToolWindow: createTool,
-  getWindowInfo
-} = useWindowManager()
+  createToolWindow: createTool
+} = useMainWindowManagement()
+
+// 使用通用窗体管理器 - 新的高级管理器
+const universalWindowManager = useMainAppWindowManager()
 
 // 新窗口表单数据
 const newWindow = ref({
@@ -156,8 +187,7 @@ const newWindow = ref({
   modal: false
 })
 
-// 计算属性
-const windowInfo = computed(() => getWindowInfo())
+// windowInfo 已从 useMainWindowManagement 中获取
 
 // 窗口操作方法
 const minimizeWindow = async () => {
@@ -183,6 +213,70 @@ const closeWindow = async () => {
     } catch (error) {
       console.error('关闭失败:', error)
     }
+  }
+}
+
+// 通用窗体管理方法
+const openEstimateDemo = async () => {
+  try {
+    await universalWindowManager.quick.estimateDemo()
+    console.log('概算演示窗口已打开')
+  } catch (error) {
+    console.error('打开概算演示失败:', error)
+  }
+}
+
+const openTableTest = async () => {
+  try {
+    await universalWindowManager.quick.tableTest()
+    console.log('表格测试窗口已打开')
+  } catch (error) {
+    console.error('打开表格测试失败:', error)
+  }
+}
+
+const openDataViewer = async () => {
+  try {
+    await universalWindowManager.quick.dataViewer()
+    console.log('数据查看器窗口已打开')
+  } catch (error) {
+    console.error('打开数据查看器失败:', error)
+  }
+}
+
+const openRoughEstimate = async () => {
+  try {
+    await universalWindowManager.quick.roughEstimate()
+    console.log('概算子应用已打开')
+  } catch (error) {
+    console.error('打开概算子应用失败:', error)
+  }
+}
+
+const openSettings = async () => {
+  try {
+    await universalWindowManager.quick.settings()
+    console.log('设置窗口已打开')
+  } catch (error) {
+    console.error('打开设置失败:', error)
+  }
+}
+
+const closeAllUniversalWindows = async () => {
+  try {
+    await universalWindowManager.closeAllWindows()
+    console.log('所有通用窗口已关闭')
+  } catch (error) {
+    console.error('关闭窗口失败:', error)
+  }
+}
+
+const closeUniversalWindow = async (windowId) => {
+  try {
+    await universalWindowManager.closeWindow(windowId)
+    console.log('窗口已关闭:', windowId)
+  } catch (error) {
+    console.error('关闭窗口失败:', error)
   }
 }
 
@@ -309,7 +403,7 @@ const createHelpWindow = async () => {
 let cleanup = null
 
 onMounted(async () => {
-  cleanup = await initWindowManager()
+  await initializeWindow()
 })
 
 onUnmounted(() => {
@@ -341,6 +435,15 @@ onUnmounted(() => {
   font-size: 14px;
 }
 
+.current-info {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 10px;
+  font-size: 14px;
+  color: #666;
+}
+
 .demo-content {
   display: flex;
   flex-direction: column;
@@ -350,7 +453,8 @@ onUnmounted(() => {
 .window-info,
 .window-controls,
 .child-window-controls,
-.preset-windows {
+.preset-windows,
+.universal-window-controls {
   background: #f5f5f5;
   padding: 20px;
   border-radius: 8px;
@@ -360,10 +464,49 @@ onUnmounted(() => {
 .window-info h3,
 .window-controls h3,
 .child-window-controls h3,
-.preset-windows h3 {
+.preset-windows h3,
+.universal-window-controls h3 {
   margin: 0 0 15px 0;
   color: #333;
   font-size: 16px;
+}
+
+.universal-window-controls {
+  background: #e6f7ff;
+  border-color: #91d5ff;
+}
+
+.universal-window-controls h3 {
+  color: #1890ff;
+}
+
+.universal-window-list {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #91d5ff;
+}
+
+.universal-window-list h4 {
+  margin: 0 0 10px 0;
+  color: #1890ff;
+  font-size: 14px;
+}
+
+.universal-window-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.universal-window-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f0f8ff;
+  margin-bottom: 5px;
+  border-radius: 4px;
+  border: 1px solid #d1e9ff;
 }
 
 .info-item {
