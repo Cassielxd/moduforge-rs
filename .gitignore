@@ -1,8 +1,9 @@
 /target
 /data
 /logs
-.idea
+/frontendUi
 
+.idea
 /.vs
 .DS_Store
 .Thumbs.db
