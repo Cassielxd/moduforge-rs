@@ -34,7 +34,7 @@ mod tests {
                 tree.nodes.iter().map(|m| m.len()).collect();
             let meta_json = serde_json::json!({"title":"demo document","version":state.version});
             let shard_meta = SnapshotShardMeta {
-                root_id: tree.root_id.clone(),
+                root_id: tree.root_id.clone().to_string(),
                 num_shards,
                 counts: shard_counts,
             };
