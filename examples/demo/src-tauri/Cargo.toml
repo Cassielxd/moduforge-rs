@@ -20,6 +20,8 @@ tauri-build = { version = "2.2.0", features = [] }
 [dependencies]
 log = "0.4"
 tauri = { version = "2.5.1", features = [ "tray-icon"] }
+tauri-plugin-log = "2.5.0"
+tauri-plugin-dialog = "2.0.0"
 tokio = { version = "1.0", features = ["full"] }
 tokio-util = "0.7.14"
 serde = { version = "1.0", features = ["derive", "rc"] }
@@ -38,18 +40,19 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2"
 # 核心模块
-moduforge-model =  {path = "../../../crates/model"}
-moduforge-state =    {path = "../../../crates/state"}
-moduforge-transform = {path = "../../../crates/transform"}
-moduforge-core = {path = "../../../crates/core"}
-moduforge-macros = {path = "../../../crates/macro"}
-moduforge-macros-derive = {path = "../../../crates/derive"}
-moduforge-collaboration-client = {path = "../../../crates/collaboration_client"}
+moduforge-model =  {workspace = true}
+moduforge-state =    {workspace = true}
+moduforge-transform = {workspace = true}
+moduforge-core = {workspace = true}
+moduforge-macros = {workspace = true}
+moduforge-macros-derive = {workspace = true}
+moduforge-collaboration-client = {workspace = true}
 
 # 规则引擎
-moduforge-rules-engine = {path = "../../../crates/engine"}
-moduforge-rules-expression = {path = "../../../crates/expression"}
-moduforge-rules-template = {path = "../../../crates/template"}
+moduforge-rules-engine = {workspace = true}
+moduforge-rules-expression = {workspace = true}
+moduforge-rules-template = {workspace = true}
 chrono = "0.4.41"
 
-
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-global-shortcut = "2.2.1"

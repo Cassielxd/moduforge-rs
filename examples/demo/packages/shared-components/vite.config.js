@@ -12,13 +12,26 @@ export default defineConfig(({ mode }) => ({
       formats: ['es', 'umd']
     },
     rollupOptions: {
-      external: ['vue', 'ant-design-vue', 'dayjs', '@surely-vue/table'],
+      external: [
+        'vue', 
+        'ant-design-vue', 
+        'dayjs', 
+        '@surely-vue/table',
+        '@tauri-apps/api',
+        '@tauri-apps/api/webviewWindow',
+        '@tauri-apps/api/core',
+        '@tauri-apps/api/event'
+      ],
       output: {
         globals: {
           vue: 'Vue',
           'ant-design-vue': 'antd',
           'dayjs': 'dayjs',
-          '@surely-vue/table': 'STable'
+          '@surely-vue/table': 'STable',
+          '@tauri-apps/api': 'TauriApi',
+          '@tauri-apps/api/webviewWindow': 'TauriWebviewWindow',
+          '@tauri-apps/api/core': 'TauriCore',
+          '@tauri-apps/api/event': 'TauriEvent'
         }
       }
     },

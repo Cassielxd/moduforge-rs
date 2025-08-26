@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 
 // 概算应用专用路由配置
 const routes = [
@@ -22,9 +22,9 @@ const routes = [
   }
 ]
 
-// 创建路由实例
+// 创建路由实例 - 使用 hash 模式以支持打包后的环境
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes
 })
 

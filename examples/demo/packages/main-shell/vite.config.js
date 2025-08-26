@@ -23,10 +23,12 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
+    sourcemap: true,  // 开启 sourcemap 便于调试
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html')
       }
+      // 移除 external 配置，让 Tauri API 正确打包
     }
   },
   resolve: {

@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import vueDevTools from 'vite-plugin-vue-devtools'
 import { resolve } from 'path'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
@@ -9,7 +8,7 @@ import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 export default defineConfig({
   plugins: [
     vue(),
-    vueDevTools(),
+    // vueDevTools(), // 暂时注释掉以避免导入错误
     AutoImport({
       resolvers: [AntDesignVueResolver()],
     }),
@@ -26,10 +25,12 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
+    sourcemap: true,  // 开启 sourcemap 便于调试
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html')
       }
+      // 移除 external 配置，让 Tauri API 正确打包
     }
   },
       // CSS预处理器配置
