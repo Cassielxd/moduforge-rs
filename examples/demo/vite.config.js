@@ -53,7 +53,7 @@ const copyPackagesPlugin = () => {
   return {
     name: 'copy-packages',
     writeBundle() {
-      const packages = ['rough-estimate', 'main-shell'];
+      const packages = ['rough-estimate'];
 
       packages.forEach(pkg => {
         try {
