@@ -52,7 +52,7 @@ export {
 export { globalState, getters, actions, persistence } from './store/index.js'
 
 // 导出布局组件
-export { AppHeader, SimpleHeader } from './layouts/index.js'
+export { AppHeader, SimpleHeader,op } from './layouts/index.js'
 
 // 导出Web环境工具函数
 export {

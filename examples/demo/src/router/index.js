@@ -27,12 +27,6 @@ const routes = [
     meta: { title: '数据查看器' }
   },
   {
-    path: '/estimate-demo',
-    name: 'EstimateDemo',
-    component: () => import('../views/EstimateDemo.vue'),
-    meta: { title: '概算演示' }
-  },
-  {
     path: '/table-test',
     name: 'TableTest',
     component: () => import('../views/TableTest.vue'),

@@ -219,10 +219,11 @@ const closeWindow = async () => {
 // 通用窗体管理方法
 const openEstimateDemo = async () => {
   try {
-    await universalWindowManager.quick.estimateDemo()
-    console.log('概算演示窗口已打开')
+    // 直接打开概算子应用
+    await universalWindowManager.quick.roughEstimate()
+    console.log('概算管理窗口已打开')
   } catch (error) {
-    console.error('打开概算演示失败:', error)
+    console.error('打开概算管理失败:', error)
   }
 }
 

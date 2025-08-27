@@ -13,7 +13,7 @@
         <h4>工作台窗口操作</h4>
         <a-space wrap>
           <a-button type="primary" @click="openEstimateDemo">
-            打开概算演示
+            打开数据查看器
           </a-button>
           <a-button @click="openTableTest">
             打开表格测试
@@ -93,13 +93,13 @@ export default {
     // 打开工作台相关窗口
     const openEstimateDemo = async () => {
       try {
-        await windowManager.quick.estimateDemo({
+        await windowManager.quick.dataPage({
           width: 1400,
           height: 900
         })
-        message.success('概算演示窗口已打开')
+        message.success('数据查看器窗口已打开')
       } catch (error) {
-        message.error('打开概算演示窗口失败')
+        message.error('打开数据查看器窗口失败')
         console.error(error)
       }
     }

@@ -35,7 +35,9 @@
           </div>
         </template>
       </SimpleHeader>
-
+      <div>
+        <op></op>
+      </div>
       <!-- 主内容区 -->
       <a-layout-content class="content">
         <div class="content-wrapper">
@@ -115,7 +117,7 @@ import {
   ExportOutlined,
   WindowsOutlined
 } from '@ant-design/icons-vue'
-import { CostTable, useEstimate, SimpleHeader, useParentWindowDataExchange, useChildAppWindowManager } from '@cost-app/shared-components'
+import { CostTable, useEstimate, SimpleHeader, useParentWindowDataExchange, useChildAppWindowManager,op } from '@cost-app/shared-components'
 import { invoke } from '@tauri-apps/api/core'
 import { useChildWindowManagement } from '@cost-app/shared-components'
 
@@ -511,9 +513,27 @@ const openFormWindow = async (mode = 'create', data = null) => {
       console.log('窗口不存在，创建新窗口:', windowId)
     }
 
-    // 构建完整的URL，使用当前应用的端口访问form-page路由
+    // 构建完整的URL，区分开发和生产环境
+    let fullUrl
     const currentOrigin = window.location.origin
-    const fullUrl = `${currentOrigin}/form-page?${params.toString()}`
+    const pathname = window.location.pathname
+    const isDev = window.location.port && (window.location.port.startsWith('51') || window.location.hostname === 'localhost')
+    
+    console.log('环境检测:', {
+      origin: currentOrigin,
+      port: window.location.port,
+      hostname: window.location.hostname,
+      pathname: pathname,
+      isDev
+    })
+    
+    if (isDev) {
+      // 开发环境：使用当前应用的完整URL
+      fullUrl = `${currentOrigin}/#/form-page?${params.toString()}`
+    } else {
+      // 生产环境：使用相对路径指向概算子应用
+      fullUrl = `/rough-estimate/index.html#/form-page?${params.toString()}`
+    }
     
     console.log('子窗口完整URL:', fullUrl)
 
