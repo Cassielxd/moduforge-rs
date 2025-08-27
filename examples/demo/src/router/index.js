@@ -15,12 +15,6 @@ const routes = [
     meta: { title: '表单页面' }
   },
   {
-    path: '/settings-page',
-    name: 'SettingsPage',
-    component: () => import('../views/SettingsPage.vue'),
-    meta: { title: '系统设置' }
-  },
-  {
     path: '/data-page',
     name: 'DataPage',
     component: () => import('../views/DataPage.vue'),
@@ -32,12 +26,6 @@ const routes = [
     component: () => import('../views/TableTest.vue'),
     meta: { title: '表格测试' }
   },
-  {
-    path: '/window-manager',
-    name: 'WindowManager',
-    component: () => import('../components/WindowManagerDemo.vue'),
-    meta: { title: '窗体管理演示' }
-  }
 ]
 
 // 创建路由实例

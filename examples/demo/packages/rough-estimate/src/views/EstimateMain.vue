@@ -25,10 +25,6 @@
                 <template #icon><ExportOutlined /></template>
                 导出数据
               </a-button>
-              <a-button type="dashed" @click="showWindowManager">
-                <template #icon><WindowsOutlined /></template>
-                窗体管理演示
-              </a-button>
               <a-tag v-if="isReady" color="green">{{ windowLabel }}</a-tag>
               <a-tag v-else color="orange">初始化中...</a-tag>
             </a-space>
@@ -114,10 +110,9 @@ import { message } from 'ant-design-vue'
 import {
   PlusOutlined,
   ImportOutlined,
-  ExportOutlined,
-  WindowsOutlined
+  ExportOutlined
 } from '@ant-design/icons-vue'
-import { CostTable, useEstimate, SimpleHeader, useParentWindowDataExchange, useChildAppWindowManager,op } from '@cost-app/shared-components'
+import { CostTable, useEstimate, SimpleHeader, useParentWindowDataExchange, useChildAppWindowManager, useEstimateFormWindow, op } from '@cost-app/shared-components'
 import { invoke } from '@tauri-apps/api/core'
 import { useChildWindowManagement } from '@cost-app/shared-components'
 
@@ -152,6 +147,9 @@ const {
 
 // 使用子应用窗体管理器
 const windowManager = useChildAppWindowManager()
+
+// 使用新的表单窗口管理器
+const formWindowManager = useEstimateFormWindow()
 
 // windowReady、windowLabel、isMaximized 等都已从 useChildWindowManagement 获取
 
@@ -431,8 +429,11 @@ const getStatusText = (status) => {
 
 // 操作方法
 const newEstimate = async () => {
+  console.log(windowInfo.value)
   try {
-    await openFormWindow('create', null)
+    await formWindowManager.createForm({
+      windowInfo: windowInfo.value
+    })
   } catch (error) {
     console.error('打开新建表单失败:', error)
     message.error('打开表单失败')
@@ -447,123 +448,21 @@ const exportData = () => {
   message.success('数据导出成功！')
 }
 
-// 窗体管理演示 - 打开工作台的窗体管理演示页面
-const showWindowManager = async () => {
-  try {
-    // 打开工作台的窗体管理演示页面，建立父子窗口关系
-    await windowManager.openWindow('window-manager-demo', {
-      width: 1000,
-      height: 700
-    })
-    message.success('窗体管理演示窗口已打开')
-  } catch (error) {
-    console.error('打开窗体管理演示失败:', error)
-    message.error('打开窗体管理演示失败')
-  }
-}
 
-// 打开表单窗口
-const openFormWindow = async (mode = 'create', data = null) => {
-  try {
-    // 对于相同模式，使用固定的窗口ID，这样可以重用窗口
-    const baseWindowId = data?.id ? `estimate-form-${mode}-${data.id}` : `estimate-form-${mode}`
-    const windowId = baseWindowId
-    const title = mode === 'create' ? '新建概算' : mode === 'edit' ? '编辑概算' : '查看概算'
-    const isModal = mode !== 'view' // 编辑和创建使用模态，查看使用非模态
-
-    console.log('打开表单窗口:', {
-      windowId,
-      title,
-      mode,
-      modal: isModal,
-      dataId: data?.id
-    })
-
-    // 构建URL参数
-    const parentWindowLabel = windowInfo.value.label || 'module-rough-estimate'
-    const currentPort = window.location.port || '5176' // 默认端口
-    const params = new URLSearchParams({
-      mode,
-      formType: 'estimate',
-      modal: isModal.toString(),
-      parentWindow: parentWindowLabel,
-      appId: 'rough-estimate',  // 应用标识
-      appPort: currentPort  // 应用端口（动态获取）
-    })
-
-    console.log('传递给表单的参数:', {
-      mode,
-      formType: 'estimate',
-      modal: isModal,
-      parentWindow: parentWindowLabel
-    })
-
-    if (data) {
-      params.append('data', JSON.stringify(data))
-    }
-
-    // 先尝试显示已存在的窗口
-    try {
-      await invoke('show_existing_window', { windowId })
-      console.log('已显示现有窗口:', windowId)
-      message.success(`${title}窗口已显示`)
-      return
-    } catch (error) {
-      // 窗口不存在，继续创建新窗口
-      console.log('窗口不存在，创建新窗口:', windowId)
-    }
-
-    // 构建完整的URL，区分开发和生产环境
-    let fullUrl
-    const currentOrigin = window.location.origin
-    const pathname = window.location.pathname
-    const isDev = window.location.port && (window.location.port.startsWith('51') || window.location.hostname === 'localhost')
-    
-    console.log('环境检测:', {
-      origin: currentOrigin,
-      port: window.location.port,
-      hostname: window.location.hostname,
-      pathname: pathname,
-      isDev
-    })
-    
-    if (isDev) {
-      // 开发环境：使用当前应用的完整URL
-      fullUrl = `${currentOrigin}/#/form-page?${params.toString()}`
-    } else {
-      // 生产环境：使用相对路径指向概算子应用
-      fullUrl = `/rough-estimate/index.html#/form-page?${params.toString()}`
-    }
-    
-    console.log('子窗口完整URL:', fullUrl)
-
-    // 使用invoke直接调用后端创建窗口
-    await invoke('create_child_window', {
-      windowId,
-      title,
-      url: fullUrl,  // 使用完整URL而不是相对路径
-      modal: !isModal,
-      width: isModal ? 700 : 800,  // 比概算窗口更小
-      height: isModal ? 500 : 600,  // 比概算窗口更小
-      parentWindow: windowInfo.value.label  // 确保使用概算窗口的label作为父窗口
-    })
-    
-    console.log('创建子窗口，父窗口:', windowInfo.value.label, '模态:', isModal)
-
-    message.success(`${title}窗口已打开`)
-  } catch (error) {
-    console.error('打开表单窗口失败:', error)
-    message.error('打开窗口失败')
-  }
-}
 
 // 表格事件处理
 const handleOpenForm = ({ type, data }) => {
-  openFormWindow(type, data)
+  if (type === 'create') {
+    formWindowManager.createForm({ windowInfo: windowInfo.value })
+  } else if (type === 'edit') {
+    formWindowManager.editForm(data, { windowInfo: windowInfo.value })
+  } else if (type === 'view') {
+    formWindowManager.viewForm(data, { windowInfo: windowInfo.value })
+  }
 }
 
 const handleEditRow = (record) => {
-  openFormWindow('edit', record)
+  formWindowManager.editForm(record, { windowInfo: windowInfo.value })
 }
 
 const handleDeleteRow = (record) => {

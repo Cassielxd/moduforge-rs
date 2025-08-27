@@ -16,6 +16,14 @@ export { default as ModalWindowHeader } from './components/ModalWindowHeader.vue
 export { useCostCalculation } from './composables/useCostCalculation.js'
 export { useTableOperations } from './composables/useTableOperations.js'
 
+// 表单窗口管理
+export { 
+  useFormWindowManager,
+  useEstimateFormWindow,
+  useBudgetFormWindow,
+  formWindowPresets
+} from './composables/useFormWindowManager.js'
+
 // 窗口管理 - 新的简化稳定版本
 export { 
   useSimpleWindowManagement,
