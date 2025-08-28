@@ -1,90 +1,106 @@
 <template>
-  <div class="estimate-main">
-    <a-layout class="layout">
-      <!-- 使用共享头部组件 -->
-      <SimpleHeader
-        :title="headerTitle"
-        :show-window-controls="true"
-        :is-maximized="isMaximized"
-        @minimize="onMinimize"
-        @maximize="onMaximize"
-        @close="onClose"
-      >
-        <template #right>
-          <div class="actions">
-            <a-space>
-              <a-button type="primary" @click="newEstimate">
-                <template #icon><PlusOutlined /></template>
-                新建概算
-              </a-button>
-              <a-button @click="importData">
-                <template #icon><ImportOutlined /></template>
-                导入数据
-              </a-button>
-              <a-button @click="exportData">
-                <template #icon><ExportOutlined /></template>
-                导出数据
-              </a-button>
-              <a-tag v-if="isReady" color="green">{{ windowLabel }}</a-tag>
-              <a-tag v-else color="orange">初始化中...</a-tag>
-            </a-space>
-          </div>
-        </template>
-      </SimpleHeader>
-      <div>
-        <op></op>
+  <AppLayout
+    class="child-app-layout"
+    :title="headerTitle"
+    :loading="loading"
+    loading-tip="正在处理中..."
+    :is-maximized="isMaximized"
+    :show-operate="true"
+    :show-aside="true"
+    :show-footer="true"
+    @minimize="onMinimize"
+    @maximize="onMaximize"
+    @close="onClose"
+    @aside-toggle="onAsideToggle"
+  >
+    <!-- Header 右侧内容 -->
+    <template #header-right>
+      <div class="actions">
+        <a-space>
+          <a-button type="primary" @click="newEstimate">
+            <template #icon><PlusOutlined /></template>
+            新建概算
+          </a-button>
+          <a-button @click="importData">
+            <template #icon><ImportOutlined /></template>
+            导入数据
+          </a-button>
+          <a-button @click="exportData">
+            <template #icon><ExportOutlined /></template>
+            导出数据
+          </a-button>
+          <a-tag v-if="isReady" color="green">{{ windowLabel }}</a-tag>
+          <a-tag v-else color="orange">初始化中...</a-tag>
+        </a-space>
       </div>
-      <!-- 主内容区 -->
-      <a-layout-content class="content">
-        <div class="content-wrapper">
-          <!-- 工具栏 -->
-          <a-card class="toolbar-card" :bordered="false">
-            <a-row :gutter="16" align="middle">
-              <a-col :span="8">
-                <a-input-search
-                  v-model:value="searchText"
-                  placeholder="搜索概算项目..."
-                  @search="handleSearch"
-                  style="width: 100%"
-                />
-              </a-col>
-              <a-col :span="4">
-                <a-select
-                  v-model:value="statusFilter"
-                  placeholder="状态筛选"
-                  style="width: 100%"
-                  @change="handleStatusFilter"
-                  allow-clear
-                >
-                  <a-select-option value="">全部状态</a-select-option>
-                  <a-select-option value="draft">草稿</a-select-option>
-                  <a-select-option value="reviewing">审核中</a-select-option>
-                  <a-select-option value="approved">已批准</a-select-option>
-                  <a-select-option value="rejected">已拒绝</a-select-option>
-                </a-select>
-              </a-col>
-              <a-col :span="4">
-                <a-date-picker
-                  v-model:value="dateFilter"
-                  placeholder="选择日期"
-                  style="width: 100%"
-                  @change="handleDateFilter"
-                />
-              </a-col>
-              <a-col :span="8" style="text-align: right">
-                <a-space>
-                  <a-button @click="handleRefresh">
-                    刷新
-                  </a-button>
-                  <a-button type="primary" @click="newEstimate">
-                    新建概算
-                  </a-button>
-                </a-space>
-              </a-col>
-            </a-row>
-          </a-card>
-          <!-- 数据表格 -->
-          <a-card class="table-card" :bordered="false">
+    </template>
+
+    <!-- 操作条 -->
+    <template #operate>
+      <OperateBar
+        :show-default-actions="true"
+        :has-selection="hasTableSelection"
+        :actions="customActions"
+        :more-actions="moreActions"
+        :show-search="true"
+        :show-filter="true"
+        :filters="filterOptions"
+        :show-view-switcher="false"
+        :show-refresh="true"
+        :refresh-loading="refreshLoading"
+        :status-text="statusText"
+        @action="handleOperateAction"
+        @search="handleSearch"
+        @filter-change="handleFilterChange"
+        @more-action="handleMoreAction"
+      />
+    </template>
+
+    <!-- 左侧项目树 -->
+    <template #aside>
+      <AsideTree
+        :tree-data="projectTree"
+        :selected-keys="selectedProjectKeys"
+        :expanded-keys="expandedProjectKeys"
+        :draggable="false"
+        :show-actions="true"
+        @select="handleProjectSelect"
+        @expand="handleProjectExpand"
+        @refresh="handleProjectRefresh"
+        @expand-all="handleProjectExpandAll"
+        @collapse-all="handleProjectCollapseAll"
+      >
+        <template #title="{ title, key, dataRef }">
+          <span :class="{ 'project-active': selectedProjectKeys.includes(key) }">
+            {{ title }}
+          </span>
+        </template>
+        <template #icon="{ dataRef }">
+          <component 
+            :is="getProjectIcon(dataRef)" 
+            :style="{ color: getProjectColor(dataRef) }" 
+          />
+        </template>
+      </AsideTree>
+    </template>
+
+    <!-- 主要内容区域 -->
+    <template #content>
+      <div class="main-content">
+        <!-- 内容头部 -->
+        <div class="content-header">
+          <a-breadcrumb>
+            <a-breadcrumb-item>
+              <HomeOutlined />
+              概算管理
+            </a-breadcrumb-item>
+            <a-breadcrumb-item>{{ currentProject?.title || '项目列表' }}</a-breadcrumb-item>
+          </a-breadcrumb>
+        </div>
+
+        <!-- 内容主体 -->
+        <div class="content-body">
+          <a-card title="概算项目列表" :bordered="false">
             <CostTable
               :data="filteredData"
               :columns="costTableColumns"
@@ -99,9 +115,25 @@
             />
           </a-card>
         </div>
-      </a-layout-content>
-    </a-layout>
-  </div>
+      </div>
+    </template>
+
+    <!-- Footer 内容 -->
+    <template #footer>
+      <div class="footer-content">
+        <div class="footer-left">
+          <a-typography-text type="secondary">
+            共 {{ filteredData.length }} 个项目 | 总预算: ¥{{ totalBudget.toLocaleString() }}
+          </a-typography-text>
+        </div>
+        <div class="footer-right">
+          <a-typography-text type="secondary">
+            ModuForge-RS 概算管理系统 v1.0.0
+          </a-typography-text>
+        </div>
+      </div>
+    </template>
+  </AppLayout>
 </template>
 
 <script setup>
@@ -110,9 +142,26 @@ import { message } from 'ant-design-vue'
 import {
   PlusOutlined,
   ImportOutlined,
-  ExportOutlined
+  ExportOutlined,
+  HomeOutlined,
+  FolderOutlined,
+  ProjectOutlined,
+  FileOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  SettingOutlined,
+  ReloadOutlined
 } from '@ant-design/icons-vue'
-import { CostTable, useEstimate, SimpleHeader, useParentWindowDataExchange, useChildAppWindowManager, useEstimateFormWindow, op } from '@cost-app/shared-components'
+import { 
+  CostTable, 
+  useEstimate, 
+  AppLayout, 
+  AsideTree, 
+  OperateBar,
+  useParentWindowDataExchange, 
+  useChildAppWindowManager, 
+  useEstimateFormWindow 
+} from '@cost-app/shared-components'
 import { invoke } from '@tauri-apps/api/core'
 import { useChildWindowManagement } from '@cost-app/shared-components'
 
@@ -158,6 +207,102 @@ const loading = ref(false)
 const searchText = ref('')
 const statusFilter = ref('') // 确保默认为空，显示全部数据
 const dateFilter = ref(null)
+const refreshLoading = ref(false)
+
+// 项目树数据
+const projectTree = ref([
+  {
+    key: 'building',
+    title: '建筑工程',
+    type: 'category',
+    children: [
+      { key: 'office', title: '办公楼项目', type: 'project' },
+      { key: 'parking', title: '停车场项目', type: 'project' }
+    ]
+  },
+  {
+    key: 'infrastructure',
+    title: '基础设施',
+    type: 'category',
+    children: [
+      { key: 'road', title: '道路改造', type: 'project' },
+      { key: 'pipeline', title: '管线工程', type: 'project' }
+    ]
+  },
+  {
+    key: 'decoration',
+    title: '装修工程',
+    type: 'category',
+    children: [
+      { key: 'interior', title: '室内装修', type: 'project' },
+      { key: 'landscape', title: '园林绿化', type: 'project' }
+    ]
+  }
+])
+
+const selectedProjectKeys = ref(['office'])
+const expandedProjectKeys = ref(['building', 'infrastructure'])
+const currentProject = ref(null)
+
+// 表格选择
+const selectedRowKeys = ref([])
+const hasTableSelection = computed(() => selectedRowKeys.value.length > 0)
+
+// 操作条配置
+const customActions = [
+  {
+    key: 'batch-approve',
+    label: '批量审批',
+    icon: EditOutlined,
+    tooltip: '批量审批选中项目'
+  },
+  {
+    key: 'batch-export',
+    label: '批量导出',
+    icon: ExportOutlined,
+    tooltip: '批量导出数据',
+    divider: true
+  }
+]
+
+const moreActions = [
+  {
+    key: 'settings',
+    label: '系统设置',
+    icon: SettingOutlined
+  },
+  {
+    key: 'template',
+    label: '模板管理',
+    icon: FileOutlined
+  }
+]
+
+const filterOptions = [
+  {
+    key: 'status',
+    placeholder: '选择状态',
+    width: '120px',
+    options: [
+      { label: '草稿', value: 'draft' },
+      { label: '审核中', value: 'reviewing' },
+      { label: '已批准', value: 'approved' },
+      { label: '已拒绝', value: 'rejected' }
+    ],
+    value: statusFilter
+  },
+  {
+    key: 'type',
+    placeholder: '项目类型',
+    width: '120px',
+    options: [
+      { label: '建筑工程', value: 'building' },
+      { label: '基础设施', value: 'infrastructure' },
+      { label: '装修工程', value: 'renovation' }
+    ],
+    value: undefined
+  }
+]
 
 // 表格配置（Ant Table 用）
 const columns = [
@@ -254,8 +399,12 @@ const handleCostTableDataChange = (newData) => {
   pagination.value.total = newData.length
 }
 
-const handleCostTableRowSelect = (row) => {
-  message.info(`选中：${row.name}`)
+const handleCostTableRowSelect = (selectedKeys, selectedRows) => {
+  selectedRowKeys.value = selectedKeys
+  console.log('表格选择变化:', selectedKeys, selectedRows)
+  if (selectedRows && selectedRows.length > 0) {
+    message.info(`选中 ${selectedRows.length} 个项目`)
+  }
 }
 
 // 分页配置
@@ -385,6 +534,17 @@ const deleteProject = (id) => {
 
 console.log('本地数据初始化完成，数据长度:', estimateData.value.length)
 
+// 计算属性
+const totalBudget = computed(() => {
+  return filteredData.value.reduce((total, item) => total + (item.amount || 0), 0)
+})
+
+const statusText = computed(() => {
+  const total = filteredData.value.length
+  const reviewing = filteredData.value.filter(item => item.status === 'reviewing').length
+  const approved = filteredData.value.filter(item => item.status === 'approved').length
+  return `共 ${total} 项，审核中 ${reviewing} 项，已批准 ${approved} 项`
+})
 
 // 使用共享状态的过滤数据，确保状态同步
 const filteredData = computed(() => {
@@ -489,8 +649,124 @@ const handleDateFilter = () => {
   console.log('日期筛选:', dateFilter.value)
 }
 
-const handleRefresh = () => {
-  message.success('数据已刷新')
+const handleRefresh = async () => {
+  try {
+    refreshLoading.value = true
+    // 模拟数据刷新
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    message.success('数据已刷新')
+  } finally {
+    refreshLoading.value = false
+  }
+}
+
+// 新Layout相关事件处理
+const onAsideToggle = (collapsed) => {
+  console.log('侧边栏切换:', collapsed)
+}
+
+// 操作条事件处理
+const handleOperateAction = (actionKey, actionData) => {
+  console.log('操作条动作:', actionKey, actionData)
+  
+  switch (actionKey) {
+    case 'create':
+      newEstimate()
+      break
+    case 'edit':
+      if (!hasTableSelection.value) {
+        message.warning('请先选择要编辑的项目')
+        return
+      }
+      message.info('编辑项目')
+      break
+    case 'delete':
+      if (!hasTableSelection.value) {
+        message.warning('请先选择要删除的项目')
+        return
+      }
+      message.warning('删除项目')
+      break
+    case 'refresh':
+      handleRefresh()
+      break
+    case 'batch-approve':
+      if (!hasTableSelection.value) {
+        message.warning('请先选择要批准的项目')
+        return
+      }
+      message.info('批量审批')
+      break
+    case 'batch-export':
+      if (!hasTableSelection.value) {
+        message.warning('请先选择要导出的项目')
+        return
+      }
+      message.info('批量导出')
+      break
+    default:
+      message.info(`执行操作: ${actionKey}`)
+  }
+}
+
+const handleFilterChange = (filterKey, value) => {
+  console.log('筛选变化:', filterKey, value)
+  if (filterKey === 'status') {
+    statusFilter.value = value
+  }
+  message.info(`筛选 ${filterKey}: ${value}`)
+}
+
+const handleMoreAction = (key, action) => {
+  console.log('更多操作:', key, action)
+  message.info(`执行: ${action?.label}`)
+}
+
+// 项目树事件处理
+const handleProjectSelect = (selectedKeys, info) => {
+  selectedProjectKeys.value = selectedKeys
+  if (selectedKeys.length > 0) {
+    const node = info.node.dataRef || info.node
+    currentProject.value = node
+    message.info(`选择项目分类: ${node.title}`)
+  }
+}
+
+const handleProjectExpand = (expandedKeys) => {
+  expandedProjectKeys.value = expandedKeys
+}
+
+const handleProjectRefresh = () => {
+  message.info('刷新项目树')
+}
+
+const handleProjectExpandAll = (keys) => {
+  expandedProjectKeys.value = keys
+  message.info('展开所有项目')
+}
+
+const handleProjectCollapseAll = () => {
+  expandedProjectKeys.value = []
+  message.info('收起所有项目')
+}
+
+// 工具函数
+const getProjectIcon = (dataRef) => {
+  const iconMap = {
+    category: FolderOutlined,
+    project: ProjectOutlined,
+    default: FileOutlined
+  }
+  return iconMap[dataRef.type] || iconMap.default
+}
+
+const getProjectColor = (dataRef) => {
+  const colorMap = {
+    category: '#1890ff',
+    project: '#52c41a',
+    default: '#666'
+  }
+  return colorMap[dataRef.type] || colorMap.default
 }
 
 // 窗口禁用/启用相关功能
@@ -653,38 +929,98 @@ const setupDataExchangeHandlers = () => {
 </script>
 
 <style scoped>
-.estimate-main {
-  height: 100vh;
-}
-
-.layout {
-  height: 100vh;
-}
-
-/* 头部样式已移至共享组件 */
 .actions {
   display: flex;
   align-items: center;
 }
 
-.content {
-  padding: 24px;
+.main-content {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.content-header {
+  height: 60px;
+  flex-shrink: 0;
+  padding: 8px 24px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+}
+
+.content-body {
+  height: calc(100vh - 180px);
+  padding: 8px;
   background: #f0f2f5;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.content-wrapper {
-  max-width: 1200px;
-  margin: 0 auto;
+.content-body :deep(.ant-card) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.toolbar-card {
-  margin-bottom: 16px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.content-body :deep(.ant-card-head) {
+  padding: 8px 16px;
+  min-height: auto;
 }
 
-.table-card {
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.content-body :deep(.ant-card-body) {
+  flex: 1;
+  padding: 8px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.project-active {
+  color: #1890ff;
+  font-weight: 600;
+}
+
+/* 子应用布局特定样式 */
+.child-app-layout :deep(.layout-header) {
+  height: 60px;
+  flex-shrink: 0;
+}
+
+.child-app-layout :deep(.layout-operate) {
+  height: 60px;
+  flex-shrink: 0;
+}
+
+.child-app-layout :deep(.layout-main) {
+  height: calc(100vh - 180px);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.child-app-layout :deep(.layout-footer) {
+  height: 60px;
+  flex-shrink: 0;
+}
+
+/* 响应式样式 */
+@media (max-width: 768px) {
+  .content-header {
+    padding: 12px 16px;
+  }
+  
+  .content-body {
+    padding: 12px;
+  }
 }
 </style>

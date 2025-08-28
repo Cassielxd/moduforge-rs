@@ -58,9 +58,13 @@
 }
 
 /* 通用样式 */
-body {
+html, body {
   margin: 0;
   padding: 0;
+  height: 100%;
+}
+
+body {
   background: var(--background-color-light);
   color: var(--text-color);
   transition: background-color 0.3s ease, color 0.3s ease;

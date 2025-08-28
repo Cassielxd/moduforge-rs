@@ -3,6 +3,7 @@
     <a-layout class="layout">
       <!-- 使用共享头部组件 -->
       <AppHeader
+        class="dashboard-header"
         title="造价管理系统"
         :show-window-controls="true"
         :is-maximized="isMaximized"
@@ -214,10 +215,14 @@ const openModule = async (module) => {
 <style scoped>
 .dashboard {
   height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .layout {
-  height: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .header {
@@ -247,6 +252,11 @@ const openModule = async (module) => {
   gap: 16px;
 }
 
+.dashboard-header {
+  flex-shrink: 0;
+  height: 64px;
+}
+
 .logo h2 {
   margin: 0;
   color: white;
@@ -255,8 +265,11 @@ const openModule = async (module) => {
 }
 
 .content {
+  flex: 1;
   background: #f0f2f5;
   padding: 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .content-wrapper {

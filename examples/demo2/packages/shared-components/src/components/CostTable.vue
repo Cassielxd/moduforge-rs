@@ -39,7 +39,7 @@
         :animateRows="false"
         :pagination="false"
         :loading="loading"
-        :scroll="{ x: 1200, y: 400 }"
+        :scroll="{ x: 1200 }"
         size="middle"
         bordered
         row-key="id"
@@ -278,9 +278,9 @@ defineExpose({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 0;
+  padding: 8px 0;
   border-bottom: 1px solid #f0f0f0;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 .table-search {
@@ -289,7 +289,8 @@ defineExpose({
 
 .table-content {
   flex: 1;
-  min-height: 400px;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .table-footer {
@@ -308,6 +309,19 @@ defineExpose({
 .amount-cell {
   font-weight: 600;
   color: #1890ff;
+}
+
+:deep(.ant-table) {
+  height: 100%;
+}
+
+:deep(.ant-table-container) {
+  height: 100%;
+}
+
+:deep(.ant-table-body) {
+  max-height: calc(100% - 55px) !important;
+  overflow: auto !important;
 }
 
 :deep(.ant-table-thead > tr > th) {
