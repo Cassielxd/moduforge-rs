@@ -8,9 +8,19 @@ fn bench_search_model(c: &mut Criterion) {
     group.bench_function("SearchQuery创建", |b| {
         b.iter(|| {
             let query = SearchQuery {
-                query: "test query".to_string(),
-                limit: Some(10),
-                offset: Some(0),
+                text: Some("test query".to_string()),
+                node_type: None,
+                parent_id: None,
+                marks: vec![],
+                attrs: vec![],
+                limit: 10,
+                offset: 0,
+                sort_by: None,
+                sort_asc: true,
+                after_value: None,
+                range_field: None,
+                range_min: None,
+                range_max: None,
             };
             criterion::black_box(query)
         })

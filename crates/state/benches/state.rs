@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use mf_state::*;
+// Basic math benchmark, no imports needed
 
 /// 基础状态基准测试
 fn bench_basic_state(c: &mut Criterion) {
