@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use mf_state::{plugin::PluginTrait, State, Transaction};
-use mf_state::plugin::PluginMetadata;
+
 /*
 单价构成 插件
 人材机 数据插入后需要 触发单价构成的计算
@@ -13,18 +13,6 @@ pub struct DjgcPlugin;
 
 #[async_trait]
 impl PluginTrait for DjgcPlugin {
-    fn metadata(&self) -> PluginMetadata {
-        PluginMetadata{
-            name: "djgc".to_string(),
-            version: "1.0.0".to_string(),
-            description: "单价构成插件".to_string(),
-            author: "".to_string(),
-            dependencies: vec![],
-            conflicts: vec![],
-            state_fields: vec![],
-            tags: vec![],
-        }
-    }
     async fn append_transaction(
         &self,
         _trs: &[Transaction],

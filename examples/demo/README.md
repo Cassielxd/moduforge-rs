@@ -1,165 +1,80 @@
-# 🏗️ ModuForge Demo - 造价管理系统
+# frontend
 
-基于 Tauri + Vue 3 + 微前端架构的现代化造价管理系统演示应用。
+This template should help get you started developing with Vue 3 in Vite.
 
-## 🎯 项目特性
+## Recommended IDE Setup
 
-- ✅ **微前端架构**: 模块化设计，支持独立开发和部署
-- ✅ **Tauri 桌面应用**: 高性能的桌面应用框架
-- ✅ **Vue 3 + Vite**: 现代化的前端技术栈
-- ✅ **多窗口支持**: 每个模块可在独立窗口中运行
-- ✅ **共享组件库**: 包含通用头部组件和窗口控制功能
-- ✅ **自动化构建**: 一键构建所有子模块
+[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
 
-## 📁 项目结构
+## Type Support for `.vue` Imports in TS
 
-```
-demo/
-├── src/                        # 主应用源码
-│   ├── views/Dashboard.vue     # 工作台主界面
-│   ├── App.vue                 # 应用根组件
-│   └── main.js                 # 应用入口
-├── packages/                   # 微前端模块
-│   ├── rough-estimate/         # 概算模块 ✅
-│   ├── main-shell/             # 主应用模块 ✅
-│   ├── budget/                 # 预算模块 (待开发)
-│   └── shared-components/      # 共享组件库 ✅
-│       └── src/layouts/        # 通用头部组件
-├── src-tauri/                  # Tauri 后端
-└── dist/                       # 构建产物
-```
+TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
 
-## 🚀 快速开始
+## Customize configuration
 
-### 环境要求
+See [Vite Configuration Reference](https://vite.dev/config/).
 
-- Node.js 16+
-- Rust (用于 Tauri)
-- npm 或 yarn
+## Project Setup
 
-### 安装依赖
-
-```bash
+```sh
 npm install
 ```
 
-### 开发环境
+### Compile and Hot-Reload for Development
 
-1. **启动子模块**（可选）:
-```bash
-cd packages/rough-estimate
+```sh
 npm run dev
 ```
 
-2. **启动主应用**:
-```bash
-npm run tauri:dev
-```
+### Type-Check, Compile and Minify for Production
 
-### 生产构建
-
-```bash
-# 构建所有模块
+```sh
 npm run build
-
-# 打包 Tauri 应用
-npm run tauri:build
 ```
 
-## 📋 可用模块
+# ModuForge Demo
 
-| 模块 | 状态 | 端口 | 描述 |
-|------|------|------|------|
-| 概算 | ✅ 可用 | 5174 | 项目概算管理和计算 |
-| 主应用 | ✅ 可用 | 5173 | 主应用界面和导航 |
-| 共享组件 | ✅ 可用 | 5175 | 通用组件库，包含头部组件等 |
-| 预算 | 🔄 开发中 | 5176 | 项目预算编制和管理 |
-| 预算审核 | 🔄 开发中 | 5177 | 预算审核流程管理 |
-| 结算 | 🔄 开发中 | 5178 | 项目结算管理 |
-| 结算审核 | 🔄 开发中 | 5179 | 结算审核流程管理 |
+## 全局状态管理
 
-## 🔧 开发指南
+### rootId 全局访问
 
-### 添加新模块
+项目中的 `rootId` 已经设置为全局状态，所有组件都可以访问。使用方式如下：
 
-1. 在 `packages/` 目录下创建新模块
-2. 配置模块的 `vite.config.js`，确保设置 `base: './'`
-3. 在主应用的构建脚本中添加新模块
-4. 在 Dashboard 中添加模块卡片
+#### 1. 在组件中使用
 
-### 构建配置
+```typescript
+import { useRootStore } from '@/stores/root';
 
-项目使用自动化构建流程：
-- 先构建所有子模块
-- 将子模块构建产物复制到主应用 `dist` 目录
-- 最后构建主应用
+// 在 setup 中
+const rootStore = useRootStore();
 
-详细信息请参考 [PACKAGING_GUIDE.md](./PACKAGING_GUIDE.md)
+// 获取 rootId
+const currentRootId = rootStore.getRootId;
 
-## 🎮 新功能：共享组件库
+// 设置 rootId
+rootStore.setRootId('new-root-id');
 
-项目现在包含一个功能完整的共享组件库，提供：
+// 清除 rootId
+rootStore.clearRootId();
+```
 
-### 通用头部组件
-
-- **AppHeader**: 功能丰富的主应用头部组件
-- **SimpleHeader**: 轻量级子窗口头部组件
-
-### 窗口控制功能
-
-- ✅ 最小化窗口
-- ✅ 最大化/还原窗口
-- ✅ 关闭窗口
-- ✅ 窗口拖拽
-- ✅ 窗口状态同步
-
-### 使用示例
+#### 2. 在模板中使用
 
 ```vue
 <template>
-  <AppHeader
-    title="造价管理系统"
-    :show-window-controls="true"
-    @minimize="onMinimize"
-    @close="onClose"
-  >
-    <template #right>
-      <div class="user-info">管理员</div>
-    </template>
-  </AppHeader>
+  <div v-if="rootStore.getRootId">
+    当前项目ID: {{ rootStore.getRootId }}
+  </div>
 </template>
-
-<script setup>
-import { AppHeader } from 'shared-components'
-
-const onMinimize = () => console.log('窗口最小化')
-const onClose = () => console.log('窗口关闭')
-</script>
 ```
 
-详细使用说明请参考：`packages/shared-components/src/layouts/README.md`
+#### 3. 响应式访问
 
-## 📚 相关文档
+由于使用了 Pinia，`rootId` 的变化会自动触发相关组件的重新渲染。
 
-- [📦 打包指南](./PACKAGING_GUIDE.md) - 详细的构建和打包说明
-- [🏗️ 微前端架构](./README_MICROFRONTEND.md) - 微前端架构详细说明
-- [🪟 窗口管理指南](./WINDOW_MANAGEMENT_GUIDE.md) - Tauri 窗口管理功能说明
-- [🧩 共享组件使用](./packages/shared-components/src/layouts/README.md) - 共享组件库使用指南
+### Store 文件位置
 
-## 🛠️ 技术栈
+- 全局 rootId store: `src/stores/root.ts`
+- 历史记录 store: `src/stores/history.ts`
 
-- **前端**: Vue 3, Vite, Ant Design Vue
-- **桌面**: Tauri
-- **状态管理**: Pinia
-- **路由**: Vue Router
-- **构建**: Vite + 自定义构建脚本
-
-## 📝 开发说明
-
-### IDE 推荐
-
-- [VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar)
-
-### 全局状态管理
-
-项目使用 Pinia 进行状态管理，支持跨模块的状态共享。
+## 开发说明

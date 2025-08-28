@@ -4,7 +4,7 @@ use async_trait::async_trait;
 
 use mf_state::{plugin::PluginTrait, State, Transaction};
 use rand::Rng;
-use mf_state::plugin::PluginMetadata;
+
 use crate::commands::AddRequest;
 
 /*
@@ -15,18 +15,6 @@ pub struct FbfxCsxmPlugin;
 
 #[async_trait]
 impl PluginTrait for FbfxCsxmPlugin {
-    fn metadata(&self) -> PluginMetadata {
-        PluginMetadata{
-            name: "fbfx".to_string(),
-            version: "1.0.0".to_string(),
-            description: "分部分项插件".to_string(),
-            author: "".to_string(),
-            dependencies: vec![],
-            conflicts: vec![],
-            state_fields: vec![],
-            tags: vec![],
-        }
-    }
     async fn append_transaction(
         &self,
         trs: &[Transaction],

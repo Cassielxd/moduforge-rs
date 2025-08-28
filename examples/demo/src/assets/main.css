@@ -1,21 +1,60 @@
 @import './base.css';
 
-/* 全局样式变量 */
+/* 主题变量 */
 :root {
-  --primary-color: #1890ff;
-  --success-color: #52c41a;
-  --warning-color: #faad14;
-  --error-color: #ff4d4f;
-  --info-color: #1890ff;
+  /* Element Plus 浅色主题变量会自动生效 */
+}
 
-  --text-color: rgba(0, 0, 0, 0.85);
-  --text-color-secondary: rgba(0, 0, 0, 0.65);
-  --text-color-disabled: rgba(0, 0, 0, 0.25);
+/* 手动深色主题 */
+[data-theme="dark"] {
+  --el-color-primary: #409eff;
+  --el-color-primary-light-3: #79bbff;
+  --el-color-primary-light-5: #a0cfff;
+  --el-color-primary-light-7: #c6e2ff;
+  --el-color-primary-light-8: #d9ecff;
+  --el-color-primary-light-9: #ecf5ff;
+  --el-color-primary-dark-2: #337ecc;
+  
+  --el-color-success: #67c23a;
+  --el-color-warning: #e6a23c;
+  --el-color-danger: #f56c6c;
+  --el-color-error: #f56c6c;
+  --el-color-info: #909399;
+  
+  --el-bg-color: #1a1a1a;
+  --el-bg-color-page: #121212;
+  --el-bg-color-overlay: #1d1e1f;
+  
+  --el-text-color-primary: #ffffff;
+  --el-text-color-regular: #cfcfcf;
+  --el-text-color-secondary: #a8a8a8;
+  --el-text-color-placeholder: #8d8d8d;
+  --el-text-color-disabled: #6c6c6c;
+  
+  --el-border-color: #4c4d4f;
+  --el-border-color-light: #414243;
+  --el-border-color-lighter: #363637;
+  --el-border-color-extra-light: #2b2b2c;
+  --el-border-color-dark: #58585b;
+  --el-border-color-darker: #636466;
+  
+  --el-fill-color: #2d2d2d;
+  --el-fill-color-light: #262727;
+  --el-fill-color-lighter: #1d1d1d;
+  --el-fill-color-extra-light: #191919;
+  --el-fill-color-dark: #39393a;
+  --el-fill-color-darker: #424243;
+  --el-fill-color-blank: transparent;
+  
+  --el-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --el-box-shadow-light: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --el-box-shadow-lighter: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --el-box-shadow-dark: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
 
-  --background-color: #ffffff;
-  --background-color-light: #fafafa;
-  --border-color: #d9d9d9;
-  --border-radius: 6px;
+/* 手动浅色主题 */
+[data-theme="light"] {
+  /* Element Plus 默认浅色主题变量会自动生效 */
 }
 
 #app {
@@ -23,7 +62,7 @@
   height: 100vh;
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-weight: normal;
 }
 
 /* 滚动条样式 */
@@ -33,17 +72,17 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #f0f0f0;
+  background: var(--el-fill-color-lighter);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--el-fill-color-dark);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: var(--el-fill-color-darker);
 }
 
 /* 动画 */
@@ -61,8 +100,8 @@
 body {
   margin: 0;
   padding: 0;
-  background: var(--background-color-light);
-  color: var(--text-color);
+  background: var(--el-bg-color-page);
+  color: var(--el-text-color-primary);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -70,12 +109,16 @@ body {
   box-sizing: border-box;
 }
 
-a {
+a,
+.green {
   text-decoration: none;
-  color: var(--primary-color);
-  transition: color 0.3s ease;
+  color: hsla(160, 100%, 37%, 1);
+  transition: 0.4s;
+  padding: 3px;
 }
 
-a:hover {
-  color: #40a9ff;
+@media (hover: hover) {
+  a:hover {
+    background-color: hsla(160, 100%, 37%, 0.2);
+  }
 }

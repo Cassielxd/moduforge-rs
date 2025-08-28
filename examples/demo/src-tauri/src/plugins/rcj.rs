@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use mf_state::{plugin::PluginTrait, State, Transaction};
-
+use mf_state::plugin::PluginMetadata;
 /*
 人材机 插件
 分部分项 数据插入后需要 触发人材机的计算
@@ -13,6 +13,18 @@ pub struct RcjPlugin;
 
 #[async_trait]
 impl PluginTrait for RcjPlugin {
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata{
+            name: "rcj".to_string(),
+            version: "1.0.0".to_string(),
+            description: "人材机插件".to_string(),
+            author: "".to_string(),
+            dependencies: vec![],
+            conflicts: vec![],
+            state_fields: vec![],
+            tags: vec![],
+        }
+    }
     async fn append_transaction(
         &self,
         _trs: &[Transaction],

@@ -3,7 +3,7 @@
   "identifier": "default",
   "description": "enables the default permissions",
   "windows": [
-    "*"
+    "main"
   ],
   "permissions": [
     "core:default",
@@ -14,19 +14,15 @@
     "core:window:allow-minimize",
     "core:window:allow-maximize",
     "core:window:allow-toggle-maximize",
-    "core:window:allow-unmaximize",
-    "core:window:allow-show",
-    "core:window:allow-hide",
-    "core:window:allow-set-focus",
-    "core:window:allow-center",
-    "core:window:allow-set-position",
-    "core:window:allow-set-size",
-    "core:window:allow-is-maximized",
-    "core:window:allow-is-minimized",
-    "core:window:allow-is-visible",
-    "core:window:allow-is-focused",
-    "core:webview:default",
-    "core:webview:allow-create-webview-window",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "dialog:allow-message",
+    "dialog:allow-ask",
+    "dialog:allow-confirm",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister",
+    "global-shortcut:allow-unregister-all",
+    "global-shortcut:allow-is-registered",
     "core:tray:allow-get-by-id",
     "core:tray:allow-new",
     "core:tray:allow-set-menu",
@@ -34,5 +30,6 @@
     "core:tray:allow-set-tooltip",
     "core:tray:allow-set-title",
     "core:tray:allow-set-temp-dir-path"
+    
   ]
 }
