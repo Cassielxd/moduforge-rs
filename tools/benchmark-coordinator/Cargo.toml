@@ -1,0 +1,21 @@
+[package]
+name = "benchmark-coordinator"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "benchmark-coordinator"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+clap = { version = "4.0", features = ["derive"] }
+criterion = { workspace = true }
+sysinfo = "0.32"
+
+# 本地依赖
+moduforge-model = { workspace = true }

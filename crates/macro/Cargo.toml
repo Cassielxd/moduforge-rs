@@ -19,4 +19,12 @@ moduforge-transform = { workspace = true }
 moduforge-core = { workspace = true }
 anyhow = {workspace=true}
 async-trait = {workspace=true}
+serde_json = {workspace=true}
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "macros"
+harness = false
 

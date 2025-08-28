@@ -31,6 +31,11 @@ anyhow = { workspace = true }
 
 # 模型
 moduforge-model = { workspace = true }
+criterion = { workspace = true }
 
 # 事务
 moduforge-transform = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+tempfile = { workspace = true }

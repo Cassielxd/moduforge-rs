@@ -3,6 +3,7 @@ use std::time::Instant;
 
 use crate::{
     config::ForgeConfig,
+    debug::{debug, error, info},
     error::{error_utils, ForgeResult},
     event::{Event, EventBus},
     extension_manager::ExtensionManager,
@@ -16,7 +17,6 @@ use crate::{
 
 use mf_model::{node_pool::NodePool, schema::Schema};
 use mf_state::{
-    debug, error, info,
     ops::GlobalResourceManager,
     state::{State, StateConfig},
     transaction::{Command, Transaction},
@@ -608,7 +608,7 @@ impl ForgeRuntime {
 
             if let Some(mut transaction) = middleware_result {
                 // 由运行时统一提交事务，再通过相同的 flow 引擎处理
-                transaction.commit();
+                transaction.commit()?;
                 let task_result = self
                     .flow_engine
                     .submit((self.state.clone(), transaction))
@@ -634,7 +634,7 @@ impl ForgeRuntime {
         metrics::command_executed(command.name().as_str());
         let mut tr = self.get_tr();
         command.execute(&mut tr).await?;
-        tr.commit();
+        tr.commit()?;
         self.dispatch(tr).await
     }
 
@@ -648,7 +648,7 @@ impl ForgeRuntime {
         metrics::command_executed(command.name().as_str());
         let mut tr = self.get_tr();
         command.execute(&mut tr).await?;
-        tr.commit();
+        tr.commit()?;
         self.dispatch_with_meta(tr, description, meta).await
     }
 

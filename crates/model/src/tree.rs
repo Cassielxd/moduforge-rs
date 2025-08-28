@@ -739,6 +739,7 @@ mod tests {
         let nodes = vec![child.clone()];
 
         tree.add_node(&root.id, &nodes).unwrap();
+        #[cfg(feature = "debug-logs")]
         dbg!(&tree);
         assert!(tree.contains_node(&child.id));
         assert_eq!(tree.children(&root.id).unwrap().len(), 1);
@@ -753,8 +754,10 @@ mod tests {
         let nodes = vec![child.clone()];
 
         tree.add_node(&root.id, &nodes).unwrap();
+        #[cfg(feature = "debug-logs")]
         dbg!(&tree);
         tree.remove_node(&root.id, vec![child.id.clone()]).unwrap();
+        #[cfg(feature = "debug-logs")]
         dbg!(&tree);
         assert!(!tree.contains_node(&child.id));
         assert_eq!(tree.children(&root.id).unwrap().len(), 0);
@@ -827,6 +830,7 @@ mod tests {
         tree.update_attr(&root.id, attrs).unwrap();
 
         let node = tree.get_node(&root.id).unwrap();
+        #[cfg(feature = "debug-logs")]
         dbg!(&node);
         assert_eq!(node.attrs.get("key").unwrap(), &json!("value"));
     }
@@ -838,6 +842,7 @@ mod tests {
 
         let mark = Mark { r#type: "test".to_string(), attrs: Attrs::default() };
         tree.add_mark(&root.id, &vec![mark.clone()]).unwrap();
+        #[cfg(feature = "debug-logs")]
         dbg!(&tree);
         let node = tree.get_node(&root.id).unwrap();
         assert!(node.marks.contains(&mark));
@@ -850,8 +855,10 @@ mod tests {
 
         let mark = Mark { r#type: "test".to_string(), attrs: Attrs::default() };
         tree.add_mark(&root.id, &vec![mark.clone()]).unwrap();
+        #[cfg(feature = "debug-logs")]
         dbg!(&tree);
         tree.remove_mark(&root.id, &[mark.r#type.clone()]).unwrap();
+        #[cfg(feature = "debug-logs")]
         dbg!(&tree);
         let node = tree.get_node(&root.id).unwrap();
         assert!(!node.marks.iter().any(|m| m.r#type == mark.r#type));
@@ -867,6 +874,7 @@ mod tests {
 
         tree.add_node(&root.id, &vec![child1.clone()]).unwrap();
         tree.add_node(&root.id, &vec![child2.clone()]).unwrap();
+        #[cfg(feature = "debug-logs")]
         dbg!(&tree);
         let all_children = tree.all_children(&root.id, None).unwrap();
         assert_eq!(all_children.1.len(), 2);

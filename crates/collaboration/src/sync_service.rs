@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use yrs::{Map, ReadTxn as _, Transact, WriteTxn as _};
+use yrs::{Map, ReadTxn as _, Transact};
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;

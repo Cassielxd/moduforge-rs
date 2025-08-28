@@ -842,6 +842,8 @@ impl<'a> NodeGenerator<'a> {
             DefaultValueType::Integer(i) => {
                 // 根据目标类型进行适当的转换
                 match target_type {
+                    "String" => Ok(quote! { #i.to_string() }),
+                    t if t.starts_with("Option<") && t.contains("String") => Ok(quote! { Some(#i.to_string()) }),
                     "i8" => Ok(quote! { #i as i8 }),
                     "i16" => Ok(quote! { #i as i16 }),
                     "i32" => Ok(quote! { #i as i32 }),
@@ -862,13 +864,19 @@ impl<'a> NodeGenerator<'a> {
             DefaultValueType::Float(f) => {
                 // 根据目标类型进行适当的转换
                 match target_type {
+                    "String" => Ok(quote! { #f.to_string() }),
+                    t if t.starts_with("Option<") && t.contains("String") => Ok(quote! { Some(#f.to_string()) }),
                     "f32" => Ok(quote! { #f as f32 }),
                     "f64" => Ok(quote! { #f }),
                     _ => Ok(quote! { #f })
                 }
             }
             DefaultValueType::Boolean(b) => {
-                Ok(quote! { #b })
+                match target_type {
+                    "String" => Ok(quote! { #b.to_string() }),
+                    t if t.starts_with("Option<") && t.contains("String") => Ok(quote! { Some(#b.to_string()) }),
+                    _ => Ok(quote! { #b })
+                }
             }
             DefaultValueType::Json(_) => {
                 // 对于复杂的 JSON，使用字符串表示
@@ -1118,8 +1126,9 @@ impl<'a> NodeGenerator<'a> {
             /// - 其他字段不会包含在生成的 Node 中
             pub fn to_node(&self) -> mf_model::node::Node {
                 use mf_model::attrs::Attrs;
+                use mf_model::imbl;
                 use serde_json::Value as JsonValue;
-                
+
                 #id_code
                 #attrs_code
                 
@@ -1762,5 +1771,62 @@ mod tests {
         
         // 验证生成的导入语句包含必要的类型
         assert!(imports_str.contains("HashMap") || imports_str.contains("JsonValue"));
+    }
+
+    /// 测试数字到字符串默认值转换的代码生成
+    #[test]
+    fn test_numeric_to_string_conversion_in_generated_code() {
+        use crate::parser::default_value::{DefaultValue, DefaultValueType};
+        
+        let input: DeriveInput = parse_quote! {
+            #[derive(Node)]
+            #[node_type = "test_node"]
+            struct TestNode;
+        };
+        
+        let config = AttributeParser::parse_node_attributes(&input).unwrap();
+        let generator = NodeGenerator::new(&input, &config);
+        
+        // 测试整数到字符串的转换
+        let int_default = DefaultValue {
+            raw_value: "42".to_string(),
+            value_type: DefaultValueType::Integer(42),
+            is_json: false,
+            span: None,
+        };
+        let result = generator.generate_default_value_from_attr_for_instance(&int_default, "String");
+        assert!(result.is_ok());
+        let code_str = result.unwrap().to_string();
+        assert!(code_str.contains("to_string"));
+        
+        // 测试浮点数到字符串的转换
+        let float_default = DefaultValue {
+            raw_value: "3.14".to_string(),
+            value_type: DefaultValueType::Float(3.14),
+            is_json: false,
+            span: None,
+        };
+        let result = generator.generate_default_value_from_attr_for_instance(&float_default, "String");
+        assert!(result.is_ok());
+        let code_str = result.unwrap().to_string();
+        assert!(code_str.contains("to_string"));
+        
+        // 测试布尔值到字符串的转换
+        let bool_default = DefaultValue {
+            raw_value: "true".to_string(),
+            value_type: DefaultValueType::Boolean(true),
+            is_json: false,
+            span: None,
+        };
+        let result = generator.generate_default_value_from_attr_for_instance(&bool_default, "String");
+        assert!(result.is_ok());
+        let code_str = result.unwrap().to_string();
+        assert!(code_str.contains("to_string"));
+        
+        // 测试 Option<String> 类型的转换
+        let result = generator.generate_default_value_from_attr_for_instance(&int_default, "Option<String>");
+        assert!(result.is_ok());
+        let code_str = result.unwrap().to_string();
+        assert!(code_str.contains("Some") && code_str.contains("to_string"));
     }
 }

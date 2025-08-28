@@ -1,0 +1,110 @@
+[
+  {
+    "crate_name": "moduforge-model",
+    "benchmark_name": "ID生成",
+    "duration_ns": 82408,
+    "memory_usage_bytes": 1024,
+    "cpu_utilization_percent": 15.2,
+    "timestamp": "2025-01-28T10:30:00Z",
+    "git_commit": "1a287fe5"
+  },
+  {
+    "crate_name": "moduforge-model",
+    "benchmark_name": "Attrs创建",
+    "duration_ns": 156789,
+    "memory_usage_bytes": 2048,
+    "cpu_utilization_percent": 18.5,
+    "timestamp": "2025-01-28T10:30:01Z",
+    "git_commit": "1a287fe5"
+  },
+  {
+    "crate_name": "moduforge-macros",
+    "benchmark_name": "基础宏展开",
+    "duration_ns": 4014700,
+    "memory_usage_bytes": 4096,
+    "cpu_utilization_percent": 25.3,
+    "timestamp": "2025-01-28T10:30:02Z",
+    "git_commit": "1a287fe5"
+  },
+  {
+    "crate_name": "moduforge-macros",
+    "benchmark_name": "批量宏使用",
+    "duration_ns": 8945200,
+    "memory_usage_bytes": 8192,
+    "cpu_utilization_percent": 32.1,
+    "timestamp": "2025-01-28T10:30:03Z",
+    "git_commit": "1a287fe5"
+  },
+  {
+    "crate_name": "moduforge-core",
+    "benchmark_name": "配置管理",
+    "duration_ns": 2456789,
+    "memory_usage_bytes": 3072,
+    "cpu_utilization_percent": 22.7,
+    "timestamp": "2025-01-28T10:30:04Z",
+    "git_commit": "1a287fe5"
+  },
+  {
+    "crate_name": "moduforge-core",
+    "benchmark_name": "错误处理",
+    "duration_ns": 1234567,
+    "memory_usage_bytes": 1536,
+    "cpu_utilization_percent": 19.4,
+    "timestamp": "2025-01-28T10:30:05Z",
+    "git_commit": "1a287fe5"
+  },
+  {
+    "crate_name": "moduforge-core",
+    "benchmark_name": "XML解析",
+    "duration_ns": 5678901,
+    "memory_usage_bytes": 6144,
+    "cpu_utilization_percent": 28.9,
+    "timestamp": "2025-01-28T10:30:06Z",
+    "git_commit": "1a287fe5"
+  },
+  {
+    "crate_name": "moduforge-file",
+    "benchmark_name": "基础读写操作",
+    "duration_ns": 3456789,
+    "memory_usage_bytes": 4096,
+    "cpu_utilization_percent": 24.6,
+    "timestamp": "2025-01-28T10:30:07Z",
+    "git_commit": "1a287fe5"
+  },
+  {
+    "crate_name": "moduforge-file",
+    "benchmark_name": "历史编码",
+    "duration_ns": 7890123,
+    "memory_usage_bytes": 8192,
+    "cpu_utilization_percent": 31.2,
+    "timestamp": "2025-01-28T10:30:08Z",
+    "git_commit": "1a287fe5"
+  },
+  {
+    "crate_name": "moduforge-search",
+    "benchmark_name": "查询执行",
+    "duration_ns": 12345678,
+    "memory_usage_bytes": 16384,
+    "cpu_utilization_percent": 45.8,
+    "timestamp": "2025-01-28T10:30:09Z",
+    "git_commit": "1a287fe5"
+  },
+  {
+    "crate_name": "moduforge-state",
+    "benchmark_name": "状态管理",
+    "duration_ns": 6789012,
+    "memory_usage_bytes": 8192,
+    "cpu_utilization_percent": 29.7,
+    "timestamp": "2025-01-28T10:30:10Z",
+    "git_commit": "1a287fe5"
+  },
+  {
+    "crate_name": "moduforge-collaboration",
+    "benchmark_name": "协作同步",
+    "duration_ns": 15678901,
+    "memory_usage_bytes": 20480,
+    "cpu_utilization_percent": 52.3,
+    "timestamp": "2025-01-28T10:30:11Z",
+    "git_commit": "1a287fe5"
+  }
+]

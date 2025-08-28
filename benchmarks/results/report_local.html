@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ModuForge-RS 性能基准测试报告</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header .subtitle {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .card-title {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        .tier-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .tier-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .crate-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .crate-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            border-left: 4px solid #667eea;
+        }
+        
+        .crate-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .benchmark-list {
+            list-style: none;
+        }
+        
+        .benchmark-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.25rem 0;
+            font-size: 0.9rem;
+        }
+        
+        .benchmark-name {
+            color: #666;
+        }
+        
+        .benchmark-time {
+            font-family: 'Monaco', 'Consolas', monospace;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .performance-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .badge-excellent { background: #e6ffe6; color: #2d5016; }
+        .badge-good { background: #fffbe6; color: #594d00; }
+        .badge-warning { background: #ffe6e6; color: #5a1a1a; }
+
+        .simple-chart {
+            display: flex;
+            align-items: end;
+            justify-content: space-around;
+            height: 300px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        .bar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0 10px;
+        }
+
+        .bar-fill {
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px 4px 0 0;
+            width: 40px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .bar-fill:hover {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+
+        .bar-label {
+            font-size: 0.8rem;
+            color: #666;
+            text-align: center;
+            max-width: 80px;
+            word-break: break-word;
+        }
+
+        .bar-value {
+            font-size: 0.7rem;
+            color: #333;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            border-top: 1px solid #e0e0e0;
+            margin-top: 3rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ModuForge-RS 性能基准测试报告</h1>
+        <div class="subtitle">
+            提交: 1a287fe5 | 生成时间: 2025-01-28 18:30:00 UTC
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- 汇总卡片 -->
+        <div class="summary-cards">
+            <div class="card">
+                <div class="card-title">总基准测试数</div>
+                <div class="card-value">12</div>
+            </div>
+            <div class="card">
+                <div class="card-title">测试的Crate数</div>
+                <div class="card-value">7</div>
+            </div>
+            <div class="card">
+                <div class="card-title">平均执行时间</div>
+                <div class="card-value">5.73ms</div>
+            </div>
+            <div class="card">
+                <div class="card-title">执行层级</div>
+                <div class="card-value">4</div>
+            </div>
+        </div>
+        
+        <!-- 性能分布图表 -->
+        <div class="chart-container">
+            <div class="chart-title">📊 各Crate执行时间分布</div>
+            <div class="simple-chart">
+                <div class="bar">
+                    <div class="bar-value">0.12ms</div>
+                    <div class="bar-fill" style="height: 8px;"></div>
+                    <div class="bar-label">model</div>
+                </div>
+                <div class="bar">
+                    <div class="bar-value">6.48ms</div>
+                    <div class="bar-fill" style="height: 130px;"></div>
+                    <div class="bar-label">macros</div>
+                </div>
+                <div class="bar">
+                    <div class="bar-value">3.12ms</div>
+                    <div class="bar-fill" style="height: 62px;"></div>
+                    <div class="bar-label">core</div>
+                </div>
+                <div class="bar">
+                    <div class="bar-value">5.67ms</div>
+                    <div class="bar-fill" style="height: 114px;"></div>
+                    <div class="bar-label">file</div>
+                </div>
+                <div class="bar">
+                    <div class="bar-value">12.35ms</div>
+                    <div class="bar-fill" style="height: 247px;"></div>
+                    <div class="bar-label">search</div>
+                </div>
+                <div class="bar">
+                    <div class="bar-value">6.79ms</div>
+                    <div class="bar-fill" style="height: 136px;"></div>
+                    <div class="bar-label">state</div>
+                </div>
+                <div class="bar">
+                    <div class="bar-value">15.68ms</div>
+                    <div class="bar-fill" style="height: 280px;"></div>
+                    <div class="bar-label">collaboration</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 分层级详细结果 -->
+        <div class="tier-section">
+            <div class="tier-title">🏗️ 基础层 (Foundation)</div>
+            <div class="crate-grid">
+                <div class="crate-card">
+                    <div class="crate-name">moduforge-model <span class="performance-badge badge-excellent">优秀</span></div>
+                    <ul class="benchmark-list">
+                        <li class="benchmark-item">
+                            <span class="benchmark-name">ID生成</span>
+                            <span class="benchmark-time">82.41µs</span>
+                        </li>
+                        <li class="benchmark-item">
+                            <span class="benchmark-name">Attrs创建</span>
+                            <span class="benchmark-time">156.79µs</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="crate-card">
+                    <div class="crate-name">moduforge-macros <span class="performance-badge badge-good">良好</span></div>
+                    <ul class="benchmark-list">
+                        <li class="benchmark-item">
+                            <span class="benchmark-name">基础宏展开</span>
+                            <span class="benchmark-time">4.01ms</span>
+                        </li>
+                        <li class="benchmark-item">
+                            <span class="benchmark-name">批量宏使用</span>
+                            <span class="benchmark-time">8.95ms</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="tier-section">
+            <div class="tier-title">⚙️ 核心逻辑层 (Core Logic)</div>
+            <div class="crate-grid">
+                <div class="crate-card">
+                    <div class="crate-name">moduforge-core <span class="performance-badge badge-good">良好</span></div>
+                    <ul class="benchmark-list">
+                        <li class="benchmark-item">
+                            <span class="benchmark-name">配置管理</span>
+                            <span class="benchmark-time">2.46ms</span>
+                        </li>
+                        <li class="benchmark-item">
+                            <span class="benchmark-name">错误处理</span>
+                            <span class="benchmark-time">1.23ms</span>
+                        </li>
+                        <li class="benchmark-item">
+                            <span class="benchmark-name">XML解析</span>
+                            <span class="benchmark-time">5.68ms</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="tier-section">
+            <div class="tier-title">🔧 服务层 (Service)</div>
+            <div class="crate-grid">
+                <div class="crate-card">
+                    <div class="crate-name">moduforge-file <span class="performance-badge badge-good">良好</span></div>
+                    <ul class="benchmark-list">
+                        <li class="benchmark-item">
+                            <span class="benchmark-name">基础读写操作</span>
+                            <span class="benchmark-time">3.46ms</span>
+                        </li>
+                        <li class="benchmark-item">
+                            <span class="benchmark-name">历史编码</span>
+                            <span class="benchmark-time">7.89ms</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="crate-card">
+                    <div class="crate-name">moduforge-search <span class="performance-badge badge-warning">需优化</span></div>
+                    <ul class="benchmark-list">
+                        <li class="benchmark-item">
+                            <span class="benchmark-name">查询执行</span>
+                            <span class="benchmark-time">12.35ms</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="crate-card">
+                    <div class="crate-name">moduforge-state <span class="performance-badge badge-good">良好</span></div>
+                    <ul class="benchmark-list">
+                        <li class="benchmark-item">
+                            <span class="benchmark-name">状态管理</span>
+                            <span class="benchmark-time">6.79ms</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="tier-section">
+            <div class="tier-title">🔗 集成层 (Integration)</div>
+            <div class="crate-grid">
+                <div class="crate-card">
+                    <div class="crate-name">moduforge-collaboration <span class="performance-badge badge-warning">需优化</span></div>
+                    <ul class="benchmark-list">
+                        <li class="benchmark-item">
+                            <span class="benchmark-name">协作同步</span>
+                            <span class="benchmark-time">15.68ms</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>ModuForge-RS 性能基准测试报告</strong></p>
+            <p>自动生成 | 本地版本</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -140,7 +140,7 @@ mod tests {
             top_node: Some("test".to_string()),
         };
 
-        Arc::new(Schema::compile(spec).unwrap())
+        Arc::new(Schema::compile(spec).expect("测试 Schema 编译失败"))
     }
 
     #[test]

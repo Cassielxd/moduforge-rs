@@ -26,10 +26,14 @@ pub fn get_schema_by_resolved_extensions(
 ) -> ForgeResult<Schema> {
     // 收集所有扩展中定义的全局属性
     let mut extension_attributes = vec![];
+    let mut node_transforms = vec![];
     for extension in extensions {
         if let Extensions::E(extension) = extension {
             for item in extension.get_global_attributes().iter() {
                 extension_attributes.push(item);
+            }
+            if let Some(t)=extension.get_node_transform(){
+                node_transforms.push(t);
             }
         }
     }
@@ -43,7 +47,16 @@ pub fn get_schema_by_resolved_extensions(
     for extension in extensions {
         match extension {
             // 处理节点扩展
-            Extensions::N(node) => {
+            Extensions::N(node_old) => {
+                let  node = {
+                    let mut newn =node_old.clone();
+                  for n_fn in  &node_transforms{
+                      if let Err(e) = n_fn(&mut newn){
+                          return Err(e);
+                      }
+                  }
+                  newn
+                };
                 let name = node.name.clone();
                 // 检查是否为顶层节点
                 if node.is_top_node() {
@@ -64,6 +77,7 @@ pub fn get_schema_by_resolved_extensions(
                 };
                 let mut t = node.r#type.clone();
                 t.attrs = Some(attrs_def);
+
                 nodes.insert(node.name.clone(), t);
             },
             // 处理标记扩展

@@ -15,34 +15,39 @@ impl MemoryLoader {
         &self,
         key: K,
         content: D,
-    ) where
+    ) -> Result<(), anyhow::Error>
+    where
         K: Into<String>,
         D: Into<DecisionContent>,
     {
-        let mut mref = self.memory_refs.write().unwrap();
+        let mut mref = self.memory_refs.write()
+            .map_err(|_| anyhow::anyhow!("无法获取内存加载器写锁"))?;
         mref.insert(key.into(), Arc::new(content.into()));
+        Ok(())
     }
 
     pub fn get<K>(
         &self,
         key: K,
-    ) -> Option<Arc<DecisionContent>>
+    ) -> Result<Option<Arc<DecisionContent>>, anyhow::Error>
     where
         K: AsRef<str>,
     {
-        let mref = self.memory_refs.read().unwrap();
-        mref.get(key.as_ref()).map(|r| r.clone())
+        let mref = self.memory_refs.read()
+            .map_err(|_| anyhow::anyhow!("无法获取内存加载器读锁"))?;
+        Ok(mref.get(key.as_ref()).cloned())
     }
 
     pub fn remove<K>(
         &self,
         key: K,
-    ) -> bool
+    ) -> Result<bool, anyhow::Error>
     where
         K: AsRef<str>,
     {
-        let mut mref = self.memory_refs.write().unwrap();
-        mref.remove(key.as_ref()).is_some()
+        let mut mref = self.memory_refs.write()
+            .map_err(|_| anyhow::anyhow!("无法获取内存加载器写锁"))?;
+        Ok(mref.remove(key.as_ref()).is_some())
     }
 }
 
@@ -52,8 +57,14 @@ impl DecisionLoader for MemoryLoader {
         key: &'a str,
     ) -> impl Future<Output = LoaderResponse> + 'a {
         async move {
-            self.get(&key)
-                .ok_or_else(|| LoaderError::NotFound(key.to_string()).into())
+            match self.get(key) {
+                Ok(Some(content)) => Ok(content),
+                Ok(None) => Err(LoaderError::NotFound(key.to_string()).into()),
+                Err(e) => Err(LoaderError::Internal {
+                    key: key.to_string(),
+                    source: e,
+                }.into()),
+            }
         }
     }
 }

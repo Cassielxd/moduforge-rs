@@ -256,7 +256,7 @@ pub mod validation {
     pub const MIN_IDENTIFIER_LENGTH: usize = 1;
     
     /// 标识符最大长度
-    pub const MAX_IDENTIFIER_LENGTH: usize = 64;
+    pub const MAX_IDENTIFIER_LENGTH: usize = 100;
     
     /// 属性值最大长度
     pub const MAX_ATTRIBUTE_VALUE_LENGTH: usize = 256;
@@ -265,7 +265,7 @@ pub mod validation {
     pub const MAX_MARKS_COUNT: usize = 10;
     
     /// 字段属性最大数量
-    pub const MAX_FIELD_ATTRIBUTES: usize = 20;
+    pub const MAX_FIELD_ATTRIBUTES: usize = 100;
 }
 
 /// 性能优化相关常量

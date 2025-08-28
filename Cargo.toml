@@ -3,14 +3,15 @@ resolver = "2"
 members = [
    "crates/*",
    "examples/demo2/src-tauri",
-   "devtool-rules"
+   "devtool-rules",
+   "tools/*"
    ]
 exclude = [
-   "demo",
    "examples/*"
 ]
+
 [workspace.package]
-version = "0.5.0"
+version = "0.5.1"
 edition = "2024"
 authors = ["String <348040933@qq.com>"]
 license = "MIT"
