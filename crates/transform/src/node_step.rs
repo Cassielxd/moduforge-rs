@@ -232,7 +232,7 @@ mod tests {
             top_node: Some("test".to_string()),
         };
 
-        Arc::new(Schema::compile(spec).unwrap())
+        Arc::new(Schema::compile(spec).expect("测试 Schema 编译失败"))
     }
 
     fn create_test_tree() -> Tree {
@@ -246,7 +246,7 @@ mod tests {
         let schema = create_test_schema();
 
         // Create a test node to add
-        let node = create_test_node("root");
+        let node = create_test_node("child");
         let test = create_test_node("test");
         let node_enum = NodeEnum(node, vec![NodeEnum(test, vec![])]);
         let step = AddNodeStep::new("root".into(), vec![node_enum.clone()]);
@@ -263,6 +263,9 @@ mod tests {
         // Apply inverted step
         if let Some(inverted_step) = inverted {
             let result = inverted_step.apply(&mut tree, schema);
+            if result.is_err() {
+                eprintln!("Invert step failed: {:?}", result);
+            }
             assert!(result.is_ok());
             // Verify node was removed
             assert!(tree.get_node(&"test".into()).is_none());
@@ -276,7 +279,7 @@ mod tests {
 
         // Add a node first
         let node = create_test_node("test");
-        tree.add_node(&"root".into(), &vec![node]).unwrap();
+        tree.add_node(&"root".into(), &vec![node]).expect("测试中添加节点应该成功");
 
         let step = RemoveNodeStep::new("root".into(), vec!["test".into()]);
         let result = step.apply(&mut tree, schema.clone());
@@ -300,9 +303,9 @@ mod tests {
         let target = create_test_node("target");
         let node = create_test_node("node");
 
-        tree.add_node(&"root".into(), &vec![source]).unwrap();
-        tree.add_node(&"root".into(), &vec![target]).unwrap();
-        tree.add_node(&"source".into(), &vec![node]).unwrap();
+        tree.add_node(&"root".into(), &vec![source]).expect("测试中添加源节点应该成功");
+        tree.add_node(&"root".into(), &vec![target]).expect("测试中添加目标节点应该成功");
+        tree.add_node(&"source".into(), &vec![node]).expect("测试中添加子节点应该成功");
 
         let step = MoveNodeStep::new(
             "source".into(),
@@ -315,7 +318,7 @@ mod tests {
         assert!(result.is_ok());
 
         // Verify node was moved
-        let target_node = tree.get_node(&"target".into()).unwrap();
+        let target_node = tree.get_node(&"target".into()).expect("目标节点应该存在");
         assert!(target_node.content.contains(&"node".into()));
 
         // Test invert

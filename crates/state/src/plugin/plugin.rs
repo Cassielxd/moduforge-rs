@@ -110,7 +110,7 @@ impl PluginSpec {
     ) -> StateResult<Option<Transaction>> {
         let tr = self.tr.append_transaction(trs, old_state, new_state).await?;
         if let Some(mut tr) = tr {
-            tr.commit();
+            let _ = tr.commit(); // 在插件系统中，commit 错误可以被忽略
             Ok(Some(tr))
         } else {
             Ok(None)

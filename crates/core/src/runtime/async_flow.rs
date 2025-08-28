@@ -5,11 +5,11 @@ use crate::{
         AsyncProcessor, ProcessorError, TaskProcessor, TaskResult,
     },
     config::ProcessorConfig,
+    debug::debug,
     types::{ProcessorResult, TaskParams, TransactionStatus},
     ForgeResult,
 };
 use async_trait::async_trait;
-use mf_state::debug;
 
 /// 事务处理器
 pub struct TransactionProcessor;

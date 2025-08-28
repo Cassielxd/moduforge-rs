@@ -35,6 +35,8 @@ once_cell = { workspace = true }
 
 [features]
 build-tools = []
+debug-logs = []
+default = ["debug-logs"]
 
 [dev-dependencies]
 rand = "0.8"

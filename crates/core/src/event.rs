@@ -7,13 +7,14 @@ use std::{
 };
 
 use async_channel::{Receiver, Sender};
-use mf_state::{debug, state::State, Transaction};
+use mf_state::{state::State, Transaction};
 // 进程信号处理应由应用层负责，不在库层拦截
 use arc_swap::ArcSwap;
 use dashmap::DashMap;
 
 use crate::{
     config::EventConfig,
+    debug::debug,
     error::{ForgeResult, error_utils},
 };
 

@@ -64,12 +64,12 @@ impl Transform {
     }
 
     /// 获取草稿状态，使用 Copy-on-Write
-    fn get_draft(&mut self) -> &mut Tree {
+    fn get_draft(&mut self) -> TransformResult<&mut Tree> {
         if self.draft.is_none() {
             // 只有在第一次修改时才克隆
             self.draft = Some(self.base_doc.get_inner().as_ref().clone());
         }
-        self.draft.as_mut().unwrap()
+        self.draft.as_mut().ok_or_else(|| anyhow::anyhow!("草稿状态未初始化"))
     }
 
     pub fn step(
@@ -77,7 +77,7 @@ impl Transform {
         step: Arc<dyn Step>,
     ) -> TransformResult<()> {
         let schema = self.schema.clone();
-        let draft = self.get_draft();
+        let draft = self.get_draft()?;
         let result: StepResult = step.apply(draft, schema)?;
 
         match result.failed {
@@ -148,7 +148,7 @@ impl Transform {
             }
         }
 
-        let draft = self.get_draft();
+        let draft = self.get_draft()?;
 
         // 批量应用，减少中间状态创建
         for step in &steps {
@@ -178,16 +178,19 @@ impl Transform {
 
     /// 提交更改，将当前状态设为新的基础状态
     /// 保留历史记录（steps 和 invert_steps）以支持回滚功能
-    pub fn commit(&mut self) {
+    /// 返回 TransformResult 以处理状态错误
+    pub fn commit(&mut self) -> TransformResult<()> {
         if self.needs_recompute && self.draft.is_some() {
-            let new_doc =
-                NodePool::new(Arc::new(self.draft.as_ref().unwrap().clone()));
+            let draft_tree = self.draft.as_ref()
+                .ok_or_else(|| anyhow::anyhow!("尝试提交时草稿状态意外丢失"))?;
+            let new_doc = NodePool::new(Arc::new(draft_tree.clone()));
             self.base_doc = new_doc.clone();
             self.lazy_doc = LazyDoc::Computed(new_doc);
             self.draft = None;
             // 保留 steps 和 invert_steps 用于历史记录和回滚
             self.needs_recompute = false;
         }
+        Ok(())
     }
 
     /// 回滚所有未提交的更改
@@ -219,7 +222,7 @@ impl Transform {
             }
         }
 
-        let draft = self.get_draft();
+        let draft = self.get_draft()?;
 
         // 应用反向步骤
         for invert_step in invert_steps_to_apply {

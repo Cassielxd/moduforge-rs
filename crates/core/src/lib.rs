@@ -24,8 +24,12 @@
 //! - `types`: 核心类型定义
 
 pub mod config;
+pub mod debug;
 pub mod error;
+pub mod error_helpers;
 pub mod event;
+#[cfg(test)]
+pub mod test_helpers;
 pub mod extension;
 pub mod extension_manager;
 pub mod helpers;
@@ -44,6 +48,7 @@ pub mod types;
 #[cfg(feature = "build-tools")]
 pub mod build_tools;
 pub use error::{ForgeResult, error_utils};
+pub use error_helpers::{UnwrapHelpers, lock_helpers, collection_helpers, schema_helpers, state_helpers};
 /// 重命名
 pub mod model {
     pub use mf_model::*;

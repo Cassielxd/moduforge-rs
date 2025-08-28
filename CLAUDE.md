@@ -16,6 +16,12 @@ cargo build
 # Build with all features
 cargo build --all-features
 
+# Production build (without debug output)
+cargo build --no-default-features
+
+# Development build (with debug output) - default
+cargo build --features debug-logs
+
 # Run all tests
 cargo test
 
@@ -302,6 +308,36 @@ Documents can be serialized to multiple formats (JSON, CBOR, MessagePack) with c
 
 ### Search Integration
 Full-text search capabilities with indexing, query parsing, and result ranking.
+
+## Debug Output Control
+
+The framework provides conditional compilation for debug output to ensure clean production builds:
+
+### Feature Flags
+- **debug-logs** (default): Enables debug output in development
+- **no-default-features**: Production build without debug output
+
+### Usage
+```bash
+# Development with debug output (default)
+cargo build
+
+# Production without debug output
+cargo build --no-default-features
+cargo build --release --no-default-features
+```
+
+### Debug Macros
+- `debug!()` - Completely removed in production builds
+- `info!()` - Preserved in all builds
+- `warn!()`, `error!()` - Always preserved
+- `dbg!()` - Conditionally compiled in test modules
+
+### Benefits
+- **Zero Runtime Cost**: Debug statements are compiled out in production
+- **Clean Logs**: Production builds have no debug noise
+- **Development Friendly**: Full debug information available during development
+- **Binary Size**: Smaller production binaries without debug strings
 
 This framework is particularly well-suited for applications requiring:
 - Complex document editing with collaboration

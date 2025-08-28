@@ -21,7 +21,10 @@
       "Bash(.targetdebugexamplesminimal_plugin.exe)",
       "Bash(targetdebugexamplesminimal_plugin.exe)",
       "Bash(./target/debug/examples/minimal_plugin.exe)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(cargo audit:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(RUST_BACKTRACE=1 cargo test -p moduforge-transform --lib node_step::tests::test_add_node_step)"
     ],
     "deny": [],
     "ask": [],

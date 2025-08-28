@@ -44,6 +44,7 @@ use crate::runtime::runtime::ForgeRuntime;
 use crate::types::ProcessorResult;
 use crate::{
     config::{ForgeConfig, PerformanceConfig},
+    debug::debug,
     error::error_utils,
     event::Event,
     runtime::async_flow::{FlowEngine},
@@ -51,7 +52,6 @@ use crate::{
     ForgeResult,
 };
 use mf_state::{
-    debug,
     state::TransactionResult,
     transaction::{Command, Transaction},
     State,
@@ -260,7 +260,7 @@ impl ForgeAsyncRuntime {
         // 创建事务并应用命令
         let mut tr = self.get_tr();
         command.execute(&mut tr).await?;
-        tr.commit();
+        tr.commit()?;
         // 使用高性能处理引擎处理事务
         match self.dispatch_flow_with_meta(tr, description, meta).await {
             Ok(_) => {
@@ -429,7 +429,7 @@ impl ForgeAsyncRuntime {
                 },
             }
         }
-        transaction.commit();
+        transaction.commit()?;
         Ok(())
     }
     pub async fn run_after_middleware(
@@ -483,7 +483,7 @@ impl ForgeAsyncRuntime {
             }
 
             if let Some(mut transaction) = middleware_result {
-                transaction.commit();
+                transaction.commit()?;
                 // 记录额外事务处理开始时间
                 let tx_start_time = std::time::Instant::now();
 
