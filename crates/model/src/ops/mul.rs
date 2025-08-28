@@ -1,6 +1,6 @@
 use std::ops::Mul;
 
-use crate::{error::PoolResult, id_generator::IdGenerator, types::NodeId};
+use crate::{error::PoolResult, id_generator::IdGenerator};
 
 use super::NodeRef;
 

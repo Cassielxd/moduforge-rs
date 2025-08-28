@@ -21,4 +21,5 @@ anyhow = { workspace = true }
 
 # 模型
 moduforge-model = { workspace = true }
+criterion = { workspace = true }
 

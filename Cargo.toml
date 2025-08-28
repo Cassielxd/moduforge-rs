@@ -3,13 +3,14 @@ resolver = "2"
 members = [
    "crates/*",
    "examples/demo/src-tauri",
-   "devtool-rules"
+   "devtool-rules",
+   "tools/*"
    ]
 exclude = [
    "examples/*"
 ]
+
 [workspace.package]
-name = "moduforge"
 version = "0.5.1"
 edition = "2024"
 authors = ["String <348040933@qq.com>"]

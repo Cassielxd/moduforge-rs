@@ -32,4 +32,5 @@ chrono = { workspace = true }
 moduforge-state = { workspace = true }
 moduforge-model = { workspace = true }
 moduforge-transform = { workspace = true }
+criterion = { workspace = true }
 moduforge-core = { workspace = true }

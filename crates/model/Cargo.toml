@@ -30,6 +30,11 @@ parking_lot ={ workspace = true }
 
 once_cell = "1.19"
 
+[dev-dependencies]
+criterion = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true }
+
 [features]
 debug-logs = []
 default = ["debug-logs"]

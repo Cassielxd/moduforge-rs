@@ -23,3 +23,10 @@ default = ["stack-protection", "regex-deprecated"]
 stack-protection = ["moduforge-rules-expression/stack-protection"]
 regex-lite = ["moduforge-rules-expression/regex-lite"]
 regex-deprecated = ["moduforge-rules-expression/regex-deprecated"]
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "template"
+harness = false

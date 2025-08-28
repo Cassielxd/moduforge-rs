@@ -39,6 +39,10 @@ debug-logs = []
 default = ["debug-logs"]
 
 [dev-dependencies]
+criterion = { workspace = true }
+futures = { workspace = true }
+tempfile = { workspace = true }
+tokio-test = "0.4"
 rand = "0.8"
 
 
