@@ -1,0 +1,572 @@
+/* ProjectHeader 组件样式 */
+.project-header {
+  width: 100vw;
+  position: relative;
+  height: auto;
+  background: #2867c7;
+  user-select: none;
+  color: white;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.project-header.draggable {
+  -webkit-app-region: drag;
+}
+
+.project-header.web-environment {
+  position: sticky;
+  top: 0;
+  z-index: 1001;
+}
+
+/* 第一层：顶部操作区 */
+.project-header .header-top {
+  height: 32px;
+  display: flex;
+  position: relative;
+  z-index: 99;
+  align-items: center;
+}
+
+.project-header .left-content {
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  width: 225px;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+
+.project-header .logo-link {
+  height: 100%;
+  -webkit-app-region: drag;
+  display: flex;
+  align-items: center;
+}
+
+.project-header .logo {
+  width: 139px;
+  height: 19px;
+  vertical-align: top;
+  margin-top: 1px;
+  margin-left: 18px;
+}
+
+.project-header .tools-section {
+  display: flex;
+  align-items: center;
+  margin-left: 18px;
+}
+
+.project-header .tooltip-wrapper {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+}
+
+.project-header .icon-font {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.project-header .save-btn, 
+.project-header .remote-assist-btn {
+  padding: 2px;
+  border-radius: 2px;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.project-header .save-btn:hover:not(.disabled), 
+.project-header .remote-assist-btn:hover:not(.disabled) {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.project-header .save-btn:active:not(.disabled), 
+.project-header .remote-assist-btn:active:not(.disabled) {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.project-header .save-btn.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.project-header .title-section {
+  -webkit-app-region: drag;
+  flex: 1;
+  text-align: center;
+  line-height: 32px;
+  color: white;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.project-header .project-title {
+  font-weight: normal;
+}
+
+.project-header .unsaved-indicator {
+  color: #ffc107;
+  font-weight: bold;
+}
+
+.project-header .sub-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 35px;
+  left: 50%;
+  transform: translateX(-50%);
+  gap: 20px;
+  font-size: 0;
+  color: #a0ffff;
+  width: max-content;
+  z-index: 1;
+}
+
+.project-header .feedback-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.project-header .feedback-item span {
+  font-size: 12px;
+  color: #a0ffff;
+  line-height: 17px;
+}
+
+.project-header .feedback-link {
+  cursor: pointer;
+  text-decoration-line: underline;
+  transition: color 0.2s ease;
+}
+
+.project-header .feedback-link:hover {
+  color: #ffffff;
+}
+
+.project-header .feedback-icon {
+  display: block;
+  width: 15px;
+  height: 17px;
+  margin-right: 3px;
+  flex-shrink: 0;
+}
+
+.project-header .qr-code-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 3px;
+}
+
+.project-header .qr-icon {
+  display: block;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.project-header .qr-code-popup {
+  position: absolute;
+  bottom: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 4px;
+  padding: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1002;
+}
+
+.project-header .qr-code-img {
+  display: block;
+  width: 77px;
+  height: 77px;
+}
+
+.project-header .right-menu {
+  padding-right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+  min-width: 225px;
+  justify-content: flex-end;
+}
+
+.project-header .user-info {
+  display: flex;
+  align-items: center;
+}
+
+/* 窗口控制按钮样式 */
+.project-header .window-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px;
+}
+
+
+.project-header .control-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.project-header .control-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.project-header .control-btn:active {
+  transform: scale(0.95);
+}
+
+.project-header .control-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.project-header .control-btn.minimize-btn:hover {
+  background: rgba(255, 193, 7, 0.8);
+}
+
+.project-header .control-btn.maximize-btn:hover {
+  background: rgba(40, 167, 69, 0.8);
+}
+
+.project-header .control-btn.close-btn:hover {
+  background: rgba(220, 53, 69, 0.8);
+  color: white;
+}
+
+.project-header .control-btn svg {
+  width: 10px;
+  height: 10px;
+  stroke-width: 2;
+}
+
+/* 第二层：菜单导航区 */
+.project-header .header-menu {
+  height: 24px;
+  width: 100%;
+  line-height: 24px;
+  font-size: 12px;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+  position: relative;
+}
+
+.project-header .menu-navigation {
+  display: flex;
+  align-items: center;
+}
+
+.project-header .menu-item {
+  height: 24px;
+  padding: 0 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background 0.2s ease;
+  border-radius: 4px 4px 0 0;
+}
+
+.project-header .menu-item:hover {
+  background: rgba(30, 76, 149, 0.39);
+}
+
+.project-header .menu-item.selected {
+  background: #1e4c95;
+}
+
+.project-header .menu-label {
+  height: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 24px;
+}
+
+/* 下拉菜单样式 */
+.project-header .dropdown-menu {
+  position: relative;
+}
+
+.project-header .dropdown-icon {
+  width: 13px;
+  height: 13px;
+  transition: transform 0.2s ease;
+}
+
+.project-header .dropdown-icon.open {
+  transform: rotate(180deg);
+}
+
+.project-header .dropdown-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 140px;
+  background: white;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+  overflow: hidden;
+}
+
+.project-header .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.project-header .dropdown-item:hover:not(.disabled) {
+  background: #f5f5f5;
+}
+
+.project-header .dropdown-item.disabled {
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+.project-header .dropdown-item.has-submenu {
+  position: relative;
+}
+
+.project-header .menu-icon {
+  flex-shrink: 0;
+  color: #666;
+}
+
+.project-header .submenu-panel {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  min-width: 120px;
+  background: white;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1002;
+  overflow: hidden;
+}
+
+.project-header .submenu-item {
+  padding: 8px 12px;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.project-header .submenu-item:hover {
+  background: #f5f5f5;
+}
+
+/* 菜单层的反馈信息 */
+.project-header .menu-feedback {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 0;
+}
+
+.project-header .menu-feedback .feedback-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.project-header .menu-feedback .feedback-item span {
+  font-size: 12px;
+  color: #a0ffff;
+  line-height: 24px;
+}
+
+/* 加载状态 */
+.project-header .tool-button.disabled .tool-icon::after,
+.project-header .control-btn[disabled]::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: project-header-spin 0.8s linear infinite;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes project-header-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 响应式设计 */
+@media (min-width: 1100px) {
+  /* 页面拉伸到1100px时，副标题设置定位 */
+  .project-header .sub-title {
+    position: absolute;
+    top: 35px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 1099px) {
+  /* 页面缩小时隐藏副标题 */
+  .project-header .sub-title {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .project-header .header-top {
+    height: 28px;
+  }
+  
+  .project-header .logo {
+    width: 120px;
+    height: 16px;
+    margin-left: 12px;
+  }
+  
+  .project-header .tools-section {
+    gap: 8px;
+    margin-left: 8px;
+  }
+  
+  .project-header .tool-icon {
+    font-size: 16px;
+  }
+  
+  .project-header .tool-button {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .project-header .title-section {
+    font-size: 11px;
+  }
+  
+  .project-header .header-menu {
+    height: 20px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+  
+  .project-header .menu-item {
+    height: 20px;
+    padding: 0 12px;
+  }
+  
+  .project-header .menu-label {
+    line-height: 20px;
+  }
+  
+  .project-header .control-btn {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .project-header .control-btn svg {
+    width: 8px;
+    height: 8px;
+  }
+}
+
+/* 深色主题支持 */
+@media (prefers-color-scheme: dark) {
+  .project-header {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  }
+  
+  .project-header .dropdown-panel,
+  .project-header .submenu-panel {
+    background: #2c3e50;
+    border-color: #34495e;
+  }
+  
+  .project-header .dropdown-item,
+  .project-header .submenu-item {
+    color: #ecf0f1;
+  }
+  
+  .project-header .dropdown-item:hover:not(.disabled),
+  .project-header .submenu-item:hover {
+    background: #34495e;
+  }
+  
+  .project-header .menu-icon {
+    color: #95a5a6;
+  }
+}
+
+/* Web环境特殊样式 */
+.project-header.web-environment .window-controls {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(15px);
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.project-header.web-environment .control-btn {
+  position: relative;
+}
+
+
+
+
+
+
+/* 最小化动画效果 */
+.web-minimize-animation {
+  animation: web-minimize-effect 0.4s ease;
+}
+
+@keyframes web-minimize-effect {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.95); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}

@@ -1,5 +1,6 @@
 // 导入样式文件
 import './styles/simple-header.css'
+import './styles/project-header.css'
 import './styles/modal-window-header.css'
 
 // 导出STable相关
@@ -63,6 +64,7 @@ export { globalState, getters, actions, persistence } from './store/index.js'
 export { 
   AppHeader, 
   SimpleHeader, 
+  ProjectHeaderExample,
   AppLayout, 
   AsideTree, 
   OperateBar, 

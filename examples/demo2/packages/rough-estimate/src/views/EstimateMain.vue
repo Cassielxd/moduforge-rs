@@ -38,21 +38,17 @@
     <!-- 操作条 -->
     <template #operate>
       <OperateBar
-        :show-default-actions="true"
-        :has-selection="hasTableSelection"
-        :actions="customActions"
-        :more-actions="moreActions"
-        :show-search="true"
-        :show-filter="true"
-        :filters="filterOptions"
-        :show-view-switcher="false"
-        :show-refresh="true"
-        :refresh-loading="refreshLoading"
-        :status-text="statusText"
-        @action="handleOperateAction"
-        @search="handleSearch"
-        @filter-change="handleFilterChange"
-        @more-action="handleMoreAction"
+        :operate-list="operateList"
+        :component-type="'estimate'"
+        :level-type="3"
+        :window-type="'parentPage'"
+        :project-type="'estimate'"
+        :height="'60px'"
+        :show-expand-toggle="true"
+        :default-expanded="isOperateExpanded"
+        @operate-click="handleOperateClick"
+        @select-click="handleSelectClick"
+        @expand-change="handleExpandChange"
       />
     </template>
 
@@ -137,7 +133,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import {
   PlusOutlined,
@@ -164,6 +160,7 @@ import {
 } from '@cost-app/shared-components'
 import { invoke } from '@tauri-apps/api/core'
 import { useChildWindowManagement } from '@cost-app/shared-components'
+import operateList, { updateOperateByName, menuPolymerizeHandler } from '../data/operateConfig'
 
 // 标题
 const headerTitle = ref('概算管理系统')
@@ -208,6 +205,7 @@ const searchText = ref('')
 const statusFilter = ref('') // 确保默认为空，显示全部数据
 const dateFilter = ref(null)
 const refreshLoading = ref(false)
+const isOperateExpanded = ref(true) // 操作栏展开状态
 
 // 项目树数据
 const projectTree = ref([
@@ -248,61 +246,10 @@ const currentProject = ref(null)
 const selectedRowKeys = ref([])
 const hasTableSelection = computed(() => selectedRowKeys.value.length > 0)
 
-// 操作条配置
-const customActions = [
-  {
-    key: 'batch-approve',
-    label: '批量审批',
-    icon: EditOutlined,
-    tooltip: '批量审批选中项目'
-  },
-  {
-    key: 'batch-export',
-    label: '批量导出',
-    icon: ExportOutlined,
-    tooltip: '批量导出数据',
-    divider: true
-  }
-]
+// 当前选中项目过滤条件
+const currentStatusFilter = ref('all')
+const currentTypeFilter = ref([])
 
-const moreActions = [
-  {
-    key: 'settings',
-    label: '系统设置',
-    icon: SettingOutlined
-  },
-  {
-    key: 'template',
-    label: '模板管理',
-    icon: FileOutlined
-  }
-]
-
-const filterOptions = [
-  {
-    key: 'status',
-    placeholder: '选择状态',
-    width: '120px',
-    options: [
-      { label: '草稿', value: 'draft' },
-      { label: '审核中', value: 'reviewing' },
-      { label: '已批准', value: 'approved' },
-      { label: '已拒绝', value: 'rejected' }
-    ],
-    value: statusFilter
-  },
-  {
-    key: 'type',
-    placeholder: '项目类型',
-    width: '120px',
-    options: [
-      { label: '建筑工程', value: 'building' },
-      { label: '基础设施', value: 'infrastructure' },
-      { label: '装修工程', value: 'renovation' }
-    ],
-    value: undefined
-  }
-]
 
 // 表格配置（Ant Table 用）
 const columns = [
@@ -559,8 +506,13 @@ const filteredData = computed(() => {
   }
 
   // 状态筛选
-  if (statusFilter.value) {
-    data = data.filter(item => item.status === statusFilter.value)
+  if (currentStatusFilter.value && currentStatusFilter.value !== 'all') {
+    data = data.filter(item => item.status === currentStatusFilter.value)
+  }
+
+  // 类型筛选
+  if (currentTypeFilter.value && currentTypeFilter.value.length > 0) {
+    data = data.filter(item => currentTypeFilter.value.includes(item.type))
   }
 
   return data
@@ -665,11 +617,11 @@ const onAsideToggle = (collapsed) => {
   console.log('侧边栏切换:', collapsed)
 }
 
-// 操作条事件处理
-const handleOperateAction = (actionKey, actionData) => {
-  console.log('操作条动作:', actionKey, actionData)
+// 操作栏事件处理
+const handleOperateClick = (item, parentItem = null) => {
+  console.log('操作按钮点击:', item.name, item)
   
-  switch (actionKey) {
+  switch (item.name) {
     case 'create':
       newEstimate()
       break
@@ -678,49 +630,169 @@ const handleOperateAction = (actionKey, actionData) => {
         message.warning('请先选择要编辑的项目')
         return
       }
-      message.info('编辑项目')
+      handleEditSelected()
       break
     case 'delete':
       if (!hasTableSelection.value) {
         message.warning('请先选择要删除的项目')
         return
       }
-      message.warning('删除项目')
+      handleDeleteSelected()
+      break
+    case 'save':
+      handleSave()
+      break
+    case 'export-table':
+      exportData()
+      break
+    case 'batch-approve':
+      handleBatchApprove()
+      break
+    case 'batch-export':
+      handleBatchExport()
+      break
+    case 'batch-delete':
+      handleBatchDelete()
+      break
+    case 'import-data':
+      importData()
       break
     case 'refresh':
       handleRefresh()
       break
-    case 'batch-approve':
-      if (!hasTableSelection.value) {
-        message.warning('请先选择要批准的项目')
-        return
-      }
-      message.info('批量审批')
+    case 'view-detail':
+      handleViewDetail()
       break
-    case 'batch-export':
-      if (!hasTableSelection.value) {
-        message.warning('请先选择要导出的项目')
-        return
-      }
-      message.info('批量导出')
+    case 'copy-project':
+      handleCopyProject()
+      break
+    case 'system-settings':
+      handleSystemSettings()
       break
     default:
-      message.info(`执行操作: ${actionKey}`)
+      message.info(`执行操作: ${item.label}`)
   }
 }
 
-const handleFilterChange = (filterKey, value) => {
-  console.log('筛选变化:', filterKey, value)
-  if (filterKey === 'status') {
-    statusFilter.value = value
+const handleSelectClick = (selectItem, item, parentItem = null) => {
+  console.log('下拉选择:', selectItem, item)
+  
+  switch (item.name) {
+    case 'approval-status':
+      currentStatusFilter.value = selectItem.kind
+      message.info(`筛选状态: ${selectItem.name}`)
+      break
+    case 'project-type-filter':
+      if (!currentTypeFilter.value.includes(selectItem.kind)) {
+        currentTypeFilter.value.push(selectItem.kind)
+      } else {
+        currentTypeFilter.value = currentTypeFilter.value.filter(type => type !== selectItem.kind)
+      }
+      message.info(`筛选类型: ${selectItem.name}`)
+      break
+    case 'project-template':
+      handleTemplateAction(selectItem.kind, selectItem.name)
+      break
+    default:
+      message.info(`选择: ${selectItem.name}`)
   }
-  message.info(`筛选 ${filterKey}: ${value}`)
 }
 
-const handleMoreAction = (key, action) => {
-  console.log('更多操作:', key, action)
-  message.info(`执行: ${action?.label}`)
+const handleExpandChange = (expanded) => {
+  isOperateExpanded.value = expanded
+  console.log('操作栏展开状态:', expanded)
 }
+
+// 具体操作方法
+const handleEditSelected = () => {
+  const selectedRows = estimateData.value.filter(item => selectedRowKeys.value.includes(item.id))
+  if (selectedRows.length === 1) {
+    formWindowManager.editForm(selectedRows[0], { windowInfo: windowInfo.value })
+  } else {
+    message.warning('请选择一个项目进行编辑')
+  }
+}
+
+const handleDeleteSelected = () => {
+  if (selectedRowKeys.value.length === 0) {
+    message.warning('请先选择要删除的项目')
+    return
+  }
+  
+  selectedRowKeys.value.forEach(id => {
+    deleteProject(id)
+  })
+  selectedRowKeys.value = []
+  message.success(`已删除 ${selectedRowKeys.value.length} 个项目`)
+}
+
+const handleSave = () => {
+  message.success('数据已保存')
+}
+
+const handleBatchApprove = () => {
+  if (!hasTableSelection.value) {
+    message.warning('请先选择要审批的项目')
+    return
+  }
+  message.info(`批量审批 ${selectedRowKeys.value.length} 个项目`)
+}
+
+const handleBatchExport = () => {
+  if (!hasTableSelection.value) {
+    message.warning('请先选择要导出的项目')
+    return
+  }
+  message.info(`批量导出 ${selectedRowKeys.value.length} 个项目`)
+}
+
+const handleBatchDelete = () => {
+  if (!hasTableSelection.value) {
+    message.warning('请先选择要删除的项目')
+    return
+  }
+  handleDeleteSelected()
+}
+
+const handleViewDetail = () => {
+  if (!hasTableSelection.value) {
+    message.warning('请先选择要查看的项目')
+    return
+  }
+  const selectedRows = estimateData.value.filter(item => selectedRowKeys.value.includes(item.id))
+  if (selectedRows.length === 1) {
+    formWindowManager.viewForm(selectedRows[0], { windowInfo: windowInfo.value })
+  } else {
+    message.warning('请选择一个项目进行查看')
+  }
+}
+
+const handleCopyProject = () => {
+  if (!hasTableSelection.value) {
+    message.warning('请先选择要复制的项目')
+    return
+  }
+  message.info('复制项目功能开发中...')
+}
+
+const handleTemplateAction = (action, name) => {
+  switch (action) {
+    case 'save-template':
+      message.info('保存为模板功能开发中...')
+      break
+    case 'create-from-template':
+      message.info('从模板创建功能开发中...')
+      break
+    case 'template-manage':
+      message.info('模板管理功能开发中...')
+      break
+  }
+}
+
+const handleSystemSettings = () => {
+  message.info('系统设置功能开发中...')
+}
+
 
 // 项目树事件处理
 const handleProjectSelect = (selectedKeys, info) => {
@@ -857,6 +929,14 @@ onMounted(async () => {
   
   // 窗口管理通过 useChildWindowManagement 自动初始化
   
+  // 初始化操作按钮配置
+  initializeOperateConfig()
+  
+  // 窗口缩放监听，窗口缩放时菜单聚合显示处理
+  window.addEventListener('resize', () => {
+    menuPolymerizeHandler()
+  })
+  
   // 保留模态窗口监听（这部分功能暂时保持独立）
   try {
     if (currentWindow.value) {
@@ -879,6 +959,35 @@ onMounted(async () => {
 
   // 设置数据交换事件处理
   setupDataExchangeHandlers()
+})
+
+// 初始化操作按钮配置
+const initializeOperateConfig = () => {
+  // 设置审批状态选择的初始值
+  updateOperateByName('approval-status', item => {
+    item.value = currentStatusFilter.value
+  })
+  
+  // 设置项目类型过滤的初始值
+  updateOperateByName('project-type-filter', item => {
+    item.value = currentTypeFilter.value
+  })
+  
+  // 执行菜单聚合处理
+  menuPolymerizeHandler()
+}
+
+// 监听筛选条件变化
+watch(() => currentStatusFilter.value, (newVal) => {
+  updateOperateByName('approval-status', item => {
+    item.value = newVal
+  })
+})
+
+watch(() => currentTypeFilter.value, (newVal) => {
+  updateOperateByName('project-type-filter', item => {
+    item.value = newVal
+  })
 })
 
 // 设置数据交换处理器
@@ -925,6 +1034,7 @@ const setupDataExchangeHandlers = () => {
   })
   
   console.log('数据交换处理器已设置')
+  console.log('操作按钮配置已加载:', operateList.value.length, '个按钮')
 }
 </script>
 

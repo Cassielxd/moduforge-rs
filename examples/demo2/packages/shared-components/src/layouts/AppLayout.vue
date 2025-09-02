@@ -211,8 +211,8 @@ defineExpose({
 .layout-operate {
   flex-shrink: 0;
   background: #fff;
-  border-bottom: 1px solid #e8e8e8;
-  padding: 4px 16px;
+  /* border-bottom: 1px solid #e8e8e8; */
+  /* padding: 4px 16px; */
 }
 
 .layout-main {
