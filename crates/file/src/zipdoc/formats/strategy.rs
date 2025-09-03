@@ -167,7 +167,7 @@ impl SnapshotFormat {
     }
 }
 
-// 高层封装：根据策略导出 ZIP（meta.json + schema.xml + 分片 + 可选 parent_map）
+// 高层封装：根据策略导出 ZIP（meta.json + schema.xml + 分片 + 可选 parent_map + 插件状态）
 pub fn export_zip_with_format<P, F, T, PM>(
     path: P,
     meta_json: &serde_json::Value,
@@ -175,6 +175,7 @@ pub fn export_zip_with_format<P, F, T, PM>(
     shard_meta: &SnapshotShardMeta,
     get_shard_value: F,
     parent_map: Option<&PM>,
+    plugin_states: Option<std::collections::HashMap<String, Vec<u8>>>,
     zstd_level: i32,
     format: SnapshotFormat,
 ) -> io::Result<()>
@@ -192,21 +193,26 @@ where
     if let Some(pm) = parent_map {
         format.write_parent_map(&mut zw, pm, zstd_level)?;
     }
+    if let Some(states) = plugin_states {
+        zw.add_plugin_states(states)?;
+    }
     let _ = zw.finalize()?;
     Ok(())
 }
 
-// 高层封装：根据策略导入 ZIP（返回 meta.json, schema.xml, 分片, 可选 parent_map）
+// 高层封装：根据策略导入 ZIP（返回 meta.json, schema.xml, 分片, 可选 parent_map, 插件状态）
 pub fn import_zip_with_format<P, T, PM>(
     path: P,
     format: SnapshotFormat,
     read_parent_map: bool,
+    read_plugin_states: bool,
 ) -> io::Result<(
     serde_json::Value,
     Vec<u8>,
     SnapshotShardMeta,
     Vec<T>,
     Option<PM>,
+    Option<std::collections::HashMap<String, Vec<u8>>>,
 )>
 where
     P: AsRef<Path>,
@@ -225,5 +231,96 @@ where
     } else {
         None
     };
-    Ok((meta_val, schema_xml, shard_meta, decoded, parent_map))
+    let plugin_states = if read_plugin_states {
+        Some(zr.read_all_plugin_states()?)
+    } else {
+        None
+    };
+    Ok((meta_val, schema_xml, shard_meta, decoded, parent_map, plugin_states))
+}
+
+// 便利函数：只导出插件状态（用于纯插件状态备份）
+pub fn export_plugin_states_only<P>(
+    path: P,
+    plugin_states: std::collections::HashMap<String, Vec<u8>>,
+    meta_json: Option<&serde_json::Value>,
+) -> io::Result<()>
+where
+    P: AsRef<Path>,
+{
+    let file = std::fs::File::create(path)?;
+    let mut zw = ZipDocumentWriter::new(file)?;
+    
+    // 添加元数据（如果提供）
+    if let Some(meta) = meta_json {
+        zw.add_json("meta.json", meta)?;
+    } else {
+        // 默认元数据
+        let timestamp = {
+            #[cfg(feature = "chrono")]
+            {
+                chrono::Utc::now().to_rfc3339()
+            }
+            #[cfg(not(feature = "chrono"))]
+            {
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs()
+                    .to_string()
+            }
+        };
+        
+        let default_meta = serde_json::json!({
+            "type": "plugin_states_backup",
+            "version": "1.0",
+            "plugin_count": plugin_states.len(),
+            "timestamp": timestamp
+        });
+        zw.add_json("meta.json", &default_meta)?;
+    }
+    
+    // 添加插件状态
+    zw.add_plugin_states(plugin_states)?;
+    let _ = zw.finalize()?;
+    Ok(())
+}
+
+// 便利函数：只导入插件状态
+pub fn import_plugin_states_only<P>(
+    path: P,
+) -> io::Result<(serde_json::Value, std::collections::HashMap<String, Vec<u8>>)>
+where
+    P: AsRef<Path>,
+{
+    let file = std::fs::File::open(path)?;
+    let mut zr = ZipDocumentReader::new(file)?;
+    
+    let meta_json = zr.read_all("meta.json")?;
+    let meta_val: serde_json::Value = serde_json::from_slice(&meta_json)
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    
+    let plugin_states = zr.read_all_plugin_states()?;
+    Ok((meta_val, plugin_states))
+}
+
+// 便利函数：检查ZIP是否包含插件状态
+pub fn has_plugin_states<P>(path: P) -> io::Result<bool>
+where
+    P: AsRef<Path>,
+{
+    let file = std::fs::File::open(path)?;
+    let mut zr = ZipDocumentReader::new(file)?;
+    let plugins = zr.list_plugins()?;
+    Ok(!plugins.is_empty())
+}
+
+// 便利函数：列出ZIP中的所有插件
+pub fn list_zip_plugins<P>(path: P) -> io::Result<Vec<String>>
+where
+    P: AsRef<Path>,
+{
+    let file = std::fs::File::open(path)?;
+    let mut zr = ZipDocumentReader::new(file)?;
+    zr.list_plugins()
 }

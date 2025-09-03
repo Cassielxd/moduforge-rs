@@ -10,6 +10,7 @@ pub use dependency::DependencyManager;
 pub use manager::PluginManager;
 /// 插件元数据
 /// 插件的元数据，用于描述插件的名称、版本、描述、作者、依赖、冲突、状态字段、标签等信息
+/// dependencies 主要是 事务处理的依赖 B插件依赖于A插件 产生的事务
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginMetadata {
     pub name: String,              //插件名称

@@ -3,6 +3,7 @@ fn main() {}
 #[cfg(test)]
 mod tests {
     use anyhow::anyhow;
+    use blake3::Hash;
     use mf_core::{EditorOptionsBuilder, ForgeAsyncRuntime, ForgeResult};
     use mf_file::zipdoc::SnapshotShardMeta;
     use mf_file::zipdoc::formats::strategy::{
@@ -22,7 +23,7 @@ mod tests {
             None,
         )
         .await?;
-        let state = editor.get_state();
+        let state: &Arc<mf_state::State> = editor.get_state();
         let tree = state.doc().get_inner().clone();
         let schema_bytes = std::fs::read(xml_path).map_err(|e| anyhow!(e))?;
 
@@ -45,6 +46,7 @@ mod tests {
                 &shard_meta,
                 |i| Ok(tree.nodes[i].clone()),
                 Some(&tree.parent_map),
+                HashMap::new(),
                 1,
                 SnapshotFormat::Cbor,
             )
@@ -59,7 +61,7 @@ mod tests {
                 SnapshotShardMeta,
                 Vec<ImHashMap<String, Arc<Node>>>,
                 Option<ImHashMap<String, String>>,
-            ) = import_zip_with_format(zip_path, SnapshotFormat::Cbor, true)
+            ) = import_zip_with_format(zip_path, SnapshotFormat::Cbor, true,true)
                 .map_err(|e| anyhow!(e))?;
             let meta_len = _meta_json.to_string().len();
             let schema_len = _schema_xml.len();
