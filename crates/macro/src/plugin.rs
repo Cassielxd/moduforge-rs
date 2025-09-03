@@ -116,7 +116,43 @@ macro_rules! impl_state_field {
     };
 }
 
-/// 创建插件元数据的辅助宏
+/// 创建插件元数据的宏，不需要名称参数（名称将由mf_plugin!宏自动提供）  
+#[macro_export]
+macro_rules! mf_meta {
+    (
+        version = $version:expr
+        $(, description = $desc:expr)?
+        $(, author = $author:expr)?
+        $(, dependencies = [$($dep:expr),* $(,)?])?
+        $(, conflicts = [$($conflict:expr),* $(,)?])?
+        $(, state_fields = [$($field:expr),* $(,)?])?
+        $(, tags = [$($tag:expr),* $(,)?])?
+    ) => {{
+        mf_state::plugin::PluginMetadata {
+            name: "".to_string(),  // 将被mf_plugin!宏替换
+            version: $version.to_string(),
+            description: {
+                #[allow(unused_mut)]
+                let mut desc = "Auto-generated plugin".to_string();
+                $(desc = $desc.to_string();)?
+                desc
+            },
+            author: {
+                #[allow(unused_mut)]
+                let mut author = "Unknown".to_string();
+                $(author = $author.to_string();)?
+                author
+            },
+            dependencies: vec![$($($dep.to_string(),)*)?],
+            conflicts: vec![$($($conflict.to_string(),)*)?],
+            state_fields: vec![$($($field.to_string(),)*)?],
+            tags: vec![$($($tag.to_string(),)*)?],
+        }
+    }};
+}
+
+/// 创建插件元数据的辅助宏 (已废弃，请使用 mf_meta!)
+#[deprecated(since = "2.0.0", note = "请使用 mf_meta! 宏代替，它不需要重复指定插件名称")]
 #[macro_export]
 macro_rules! mf_plugin_metadata {
     ($name:expr) => {{
@@ -304,9 +340,20 @@ macro_rules! mf_plugin {
                 #[allow(unreachable_code)]
                 {
                     $(
-                        return $metadata;
+                        let mut metadata = $metadata;
+                        metadata.name = stringify!($name).to_string();
+                        return metadata;
                     )?
-                    mf_plugin_metadata!(stringify!($name))
+                    mf_state::plugin::PluginMetadata {
+                        name: stringify!($name).to_string(),
+                        version: "1.0.0".to_string(),
+                        description: "Auto-generated plugin".to_string(),
+                        author: "Unknown".to_string(),
+                        dependencies: vec![],
+                        conflicts: vec![],
+                        state_fields: vec![],
+                        tags: vec![],
+                    }
                 }
             }
             
