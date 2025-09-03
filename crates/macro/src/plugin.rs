@@ -301,8 +301,13 @@ macro_rules! mf_plugin {
         #[async_trait::async_trait]
         impl mf_state::plugin::PluginTrait for $name {
             fn metadata(&self) -> mf_state::plugin::PluginMetadata {
-                $( return $metadata; )?
-                mf_plugin_metadata!(stringify!($name))
+                #[allow(unreachable_code)]
+                {
+                    $(
+                        return $metadata;
+                    )?
+                    mf_plugin_metadata!(stringify!($name))
+                }
             }
             
             $(
