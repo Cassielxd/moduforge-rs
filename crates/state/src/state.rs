@@ -174,6 +174,7 @@ impl State {
     }
 
     /// 异步应用事务到当前状态
+    /// 返回新的状态实例和应用事务的步骤
     pub async fn apply_transaction(
         &self,
         root_tr: Transaction,

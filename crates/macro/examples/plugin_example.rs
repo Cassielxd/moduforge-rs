@@ -1,4 +1,4 @@
-use mf_macro::{mf_plugin, mf_plugin_metadata, mf_plugin_config, mf_plugin_with_config};
+use mf_macro::{mf_meta, mf_plugin, mf_plugin_config, mf_plugin_metadata, mf_plugin_with_config};
 use mf_state::{Transaction, State, error::StateResult};
 use mf_state::plugin::{PluginMetadata, PluginConfig};
 
@@ -134,8 +134,7 @@ mf_plugin!(
 // 4. 完整功能插件
 mf_plugin!(
     validation_plugin,
-    metadata = mf_plugin_metadata!(
-        "validation_plugin",
+    metadata = mf_meta!(
         version = "2.1.0",
         description = "事务验证插件，确保数据完整性",
         author = "ModuForge Team",
