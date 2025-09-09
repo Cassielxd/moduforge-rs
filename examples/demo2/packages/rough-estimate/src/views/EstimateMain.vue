@@ -4,7 +4,7 @@
     :title="headerTitle"
     :loading="loading"
     loading-tip="正在处理中..."
-    :is-maximized=" "
+    :is-maximized="isMaximized"
     :show-operate="true"
     :show-aside="true"
     :show-footer="true"
