@@ -8,6 +8,7 @@ export { STable, setupSTable } from './plugins/stable.js'
 
 // 导出共享组件
 export { default as CostTable } from './components/CostTable.vue'
+export { default as TableContextMenu } from './components/TableContextMenu.vue'
 export { default as CostForm } from './components/CostForm.vue'
 export { default as FormWindow } from './components/FormWindow.vue'
 export { default as SimpleFormWindow } from './components/SimpleFormWindow.vue'
@@ -16,6 +17,9 @@ export { default as ModalWindowHeader } from './components/ModalWindowHeader.vue
 // 导出共享的composables
 export { useCostCalculation } from './composables/useCostCalculation.js'
 export { useTableOperations } from './composables/useTableOperations.js'
+export { useTableEditing } from './composables/useTableEditing.js'
+export { useTableSelection } from './composables/useTableSelection.js'
+export { useTreeTable } from './composables/useTreeTable.js'
 
 // 表单窗口管理
 export { 

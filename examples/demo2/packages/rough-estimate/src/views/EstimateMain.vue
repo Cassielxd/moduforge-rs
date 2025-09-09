@@ -4,7 +4,7 @@
     :title="headerTitle"
     :loading="loading"
     loading-tip="正在处理中..."
-    :is-maximized="isMaximized"
+    :is-maximized=" "
     :show-operate="true"
     :show-aside="true"
     :show-footer="true"
@@ -96,20 +96,58 @@
 
         <!-- 内容主体 -->
         <div class="content-body">
-          <a-card title="概算项目列表" :bordered="false">
+         
             <CostTable
-              :data="filteredData"
+              :data="treeEstimateData"
               :columns="costTableColumns"
+              :editable="true"
+              :show-toolbar="true"
+              :show-summary="true"
+              :range-selection="true"
+              :tree-props="treeProps"
+              :scroll-config="{ x: 1200, y: 400 }"
               table-type="estimate"
-              :editable="false"
+              row-key="id"
               @data-change="handleCostTableDataChange"
+              @cell-edited="handleCellEdited"
               @row-select="handleCostTableRowSelect"
-              @cell-edit="handleCostTableCellEdit"
-              @open-form="handleOpenForm"
-              @edit-row="handleEditRow"
+              @add-row="handleAddRow"
               @delete-row="handleDeleteRow"
-            />
-          </a-card>
+              @copy-rows="handleCopyRows"
+              @paste-rows="handlePasteRows"
+              @open-form="handleOpenForm"
+            >
+              <!-- 自定义工具栏 -->
+              <template #toolbar-extra>
+                <a-button @click="calculateTotal">
+                  <template #icon><CalculatorOutlined /></template>
+                  重新计算
+                </a-button>
+                <a-button @click="importTemplate">
+                  <template #icon><ImportOutlined /></template>
+                  导入模板
+                </a-button>
+              </template>
+
+              <!-- 自定义右键菜单 -->
+              <template #context-menu="{ record, column }">
+                <a-menu @click="(e) => handleContextMenuClick(e, record)">
+                  <a-sub-menu key="add" title="插入">
+                    <a-menu-item key="add-parent">添加父级项目</a-menu-item>
+                    <a-menu-item key="add-child">添加子项目</a-menu-item>
+                    <a-menu-item key="add-sibling">添加同级项目</a-menu-item>
+                  </a-sub-menu>
+                  <a-menu-divider />
+                  <a-menu-item key="copy">复制</a-menu-item>
+                  <a-menu-item key="paste">粘贴</a-menu-item>
+                  <a-menu-divider />
+                  <a-menu-item key="edit">编辑</a-menu-item>
+                  <a-menu-item key="delete" danger>删除</a-menu-item>
+                  <a-menu-divider />
+                  <a-menu-item key="calculate">重新计算</a-menu-item>
+                </a-menu>
+              </template>
+            </CostTable>
         </div>
       </div>
     </template>
@@ -146,20 +184,21 @@ import {
   EditOutlined,
   DeleteOutlined,
   SettingOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  CalculatorOutlined
 } from '@ant-design/icons-vue'
-import { 
-  CostTable, 
-  useEstimate, 
-  AppLayout, 
-  AsideTree, 
+import {
+  CostTable,
+  TableContextMenu,
+  AppLayout,
+  AsideTree,
   OperateBar,
-  useParentWindowDataExchange, 
-  useChildAppWindowManager, 
-  useEstimateFormWindow 
+  useChildWindowManagement,
+  useChildAppWindowManager,
+  useEstimateFormWindow,
+  useParentWindowDataExchange
 } from '@cost-app/shared-components'
-import { invoke } from '@tauri-apps/api/core'
-import { useChildWindowManagement } from '@cost-app/shared-components'
+// import { invoke } from '@tauri-apps/api/core'
 import operateList, { updateOperateByName, menuPolymerizeHandler } from '../data/operateConfig'
 
 // 标题
@@ -292,58 +331,305 @@ const columns = [
   },
 ]
 
-// 共享表格组件（CostTable）相关配置
+// 共享表格组件（CostTable）相关配置 - 支持编辑和树形结构
 const costTableColumns = [
   {
+    title: '项目编码',
+    field: 'code',
+    dataIndex: 'code',
+    width: 260,
+    align: 'left',
+    fixed: 'left',
+    editable: true,
+    required: true
+  },
+  {
     title: '项目名称',
+    field: 'name',
     dataIndex: 'name',
-    key: 'name',
     width: 200,
+    align: 'left',
+    editable: true,
+    required: true,
     sorter: true
   },
   {
     title: '项目类型',
+    field: 'type',
     dataIndex: 'type',
-    key: 'type',
-    width: 120
+    width: 120,
+    align: 'center',
+    editable: true
+  },
+  {
+    title: '单位',
+    field: 'unit',
+    dataIndex: 'unit',
+    width: 80,
+    align: 'center',
+    editable: true
+  },
+  {
+    title: '数量',
+    field: 'quantity',
+    dataIndex: 'quantity',
+    width: 100,
+    align: 'right',
+    editable: true,
+    dataType: 'number',
+    formatter: (value) => Number(value || 0).toFixed(2)
+  },
+  {
+    title: '单价',
+    field: 'unitPrice',
+    dataIndex: 'unitPrice',
+    width: 120,
+    align: 'right',
+    editable: true,
+    dataType: 'number',
+    formatter: (value) => Number(value || 0).toFixed(2)
   },
   {
     title: '概算金额',
+    field: 'amount',
     dataIndex: 'amount',
-    key: 'amount',
     width: 150,
-    sorter: true
+    align: 'right',
+    sorter: true,
+    formatter: (value) => Number(value || 0).toFixed(2)
   },
   {
     title: '状态',
+    field: 'status',
     dataIndex: 'status',
-    key: 'status',
-    width: 100
+    width: 100,
+    align: 'center'
   },
   {
     title: '负责人',
+    field: 'creator',
     dataIndex: 'creator',
-    key: 'creator',
-    width: 100
+    width: 100,
+    align: 'center',
+    editable: true
   },
   {
     title: '创建时间',
+    field: 'createTime',
     dataIndex: 'createTime',
-    key: 'createTime',
     width: 150,
+    align: 'center',
     sorter: true
-  },
-  {
-    title: '操作',
-    key: 'action',
-    width: 200,
-    fixed: 'right'
   }
 ]
+
+// 树形表格配置
+const treeProps = {
+  children: 'children',
+  hasChildren: 'hasChildren'
+}
+
+// 右键菜单配置
+const contextMenuOptions = ref([
+  {
+    code: "add",
+    name: "插入1",
+    visible: true,
+    disabled: false,
+    children: [
+      {
+        code: "add-parent",
+        name: "添加父级项目",
+        kind: "01",
+        visible: true,
+        disabled: false,
+      },
+      {
+        code: "add-child",
+        name: "添加子项目",
+        kind: "02",
+        visible: true,
+        disabled: false,
+      },
+      {
+        code: "add-sibling",
+        name: "添加同级项目",
+        kind: "03",
+        visible: true,
+        disabled: false,
+      }
+    ],
+  },
+  {
+    code: "cut",
+    name: "剪切",
+    visible: true,
+    disabled: false,
+  },
+  {
+    code: "copy",
+    name: "复制",
+    visible: true,
+    disabled: false,
+  },
+  {
+    code: "paste",
+    name: "粘贴",
+    visible: true,
+    disabled: false,
+  },
+  {
+    code: "delete",
+    name: "删除",
+    visible: true,
+    disabled: false,
+  },
+  {
+    code: "edit",
+    name: "编辑",
+    visible: true,
+    disabled: false,
+  },
+  {
+    code: "calculate",
+    name: "重新计算",
+    visible: true,
+    disabled: false,
+  }
+])
+
+// 转换为树形数据结构
+const treeEstimateData = computed(() => {
+  // 递归添加层级信息
+  const addLevelInfo = (items, level = 0, parent = null) => {
+    return items.map(item => {
+      const processedItem = {
+        ...item,
+        code: item.code || `EST${String(item.id).padStart(3, '0')}`,
+        unit: item.unit || '项',
+        quantity: item.quantity || 1,
+        unitPrice: item.unitPrice || item.amount || 0,
+        level: level,
+        parent: parent,
+        hasChildren: !!(item.children && item.children.length > 0)
+      }
+
+      if (item.children && item.children.length > 0) {
+        processedItem.children = addLevelInfo(item.children, level + 1, processedItem)
+      }
+
+      return processedItem
+    })
+  }
+
+  return addLevelInfo(estimateData.value)
+})
 
 const handleCostTableDataChange = (newData) => {
   estimateData.value = newData
   pagination.value.total = newData.length
+}
+
+const handleCellEdited = ({ record, column, newValue, oldValue }) => {
+  console.log('单元格编辑:', { record, column, newValue, oldValue })
+
+  // 自动计算金额
+  if (column.field === 'quantity' || column.field === 'unitPrice') {
+    record.amount = (record.quantity || 0) * (record.unitPrice || 0)
+  }
+
+  message.success('编辑成功')
+}
+
+const handleAddRow = (newRow) => {
+  console.log('新增行:', newRow)
+  message.success('新增成功')
+}
+
+const handleDeleteRow = (deletedRows) => {
+  // 处理单个记录或多个记录
+  const rowsToDelete = Array.isArray(deletedRows) ? deletedRows : [deletedRows]
+
+  rowsToDelete.forEach(record => {
+    deleteProject(record)
+  })
+
+  const names = rowsToDelete.map(r => r.name).join(', ')
+  console.log('删除行:', names)
+  message.success(`删除了 ${rowsToDelete.length} 项: ${names}`)
+}
+
+const handleCopyRows = (copiedRows) => {
+  const names = copiedRows.map(r => r.name).join(', ')
+  console.log('复制行:', names)
+  message.info(`已复制 ${copiedRows.length} 项`)
+}
+
+const handlePasteRows = (pastedRows) => {
+  const names = pastedRows.map(r => r.name).join(', ')
+  console.log('粘贴行:', names)
+  message.success(`已粘贴 ${pastedRows.length} 项`)
+}
+
+const calculateTotal = () => {
+  // 递归计算所有项目的金额
+  const calculateNode = (node) => {
+    if (node.children && node.children.length > 0) {
+      node.amount = node.children.reduce((sum, child) => {
+        return sum + calculateNode(child)
+      }, 0)
+    } else {
+      node.amount = (node.quantity || 0) * (node.unitPrice || 0)
+    }
+    return node.amount
+  }
+
+  estimateData.value.forEach(calculateNode)
+  message.success('重新计算完成')
+}
+
+const importTemplate = () => {
+  message.info('导入模板功能开发中...')
+}
+
+const addChildProject = (parentRecord) => {
+  const newChild = {
+    id: `${parentRecord.id}-${Date.now()}`,
+    code: `${parentRecord.code}001`,
+    name: '新建子项目',
+    type: 'subproject',
+    unit: '项',
+    quantity: 1,
+    unitPrice: 0,
+    amount: 0,
+    status: 'draft',
+    creator: '当前用户',
+    createTime: new Date().toISOString().split('T')[0],
+    children: []
+  }
+
+  if (!parentRecord.children) {
+    parentRecord.children = []
+  }
+  parentRecord.children.push(newChild)
+
+  message.success('添加子项目成功')
+}
+
+const editProject = (record) => {
+  console.log('编辑项目:', record)
+  message.info('编辑项目功能开发中...')
+}
+
+const deleteProject = (record) => {
+  // 如果传入的是记录对象，使用其id；如果传入的是id，直接使用
+  const id = typeof record === 'object' ? record.id : record
+  const index = estimateData.value.findIndex(p => p.id === id)
+  if (index > -1) {
+    const deletedItem = estimateData.value[index]
+    estimateData.value.splice(index, 1)
+    message.success(`已删除项目: ${deletedItem.name}`)
+  }
 }
 
 const handleCostTableRowSelect = (selectedKeys, selectedRows) => {
@@ -364,59 +650,298 @@ const pagination = ref({
   showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
 })
 
-// 使用本地数据而不是共享状态（暂时修复）
+// 使用本地数据 - 树形结构概算数据（多层级）
 const estimateData = ref([
   {
     id: 1,
+    code: 'EST001',
     name: '办公楼建设项目',
     type: 'building',
-    amount: 5000000,
+    unit: '项',
+    quantity: 1,
+    unitPrice: 50000000,
+    amount: 50000000,
     status: 'approved',
     createTime: '2024-01-15',
     creator: '张三',
     description: '新建办公楼项目，包含主体建筑和配套设施',
-    manager: '张三',
-    startDate: '2024-02-01',
-    endDate: '2024-12-31'
+    children: [
+      {
+        id: 11,
+        code: 'EST001001',
+        name: '土建工程',
+        type: 'construction',
+        unit: 'm²',
+        quantity: 10000,
+        unitPrice: 300,
+        amount: 3000000,
+        status: 'approved',
+        creator: '张三',
+        createTime: '2024-01-15',
+        children: [
+          {
+            id: 111,
+            code: 'EST001001001',
+            name: '基础工程',
+            type: 'foundation',
+            unit: 'm³',
+            quantity: 500,
+            unitPrice: 800,
+            amount: 400000,
+            status: 'approved',
+            creator: '张三',
+            createTime: '2024-01-15',
+            children: [
+              {
+                id: 1111,
+                code: 'EST001001001001',
+                name: '挖土方',
+                type: 'earthwork',
+                unit: 'm³',
+                quantity: 200,
+                unitPrice: 50,
+                amount: 10000,
+                status: 'approved',
+                creator: '张三',
+                createTime: '2024-01-15',
+                children: []
+              },
+              {
+                id: 1112,
+                code: 'EST001001001002',
+                name: '混凝土浇筑',
+                type: 'concrete',
+                unit: 'm³',
+                quantity: 300,
+                unitPrice: 1300,
+                amount: 390000,
+                status: 'approved',
+                creator: '张三',
+                createTime: '2024-01-15',
+                children: []
+              }
+            ]
+          },
+          {
+            id: 112,
+            code: 'EST001001002',
+            name: '主体结构',
+            type: 'structure',
+            unit: 'm²',
+            quantity: 8000,
+            unitPrice: 325,
+            amount: 2600000,
+            status: 'approved',
+            creator: '张三',
+            createTime: '2024-01-15',
+            children: [
+              {
+                id: 1121,
+                code: 'EST001001002001',
+                name: '钢筋工程',
+                type: 'steel',
+                unit: 't',
+                quantity: 100,
+                unitPrice: 8000,
+                amount: 800000,
+                status: 'approved',
+                creator: '张三',
+                createTime: '2024-01-15',
+                children: []
+              },
+              {
+                id: 1122,
+                code: 'EST001001002002',
+                name: '模板工程',
+                type: 'formwork',
+                unit: 'm²',
+                quantity: 5000,
+                unitPrice: 120,
+                amount: 600000,
+                status: 'approved',
+                creator: '张三',
+                createTime: '2024-01-15',
+                children: []
+              },
+              {
+                id: 1123,
+                code: 'EST001001002003',
+                name: '混凝土工程',
+                type: 'concrete',
+                unit: 'm³',
+                quantity: 800,
+                unitPrice: 1500,
+                amount: 1200000,
+                status: 'approved',
+                creator: '张三',
+                createTime: '2024-01-15',
+                children: []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        id: 12,
+        code: 'EST001002',
+        name: '装修工程',
+        type: 'decoration',
+        unit: 'm²',
+        quantity: 8000,
+        unitPrice: 250,
+        amount: 2000000,
+        status: 'approved',
+        creator: '张三',
+        createTime: '2024-01-15',
+        children: [
+          {
+            id: 121,
+            code: 'EST001002001',
+            name: '地面装修',
+            type: 'floor',
+            unit: 'm²',
+            quantity: 6000,
+            unitPrice: 150,
+            amount: 900000,
+            status: 'approved',
+            creator: '张三',
+            createTime: '2024-01-15',
+            children: []
+          },
+          {
+            id: 122,
+            code: 'EST001002002',
+            name: '墙面装修',
+            type: 'wall',
+            unit: 'm²',
+            quantity: 12000,
+            unitPrice: 80,
+            amount: 960000,
+            status: 'approved',
+            creator: '张三',
+            createTime: '2024-01-15',
+            children: []
+          },
+          {
+            id: 123,
+            code: 'EST001002003',
+            name: '天花装修',
+            type: 'ceiling',
+            unit: 'm²',
+            quantity: 6000,
+            unitPrice: 120,
+            amount: 720000,
+            status: 'approved',
+            creator: '张三',
+            createTime: '2024-01-15',
+            children: []
+          }
+        ]
+      }
+    ]
   },
   {
     id: 2,
+    code: 'EST002',
     name: '道路改造工程',
     type: 'infrastructure',
-    amount: 3200000,
+    unit: 'km',
+    quantity: 5,
+    unitPrice: 6400000,
+    amount: 32000000,
     status: 'reviewing',
     createTime: '2024-01-20',
     creator: '李四',
     description: '城市主干道改造升级工程',
-    manager: '李四',
-    startDate: '2024-03-01',
-    endDate: '2024-10-31'
+    children: [
+      {
+        id: 21,
+        code: 'EST002001',
+        name: '路面工程',
+        type: 'road',
+        unit: 'm²',
+        quantity: 25000,
+        unitPrice: 800,
+        amount: 20000000,
+        status: 'reviewing',
+        creator: '李四',
+        createTime: '2024-01-20',
+        children: [
+          {
+            id: 211,
+            code: 'EST002001001',
+            name: '路基处理',
+            type: 'roadbed',
+            unit: 'm²',
+            quantity: 25000,
+            unitPrice: 200,
+            amount: 5000000,
+            status: 'reviewing',
+            creator: '李四',
+            createTime: '2024-01-20',
+            children: []
+          },
+          {
+            id: 212,
+            code: 'EST002001002',
+            name: '沥青铺设',
+            type: 'asphalt',
+            unit: 'm²',
+            quantity: 25000,
+            unitPrice: 600,
+            amount: 15000000,
+            status: 'reviewing',
+            creator: '李四',
+            createTime: '2024-01-20',
+            children: []
+          }
+        ]
+      },
+      {
+        id: 22,
+        code: 'EST002002',
+        name: '排水工程',
+        type: 'drainage',
+        unit: 'm',
+        quantity: 5000,
+        unitPrice: 2400,
+        amount: 12000000,
+        status: 'reviewing',
+        creator: '李四',
+        createTime: '2024-01-20',
+        children: []
+      }
+    ]
   },
   {
     id: 3,
+    code: 'EST003',
     name: '绿化景观项目',
     type: 'landscape',
+    unit: 'm²',
+    quantity: 15000,
+    unitPrice: 120,
     amount: 1800000,
     status: 'draft',
     createTime: '2024-01-25',
     creator: '王五',
     description: '公园绿化和景观设计项目',
-    manager: '王五',
-    startDate: '2024-04-01',
-    endDate: '2024-08-31'
+    children: []
   },
   {
     id: 4,
+    code: 'EST004',
     name: '装修改造工程',
     type: 'renovation',
+    unit: 'm²',
+    quantity: 4000,
+    unitPrice: 200,
     amount: 800000,
     status: 'approved',
     createTime: '2024-02-01',
     creator: '赵六',
     description: '办公区域装修改造项目',
-    manager: '赵六',
-    startDate: '2024-03-15',
-    endDate: '2024-06-30'
+    children: []
   },
   {
     id: 5,
@@ -472,12 +997,7 @@ const updateProject = (id, updates) => {
   }
 }
 
-const deleteProject = (id) => {
-  const index = estimateData.value.findIndex(p => p.id === id)
-  if (index > -1) {
-    estimateData.value.splice(index, 1)
-  }
-}
+
 
 console.log('本地数据初始化完成，数据长度:', estimateData.value.length)
 
@@ -577,11 +1097,7 @@ const handleEditRow = (record) => {
   formWindowManager.editForm(record, { windowInfo: windowInfo.value })
 }
 
-const handleDeleteRow = (record) => {
-  // 使用共享状态的删除方法
-  deleteProject(record.id)
-  message.success(`已删除 ${record.name}`)
-}
+
 
 const handleCostTableCellEdit = (editInfo) => {
   console.log('单元格编辑:', editInfo)
@@ -610,6 +1126,64 @@ const handleRefresh = async () => {
   } finally {
     refreshLoading.value = false
   }
+}
+
+// 右键菜单处理函数
+const handleContextMenuClick = ({ key }, record) => {
+  console.log('右键菜单点击:', key, record)
+
+  switch (key) {
+    case 'add-parent':
+      addParentProject(record)
+      break
+    case 'add-child':
+      addChildProject(record)
+      break
+    case 'add-sibling':
+      addSiblingProject(record)
+      break
+    case 'cut':
+      cutProject(record)
+      break
+    case 'copy':
+      copyProject(record)
+      break
+    case 'paste':
+      pasteProject(record)
+      break
+    case 'delete':
+      deleteProject(record)
+      break
+    case 'edit':
+      editProject(record)
+      break
+    case 'calculate':
+      calculateTotal()
+      break
+    default:
+      message.info(`执行操作: ${key}`)
+  }
+}
+
+// 右键菜单相关操作函数
+const addParentProject = (record) => {
+  message.info(`为 ${record.name} 添加父级项目功能开发中...`)
+}
+
+const addSiblingProject = (record) => {
+  message.info(`为 ${record.name} 添加同级项目功能开发中...`)
+}
+
+const cutProject = (record) => {
+  message.info(`剪切项目 ${record.name} 功能开发中...`)
+}
+
+const copyProject = (record) => {
+  message.info(`复制项目 ${record.name} 功能开发中...`)
+}
+
+const pasteProject = (record) => {
+  message.info(`在 ${record.name} 处粘贴项目功能开发中...`)
 }
 
 // 新Layout相关事件处理

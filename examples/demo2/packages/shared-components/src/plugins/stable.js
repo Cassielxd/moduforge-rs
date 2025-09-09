@@ -1,6 +1,10 @@
-import STable, { setLicenseKey } from '@surely-vue/table'
+import STablePkg from '@surely-vue/table'
 import { encode as encodeBase64 } from 'js-base64';
 import { MD5 as md5 } from 'crypto-js';
+
+// 从 CommonJS 模块中提取导出
+const STable = STablePkg.default || STablePkg;
+const setLicenseKey = STablePkg.setLicenseKey;
 /**
  * 破解 \@surely-vue/table 授权。
  * @param  [options] 配置项。

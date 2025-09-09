@@ -8,7 +8,7 @@ import { setupSTable } from '@cost-app/shared-components'
 import '@surely-vue/table/dist/index.less'
 
 // 导入共享组件样式 - 必须导入才能显示样式
-import '@cost-app/shared-components/dist/shared-components.css'
+import '@cost-app/shared-components/style'
 
 import App from './App.vue'
 import router from './router'
