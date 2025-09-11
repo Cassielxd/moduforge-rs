@@ -4,7 +4,7 @@ use axum::{extract::Path, Json};
 use chrono::{DateTime, Local};
 use mf_core::types::HistoryEntryWithMeta;
 use mf_model::{imbl as im, attrs::Attrs, mark::Mark, node::Node, types::NodeId};
-use mf_template::render;
+use zen_tmpl::render;
 use serde::{Deserialize, Serialize};
 
 use crate::{

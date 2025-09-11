@@ -49,9 +49,9 @@ moduforge-macros-derive = {workspace = true}
 moduforge-collaboration-client = {workspace = true}
 
 # 规则引擎
-moduforge-rules-engine = {workspace = true}
-moduforge-rules-expression = {workspace = true}
-moduforge-rules-template = {workspace = true}
+zen-engine = {git="https://github.com/Cassielxd/zen.git",branch="50"}
+zen-expression = {git="https://github.com/Cassielxd/zen.git",branch="50"}
+zen-tmpl = {git="https://github.com/Cassielxd/zen.git",branch="50"}
 chrono = "0.4.41"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
