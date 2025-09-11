@@ -5,12 +5,8 @@
 
 // 窗体管理相关（从 shared-components 重新导出）
 export {
-  useUniversalWindowManager,
-  useMainAppWindowManager,
-  useChildAppWindowManager,
-  useGlobalWindowManager,
-  useMainWindowManagement,
-  useChildWindowManagement
+  useOperateWindowManager,
+  useGlobalOperateWindow
 } from '@cost-app/shared-components'
 
 // 模态窗口管理

@@ -108,6 +108,9 @@
               :scroll-config="{ x: 1200, y: 400 }"
               table-type="estimate"
               row-key="id"
+              :default-expand-all="true"
+              :custom-form-component="EstimateFormComponent"
+              :form-props="{ tableType: 'estimate' }"
               @data-change="handleCostTableDataChange"
               @cell-edited="handleCellEdited"
               @row-select="handleCostTableRowSelect"
@@ -117,17 +120,6 @@
               @paste-rows="handlePasteRows"
               @open-form="handleOpenForm"
             >
-              <!-- 自定义工具栏 -->
-              <template #toolbar-extra>
-                <a-button @click="calculateTotal">
-                  <template #icon><CalculatorOutlined /></template>
-                  重新计算
-                </a-button>
-                <a-button @click="importTemplate">
-                  <template #icon><ImportOutlined /></template>
-                  导入模板
-                </a-button>
-              </template>
 
               <!-- 自定义右键菜单 -->
               <template #context-menu="{ record, column }">
@@ -193,10 +185,10 @@ import {
   AppLayout,
   AsideTree,
   OperateBar,
-  useChildWindowManagement,
-  useChildAppWindowManager,
-  useEstimateFormWindow,
-  useParentWindowDataExchange
+
+
+
+  useGlobalOperateWindow
 } from '@cost-app/shared-components'
 // import { invoke } from '@tauri-apps/api/core'
 import operateList, { updateOperateByName, menuPolymerizeHandler } from '../data/operateConfig'
@@ -204,39 +196,83 @@ import operateList, { updateOperateByName, menuPolymerizeHandler } from '../data
 // 标题
 const headerTitle = ref('概算管理系统')
 
-// 使用新的窗口管理封装
-const {
-  currentWindow,
-  isMaximized,
-  isReady,
-  windowLabel,
-  minimizeWindow,
-  toggleMaximize,
-  closeWindow
-} = useChildWindowManagement()
+// 自定义表单组件
+const EstimateFormComponent = {
+  props: ['value', 'record', 'tableType'],
+  emits: ['update:value', 'submit', 'cancel'],
+  template: `
+    <div class="estimate-form">
+      <a-form layout="vertical">
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="项目编码">
+              <a-input v-model:value="formData.code" placeholder="请输入项目编码" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="项目名称">
+              <a-input v-model:value="formData.name" placeholder="请输入项目名称" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+        <a-row :gutter="16">
+          <a-col :span="8">
+            <a-form-item label="数量">
+              <a-input-number v-model:value="formData.quantity" :min="0" style="width: 100%" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="8">
+            <a-form-item label="单价">
+              <a-input-number v-model:value="formData.unitPrice" :min="0" :precision="2" style="width: 100%" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="8">
+            <a-form-item label="金额">
+              <a-input-number v-model:value="computedAmount" :precision="2" disabled style="width: 100%" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+        <a-form-item label="备注">
+          <a-textarea v-model:value="formData.remark" :rows="3" placeholder="请输入备注信息" />
+        </a-form-item>
+      </a-form>
+    </div>
+  `,
+  setup(props, { emit }) {
+    const formData = ref({ ...props.record })
 
-// 兼容现有代码的 windowInfo
+    const computedAmount = computed(() => {
+      return (formData.value.quantity || 0) * (formData.value.unitPrice || 0)
+    })
+
+    watch(formData, (newValue) => {
+      emit('update:value', newValue)
+    }, { deep: true })
+
+    return {
+      formData,
+      computedAmount
+    }
+  }
+}
+
+// 简化的窗口信息
 const windowInfo = computed(() => ({
-  label: windowLabel.value,
-  isMaximized: isMaximized.value,
-  isReady: isReady.value
+  label: 'rough-estimate-main',
+  isMaximized: false,
+  isReady: true
 }))
 
-// 使用数据交换系统
-const dataExchange = useParentWindowDataExchange()
-const {
-  onFormSubmit,
-  onFormDataUpdate,
-  onDataRefreshRequest
-} = dataExchange
 
-// 使用子应用窗体管理器
-const windowManager = useChildAppWindowManager()
 
-// 使用新的表单窗口管理器
-const formWindowManager = useEstimateFormWindow()
+// 使用通用Tauri窗口管理器
+const operateWindowManager = useGlobalOperateWindow({
+  appId: 'rough-estimate',
+  defaultPort: '5174',
+  routePath: 'operate-page'
+})
 
-// windowReady、windowLabel、isMaximized 等都已从 useChildWindowManagement 获取
+// 窗口管理已简化
 
 // 数据状态
 const loading = ref(false)
@@ -1194,7 +1230,63 @@ const onAsideToggle = (collapsed) => {
 // 操作栏事件处理
 const handleOperateClick = (item, parentItem = null) => {
   console.log('操作按钮点击:', item.name, item)
-  
+
+  // 定义需要使用Tauri窗口的操作
+  const tauriWindowOperations = [
+    'create', 'edit', 'view',  // 表单操作
+    'import-data',      // 数据导入
+    'export-table',     // 数据导出
+    'batch-operation',  // 批量操作
+    'system-settings',  // 系统设置
+    'template-manage',  // 模板管理
+    'data-analysis',    // 数据分析
+    'tax-settings'      // 计税设置
+  ]
+
+  // 如果是Tauri窗口操作，使用窗口管理器
+  if (tauriWindowOperations.includes(item.name)) {
+    const selectedData = estimateData.value.filter(row => selectedRowKeys.value.includes(row.id))
+
+    // 表单操作使用专门的方法
+    if (['create', 'edit', 'view'].includes(item.name)) {
+      if (item.name === 'create') {
+        operateWindowManager.createRecord({
+          windowInfo: windowInfo.value
+        })
+      } else if (item.name === 'edit') {
+        if (selectedData.length === 0) {
+          message.warning('请先选择要编辑的记录')
+          return
+        }
+        operateWindowManager.editRecord(selectedData[0], {
+          windowInfo: windowInfo.value
+        })
+      } else if (item.name === 'view') {
+        if (selectedData.length === 0) {
+          message.warning('请先选择要查看的记录')
+          return
+        }
+        operateWindowManager.viewRecord(selectedData[0], {
+          windowInfo: windowInfo.value
+        })
+      }
+    } else {
+      // 其他操作使用通用方法
+      operateWindowManager.openOperateWindow(item, {
+        windowInfo: windowInfo.value,
+        data: selectedData.length > 0 ? selectedData : null,
+        tableData: estimateData.value,
+        customParams: {
+          selectedCount: selectedData.length,
+          totalCount: estimateData.value.length,
+          hasSelection: selectedData.length > 0
+        }
+      })
+    }
+    return
+  }
+
+  // 原有的操作逻辑
   switch (item.name) {
     case 'create':
       newEstimate()
@@ -1217,7 +1309,13 @@ const handleOperateClick = (item, parentItem = null) => {
       handleSave()
       break
     case 'export-table':
-      exportData()
+      // 使用弹窗方式导出
+      openModalByOperate(item, {
+        data: estimateData.value,
+        componentProps: {
+          tableData: estimateData.value
+        }
+      })
       break
     case 'batch-approve':
       handleBatchApprove()
@@ -1501,7 +1599,7 @@ onMounted(async () => {
   console.log('头部标题:', headerTitle.value)
   pagination.value.total = estimateData.value?.length
   
-  // 窗口管理通过 useChildWindowManagement 自动初始化
+  // 窗口管理已简化
   
   // 初始化操作按钮配置
   initializeOperateConfig()

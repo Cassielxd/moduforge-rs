@@ -10,9 +10,17 @@ export { STable, setupSTable } from './plugins/stable.js'
 export { default as CostTable } from './components/CostTable.vue'
 export { default as TableContextMenu } from './components/TableContextMenu.vue'
 export { default as CostForm } from './components/CostForm.vue'
-export { default as FormWindow } from './components/FormWindow.vue'
-export { default as SimpleFormWindow } from './components/SimpleFormWindow.vue'
+
 export { default as ModalWindowHeader } from './components/ModalWindowHeader.vue'
+
+// 导出窗口控制 composable
+export { useWindowControls } from './composables/useWindowControls.js'
+
+// 导出操作窗口组件
+export { default as DataImportWindow } from './components/operate/DataImportWindow.vue'
+export { default as DataExportWindow } from './components/operate/DataExportWindow.vue'
+export { default as BatchOperationWindow } from './components/operate/BatchOperationWindow.vue'
+export { default as FormWindow } from './components/operate/FormWindow.vue'
 
 // 导出共享的composables
 export { useCostCalculation } from './composables/useCostCalculation.js'
@@ -21,31 +29,17 @@ export { useTableEditing } from './composables/useTableEditing.js'
 export { useTableSelection } from './composables/useTableSelection.js'
 export { useTreeTable } from './composables/useTreeTable.js'
 
-// 表单窗口管理
-export { 
-  useFormWindowManager,
-  useEstimateFormWindow,
-  useBudgetFormWindow,
-  formWindowPresets
-} from './composables/useFormWindowManager.js'
 
-// 窗口管理 - 新的简化稳定版本
-export { 
-  useSimpleWindowManagement,
-  useMainWindowManagement, 
-  useChildWindowManagement
-} from './composables/useSimpleWindowManagement.js'
+
+// 导出通用Tauri窗口管理
 export {
-  useWindowDataExchange,
-  useChildWindowDataExchange,
-  useParentWindowDataExchange
-} from './composables/useWindowDataExchange.js'
-export {
-  useUniversalWindowManager,
-  useGlobalWindowManager,
-  useChildAppWindowManager,
-  useMainAppWindowManager
-} from './composables/useUniversalWindowManager.js'
+  useOperateWindowManager,
+  useGlobalOperateWindow,
+  registerOperateWindow,
+  operateWindowPresets
+} from './composables/useOperateWindowManager.js'
+
+
 
 // 导出状态管理
 export {

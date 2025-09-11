@@ -168,7 +168,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
-import { useChildWindowManagement } from '@cost-app/shared-components'
+import { invoke } from '@tauri-apps/api/core'
 import {
   ProjectOutlined,
   DollarOutlined,
@@ -298,11 +298,9 @@ const exportReport = async () => {
   }
 }
 
-const { closeCurrentWindow } = useChildWindowManagement()
-
 const closeWindow = async () => {
   try {
-    await closeCurrentWindow()
+    await invoke('close_window')
   } catch (error) {
     console.error('关闭窗口失败:', error)
     message.error('关闭窗口失败')

@@ -53,7 +53,7 @@ const operateList = ref([
     components: ['estimate'],
   },
 
-  // 导出表格
+  // 导出表格 - 使用弹窗
   {
     label: '导出报表',
     name: 'export-table',
@@ -62,6 +62,19 @@ const operateList = ref([
     showProjectType: ['estimate'],
     iconType: 'icon-cs-daochubaobiao',
     components: ['estimate'],
+    useModal: true, // 标记使用弹窗
+  },
+
+  // 数据导入 - 新增弹窗操作
+  {
+    label: '数据导入',
+    name: 'import-data',
+    windows: ['childPage', 'parentPage'],
+    levelType: [1, 2, 3],
+    showProjectType: ['estimate'],
+    iconType: 'icon-cs-daoru',
+    components: ['estimate'],
+    useModal: true,
   },
 
   // 统一应用
@@ -277,13 +290,36 @@ const operateList = ref([
   // 计税方式
   {
     label: '计税方式',
-    name: 'system-settings',
+    name: 'tax-settings',
     windows: ['parentPage'],
     levelType: [1],
     iconType: 'icon-cs-jishuifangshi', // 使用计税方式图标
     components: ['estimate'],
     infoDec: '概算计税方式设置',
+    useModal: true,
   },
+
+  // 数据分析 - 弹窗操作
+  {
+    label: '数据分析',
+    name: 'data-analysis',
+    windows: ['parentPage'],
+    levelType: [1, 2, 3],
+    iconType: 'icon-cs-fenxi',
+    components: ['estimate'],
+    useModal: true,
+  },
+
+  // 模板管理 - 弹窗操作
+  {
+    label: '模板管理',
+    name: 'template-manage',
+    windows: ['parentPage'],
+    levelType: [1, 2, 3],
+    iconType: 'icon-cs-moban',
+    components: ['estimate'],
+    useModal: true,
+  }
 ])
 
 /**
