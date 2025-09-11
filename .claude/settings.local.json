@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo check:*)",
+      "Bash(cargo test:*)",
+      "Bash(cargo run:*)",
+      "Read(//d/workspace/rust2025/price-rs/crates/infrastructure/storage/src/sqlite/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
