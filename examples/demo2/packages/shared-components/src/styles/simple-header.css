@@ -1,0 +1,244 @@
+/* SimpleHeader 组件样式 - 全局样式文件 */
+.simple-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0;
+  height: 56px;
+  position: relative;
+  z-index: 1000;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.simple-header.draggable {
+  -webkit-app-region: drag;
+}
+
+.simple-header .header-content {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 20px;
+}
+
+.simple-header .header-left {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+
+.simple-header .header-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.simple-header .header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+
+.simple-header .title {
+  margin: 0;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 18px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.5px;
+}
+
+.simple-header .window-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 16px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.simple-header .control-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.simple-header .control-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+.simple-header .control-btn:active {
+  transform: scale(0.95);
+}
+
+.simple-header .control-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.simple-header .control-btn.minimize-btn:hover {
+  background: rgba(255, 193, 7, 0.8);
+}
+
+.simple-header .control-btn.maximize-btn:hover {
+  background: rgba(40, 167, 69, 0.8);
+}
+
+.simple-header .control-btn.close-btn:hover {
+  background: rgba(220, 53, 69, 0.8);
+  color: white;
+}
+
+.simple-header .control-btn svg {
+  width: 10px;
+  height: 10px;
+  stroke-width: 2;
+}
+
+/* 加载状态 */
+.simple-header .control-btn[disabled] {
+  position: relative;
+}
+
+.simple-header .control-btn[disabled]::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: simple-header-spin 0.8s linear infinite;
+}
+
+@keyframes simple-header-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 深色主题支持 */
+@media (prefers-color-scheme: dark) {
+  .simple-header {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .simple-header .title {
+    color: #ecf0f1;
+  }
+  
+  .simple-header .window-controls {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  
+  .simple-header .control-btn {
+    color: rgba(236, 240, 241, 0.8);
+  }
+  
+  .simple-header .control-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ecf0f1;
+  }
+}
+
+/* Web环境特殊样式 */
+.simple-header.web-environment {
+  position: sticky;
+  top: 0;
+  z-index: 1001;
+}
+
+.simple-header.web-environment .window-controls {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(15px);
+}
+
+.simple-header.web-environment .control-btn {
+  position: relative;
+}
+
+/* Web环境工具提示 */
+.simple-header.web-environment .control-btn:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1002;
+  animation: tooltip-fade-in 0.2s ease;
+}
+
+@keyframes tooltip-fade-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(5px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* 最小化动画效果 */
+.web-minimize-animation {
+  animation: web-minimize-effect 0.4s ease;
+}
+
+@keyframes web-minimize-effect {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.95); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .simple-header {
+    height: 48px;
+  }
+  
+  .simple-header .header-content {
+    padding: 0 12px;
+  }
+  
+  .simple-header .title {
+    font-size: 16px;
+  }
+  
+  .simple-header .window-controls {
+    gap: 2px;
+    margin-left: 8px;
+  }
+  
+  .simple-header .control-btn {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .simple-header .control-btn svg {
+    width: 8px;
+    height: 8px;
+  }
+  
+  /* 移动端隐藏Web环境工具提示 */
+  .simple-header.web-environment .control-btn:hover::after {
+    display: none;
+  }
+}

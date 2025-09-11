@@ -20,4 +20,22 @@ Agent：`strategic-planner`。它的任务是读取“架构师”生成的指�
 
 **第三步：执行者 (Task Executor) - 精准实现代码**
 
-`task-executor` Agent。它是一个纯粹的“实干家”，职责只有一个：读取`tasks.md`文件，然后逐一、精准地完成每个任务——创建文件、编写rust代码、设置依赖、编写测试等等。它会严格遵循规范，直到任务清单上的所有项目都被勾选完成。
+`task-executor` Agent。它是一个纯粹的"实干家"，职责只有一个：读取`tasks.md`文件，然后逐一、精准地完成每个任务——创建文件、编写rust代码、设置依赖、编写测试等等。它会严格遵循规范，直到任务清单上的所有项目都被勾选完成。
+
+## Demo2 前端开发专用指导文档
+
+针对 `examples/demo2` 前端项目，提供了专门的架构指导和开发约束文档：
+
+* **`examples/demo2/AGENT_ARCHITECTURE_GUIDE.md`**: Demo2 前端架构全面指南
+  - 微前端架构详解
+  - Vue 3 + Tauri + Ant Design Vue 技术栈
+  - 组件开发规范和最佳实践
+  - 窗口管理和状态同步机制
+
+* **`examples/demo2/AGENT_DEVELOPMENT_CONSTRAINTS.md`**: 严格开发约束
+  - 技术栈锁定和端口分配
+  - 代码规范和命名约束  
+  - 安全策略和性能要求
+  - 禁止事项和违规处理
+
+**重要**: 开发 Demo2 相关功能时，所有 Agent 必须严格遵循这两份文档的约束和指导。

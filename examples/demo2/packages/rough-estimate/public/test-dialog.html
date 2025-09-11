@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>弹窗测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+        
+        h1 {
+            margin-bottom: 20px;
+        }
+        
+        .info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        button {
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        
+        button:hover {
+            background: #40a9ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎉 弹窗测试成功！</h1>
+    
+    <div class="info">
+        <p>如果您能看到这个页面，说明弹窗功能已经正常工作。</p>
+        <p>这是一个测试弹窗，用于验证 Tauri 窗口创建功能。</p>
+    </div>
+    
+    <button onclick="closeWindow()">关闭窗口</button>
+    
+    <script>
+        function closeWindow() {
+            if (window.__TAURI__) {
+                window.__TAURI__.window.getCurrentWindow().close();
+            } else {
+                window.close();
+            }
+        }
+        
+        console.log('测试弹窗页面已加载');
+    </script>
+</body>
+</html>

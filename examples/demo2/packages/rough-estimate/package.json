@@ -1,0 +1,28 @@
+{
+  "name": "rough-estimate",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "copy-dist": "node copy-dist.js",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@cost-app/shared-components": "file:../shared-components",
+    "@surely-vue/table": "^5.0.4",
+    "@tauri-apps/api": "^2.5.0",
+    "ant-design-vue": "^4.2.6",
+    "pinia": "^3.0.3",
+    "vue": "^3.5.13",
+    "vue-demi": "^0.14.8",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.3",
+    "unplugin-auto-import": "^19.3.0",
+    "unplugin-vue-components": "^28.7.0",
+    "vite": "^6.2.4",
+    "vite-plugin-vue-devtools": "^8.0.0"
+  }
+}
