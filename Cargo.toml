@@ -95,9 +95,6 @@ moduforge-core = { version = "0.5.0", path = "crates/core" }
 moduforge-state = { version = "0.5.0", path = "crates/state" }
 moduforge-model = { version = "0.5.0", path = "crates/model" }
 moduforge-transform = { version = "0.5.0", path = "crates/transform" }
-moduforge-rules-engine = { version = "0.5.0", path = "crates/engine" }
-moduforge-rules-template = { version = "0.5.0", path = "crates/template" }
-moduforge-rules-expression = { version = "0.5.0", path = "crates/expression" }
 moduforge-file = { version = "0.5.0", path = "crates/file" }
 moduforge-persistence = { version = "0.5.0", path = "crates/persistence" }
 moduforge-search = { version = "0.5.0", path = "crates/search" }
