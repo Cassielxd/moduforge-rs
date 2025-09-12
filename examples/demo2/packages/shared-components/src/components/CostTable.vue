@@ -158,7 +158,7 @@
 
     <!-- 表单编辑弹窗 -->
     <a-modal
-      v-model:visible="formVisible"
+      v-model:open="formVisible"
       title="表单编辑"
       width="800px"
       @ok="handleFormSubmit"

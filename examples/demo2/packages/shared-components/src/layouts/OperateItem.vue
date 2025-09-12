@@ -2,8 +2,8 @@
   <div>
     <a-tooltip
       placement="bottom"
-      v-model:visible="item.decVisible"
-      @visibleChange="val => infoVisibleChange(val, item)"
+      v-model:open="item.decVisible"
+      @openChange="val => infoVisibleChange(val, item)"
     >
       <template #title>
         <span style="font-size: 12px; text-decoration: underline">{{
@@ -14,7 +14,7 @@
         </p>
       </template>
       <template v-if="['select', 'selectRadio'].includes(item.type)">
-        <a-dropdown trigger="click" @visibleChange="visibleChange(item)">
+        <a-dropdown trigger="click" @openChange="visibleChange(item)">
           <div class="select-radio" v-if="['selectRadio'].includes(item.type)">
             <div class="select-head">
               <icon-font

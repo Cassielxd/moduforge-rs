@@ -629,8 +629,12 @@ const importTemplate = () => {
 }
 
 const addChildProject = (parentRecord) => {
+  // 生成唯一的数字 ID，避免与现有 ID 冲突
+  const timestamp = Date.now()
+  const newId = parseInt(`${parentRecord.id}${timestamp.toString().slice(-6)}`)
+
   const newChild = {
-    id: `${parentRecord.id}-${Date.now()}`,
+    id: newId,
     code: `${parentRecord.code}001`,
     name: '新建子项目',
     type: 'subproject',
@@ -1672,9 +1676,10 @@ const setupDataExchangeHandlers = () => {
     
     if (formType === 'estimate') {
       if (action === 'create') {
-        // 添加新项目
+        // 添加新项目 - 生成唯一的数字 ID
+        const timestamp = Date.now()
         const newProject = {
-          id: Date.now(),
+          id: timestamp,
           ...data,
           status: 'draft',
           createTime: new Date().toISOString().split('T')[0]
