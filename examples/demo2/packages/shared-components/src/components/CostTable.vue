@@ -158,14 +158,26 @@
 
     <!-- 表单编辑弹窗 -->
     <a-modal
-      v-model:visible="formVisible"
+      v-model:open="formVisible"
       title="表单编辑"
       width="800px"
       @ok="handleFormSubmit"
       @cancel="handleFormCancel"
     >
+      <!-- 优先使用自定义表单组件 -->
       <component
-        v-if="formComponent"
+        v-if="customFormComponent"
+        :is="customFormComponent"
+        v-model:value="formData"
+        :record="currentRecord"
+        :table-type="tableType"
+        v-bind="formProps"
+        @submit="handleFormSubmit"
+        @cancel="handleFormCancel"
+      />
+      <!-- 默认表单组件 -->
+      <component
+        v-else-if="formComponent"
         :is="formComponent"
         v-model:value="formData"
         :columns="formColumns"
@@ -173,7 +185,15 @@
         @submit="handleFormSubmit"
         @cancel="handleFormCancel"
       />
-      <slot name="form" :record="currentRecord" :data="formData"></slot>
+      <!-- 表单插槽 -->
+      <slot
+        name="form"
+        :record="currentRecord"
+        :data="formData"
+        :table-type="tableType"
+        :on-submit="handleFormSubmit"
+        :on-cancel="handleFormCancel"
+      ></slot>
     </a-modal>
   </div>
 </template>
@@ -269,6 +289,26 @@ const props = defineProps({
     default: () => []
   },
 
+  // 树形展开配置
+  defaultExpandAll: {
+    type: Boolean,
+    default: false
+  },
+  defaultExpandLevel: {
+    type: Number,
+    default: -1 // -1 表示不限制层级
+  },
+
+  // 自定义表单配置
+  customFormComponent: {
+    type: [Object, String, Function],
+    default: null
+  },
+  formProps: {
+    type: Object,
+    default: () => ({})
+  },
+
   // 自定义配置
   customRowClassName: {
     type: Function,
@@ -323,7 +363,10 @@ const {
   toggleExpand,
   isRowExpanded,
   hasChildren,
-  getRowKey
+  getRowKey,
+  expandAll,
+  collapseAll,
+  expandToLevel
 } = useTreeTable(expandedRowKeys, props.treeProps)
 
 // 计算属性
@@ -662,7 +705,10 @@ const hideColumn = (column) => {
 
 const customRow = (record) => {
   return {
-    onClick: (event) => handleRowClick(record, event),
+    onClick: (event) => {
+      handleRowClick(record, event) 
+      console.log('asdada')
+    },
     onDblclick: (event) => handleRowDblClick(record, event),
     class: props.customRowClassName ? props.customRowClassName(record) : ''
   }
@@ -716,6 +762,18 @@ watch(() => props.data, () => {
     props.data.some(item => item.id === key)
   )
 }, { deep: true })
+
+// 监听数据变化，处理默认展开
+watch(() => props.data, (newData) => {
+  if (newData && newData.length > 0) {
+    // 处理默认展开
+    if (props.defaultExpandAll) {
+      expandAll(newData)
+    } else if (props.defaultExpandLevel >= 0) {
+      expandToLevel(newData, props.defaultExpandLevel)
+    }
+  }
+}, { immediate: true, deep: true })
 
 defineExpose({
   getTableData: () => filteredData.value,

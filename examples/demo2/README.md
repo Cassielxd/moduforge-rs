@@ -5,27 +5,30 @@
 ## 🎯 项目特性
 
 - ✅ **微前端架构**: 模块化设计，支持独立开发和部署
-- ✅ **Tauri 桌面应用**: 高性能的桌面应用框架
+- ✅ **Tauri 桌面应用**: 高性能的桌面应用框架，替代 Electron
 - ✅ **Vue 3 + Vite**: 现代化的前端技术栈
-- ✅ **多窗口支持**: 每个模块可在独立窗口中运行
-- ✅ **共享组件库**: 包含通用头部组件和窗口控制功能
-- ✅ **自动化构建**: 一键构建所有子模块
+- ✅ **多窗口支持**: 每个模块可在独立 Tauri 窗口中运行
+- ✅ **共享组件库**: 统一的 UI 组件和窗口控制功能
+- ✅ **自动化构建**: 一键构建所有子模块和打包
 
 ## 📁 项目结构
 
 ```
-demo/
+examples/demo2/
 ├── src/                        # 主应用源码
 │   ├── views/Dashboard.vue     # 工作台主界面
 │   ├── App.vue                 # 应用根组件
 │   └── main.js                 # 应用入口
 ├── packages/                   # 微前端模块
 │   ├── rough-estimate/         # 概算模块 ✅
-│   ├── main-shell/             # 主应用模块 ✅
 │   ├── budget/                 # 预算模块 (待开发)
 │   └── shared-components/      # 共享组件库 ✅
-│       └── src/layouts/        # 通用头部组件
+│       ├── src/components/     # 通用组件
+│       ├── src/layouts/        # 头部组件
+│       └── src/composables/    # 组合式函数
 ├── src-tauri/                  # Tauri 后端
+│   ├── src/main.rs            # 主程序入口
+│   └── tauri.conf.json        # Tauri 配置
 └── dist/                       # 构建产物
 ```
 
@@ -33,26 +36,28 @@ demo/
 
 ### 环境要求
 
-- Node.js 16+
-- Rust (用于 Tauri)
-- npm 或 yarn
+- **Node.js** 16+
+- **Rust** 1.70+ (用于 Tauri)
+- **npm** 或 **yarn**
 
 ### 安装依赖
 
 ```bash
+# 安装所有依赖（包括子模块）
 npm install
 ```
 
 ### 开发环境
 
-1. **启动子模块**（可选）:
+1. **启动概算模块**（必须先启动）:
 ```bash
 cd packages/rough-estimate
-npm run dev
+npm run dev  # 启动在 http://localhost:5174
 ```
 
 2. **启动主应用**:
 ```bash
+# 在项目根目录
 npm run tauri:dev
 ```
 
@@ -68,98 +73,233 @@ npm run tauri:build
 
 ## 📋 可用模块
 
-| 模块 | 状态 | 端口 | 描述 |
-|------|------|------|------|
-| 概算 | ✅ 可用 | 5174 | 项目概算管理和计算 |
-| 主应用 | ✅ 可用 | 5173 | 主应用界面和导航 |
-| 共享组件 | ✅ 可用 | 5175 | 通用组件库，包含头部组件等 |
-| 预算 | 🔄 开发中 | 5176 | 项目预算编制和管理 |
-| 预算审核 | 🔄 开发中 | 5177 | 预算审核流程管理 |
-| 结算 | 🔄 开发中 | 5178 | 项目结算管理 |
-| 结算审核 | 🔄 开发中 | 5179 | 结算审核流程管理 |
+| 模块 | 状态 | 端口 | 描述 | 功能 |
+|------|------|------|------|------|
+| **主应用** | ✅ 完成 | 5173 | 工作台和导航中心 | 模块导航、系统设置 |
+| **概算模块** | ✅ 完成 | 5174 | 项目概算管理 | 概算编制、计算、审核 |
+| **共享组件** | ✅ 完成 | - | 通用组件库 | 头部、表格、窗口控制 |
+| **预算模块** | 🔄 开发中 | 5176 | 项目预算编制 | 预算编制、管理 |
+| **预算审核** | 🔄 开发中 | 5177 | 预算审核流程 | 审核流程、意见反馈 |
+| **结算模块** | 🔄 开发中 | 5178 | 项目结算管理 | 结算编制、计算 |
+| **结算审核** | 🔄 开发中 | 5179 | 结算审核流程 | 审核流程、签批 |
+
+## 🎮 核心功能
+
+### 1. 微前端架构
+- **独立开发**: 每个模块可独立开发、测试、部署
+- **技术栈自由**: 不同模块可使用不同的技术栈
+- **团队协作**: 支持多团队并行开发
+
+### 2. Tauri 多窗口系统
+- **独立窗口**: 每个模块在独立的 Tauri 窗口中运行
+- **窗口管理**: 支持最小化、最大化、关闭等操作
+- **父子关系**: 主窗口关闭时自动关闭所有子窗口
+- **状态同步**: 窗口状态实时同步
+
+### 3. 共享组件库
+- **统一 UI**: 提供一致的用户界面组件
+- **窗口控制**: 统一的窗口控制逻辑
+- **操作窗口**: 支持数据导入、导出、批量操作等
+- **表单系统**: 支持新建、编辑、查看等表单操作
+
+### 4. 操作窗口系统
+- **数据导入**: Excel、CSV 文件导入功能
+- **数据导出**: 多格式数据导出（Excel、PDF、CSV）
+- **批量操作**: 批量编辑、删除、审核等操作
+- **系统设置**: 系统配置和参数管理
 
 ## 🔧 开发指南
 
 ### 添加新模块
 
-1. 在 `packages/` 目录下创建新模块
-2. 配置模块的 `vite.config.js`，确保设置 `base: './'`
-3. 在主应用的构建脚本中添加新模块
-4. 在 Dashboard 中添加模块卡片
+1. **创建模块目录**:
+```bash
+mkdir packages/new-module
+cd packages/new-module
+npm init -y
+```
 
-### 构建配置
+2. **配置 Vite**:
+```javascript
+// vite.config.js
+export default {
+  base: './',  // 重要：确保相对路径
+  build: {
+    outDir: 'dist'
+  }
+}
+```
 
-项目使用自动化构建流程：
-- 先构建所有子模块
-- 将子模块构建产物复制到主应用 `dist` 目录
-- 最后构建主应用
+3. **注册到主应用**:
+```javascript
+// src/views/Dashboard.vue
+const modules = [
+  {
+    key: 'new-module',
+    title: '新模块',
+    description: '新模块描述',
+    port: 5180,
+    status: 'available'
+  }
+]
+```
 
-详细信息请参考 [PACKAGING_GUIDE.md](./PACKAGING_GUIDE.md)
+4. **添加构建脚本**:
+```json
+// package.json
+{
+  "scripts": {
+    "build:new-module": "cd packages/new-module && npm run build && npm run copy-dist"
+  }
+}
+```
 
-## 🎮 新功能：共享组件库
-
-项目现在包含一个功能完整的共享组件库，提供：
-
-### 通用头部组件
-
-- **AppHeader**: 功能丰富的主应用头部组件
-- **SimpleHeader**: 轻量级子窗口头部组件
-
-### 窗口控制功能
-
-- ✅ 最小化窗口
-- ✅ 最大化/还原窗口
-- ✅ 关闭窗口
-- ✅ 窗口拖拽
-- ✅ 窗口状态同步
-
-### 使用示例
+### 使用共享组件
 
 ```vue
 <template>
-  <AppHeader
-    title="造价管理系统"
-    :show-window-controls="true"
-    @minimize="onMinimize"
-    @close="onClose"
-  >
-    <template #right>
-      <div class="user-info">管理员</div>
-    </template>
-  </AppHeader>
+  <div>
+    <!-- 使用头部组件 -->
+    <AppHeader
+      title="模块标题"
+      :show-window-controls="true"
+    />
+
+    <!-- 使用操作栏 -->
+    <OperateBar
+      :operate-list="operateList"
+      @operate-click="handleOperate"
+    />
+
+    <!-- 使用表格组件 -->
+    <CostTable
+      :data="tableData"
+      :columns="columns"
+      row-key="id"
+    />
+  </div>
 </template>
 
 <script setup>
-import { AppHeader } from 'shared-components'
-
-const onMinimize = () => console.log('窗口最小化')
-const onClose = () => console.log('窗口关闭')
+import { AppHeader, OperateBar, CostTable } from '@cost-app/shared-components'
 </script>
 ```
 
-详细使用说明请参考：`packages/shared-components/src/layouts/README.md`
+### 窗口控制
 
-## 📚 相关文档
+```javascript
+// 使用窗口控制 composable
+import { useWindowControls } from '@cost-app/shared-components'
 
-- [📦 打包指南](./PACKAGING_GUIDE.md) - 详细的构建和打包说明
-- [🏗️ 微前端架构](./README_MICROFRONTEND.md) - 微前端架构详细说明
-- [🪟 窗口管理指南](./WINDOW_MANAGEMENT_GUIDE.md) - Tauri 窗口管理功能说明
-- [🧩 共享组件使用](./packages/shared-components/src/layouts/README.md) - 共享组件库使用指南
+const { isMaximized, handleMinimize, handleMaximize, handleClose } = useWindowControls()
+
+// 在模板中使用
+<ModalWindowHeader
+  :is-maximized="isMaximized"
+  @minimize="handleMinimize"
+  @maximize="handleMaximize"
+  @close="handleClose"
+/>
+```
 
 ## 🛠️ 技术栈
 
-- **前端**: Vue 3, Vite, Ant Design Vue
-- **桌面**: Tauri
-- **状态管理**: Pinia
-- **路由**: Vue Router
-- **构建**: Vite + 自定义构建脚本
+### 前端技术
+- **Vue 3.5+**: 组合式 API、响应式系统
+- **Vite 6.x**: 快速构建工具
+- **Ant Design Vue 4.x**: UI 组件库
+- **Pinia**: 状态管理
+- **Vue Router**: 路由管理
 
-## 📝 开发说明
+### 桌面技术
+- **Tauri 2.x**: 桌面应用框架
+- **Rust**: 后端系统语言
+- **WebView**: 前端渲染引擎
 
-### IDE 推荐
+### 构建工具
+- **Vite**: 前端构建
+- **Cargo**: Rust 构建
+- **npm workspaces**: 多包管理
 
-- [VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar)
+## 📚 文档说明
 
-### 全局状态管理
+本项目包含以下文档，除开发约束文档外已整合到本 README：
 
-项目使用 Pinia 进行状态管理，支持跨模块的状态共享。
+### 已整合的文档
+- ✅ **微前端架构** (`README_MICROFRONTEND.md`) - 架构设计和实现
+- ✅ **打包构建** (`PACKAGING_GUIDE.md`) - 构建流程和配置
+- ✅ **窗口管理** (`WINDOW_MANAGEMENT_GUIDE.md`) - Tauri 窗口系统
+- ✅ **操作窗口** (`TAURI_WINDOW_GUIDE.md`) - 操作窗口系统
+- ✅ **子窗口修复** (`CHILD_WINDOW_FIX.md`) - 窗口控制功能
+- ✅ **自定义表单** (`CUSTOM_FORM_GUIDE.md`) - 表单组件系统
+
+### 独立保留的文档
+- 📋 **开发架构指南** (`AGENT_ARCHITECTURE_GUIDE.md`) - 开发规范和架构
+- 📋 **开发约束文档** (`AGENT_DEVELOPMENT_CONSTRAINTS.md`) - 开发限制和约束
+
+## 🎯 使用方法
+
+### 1. 启动系统
+```bash
+# 1. 启动概算模块
+cd packages/rough-estimate && npm run dev
+
+# 2. 启动主应用（新终端）
+npm run tauri:dev
+```
+
+### 2. 使用功能
+1. **主界面**: 查看 6 个业务模块卡片
+2. **打开模块**: 点击"概算"卡片，在新窗口打开概算系统
+3. **窗口操作**: 使用最小化、最大化、关闭按钮
+4. **数据操作**: 使用导入、导出、新建、编辑等功能
+
+### 3. 开发新模块
+1. 复制概算模块结构
+2. 修改配置和业务逻辑
+3. 注册到主应用
+4. 测试窗口功能
+
+## 🔍 故障排除
+
+### 常见问题
+
+1. **模块无法打开**
+   - 检查模块是否已启动（端口是否占用）
+   - 确认 Tauri 窗口创建权限
+   - 查看控制台错误信息
+
+2. **窗口控制按钮无效**
+   - 确认窗口配置 `modal: false`
+   - 检查 `useWindowControls` 是否正确导入
+   - 验证 Tauri API 权限
+
+3. **构建失败**
+   - 检查所有子模块依赖是否安装
+   - 确认 Rust 环境配置正确
+   - 查看构建日志错误信息
+
+### 调试技巧
+
+```bash
+# 查看详细日志
+RUST_LOG=debug npm run tauri:dev
+
+# 检查端口占用
+netstat -ano | findstr :5174
+
+# 清理构建缓存
+npm run clean && npm install
+```
+
+## 🎊 总结
+
+这是一个完整的现代化造价管理系统，采用微前端架构和 Tauri 桌面技术：
+
+- ✅ **架构先进**: 微前端 + Tauri 多窗口
+- ✅ **功能完整**: 概算模块已完成，其他模块框架就绪
+- ✅ **开发友好**: 统一的组件库和开发规范
+- ✅ **用户体验**: 现代化界面和流畅的窗口操作
+- ✅ **可扩展性**: 易于添加新模块和功能
+
+现在可以基于这个框架继续开发其他业务模块，享受微前端架构带来的开发效率提升！

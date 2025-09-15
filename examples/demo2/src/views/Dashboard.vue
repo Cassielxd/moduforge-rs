@@ -88,7 +88,7 @@
 import { ref } from 'vue'
 import { message } from 'ant-design-vue'
 import { invoke } from '@tauri-apps/api/core'
-import { AppHeader, useMainWindowManagement } from '@cost-app/shared-components'
+import { AppHeader } from '@cost-app/shared-components'
 import {
   UserOutlined,
   CalculatorOutlined,
@@ -97,18 +97,12 @@ import {
   FileTextOutlined,
   AuditOutlined
 } from '@ant-design/icons-vue'
-// 使用新的简化窗口管理
-const {
-  isMaximized,
-  minimizeWindow: minimize,
-  toggleMaximize: toggle,
-  closeWindow: close
-} = useMainWindowManagement()
+// 简化的窗口控制
+const isMaximized = ref(false)
 
-// 包装窗口操作函数以添加用户反馈
 const minimizeWindow = async () => {
   try {
-    await minimize()
+    await invoke('minimize_window')
     message.success('窗口已最小化')
   } catch (error) {
     message.error('窗口操作失败')
@@ -117,7 +111,12 @@ const minimizeWindow = async () => {
 
 const toggleMaximize = async () => {
   try {
-    await toggle()
+    if (isMaximized.value) {
+      await invoke('unmaximize_window')
+    } else {
+      await invoke('maximize_window')
+    }
+    isMaximized.value = !isMaximized.value
   } catch (error) {
     message.error('窗口操作失败')
   }
@@ -125,7 +124,7 @@ const toggleMaximize = async () => {
 
 const closeWindow = async () => {
   try {
-    await close()
+    await invoke('close_window')
   } catch (error) {
     message.error('窗口操作失败')
   }
@@ -209,7 +208,7 @@ const openModule = async (module) => {
   }
 }
 
-// 窗口管理通过 useMainWindowManagement 自动初始化
+// 窗口管理已简化
 </script>
 
 <style scoped>

@@ -19,6 +19,12 @@ const routes = [
     name: 'TestFormPage',
     component: () => import('../views/TestFormPage.vue'),
     meta: { title: '表单测试页面' }
+  },
+  {
+    path: '/operate-page/:operate?',
+    name: 'OperatePage',
+    component: () => import('../views/OperatePage.vue'),
+    meta: { title: '操作页面' }
   }
 ]
 

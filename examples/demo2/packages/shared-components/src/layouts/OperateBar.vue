@@ -18,8 +18,8 @@
           >
             <a-tooltip
               placement="bottom"
-              v-model:visible="item.decVisible"
-              @visibleChange="val => infoVisibleChange(val, item)"
+              v-model:open="item.decVisible"
+              @openChange="val => infoVisibleChange(val, item)"
             >
               <template #title>
                 <span style="font-size: 12px; text-decoration: underline">{{ item.label }}</span>
@@ -31,9 +31,9 @@
               <!-- 下拉选择框类型 -->
               <template v-if="['selectCheck'].includes(item.type)">
                 <a-dropdown
-                  @visibleChange="() => handleOperateClick(item)"
+                  @openChange="() => handleOperateClick(item)"
                   trigger="click"
-                  v-model:visible="item.dropdownVisible"
+                  v-model:open="item.dropdownVisible"
                 >
                   <div>
                     <icon-font
@@ -76,9 +76,9 @@
               <!-- 单选下拉类型 -->
               <template v-else-if="['selectRadio'].includes(item.type)">
                 <a-dropdown
-                  @visibleChange="() => handleOperateClick(item)"
+                  @openChange="() => handleOperateClick(item)"
                   trigger="click"
-                  v-model:visible="item.dropdownVisible"
+                  v-model:open="item.dropdownVisible"
                 >
                   <div class="select-radio">
                     <div class="select-head">
@@ -122,7 +122,7 @@
               <template v-else-if="item.type === 'menuList'">
                 <a-dropdown
                   trigger="click"
-                  v-model:visible="item.dropdownVisible"
+                  v-model:open="item.dropdownVisible"
                 >
                   <div class="menu-list-btn">
                     <div class="menu-list-head">
