@@ -10,7 +10,8 @@ pub use document::{
 };
 pub use history::{TypeWrapper, encode_history_frames, decode_history_frames};
 pub use zipdoc::{
-    ZipDocumentWriter, ZipDocumentReader,
+    ZipDocumentWriter, ZipDocumentReader, MmapConfig, MmapStats, ZipStreamReader,
+    FileSizeCategory, ProcessingStrategy, FileInfo,
     formats::strategy::{
         SnapshotFormat, export_zip_with_format, import_zip_with_format,
         export_plugin_states_only, import_plugin_states_only,
