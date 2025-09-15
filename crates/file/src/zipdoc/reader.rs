@@ -109,33 +109,47 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
         &mut self,
         name: &str,
     ) -> io::Result<Vec<u8>> {
-        // 检查文件大小决定策略
-        let file_size = {
-            let f = self.zip.by_name(name)?;
-            f.size()
-        };
+        // 使用智能读取策略
+        self.read_smart(name)
+    }
 
-        if file_size >= self.mmap_config.huge_file_threshold && self.mmap_config.enable_streaming {
-            // 超大文件：使用流式读取
-            // 更新访问计数（流式处理不使用缓存）
-            *self.access_count.entry(name.to_string()).or_insert(0) += 1;
-            self.read_huge_file_streaming(name)
-        } else if file_size >= self.mmap_config.threshold {
-            // 大文件：尝试使用 mmap (mmap 自己会更新访问计数)
-            match self.read_mmap(name) {
-                Ok(data) => Ok(data.to_vec()),
-                Err(_) => {
-                    // mmap 失败，回退到标准读取
-                    // 更新访问计数（标准读取不使用缓存）
+    // 智能读取：基于文件信息自动选择最优策略
+    pub fn read_smart(&mut self, name: &str) -> io::Result<Vec<u8>> {
+        let file_info = self.get_file_info(name)?;
+        
+        match file_info.recommended_strategy {
+            ProcessingStrategy::Standard => {
+                // 小文件：标准读取
+                *self.access_count.entry(name.to_string()).or_insert(0) += 1;
+                self.read_standard(name)
+            },
+            ProcessingStrategy::MemoryMap => {
+                // 中等文件：优先使用 mmap，失败时回退
+                match self.read_mmap(name) {
+                    Ok(data) => Ok(data.to_vec()),
+                    Err(_) => {
+                        // mmap 失败，回退到标准读取
+                        *self.access_count.entry(name.to_string()).or_insert(0) += 1;
+                        self.read_standard(name)
+                    }
+                }
+            },
+            ProcessingStrategy::Streaming => {
+                // 超大文件：流式读取（如果启用）
+                if self.mmap_config.enable_streaming {
                     *self.access_count.entry(name.to_string()).or_insert(0) += 1;
-                    self.read_standard(name)
+                    self.read_huge_file_streaming(name)
+                } else {
+                    // 流式处理未启用，尝试 mmap 或标准读取
+                    match self.read_mmap(name) {
+                        Ok(data) => Ok(data.to_vec()),
+                        Err(_) => {
+                            *self.access_count.entry(name.to_string()).or_insert(0) += 1;
+                            self.read_standard(name)
+                        }
+                    }
                 }
             }
-        } else {
-            // 小文件：直接标准读取
-            // 更新访问计数（标准读取不使用缓存）
-            *self.access_count.entry(name.to_string()).or_insert(0) += 1;
-            self.read_standard(name)
         }
     }
 
@@ -430,6 +444,85 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
             total_size,
             current_pos: 0,
         })
+    }
+
+    // 智能处理：根据文件大小自动选择回调或直接返回策略
+    pub fn process_smart<F>(&mut self, name: &str, mut processor: F) -> io::Result<()>
+    where
+        F: FnMut(&[u8]) -> io::Result<()>,
+    {
+        let file_info = self.get_file_info(name)?;
+        
+        match file_info.recommended_strategy {
+            ProcessingStrategy::Standard => {
+                // 小文件：直接读取后一次性回调
+                *self.access_count.entry(name.to_string()).or_insert(0) += 1;
+                let data = self.read_standard(name)?;
+                processor(&data)
+            },
+            ProcessingStrategy::MemoryMap => {
+                // 中等文件：尝试 mmap 零拷贝，失败时回退
+                match self.read_mmap(name) {
+                    Ok(data) => {
+                        // 零拷贝：直接传递 mmap 的引用
+                        processor(data)
+                    },
+                    Err(_) => {
+                        // mmap 失败，回退到标准读取
+                        *self.access_count.entry(name.to_string()).or_insert(0) += 1;
+                        let data = self.read_standard(name)?;
+                        processor(&data)
+                    }
+                }
+            },
+            ProcessingStrategy::Streaming => {
+                // 超大文件：强制使用流式回调处理
+                if self.mmap_config.enable_streaming {
+                    *self.access_count.entry(name.to_string()).or_insert(0) += 1;
+                    self.process_huge_file(name, processor)
+                } else {
+                    // 流式处理未启用，尝试 mmap 或回退
+                    match self.read_mmap(name) {
+                        Ok(data) => processor(data),
+                        Err(_) => {
+                            *self.access_count.entry(name.to_string()).or_insert(0) += 1;
+                            let data = self.read_standard(name)?;
+                            processor(&data)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 智能批量处理：自动判断是否需要流式处理多个文件
+    pub fn process_files_smart<F>(&mut self, file_names: &[&str], mut processor: F) -> io::Result<()>
+    where
+        F: FnMut(&str, &[u8]) -> io::Result<()>,
+    {
+        for &name in file_names {
+            let file_info = self.get_file_info(name)?;
+            
+            // 根据策略决定处理方式
+            match file_info.recommended_strategy {
+                ProcessingStrategy::Standard | ProcessingStrategy::MemoryMap => {
+                    // 小文件和中等文件：一次性处理
+                    let data = self.read_smart(name)?;
+                    processor(name, &data)?;
+                },
+                ProcessingStrategy::Streaming => {
+                    // 超大文件：流式处理，累积数据
+                    let mut accumulated_data = Vec::new();
+                    self.process_smart(name, |chunk| {
+                        accumulated_data.extend_from_slice(chunk);
+                        Ok(())
+                    })?;
+                    processor(name, &accumulated_data)?;
+                }
+            }
+        }
+        
+        Ok(())
     }
 
     // 处理超大文件的回调方式（避免内存占用）
