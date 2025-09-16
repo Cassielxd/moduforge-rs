@@ -1,0 +1,44 @@
+[package]
+name = "moduforge-deno"
+version = {workspace=true}
+edition = {workspace=true}
+description = "Deno runtime integration for ModuForge-RS"
+license = "MIT"
+[lib]
+name = "mf_deno"
+path = "src/lib.rs"
+[dependencies]
+deno_core = { version = "0.357.0"}
+deno_runtime = { version = "0.223.0"}
+# Async runtime
+tokio = { workspace = true }
+async-trait = { workspace = true }
+
+# Data structures
+serde = { workspace = true }
+serde_json = { workspace = true }
+dashmap = { workspace = true }
+imbl = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Local dependencies
+moduforge-state = { workspace = true }
+moduforge-model = { workspace = true }
+moduforge-transform = { workspace = true }
+
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.0"
+futures = "0.3"
+
+# 暂时移除 deno_core 相关配置
