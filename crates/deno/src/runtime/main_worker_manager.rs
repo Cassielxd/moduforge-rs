@@ -9,8 +9,9 @@ use mf_state::State;
 use tokio::sync::{RwLock, Mutex};
 
 use crate::error::{DenoError, DenoResult};
-use crate::ops::create_moduforge_extension;
+use crate::ops::{create_moduforge_extension, create_moduforge_extension_with_channel, ChannelManager};
 use crate::runtime::context::{ModuForgeContext, set_context_to_opstate};
+use crate::execution_context::{PluginExecutionContext, ExecutionStats};
 
 /// MainWorker 配置
 #[derive(Clone)]
@@ -19,6 +20,7 @@ pub struct MainWorkerConfig {
     pub worker_options: WorkerOptions,
     pub bootstrap_options: BootstrapOptions,
     pub init_script: String,
+    pub channel_manager: Option<ChannelManager>,
 }
 
 impl Default for MainWorkerConfig {
@@ -72,8 +74,140 @@ impl Default for MainWorkerConfig {
             worker_options,
             bootstrap_options,
             init_script,
+            channel_manager: None,
         }
     }
+}
+
+/// 创建带通道的 MainWorker 配置
+pub fn create_config_with_channel() -> (MainWorkerConfig, ChannelManager) {
+    let (channel_manager, request_receiver) = ChannelManager::new();
+
+    let extensions = vec![create_moduforge_extension_with_channel(request_receiver)];
+
+    let init_script = r#"
+        // ModuForge JavaScript API 初始化（带通道支持）
+        globalThis.ModuForge = {
+            // 状态 API
+            State: {
+                getVersion: () => Deno.core.ops.op_state_get_version(),
+                hasField: (name) => Deno.core.ops.op_state_has_field(name),
+                getField: (name) => Deno.core.ops.op_state_get_field(name),
+                getDoc: () => Deno.core.ops.op_state_get_doc(),
+                getSchema: () => Deno.core.ops.op_state_get_schema(),
+            },
+
+            // 事务 API
+            Transaction: {
+                new: () => Deno.core.ops.op_transaction_new(),
+                setNodeAttribute: (trId, nodeId, attrs) =>
+                    Deno.core.ops.op_transaction_set_node_attribute(trId, nodeId, JSON.stringify(attrs)),
+                addNode: (trId, parentId, nodes) =>
+                    Deno.core.ops.op_transaction_add_node(trId, parentId, JSON.stringify(nodes)),
+                removeNode: (trId, parentId, nodeIds) =>
+                    Deno.core.ops.op_transaction_remove_node(trId, parentId, JSON.stringify(nodeIds)),
+                setMeta: (trId, key, value) =>
+                    Deno.core.ops.op_transaction_set_meta(trId, key, JSON.stringify(value)),
+                getMeta: (trId, key) => Deno.core.ops.op_transaction_get_meta(trId, key),
+            },
+
+            // 节点 API
+            Node: {
+                getAttribute: (nodeId, attrName) =>
+                    Deno.core.ops.op_node_get_attribute(nodeId, attrName),
+                getChildren: (nodeId) => Deno.core.ops.op_node_get_children(nodeId),
+                getParent: (nodeId) => Deno.core.ops.op_node_get_parent(nodeId),
+                findById: (nodeId) => Deno.core.ops.op_node_find_by_id(nodeId),
+                getInfo: (nodeId) => Deno.core.ops.op_node_get_info(nodeId),
+            }
+        };
+
+        // 启动请求处理器
+        async function startRequestHandler() {
+            console.log("Starting ModuForge request handler...");
+
+            while (true) {
+                try {
+                    // 等待下一个请求
+                    const request = await Deno.core.ops.op_channel_wait_request();
+
+                    if (!request) {
+                        console.log("Channel closed, stopping request handler");
+                        break;
+                    }
+
+                    console.log("Received request:", request);
+
+                    const startTime = Date.now();
+
+                    try {
+                        // 执行插件方法
+                        const result = await executePluginMethod(request.plugin_id, request.method_name, request.args);
+
+                        const executionTime = Date.now() - startTime;
+
+                        // 发送成功响应
+                        const response = {
+                            request_id: request.request_id,
+                            success: true,
+                            result: result,
+                            error: null,
+                            execution_time_ms: executionTime
+                        };
+
+                        Deno.core.ops.op_channel_send_response(response);
+                        console.log("Sent response for request:", request.request_id);
+
+                    } catch (error) {
+                        const executionTime = Date.now() - startTime;
+
+                        // 发送错误响应
+                        const response = {
+                            request_id: request.request_id,
+                            success: false,
+                            result: null,
+                            error: error.toString(),
+                            execution_time_ms: executionTime
+                        };
+
+                        Deno.core.ops.op_channel_send_response(response);
+                        console.error("Error executing request:", request.request_id, error);
+                    }
+
+                } catch (error) {
+                    console.error("Error in request handler:", error);
+                    // 继续循环，不退出
+                }
+            }
+        }
+
+        // 执行插件方法的辅助函数
+        async function executePluginMethod(pluginId, methodName, args) {
+            // 检查方法是否存在
+            if (typeof globalThis[methodName] !== 'function') {
+                throw new Error(`Method '${methodName}' not found in plugin '${pluginId}'`);
+            }
+
+            // 调用方法
+            const result = await globalThis[methodName](args);
+            return result;
+        }
+
+        // 启动处理器（异步执行）
+        startRequestHandler().catch(error => {
+            console.error("Request handler failed:", error);
+        });
+    "#.to_string();
+
+    let config = MainWorkerConfig {
+        extensions,
+        worker_options: WorkerOptions::default(),
+        bootstrap_options: BootstrapOptions::default(),
+        init_script,
+        channel_manager: Some(channel_manager.clone()),
+    };
+
+    (config, channel_manager)
 }
 
 /// 运行时统计信息
@@ -91,7 +225,7 @@ thread_local! {
 }
 
 /// 线程本地 MainWorker 管理器
-/// 使用 MainWorker 提供完整的 Deno 功能
+/// 使用 MainWorker 提供完整的 Deno 功能，集成请求-响应通道
 pub struct MainWorkerManager {
     /// MainWorker 配置
     config: MainWorkerConfig,
@@ -107,14 +241,87 @@ pub struct MainWorkerManager {
 }
 
 impl MainWorkerManager {
-    /// 创建新的线程本地 MainWorker 管理器
+    /// 创建新的线程本地 MainWorker 管理器（带通道支持）
     pub fn new(initial_state: Arc<State>) -> Self {
+        let (config, _channel_manager) = create_config_with_channel();
+
+        let manager = Self {
+            config,
+            plugins: Arc::new(RwLock::new(HashMap::new())),
+            current_state: Arc::new(RwLock::new(initial_state)),
+            stats: Arc::new(Mutex::new(RuntimeStats::default())),
+        };
+
+        // 启动线程本地 MainWorker 初始化
+        manager.initialize_worker();
+
+        manager
+    }
+
+    /// 创建线程本地 MainWorker 管理器（无通道支持，向后兼容）
+    pub fn new_without_channel(initial_state: Arc<State>) -> Self {
         Self {
             config: MainWorkerConfig::default(),
             plugins: Arc::new(RwLock::new(HashMap::new())),
             current_state: Arc::new(RwLock::new(initial_state)),
             stats: Arc::new(Mutex::new(RuntimeStats::default())),
         }
+    }
+
+    /// 初始化线程本地 MainWorker
+    fn initialize_worker(&self) {
+        let current_state = self.current_state.clone();
+        let stats = self.stats.clone();
+        let config = self.config.clone();
+
+        tokio::spawn(async move {
+            tokio::task::spawn_blocking(move || {
+                MAIN_WORKER.with(|worker_cell| {
+                    let mut worker_opt = worker_cell.borrow_mut();
+
+                    if worker_opt.is_none() {
+                        // 创建 MainWorker 实例
+                        let permissions = PermissionsContainer::new(Permissions::allow_all());
+                        let main_module = ModuleSpecifier::parse("file:///main.js").unwrap();
+
+                        let worker_options = WorkerOptions {
+                            extensions: config.extensions.clone(),
+                            ..Default::default()
+                        };
+
+                        let bootstrap_options = config.bootstrap_options.clone();
+
+                        let mut worker = MainWorker::bootstrap_from_options(
+                            main_module,
+                            worker_options,
+                            bootstrap_options,
+                        );
+
+                        // 执行初始化脚本
+                        if let Err(e) = worker.execute_script("moduforge_init.js", FastString::from(config.init_script)) {
+                            tracing::error!("Failed to initialize MainWorker: {}", e);
+                            return;
+                        }
+
+                        *worker_opt = Some(worker);
+
+                        // 更新统计信息
+                        let handle = tokio::runtime::Handle::current();
+                        handle.block_on(async {
+                            let mut stats = stats.lock().await;
+                            stats.workers_created += 1;
+                            stats.last_activity = Some(Instant::now());
+                        });
+
+                        tracing::info!("MainWorker with channel support initialized");
+                    }
+                });
+            })
+            .await
+            .unwrap_or_else(|e| {
+                tracing::error!("Worker initialization task failed: {}", e);
+            });
+        });
     }
 
     /// 获取或创建当前线程的 MainWorker 实例
@@ -235,7 +442,7 @@ impl MainWorkerManager {
             })
         }).await
         .map_err(|e| DenoError::Runtime(anyhow::anyhow!("Task join error: {}", e)))??;
-
+ 
         tracing::info!("Plugin {} loaded successfully", plugin_id);
         Ok(())
     }
@@ -397,8 +604,148 @@ impl MainWorkerManager {
             "loaded_plugins_count": plugins.len(),
             "loaded_plugins": plugins.keys().cloned().collect::<Vec<_>>(),
             "last_activity": stats.last_activity.map(|t| t.elapsed().as_secs()),
-            "architecture": "main_worker"
+            "architecture": if self.config.channel_manager.is_some() { "main_worker_channel" } else { "main_worker" }
         })
+    }
+
+    /// 通过通道异步执行插件方法
+    /// 这是新的推荐方式，支持真正的异步执行
+    pub async fn execute_plugin_method_async(
+        &self,
+        plugin_id: &str,
+        method_name: &str,
+        args: serde_json::Value,
+    ) -> DenoResult<serde_json::Value> {
+        let start_time = Instant::now();
+
+        // 更新统计信息
+        {
+            let mut stats = self.stats.lock().await;
+            stats.last_activity = Some(Instant::now());
+        }
+
+        // 检查通道管理器是否可用
+        let channel_manager = self.config.channel_manager.as_ref()
+            .ok_or_else(|| DenoError::Runtime(anyhow::anyhow!("Channel manager not available. Use new() instead of new_without_channel()")))?;
+
+        // 通过通道发送请求
+        let response = channel_manager.send_request(
+            plugin_id.to_string(),
+            method_name.to_string(),
+            args,
+        ).await?;
+
+        // 更新执行统计
+        {
+            let mut stats = self.stats.lock().await;
+            stats.plugin_executions += 1;
+            stats.total_execution_time += start_time.elapsed();
+        }
+
+        if response.success {
+            Ok(response.result.unwrap_or(serde_json::Value::Null))
+        } else {
+            Err(DenoError::JsExecution(
+                response.error.unwrap_or_else(|| "Unknown execution error".to_string())
+            ))
+        }
+    }
+
+    /// 通过通道异步执行插件方法（带超时）
+    pub async fn execute_plugin_method_async_with_timeout(
+        &self,
+        plugin_id: &str,
+        method_name: &str,
+        args: serde_json::Value,
+        timeout_ms: u64,
+    ) -> DenoResult<serde_json::Value> {
+        let start_time = Instant::now();
+
+        // 更新统计信息
+        {
+            let mut stats = self.stats.lock().await;
+            stats.last_activity = Some(Instant::now());
+        }
+
+        // 检查通道管理器是否可用
+        let channel_manager = self.config.channel_manager.as_ref()
+            .ok_or_else(|| DenoError::Runtime(anyhow::anyhow!("Channel manager not available. Use new() instead of new_without_channel()")))?;
+
+        // 通过通道发送请求（带超时）
+        let response = channel_manager.send_request_with_timeout(
+            plugin_id.to_string(),
+            method_name.to_string(),
+            args,
+            timeout_ms,
+        ).await?;
+
+        // 更新执行统计
+        {
+            let mut stats = self.stats.lock().await;
+            stats.plugin_executions += 1;
+            stats.total_execution_time += start_time.elapsed();
+        }
+
+        if response.success {
+            Ok(response.result.unwrap_or(serde_json::Value::Null))
+        } else {
+            Err(DenoError::JsExecution(
+                response.error.unwrap_or_else(|| "Unknown execution error".to_string())
+            ))
+        }
+    }
+
+    /// 获取通道管理器（用于自定义通信）
+    pub fn get_channel_manager(&self) -> Option<&ChannelManager> {
+        self.config.channel_manager.as_ref()
+    }
+}
+
+// 为 MainWorkerManager 实现 PluginExecutionContext 特质
+#[async_trait::async_trait]
+impl PluginExecutionContext for MainWorkerManager {
+    async fn execute_plugin_method(
+        &self,
+        plugin_id: &str,
+        method_name: &str,
+        args: serde_json::Value,
+    ) -> DenoResult<serde_json::Value> {
+        // 使用传统的同步执行方法
+        self.execute_plugin_method(plugin_id, method_name, args).await
+    }
+
+    async fn execute_plugin_method_async(
+        &self,
+        plugin_id: &str,
+        method_name: &str,
+        args: serde_json::Value,
+    ) -> DenoResult<serde_json::Value> {
+        // 使用新的异步通道方法（如果可用）
+        if self.config.channel_manager.is_some() {
+            self.execute_plugin_method_async(plugin_id, method_name, args).await
+        } else {
+            // 回退到同步方法
+            self.execute_plugin_method(plugin_id, method_name, args).await
+        }
+    }
+
+    async fn is_plugin_loaded(&self, plugin_id: &str) -> bool {
+        let plugins = self.plugins.read().await;
+        plugins.contains_key(plugin_id)
+    }
+
+    async fn get_execution_stats(&self) -> ExecutionStats {
+        let stats = self.stats.lock().await;
+        ExecutionStats {
+            total_executions: stats.plugin_executions,
+            successful_executions: stats.plugin_executions, // 简化：假设都成功
+            failed_executions: 0,
+            average_execution_time_ms: if stats.plugin_executions > 0 {
+                stats.total_execution_time.as_millis() as f64 / stats.plugin_executions as f64
+            } else {
+                0.0
+            },
+        }
     }
 }
 

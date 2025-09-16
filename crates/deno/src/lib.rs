@@ -5,6 +5,8 @@
 
 pub mod error;
 pub mod plugin;
+pub mod plugin_v2;
+pub mod execution_context;
 
 // 条件编译：根据是否启用 deno_core 来选择实现
 pub mod ops;
@@ -14,9 +16,12 @@ pub mod integration;
 
 pub use error::{DenoError, DenoResult};
 pub use plugin::{DenoPlugin, DenoPluginBuilder};
+pub use plugin_v2::{DenoPluginV2, DenoPluginBuilderV2};
+pub use execution_context::{PluginExecutionContext, ExecutionStats, NullExecutionContext};
 
 pub use integration::{ModuForgeDeno, add_deno_plugins_to_state_config, create_sample_plugin_code};
-pub use runtime::{DenoPluginManager, ModuForgeContext, RuntimePoolStats, MainWorkerManager};
+pub use runtime::{DenoPluginManager, ModuForgeContext, RuntimePoolStats, MainWorkerManager, EventBridge, DenoEvent, EventListener};
+pub use ops::{ChannelManager, ChannelRequest, ChannelResponse};
 
 
 // 重新导出，提供统一的接口

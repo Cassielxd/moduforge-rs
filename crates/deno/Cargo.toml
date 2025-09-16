@@ -30,6 +30,9 @@ tracing = { workspace = true }
 # Time handling
 chrono = { version = "0.4", features = ["serde"] }
 
+# UUID generation
+uuid = { workspace = true }
+
 # Local dependencies
 moduforge-state = { workspace = true }
 moduforge-model = { workspace = true }
