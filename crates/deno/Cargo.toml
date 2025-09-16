@@ -4,12 +4,94 @@ version = {workspace=true}
 edition = {workspace=true}
 description = "Deno runtime integration for ModuForge-RS"
 license = "MIT"
+
+[features]
+# "fake" feature that allows to generate docs on docs.rs
+docsrs = []
+# A feature that allows excluding `./js/99_main.js` from the exported extension.
+exclude_runtime_main_js = []
+# A feature that disables embedding of the JavaScript source files in the binary.
+# With this feature enabled, the sources must be consumed during build time,
+# by creating a startup snapshot.
+include_js_files_for_snapshotting = [
+  "deno_core/include_js_files_for_snapshotting",
+]
+# A dev feature to disable creations and loading of snapshots in favor of
+# loading JS sources at runtime.
+hmr = ["include_js_files_for_snapshotting", "transpile"]
+# Signal that only snapshotted JS sources should be used. This will
+# conditionally exclude the runtime source transpilation logic, and add an
+# assertion that a snapshot is provided.
+only_snapshotted_js_sources = ["include_js_files_for_snapshotting"]
+snapshot = ["transpile"]
+transpile = ["deno_ast"]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tokio_unstable)'] }
+
+
 [lib]
 name = "mf_deno"
-path = "src/lib.rs"
+path = "lib.rs"
 [dependencies]
 deno_core = { version = "0.357.0"}
-deno_runtime = { version = "0.223.0"}
+
+deno_ast = { version = "=0.50.0", features = ["transpiling"],optional = true }
+deno_broadcast_channel = { version = "0.209.0" }
+deno_bundle_runtime = { version = "0.2.0" }
+deno_cache = { version = "0.147.0" }
+deno_canvas = { version = "0.84.0" }
+deno_console = { version = "0.215.0"}
+
+deno_cron = { version = "0.95.0" }
+deno_crypto = { version = "0.229.0"}
+deno_error = "=0.7.0"
+deno_features = { version = "0.12.0" }
+deno_fetch = { version = "0.239.0"}
+deno_ffi = { version = "0.202.0" }
+deno_fs = {version = "0.125.0", features = ["sync_fs"] }
+deno_http = { version = "0.213.0"}
+deno_io = { version = "0.125.0"  }
+deno_kv = { version = "0.123.0" }
+deno_napi = { version = "0.146.0" }
+deno_net = { version = "0.207.0" }
+deno_node = { version = "0.153.0" }
+deno_os = { version = "0.32.0" }
+deno_path_util = "=0.6.1"
+deno_permissions = { version = "0.74.0"}
+deno_process = { version = "0.30.0" }
+deno_resolver = { version = "0.46.0", features = ["sync"] }
+deno_signals = "0.6.0"
+deno_telemetry="0.37.0"
+deno_terminal = "=0.2.2"
+deno_tls = { version = "0.202.0"}
+deno_url = { version = "0.215.0" }
+deno_web = { version = "0.246.0" }
+deno_webidl = { version = "0.215.0" }
+deno_websocket = { version = "0.220.0" }
+deno_webstorage = { version = "0.210.0" }
+node_resolver = { version = "0.53.0", features = ["sync"] }
+
+color-print = "0.3.5"
+encoding_rs = "=0.8.35"
+fastwebsockets = { version = "0.8", features = ["upgrade", "unstable-split"] }
+http = "1.0"
+http-body-util = "0.1.2"
+hyper = { version = "1.6.0", features = ["full"] }
+hyper-util = { version = "0.1.10", features = ["tokio", "client", "client-legacy", "server", "server-auto"] }
+indexmap = { version = "2", features = ["serde"] }
+libc = "0.2.168"
+log = { version = "0.4.20", features = ["kv"] }
+notify = "=6.1.1"
+once_cell = "1.17.1"
+regex = "^1.7.0"
+rustyline = { version="=13.0.0", features = ["custom-bindings"] }
+same-file = "1.0.6"
+sys_traits = "=0.1.17"
+tokio-metrics = { version = "0.3.0", features = ["rt"] }
+twox-hash = { version = "=2.1.0", features = ["std", "xxhash64"], default-features = false }
+
+
 # Async runtime
 tokio = { workspace = true }
 async-trait = { workspace = true }
@@ -37,6 +119,22 @@ uuid = { workspace = true }
 moduforge-state = { workspace = true }
 moduforge-model = { workspace = true }
 moduforge-transform = { workspace = true }
+
+
+
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "=0.3.9", features = ["commapi", "knownfolders", "mswsock", "objbase", "psapi", "shlobj", "tlhelp32", "winbase", "winerror", "winuser", "winsock2"] }
+ntapi = "0.4.0"
+windows-sys = { version = "0.59.0", features = ["Win32_Foundation", "Win32_Media", "Win32_Storage_FileSystem", "Win32_System_IO", "Win32_System_WindowsProgramming", "Wdk", "Wdk_System", "Wdk_System_SystemInformation", "Win32_Security", "Win32_System_Pipes", "Wdk_Storage_FileSystem", "Win32_System_Registry", "Win32_System_Kernel", "Win32_System_Threading", "Win32_UI", "Win32_UI_Shell"] }
+
+[target.'cfg(unix)'.dependencies]
+nix = "=0.27.1"
+
+
+
+[package.metadata.docs.rs]
+features = ["docsrs"]
 
 
 [dev-dependencies]

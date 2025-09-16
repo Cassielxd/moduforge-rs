@@ -1,0 +1,1319 @@
+// Copyright 2018-2025 the Deno authors. MIT license.
+use std::borrow::Cow;
+use std::collections::HashMap;
+use std::rc::Rc;
+use std::sync::Arc;
+#[cfg(target_os = "linux")]
+use std::sync::LazyLock;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::time::Duration;
+use std::time::Instant;
+
+use deno_broadcast_channel::InMemoryBroadcastChannel;
+use deno_cache::CacheImpl;
+use deno_cache::CreateCache;
+use deno_cache::SqliteBackedCache;
+use deno_core::CompiledWasmModuleStore;
+use deno_core::Extension;
+use deno_core::InspectorSessionKind;
+use deno_core::InspectorSessionOptions;
+use deno_core::JsRuntime;
+use deno_core::LocalInspectorSession;
+use deno_core::ModuleCodeString;
+use deno_core::ModuleId;
+use deno_core::ModuleLoader;
+use deno_core::ModuleSpecifier;
+use deno_core::OpMetricsFactoryFn;
+use deno_core::OpMetricsSummaryTracker;
+use deno_core::PollEventLoopOptions;
+use deno_core::RequestedModuleType;
+use deno_core::RuntimeOptions;
+use deno_core::SharedArrayBufferStore;
+use deno_core::SourceCodeCacheInfo;
+use deno_core::error::CoreError;
+use deno_core::error::JsError;
+use deno_core::merge_op_metrics;
+use deno_core::v8;
+use deno_cron::local::LocalCronHandler;
+use deno_fs::FileSystem;
+use deno_io::Stdio;
+use deno_kv::dynamic::MultiBackendDbHandler;
+use deno_napi::DenoRtNativeAddonLoaderRc;
+use deno_node::ExtNodeSys;
+use deno_node::NodeExtInitServices;
+use deno_os::ExitCode;
+use deno_permissions::PermissionsContainer;
+use deno_process::NpmProcessStateProviderRc;
+use deno_tls::RootCertStoreProvider;
+use deno_tls::TlsKeys;
+use deno_web::BlobStore;
+use log::debug;
+use node_resolver::InNpmPackageChecker;
+use node_resolver::NpmPackageFolderResolver;
+
+use crate::BootstrapOptions;
+use crate::FeatureChecker;
+use crate::code_cache::CodeCache;
+use crate::code_cache::CodeCacheType;
+use crate::inspector_server::InspectorServer;
+use crate::ops;
+use crate::shared::runtime;
+
+pub type FormatJsErrorFn = dyn Fn(&JsError) -> String + Sync + Send;
+
+#[cfg(target_os = "linux")]
+pub(crate) static MEMORY_TRIM_HANDLER_ENABLED: LazyLock<bool> =
+  LazyLock::new(|| std::env::var_os("DENO_USR2_MEMORY_TRIM").is_some());
+
+#[cfg(target_os = "linux")]
+pub(crate) static SIGUSR2_RX: LazyLock<tokio::sync::watch::Receiver<()>> =
+  LazyLock::new(|| {
+    let (tx, rx) = tokio::sync::watch::channel(());
+
+    tokio::spawn(async move {
+      let mut sigusr2 = deno_signals::signal_stream(libc::SIGUSR2).unwrap();
+
+      loop {
+        sigusr2.recv().await;
+
+        // 安全：调用libc，Rust侧没有相关内容。
+        unsafe {
+          libc::malloc_trim(0);
+        }
+
+        if tx.send(()).is_err() {
+          break;
+        }
+      }
+    });
+
+    rx
+  });
+
+// TODO(bartlomieju): 临时测量，直到我们开始支持更多模块类型
+pub fn create_validate_import_attributes_callback(
+  enable_raw_imports: Arc<AtomicBool>,
+) -> deno_core::ValidateImportAttributesCb {
+  Box::new(
+    move |scope: &mut v8::HandleScope, attributes: &HashMap<String, String>| {
+      let valid_attribute = |kind: &str| {
+        enable_raw_imports.load(Ordering::Relaxed)
+          && matches!(kind, "bytes" | "text")
+          || matches!(kind, "json")
+      };
+      for (key, value) in attributes {
+        let msg = if key != "type" {
+          Some(format!("\"{key}\" attribute is not supported."))
+        } else if !valid_attribute(value.as_str())
+          && value != "$$deno-core-internal-wasm-module"
+        {
+          Some(format!("\"{value}\" is not a valid module type."))
+        } else {
+          None
+        };
+
+        let Some(msg) = msg else {
+          continue;
+        };
+
+        let message = v8::String::new(scope, &msg).unwrap();
+        let exception = v8::Exception::type_error(scope, message);
+        scope.throw_exception(exception);
+        return;
+      }
+    },
+  )
+}
+
+pub fn make_wait_for_inspector_disconnect_callback() -> Box<dyn Fn()> {
+  let has_notified_of_inspector_disconnect = AtomicBool::new(false);
+  Box::new(move || {
+    if !has_notified_of_inspector_disconnect
+      .swap(true, std::sync::atomic::Ordering::SeqCst)
+    {
+      log::info!(
+        "Program finished. Waiting for inspector to disconnect to exit the process..."
+      );
+    }
+  })
+}
+
+/// 此工作器由Deno可执行文件中的几乎所有子命令创建和使用。
+///
+/// 它提供`Deno`命名空间中可用的操作。
+///
+/// 在程序执行期间创建的所有`WebWorker`都是此工作器的后代。
+pub struct MainWorker {
+  pub js_runtime: JsRuntime,
+  should_break_on_first_statement: bool,
+  should_wait_for_inspector_session: bool,
+  exit_code: ExitCode,
+  bootstrap_fn_global: Option<v8::Global<v8::Function>>,
+  dispatch_load_event_fn_global: v8::Global<v8::Function>,
+  dispatch_beforeunload_event_fn_global: v8::Global<v8::Function>,
+  dispatch_unload_event_fn_global: v8::Global<v8::Function>,
+  dispatch_process_beforeexit_event_fn_global: v8::Global<v8::Function>,
+  dispatch_process_exit_event_fn_global: v8::Global<v8::Function>,
+  memory_trim_handle: Option<tokio::task::JoinHandle<()>>,
+}
+
+impl Drop for MainWorker {
+  fn drop(&mut self) {
+    if let Some(memory_trim_handle) = self.memory_trim_handle.take() {
+      memory_trim_handle.abort();
+    }
+  }
+}
+
+pub struct WorkerServiceOptions<
+  TInNpmPackageChecker: InNpmPackageChecker,
+  TNpmPackageFolderResolver: NpmPackageFolderResolver,
+  TExtNodeSys: ExtNodeSys,
+> {
+  pub blob_store: Arc<BlobStore>,
+  pub broadcast_channel: InMemoryBroadcastChannel,
+  pub deno_rt_native_addon_loader: Option<DenoRtNativeAddonLoaderRc>,
+  pub feature_checker: Arc<FeatureChecker>,
+  pub fs: Arc<dyn FileSystem>,
+  /// `ModuleLoader`的实现，当V8请求加载ES模块时
+  /// 将被调用。
+  ///
+  /// 如果未提供，当执行的代码尝试加载模块时
+  /// 运行时将报错。
+  pub module_loader: Rc<dyn ModuleLoader>,
+  pub node_services: Option<
+    NodeExtInitServices<
+      TInNpmPackageChecker,
+      TNpmPackageFolderResolver,
+      TExtNodeSys,
+    >,
+  >,
+  pub npm_process_state_provider: Option<NpmProcessStateProviderRc>,
+  pub permissions: PermissionsContainer,
+  pub root_cert_store_provider: Option<Arc<dyn RootCertStoreProvider>>,
+  pub fetch_dns_resolver: deno_fetch::dns::Resolver,
+
+  /// 用于在隔离环境之间传输SharedArrayBuffer的存储。
+  /// 如果多个隔离环境需要共享SharedArrayBuffer的可能性，
+  /// 它们应该使用相同的[SharedArrayBufferStore]。如果
+  /// 没有指定[SharedArrayBufferStore]，SharedArrayBuffer无法被序列化。
+  pub shared_array_buffer_store: Option<SharedArrayBufferStore>,
+
+  /// 用于在隔离环境之间传输`WebAssembly.Module`对象的存储。
+  /// 如果多个隔离环境需要共享`WebAssembly.Module`对象的可能性，
+  /// 它们应该使用相同的[CompiledWasmModuleStore]。如果没有指定
+  /// [CompiledWasmModuleStore]，`WebAssembly.Module`对象无法被序列化。
+  pub compiled_wasm_module_store: Option<CompiledWasmModuleStore>,
+
+  /// 模块和脚本源代码的V8代码缓存。
+  pub v8_code_cache: Option<Arc<dyn CodeCache>>,
+
+  pub bundle_provider: Option<Arc<dyn deno_bundle_runtime::BundleProvider>>,
+}
+
+pub struct WorkerOptions {
+  pub bootstrap: BootstrapOptions,
+
+  /// JsRuntime扩展，不要与ES模块混淆。
+  ///
+  /// 扩展注册在`js`或`esm`配置中提供的"ops"和JavaScript源码。
+  /// 如果使用快照，扩展不应该提供已经被快照的JavaScript源码。
+  pub extensions: Vec<Extension>,
+
+  /// 启动时应加载的V8快照。
+  pub startup_snapshot: Option<&'static [u8]>,
+
+  /// 是否应跳过操作注册？
+  pub skip_op_registration: bool,
+
+  /// 可选的隔离环境创建参数，如堆限制。
+  pub create_params: Option<v8::CreateParams>,
+
+  pub unsafely_ignore_certificate_errors: Option<Vec<String>>,
+  pub seed: Option<u64>,
+
+  // 创建新WebWorker实例时调用的回调函数
+  pub create_web_worker_cb: Arc<ops::worker_host::CreateWebWorkerCb>,
+  pub format_js_error_fn: Option<Arc<FormatJsErrorFn>>,
+
+  pub maybe_inspector_server: Option<Arc<InspectorServer>>,
+  // 如果为true，工作器将等待检查器会话并在用户代码的第一条语句处中断。
+  // 优先级高于`should_wait_for_inspector_session`。
+  pub should_break_on_first_statement: bool,
+  // 如果为true，工作器将在执行用户代码前等待检查器会话。
+  pub should_wait_for_inspector_session: bool,
+  /// 如果为Some，为匹配给定模式的操作打印低级跟踪输出。
+  pub trace_ops: Option<Vec<String>>,
+
+  pub cache_storage_dir: Option<std::path::PathBuf>,
+  pub origin_storage_dir: Option<std::path::PathBuf>,
+  pub stdio: Stdio,
+  pub enable_raw_imports: bool,
+  pub enable_stack_trace_arg_in_ops: bool,
+
+  pub unconfigured_runtime: Option<UnconfiguredRuntime>,
+}
+
+impl Default for WorkerOptions {
+  fn default() -> Self {
+    Self {
+      create_web_worker_cb: Arc::new(|_| {
+        unimplemented!("不支持web workers")
+      }),
+      skip_op_registration: false,
+      seed: None,
+      unsafely_ignore_certificate_errors: Default::default(),
+      should_break_on_first_statement: Default::default(),
+      should_wait_for_inspector_session: Default::default(),
+      trace_ops: Default::default(),
+      maybe_inspector_server: Default::default(),
+      format_js_error_fn: Default::default(),
+      origin_storage_dir: Default::default(),
+      cache_storage_dir: Default::default(),
+      extensions: Default::default(),
+      startup_snapshot: Default::default(),
+      create_params: Default::default(),
+      bootstrap: Default::default(),
+      stdio: Default::default(),
+      enable_raw_imports: false,
+      enable_stack_trace_arg_in_ops: false,
+      unconfigured_runtime: None,
+    }
+  }
+}
+
+pub fn create_op_metrics(
+  enable_op_summary_metrics: bool,
+  trace_ops: Option<Vec<String>>,
+) -> (
+  Option<Rc<OpMetricsSummaryTracker>>,
+  Option<OpMetricsFactoryFn>,
+) {
+  let mut op_summary_metrics = None;
+  let mut op_metrics_factory_fn: Option<OpMetricsFactoryFn> = None;
+  let now = Instant::now();
+  let max_len: Rc<std::cell::Cell<usize>> = Default::default();
+  if let Some(patterns) = trace_ops {
+    /// 根据模式列表匹配操作名称
+    fn matches_pattern(patterns: &[String], name: &str) -> bool {
+      let mut found_match = false;
+      let mut found_nomatch = false;
+      for pattern in patterns.iter() {
+        if let Some(pattern) = pattern.strip_prefix('-') {
+          if name.contains(pattern) {
+            return false;
+          }
+        } else if name.contains(pattern.as_str()) {
+          found_match = true;
+        } else {
+          found_nomatch = true;
+        }
+      }
+
+      found_match || !found_nomatch
+    }
+
+    op_metrics_factory_fn = Some(Box::new(move |_, _, decl| {
+      // 如果不匹配请求的模式，或匹配负模式，则退出
+      if !matches_pattern(&patterns, decl.name) {
+        return None;
+      }
+
+      max_len.set(max_len.get().max(decl.name.len()));
+      let max_len = max_len.clone();
+      Some(Rc::new(
+        #[allow(clippy::print_stderr)]
+        move |op: &deno_core::_ops::OpCtx, event, source| {
+          eprintln!(
+            "[{: >10.3}] {name:max_len$}: {event:?} {source:?}",
+            now.elapsed().as_secs_f64(),
+            name = op.decl().name,
+            max_len = max_len.get()
+          );
+        },
+      ))
+    }));
+  }
+
+  if enable_op_summary_metrics {
+    let summary = Rc::new(OpMetricsSummaryTracker::default());
+    let summary_metrics = summary.clone().op_metrics_factory_fn(|_| true);
+    op_metrics_factory_fn = Some(match op_metrics_factory_fn {
+      Some(f) => merge_op_metrics(f, summary_metrics),
+      None => summary_metrics,
+    });
+    op_summary_metrics = Some(summary);
+  }
+
+  (op_summary_metrics, op_metrics_factory_fn)
+}
+
+impl MainWorker {
+  pub fn bootstrap_from_options<
+    TInNpmPackageChecker: InNpmPackageChecker + 'static,
+    TNpmPackageFolderResolver: NpmPackageFolderResolver + 'static,
+    TExtNodeSys: ExtNodeSys + 'static,
+  >(
+    main_module: &ModuleSpecifier,
+    services: WorkerServiceOptions<
+      TInNpmPackageChecker,
+      TNpmPackageFolderResolver,
+      TExtNodeSys,
+    >,
+    options: WorkerOptions,
+  ) -> Self {
+    let (mut worker, bootstrap_options) =
+      Self::from_options(main_module, services, options);
+    worker.bootstrap(bootstrap_options);
+    worker
+  }
+
+  fn from_options<
+    TInNpmPackageChecker: InNpmPackageChecker + 'static,
+    TNpmPackageFolderResolver: NpmPackageFolderResolver + 'static,
+    TExtNodeSys: ExtNodeSys + 'static,
+  >(
+    main_module: &ModuleSpecifier,
+    services: WorkerServiceOptions<
+      TInNpmPackageChecker,
+      TNpmPackageFolderResolver,
+      TExtNodeSys,
+    >,
+    mut options: WorkerOptions,
+  ) -> (Self, BootstrapOptions) {
+    fn create_cache_inner(options: &WorkerOptions) -> Option<CreateCache> {
+      if let Ok(var) = std::env::var("DENO_CACHE_LSC_ENDPOINT") {
+        let elems: Vec<_> = var.split(",").collect();
+        if elems.len() == 2 {
+          let endpoint = elems[0];
+          let token = elems[1];
+          use deno_cache::CacheShard;
+
+          let shard =
+            Rc::new(CacheShard::new(endpoint.to_string(), token.to_string()));
+          let create_cache_fn = move || {
+            let x = deno_cache::LscBackend::default();
+            x.set_shard(shard.clone());
+
+            Ok(CacheImpl::Lsc(x))
+          };
+          #[allow(clippy::arc_with_non_send_sync)]
+          return Some(CreateCache(Arc::new(create_cache_fn)));
+        }
+      }
+
+      if let Some(storage_dir) = &options.cache_storage_dir {
+        let storage_dir = storage_dir.clone();
+        let create_cache_fn = move || {
+          let s = SqliteBackedCache::new(storage_dir.clone())?;
+          Ok(CacheImpl::Sqlite(s))
+        };
+        return Some(CreateCache(Arc::new(create_cache_fn)));
+      }
+
+      None
+    }
+    let create_cache = create_cache_inner(&options);
+
+    // 获取操作指标
+    let (op_summary_metrics, op_metrics_factory_fn) = create_op_metrics(
+      options.bootstrap.enable_op_summary_metrics,
+      options.trace_ops,
+    );
+
+    // 权限：许多操作依赖于此
+    let enable_testing_features = options.bootstrap.enable_testing_features;
+    let exit_code = ExitCode::default();
+
+    // 检查需要配置新jsruntime的选项
+    if options.unconfigured_runtime.is_some()
+      && (options.enable_stack_trace_arg_in_ops
+        || op_metrics_factory_fn.is_some())
+    {
+      options.unconfigured_runtime = None;
+    }
+
+    #[cfg(feature = "hmr")]
+    assert!(
+      cfg!(not(feature = "only_snapshotted_js_sources")),
+      "'hmr' is incompatible with 'only_snapshotted_js_sources'."
+    );
+
+    #[cfg(feature = "only_snapshotted_js_sources")]
+    options.startup_snapshot.as_ref().expect("A user snapshot was not provided, even though 'only_snapshotted_js_sources' is used.");
+
+    let mut js_runtime = if let Some(u) = options.unconfigured_runtime {
+      u.hydrate(services.module_loader)
+    } else {
+      let mut extensions = common_extensions::<
+        TInNpmPackageChecker,
+        TNpmPackageFolderResolver,
+        TExtNodeSys,
+      >(options.startup_snapshot.is_some(), false);
+
+      extensions.extend(std::mem::take(&mut options.extensions));
+
+      common_runtime(CommonRuntimeOptions {
+        module_loader: services.module_loader.clone(),
+        startup_snapshot: options.startup_snapshot,
+        create_params: options.create_params,
+        skip_op_registration: options.skip_op_registration,
+        shared_array_buffer_store: services.shared_array_buffer_store,
+        compiled_wasm_module_store: services.compiled_wasm_module_store,
+        extensions,
+        op_metrics_factory_fn,
+        enable_stack_trace_arg_in_ops: options.enable_stack_trace_arg_in_ops,
+      })
+    };
+
+    js_runtime
+      .set_eval_context_code_cache_cbs(services.v8_code_cache.map(|cache| {
+      let cache_clone = cache.clone();
+      (
+        Box::new(move |specifier: &ModuleSpecifier, code: &v8::String| {
+          let source_hash = {
+            use std::hash::Hash;
+            use std::hash::Hasher;
+            let mut hasher = twox_hash::XxHash64::default();
+            code.hash(&mut hasher);
+            hasher.finish()
+          };
+          let data = cache
+            .get_sync(specifier, CodeCacheType::Script, source_hash)
+            .inspect(|_| {
+              // 此日志行也被测试使用。
+              log::debug!(
+                "V8 code cache hit for script: {specifier}, [{source_hash}]"
+              );
+            })
+            .map(Cow::Owned);
+          Ok(SourceCodeCacheInfo {
+            data,
+            hash: source_hash,
+          })
+        }) as Box<dyn Fn(&_, &_) -> _>,
+        Box::new(
+          move |specifier: ModuleSpecifier, source_hash: u64, data: &[u8]| {
+            // 此日志行也被测试使用。
+            log::debug!(
+              "Updating V8 code cache for script: {specifier}, [{source_hash}]"
+            );
+            cache_clone.set_sync(
+              specifier,
+              CodeCacheType::Script,
+              source_hash,
+              data,
+            );
+          },
+        ) as Box<dyn Fn(_, _, &_)>,
+      )
+    }));
+
+    js_runtime
+      .op_state()
+      .borrow_mut()
+      .borrow::<EnableRawImports>()
+      .0
+      .store(options.enable_raw_imports, Ordering::Relaxed);
+
+    js_runtime
+      .lazy_init_extensions(vec![
+        deno_web::deno_web::args::<PermissionsContainer>(
+          services.blob_store.clone(),
+          options.bootstrap.location.clone(),
+        ),
+        deno_fetch::deno_fetch::args::<PermissionsContainer>(
+          deno_fetch::Options {
+            user_agent: options.bootstrap.user_agent.clone(),
+            root_cert_store_provider: services.root_cert_store_provider.clone(),
+            unsafely_ignore_certificate_errors: options
+              .unsafely_ignore_certificate_errors
+              .clone(),
+            file_fetch_handler: Rc::new(deno_fetch::FsFetchHandler),
+            resolver: services.fetch_dns_resolver,
+            ..Default::default()
+          },
+        ),
+        deno_cache::deno_cache::args(create_cache),
+        deno_websocket::deno_websocket::args::<PermissionsContainer>(
+          options.bootstrap.user_agent.clone(),
+          services.root_cert_store_provider.clone(),
+          options.unsafely_ignore_certificate_errors.clone(),
+        ),
+        deno_webstorage::deno_webstorage::args(
+          options.origin_storage_dir.clone(),
+        ),
+        deno_crypto::deno_crypto::args(options.seed),
+        deno_broadcast_channel::deno_broadcast_channel::args(
+          services.broadcast_channel.clone(),
+        ),
+        deno_ffi::deno_ffi::args::<PermissionsContainer>(
+          services.deno_rt_native_addon_loader.clone(),
+        ),
+        deno_net::deno_net::args::<PermissionsContainer>(
+          services.root_cert_store_provider.clone(),
+          options.unsafely_ignore_certificate_errors.clone(),
+        ),
+        deno_kv::deno_kv::args(
+          MultiBackendDbHandler::remote_or_sqlite::<PermissionsContainer>(
+            options.origin_storage_dir.clone(),
+            options.seed,
+            deno_kv::remote::HttpOptions {
+              user_agent: options.bootstrap.user_agent.clone(),
+              root_cert_store_provider: services
+                .root_cert_store_provider
+                .clone(),
+              unsafely_ignore_certificate_errors: options
+                .unsafely_ignore_certificate_errors
+                .clone(),
+              client_cert_chain_and_key: TlsKeys::Null,
+              proxy: None,
+            },
+          ),
+          deno_kv::KvConfig::builder().build(),
+        ),
+        deno_napi::deno_napi::args::<PermissionsContainer>(
+          services.deno_rt_native_addon_loader.clone(),
+        ),
+        deno_http::deno_http::args(deno_http::Options {
+          no_legacy_abort: options.bootstrap.no_legacy_abort,
+          ..Default::default()
+        }),
+        deno_io::deno_io::args(Some(options.stdio)),
+        deno_fs::deno_fs::args::<PermissionsContainer>(services.fs.clone()),
+        deno_os::deno_os::args(Some(exit_code.clone())),
+        deno_process::deno_process::args(services.npm_process_state_provider),
+        deno_node::deno_node::args::<
+          PermissionsContainer,
+          TInNpmPackageChecker,
+          TNpmPackageFolderResolver,
+          TExtNodeSys,
+        >(services.node_services, services.fs.clone()),
+        ops::runtime::deno_runtime::args(main_module.clone()),
+        ops::worker_host::deno_worker_host::args(
+          options.create_web_worker_cb.clone(),
+          options.format_js_error_fn.clone(),
+        ),
+        deno_bundle_runtime::deno_bundle_runtime::args(
+          services.bundle_provider.clone(),
+        ),
+      ])
+      .unwrap();
+
+    if let Some(op_summary_metrics) = op_summary_metrics {
+      js_runtime.op_state().borrow_mut().put(op_summary_metrics);
+    }
+
+    {
+      let state = js_runtime.op_state();
+      let mut state = state.borrow_mut();
+
+      // 将检查器句柄放入操作状态中，这样我们可以在
+      // 执行CJS入口点时设置断点。
+      state.put(js_runtime.inspector());
+
+      state.put::<PermissionsContainer>(services.permissions);
+      state.put(ops::TestingFeaturesEnabled(enable_testing_features));
+      state.put(services.feature_checker);
+    }
+
+    if let Some(server) = options.maybe_inspector_server.clone() {
+      server.register_inspector(
+        main_module.to_string(),
+        &mut js_runtime,
+        options.should_break_on_first_statement
+          || options.should_wait_for_inspector_session,
+      );
+    }
+
+    let (
+      bootstrap_fn_global,
+      dispatch_load_event_fn_global,
+      dispatch_beforeunload_event_fn_global,
+      dispatch_unload_event_fn_global,
+      dispatch_process_beforeexit_event_fn_global,
+      dispatch_process_exit_event_fn_global,
+    ) = {
+      let context = js_runtime.main_context();
+      let scope = &mut js_runtime.handle_scope();
+      let context_local = v8::Local::new(scope, context);
+      let global_obj = context_local.global(scope);
+      let bootstrap_str =
+        v8::String::new_external_onebyte_static(scope, b"bootstrap").unwrap();
+      let bootstrap_ns: v8::Local<v8::Object> = global_obj
+        .get(scope, bootstrap_str.into())
+        .unwrap()
+        .try_into()
+        .unwrap();
+      let main_runtime_str =
+        v8::String::new_external_onebyte_static(scope, b"mainRuntime").unwrap();
+      let bootstrap_fn =
+        bootstrap_ns.get(scope, main_runtime_str.into()).unwrap();
+      let bootstrap_fn =
+        v8::Local::<v8::Function>::try_from(bootstrap_fn).unwrap();
+      let dispatch_load_event_fn_str =
+        v8::String::new_external_onebyte_static(scope, b"dispatchLoadEvent")
+          .unwrap();
+      let dispatch_load_event_fn = bootstrap_ns
+        .get(scope, dispatch_load_event_fn_str.into())
+        .unwrap();
+      let dispatch_load_event_fn =
+        v8::Local::<v8::Function>::try_from(dispatch_load_event_fn).unwrap();
+      let dispatch_beforeunload_event_fn_str =
+        v8::String::new_external_onebyte_static(
+          scope,
+          b"dispatchBeforeUnloadEvent",
+        )
+        .unwrap();
+      let dispatch_beforeunload_event_fn = bootstrap_ns
+        .get(scope, dispatch_beforeunload_event_fn_str.into())
+        .unwrap();
+      let dispatch_beforeunload_event_fn =
+        v8::Local::<v8::Function>::try_from(dispatch_beforeunload_event_fn)
+          .unwrap();
+      let dispatch_unload_event_fn_str =
+        v8::String::new_external_onebyte_static(scope, b"dispatchUnloadEvent")
+          .unwrap();
+      let dispatch_unload_event_fn = bootstrap_ns
+        .get(scope, dispatch_unload_event_fn_str.into())
+        .unwrap();
+      let dispatch_unload_event_fn =
+        v8::Local::<v8::Function>::try_from(dispatch_unload_event_fn).unwrap();
+      let dispatch_process_beforeexit_event =
+        v8::String::new_external_onebyte_static(
+          scope,
+          b"dispatchProcessBeforeExitEvent",
+        )
+        .unwrap();
+      let dispatch_process_beforeexit_event_fn = bootstrap_ns
+        .get(scope, dispatch_process_beforeexit_event.into())
+        .unwrap();
+      let dispatch_process_beforeexit_event_fn =
+        v8::Local::<v8::Function>::try_from(
+          dispatch_process_beforeexit_event_fn,
+        )
+        .unwrap();
+      let dispatch_process_exit_event =
+        v8::String::new_external_onebyte_static(
+          scope,
+          b"dispatchProcessExitEvent",
+        )
+        .unwrap();
+      let dispatch_process_exit_event_fn = bootstrap_ns
+        .get(scope, dispatch_process_exit_event.into())
+        .unwrap();
+      let dispatch_process_exit_event_fn =
+        v8::Local::<v8::Function>::try_from(dispatch_process_exit_event_fn)
+          .unwrap();
+      (
+        v8::Global::new(scope, bootstrap_fn),
+        v8::Global::new(scope, dispatch_load_event_fn),
+        v8::Global::new(scope, dispatch_beforeunload_event_fn),
+        v8::Global::new(scope, dispatch_unload_event_fn),
+        v8::Global::new(scope, dispatch_process_beforeexit_event_fn),
+        v8::Global::new(scope, dispatch_process_exit_event_fn),
+      )
+    };
+
+    let worker = Self {
+      js_runtime,
+      should_break_on_first_statement: options.should_break_on_first_statement,
+      should_wait_for_inspector_session: options
+        .should_wait_for_inspector_session,
+      exit_code,
+      bootstrap_fn_global: Some(bootstrap_fn_global),
+      dispatch_load_event_fn_global,
+      dispatch_beforeunload_event_fn_global,
+      dispatch_unload_event_fn_global,
+      dispatch_process_beforeexit_event_fn_global,
+      dispatch_process_exit_event_fn_global,
+      memory_trim_handle: None,
+    };
+    (worker, options.bootstrap)
+  }
+
+  pub fn bootstrap(&mut self, options: BootstrapOptions) {
+    // 为操作设置启动选项。
+    {
+      let op_state = self.js_runtime.op_state();
+      let mut state = op_state.borrow_mut();
+      state.put(options.clone());
+      if let Some(node_ipc_fd) = options.node_ipc_fd {
+        state.put(deno_node::ChildPipeFd(node_ipc_fd));
+      }
+    }
+
+    let scope = &mut self.js_runtime.handle_scope();
+    let scope = &mut v8::TryCatch::new(scope);
+    let args = options.as_v8(scope);
+    let bootstrap_fn = self.bootstrap_fn_global.take().unwrap();
+    let bootstrap_fn = v8::Local::new(scope, bootstrap_fn);
+    let undefined = v8::undefined(scope);
+    bootstrap_fn.call(scope, undefined.into(), &[args]);
+    if let Some(exception) = scope.exception() {
+      let error = JsError::from_v8_exception(scope, exception);
+      panic!("Bootstrap exception: {error}");
+    }
+  }
+
+  #[cfg(not(target_os = "linux"))]
+  pub fn setup_memory_trim_handler(&mut self) {
+    // 空操作
+  }
+
+  /// 设置一个处理程序，通过修剪未使用的内存和通知V8低内存条件
+  /// 来响应SIGUSR2信号。
+  /// 注意这必须在tokio运行时内调用。
+  /// 多次调用此方法将是空操作。
+  #[cfg(target_os = "linux")]
+  pub fn setup_memory_trim_handler(&mut self) {
+    if self.memory_trim_handle.is_some() {
+      return;
+    }
+
+    if !*MEMORY_TRIM_HANDLER_ENABLED {
+      return;
+    }
+
+    let mut sigusr2_rx = SIGUSR2_RX.clone();
+
+    let spawner = self
+      .js_runtime
+      .op_state()
+      .borrow()
+      .borrow::<deno_core::V8CrossThreadTaskSpawner>()
+      .clone();
+
+    let memory_trim_handle = tokio::spawn(async move {
+      loop {
+        if sigusr2_rx.changed().await.is_err() {
+          break;
+        }
+
+        spawner.spawn(move |isolate| {
+          isolate.low_memory_notification();
+        });
+      }
+    });
+
+    self.memory_trim_handle = Some(memory_trim_handle);
+  }
+
+  /// See [JsRuntime::execute_script](deno_core::JsRuntime::execute_script)
+  pub fn execute_script(
+    &mut self,
+    script_name: &'static str,
+    source_code: ModuleCodeString,
+  ) -> Result<v8::Global<v8::Value>, Box<JsError>> {
+    self.js_runtime.execute_script(script_name, source_code)
+  }
+
+  /// 加载并实例化指定的JavaScript模块作为"主"模块。
+  pub async fn preload_main_module(
+    &mut self,
+    module_specifier: &ModuleSpecifier,
+  ) -> Result<ModuleId, CoreError> {
+    self.js_runtime.load_main_es_module(module_specifier).await
+  }
+
+  /// 加载并实例化指定的JavaScript模块作为"副"模块。
+  pub async fn preload_side_module(
+    &mut self,
+    module_specifier: &ModuleSpecifier,
+  ) -> Result<ModuleId, CoreError> {
+    self.js_runtime.load_side_es_module(module_specifier).await
+  }
+
+  /// 执行指定的JavaScript模块。
+  pub async fn evaluate_module(
+    &mut self,
+    id: ModuleId,
+  ) -> Result<(), CoreError> {
+    self.wait_for_inspector_session();
+    let mut receiver = self.js_runtime.mod_evaluate(id);
+    tokio::select! {
+      // 不使用偏向模式会导致相对简单程序的非确定性。
+      biased;
+
+      maybe_result = &mut receiver => {
+        debug!("received module evaluate {:#?}", maybe_result);
+        maybe_result
+      }
+
+      event_loop_result = self.run_event_loop(false) => {
+        event_loop_result?;
+        receiver.await
+      }
+    }
+  }
+
+  /// 运行事件循环直到指定的持续时间。如果运行时提前解析，则提前返回。
+  /// 始终至少轮询运行时一次。
+  pub async fn run_up_to_duration(
+    &mut self,
+    duration: Duration,
+  ) -> Result<(), CoreError> {
+    match tokio::time::timeout(
+      duration,
+      self
+        .js_runtime
+        .run_event_loop(PollEventLoopOptions::default()),
+    )
+    .await
+    {
+      Ok(Ok(_)) => Ok(()),
+      Err(_) => Ok(()),
+      Ok(Err(e)) => Err(e),
+    }
+  }
+
+  /// 加载、实例化并执行指定的JavaScript模块。
+  pub async fn execute_side_module(
+    &mut self,
+    module_specifier: &ModuleSpecifier,
+  ) -> Result<(), CoreError> {
+    let id = self.preload_side_module(module_specifier).await?;
+    self.evaluate_module(id).await
+  }
+
+  /// 加载、实例化并执行指定的JavaScript模块。
+  ///
+  /// 此模块的"import.meta.main"将等于true。
+  pub async fn execute_main_module(
+    &mut self,
+    module_specifier: &ModuleSpecifier,
+  ) -> Result<(), CoreError> {
+    let id = self.preload_main_module(module_specifier).await?;
+    self.evaluate_module(id).await
+  }
+
+  fn wait_for_inspector_session(&mut self) {
+    if self.should_break_on_first_statement {
+      self
+        .js_runtime
+        .inspector()
+        .borrow_mut()
+        .wait_for_session_and_break_on_next_statement();
+    } else if self.should_wait_for_inspector_session {
+      self.js_runtime.inspector().borrow_mut().wait_for_session();
+    }
+  }
+
+  /// 创建新的检查器会话。如果Worker未配置为创建检查器，
+  /// 此函数将panic。
+  pub fn create_inspector_session(&mut self) -> LocalInspectorSession {
+    self.js_runtime.maybe_init_inspector();
+    self.js_runtime.inspector().borrow().create_local_session(
+      InspectorSessionOptions {
+        kind: InspectorSessionKind::Blocking,
+      },
+    )
+  }
+
+  pub async fn run_event_loop(
+    &mut self,
+    wait_for_inspector: bool,
+  ) -> Result<(), CoreError> {
+    self
+      .js_runtime
+      .run_event_loop(PollEventLoopOptions {
+        wait_for_inspector,
+        ..Default::default()
+      })
+      .await
+  }
+
+  /// 返回执行代码设置的退出代码（在主工作器
+  /// 或子web工作器之一中）。
+  pub fn exit_code(&self) -> i32 {
+    self.exit_code.get()
+  }
+
+  /// 向JavaScript运行时分发"load"事件。
+  ///
+  /// 不轮询事件循环，因此不等待任何"load"事件处理程序。
+  pub fn dispatch_load_event(&mut self) -> Result<(), Box<JsError>> {
+    let scope = &mut self.js_runtime.handle_scope();
+    let tc_scope = &mut v8::TryCatch::new(scope);
+    let dispatch_load_event_fn =
+      v8::Local::new(tc_scope, &self.dispatch_load_event_fn_global);
+    let undefined = v8::undefined(tc_scope);
+    dispatch_load_event_fn.call(tc_scope, undefined.into(), &[]);
+    if let Some(exception) = tc_scope.exception() {
+      let error = JsError::from_v8_exception(tc_scope, exception);
+      return Err(error);
+    }
+    Ok(())
+  }
+
+  /// 向JavaScript运行时分发"unload"事件。
+  ///
+  /// 不轮询事件循环，因此不等待任何"unload"事件处理程序。
+  pub fn dispatch_unload_event(&mut self) -> Result<(), Box<JsError>> {
+    let scope = &mut self.js_runtime.handle_scope();
+    let tc_scope = &mut v8::TryCatch::new(scope);
+    let dispatch_unload_event_fn =
+      v8::Local::new(tc_scope, &self.dispatch_unload_event_fn_global);
+    let undefined = v8::undefined(tc_scope);
+    dispatch_unload_event_fn.call(tc_scope, undefined.into(), &[]);
+    if let Some(exception) = tc_scope.exception() {
+      let error = JsError::from_v8_exception(tc_scope, exception);
+      return Err(error);
+    }
+    Ok(())
+  }
+
+  /// 为node兼容性分发process.emit("exit")事件。
+  pub fn dispatch_process_exit_event(&mut self) -> Result<(), Box<JsError>> {
+    let scope = &mut self.js_runtime.handle_scope();
+    let tc_scope = &mut v8::TryCatch::new(scope);
+    let dispatch_process_exit_event_fn =
+      v8::Local::new(tc_scope, &self.dispatch_process_exit_event_fn_global);
+    let undefined = v8::undefined(tc_scope);
+    dispatch_process_exit_event_fn.call(tc_scope, undefined.into(), &[]);
+    if let Some(exception) = tc_scope.exception() {
+      let error = JsError::from_v8_exception(tc_scope, exception);
+      return Err(error);
+    }
+    Ok(())
+  }
+
+  /// 向JavaScript运行时分发"beforeunload"事件。返回一个布尔值
+  /// 指示事件是否被阻止，因此事件循环是否应继续运行。
+  pub fn dispatch_beforeunload_event(&mut self) -> Result<bool, Box<JsError>> {
+    let scope = &mut self.js_runtime.handle_scope();
+    let tc_scope = &mut v8::TryCatch::new(scope);
+    let dispatch_beforeunload_event_fn =
+      v8::Local::new(tc_scope, &self.dispatch_beforeunload_event_fn_global);
+    let undefined = v8::undefined(tc_scope);
+    let ret_val =
+      dispatch_beforeunload_event_fn.call(tc_scope, undefined.into(), &[]);
+    if let Some(exception) = tc_scope.exception() {
+      let error = JsError::from_v8_exception(tc_scope, exception);
+      return Err(error);
+    }
+    let ret_val = ret_val.unwrap();
+    Ok(ret_val.is_false())
+  }
+
+  /// 为node兼容性分发process.emit("beforeExit")事件。
+  pub fn dispatch_process_beforeexit_event(
+    &mut self,
+  ) -> Result<bool, Box<JsError>> {
+    let scope = &mut self.js_runtime.handle_scope();
+    let tc_scope = &mut v8::TryCatch::new(scope);
+    let dispatch_process_beforeexit_event_fn = v8::Local::new(
+      tc_scope,
+      &self.dispatch_process_beforeexit_event_fn_global,
+    );
+    let undefined = v8::undefined(tc_scope);
+    let ret_val = dispatch_process_beforeexit_event_fn.call(
+      tc_scope,
+      undefined.into(),
+      &[],
+    );
+    if let Some(exception) = tc_scope.exception() {
+      let error = JsError::from_v8_exception(tc_scope, exception);
+      return Err(error);
+    }
+    let ret_val = ret_val.unwrap();
+    Ok(ret_val.is_true())
+  }
+}
+
+fn common_extensions<
+  TInNpmPackageChecker: InNpmPackageChecker + 'static,
+  TNpmPackageFolderResolver: NpmPackageFolderResolver + 'static,
+  TExtNodeSys: ExtNodeSys + 'static,
+>(
+  has_snapshot: bool,
+  unconfigured_runtime: bool,
+) -> Vec<Extension> {
+  // 注意(bartlomieju)：这里的顺序很重要，请与
+  // `runtime/worker.rs`, `runtime/web_worker.rs`, `runtime/snapshot_info.rs`
+  // 和 `runtime/snapshot.rs` 保持同步！
+  vec![
+    deno_telemetry::deno_telemetry::init(),
+    // Web APIs
+    deno_webidl::deno_webidl::init(),
+    deno_console::deno_console::init(),
+    deno_url::deno_url::init(),
+    deno_web::deno_web::lazy_init::<PermissionsContainer>(),
+    deno_canvas::deno_canvas::init(),
+    deno_fetch::deno_fetch::lazy_init::<PermissionsContainer>(),
+    deno_cache::deno_cache::lazy_init(),
+    deno_websocket::deno_websocket::lazy_init::<PermissionsContainer>(),
+    deno_webstorage::deno_webstorage::lazy_init(),
+    deno_crypto::deno_crypto::lazy_init(),
+    deno_broadcast_channel::deno_broadcast_channel::lazy_init::<
+      InMemoryBroadcastChannel,
+    >(),
+    deno_ffi::deno_ffi::lazy_init::<PermissionsContainer>(),
+    deno_net::deno_net::lazy_init::<PermissionsContainer>(),
+    deno_tls::deno_tls::init(),
+    deno_kv::deno_kv::lazy_init::<MultiBackendDbHandler>(),
+    deno_cron::deno_cron::init(LocalCronHandler::new()),
+    deno_napi::deno_napi::lazy_init::<PermissionsContainer>(),
+    deno_http::deno_http::lazy_init(),
+    deno_io::deno_io::lazy_init(),
+    deno_fs::deno_fs::lazy_init::<PermissionsContainer>(),
+    deno_os::deno_os::lazy_init(),
+    deno_process::deno_process::lazy_init(),
+    deno_node::deno_node::lazy_init::<
+      PermissionsContainer,
+      TInNpmPackageChecker,
+      TNpmPackageFolderResolver,
+      TExtNodeSys,
+    >(),
+    // 来自此crate的操作
+    ops::runtime::deno_runtime::lazy_init(),
+    ops::worker_host::deno_worker_host::lazy_init(),
+    ops::fs_events::deno_fs_events::init(),
+    ops::permissions::deno_permissions::init(),
+    ops::tty::deno_tty::init(),
+    ops::http::deno_http_runtime::init(),
+    deno_bundle_runtime::deno_bundle_runtime::lazy_init(),
+    ops::bootstrap::deno_bootstrap::init(
+      has_snapshot.then(Default::default),
+      unconfigured_runtime,
+    ),
+    runtime::init(),
+    // 注意(bartlomieju)：这样做是为了让此扩展的操作可用，
+    // 在`99_main.js`中导入它们不会因为未定义而导致错误。
+    // 尝试在非工作器上下文中使用这些操作将导致panic。
+    ops::web_worker::deno_web_worker::init().disable(),
+  ]
+}
+
+struct CommonRuntimeOptions {
+  module_loader: Rc<dyn ModuleLoader>,
+  startup_snapshot: Option<&'static [u8]>,
+  create_params: Option<v8::CreateParams>,
+  skip_op_registration: bool,
+  shared_array_buffer_store: Option<SharedArrayBufferStore>,
+  compiled_wasm_module_store: Option<CompiledWasmModuleStore>,
+  extensions: Vec<Extension>,
+  op_metrics_factory_fn: Option<OpMetricsFactoryFn>,
+  enable_stack_trace_arg_in_ops: bool,
+}
+
+struct EnableRawImports(Arc<AtomicBool>);
+
+#[allow(clippy::too_many_arguments)]
+fn common_runtime(opts: CommonRuntimeOptions) -> JsRuntime {
+  let enable_raw_imports = Arc::new(AtomicBool::new(false));
+
+  let js_runtime = JsRuntime::new(RuntimeOptions {
+    module_loader: Some(opts.module_loader),
+    startup_snapshot: opts.startup_snapshot,
+    create_params: opts.create_params,
+    skip_op_registration: opts.skip_op_registration,
+    shared_array_buffer_store: opts.shared_array_buffer_store,
+    compiled_wasm_module_store: opts.compiled_wasm_module_store,
+    extensions: opts.extensions,
+    #[cfg(feature = "transpile")]
+    extension_transpiler: Some(Rc::new(|specifier, source| {
+      crate::transpile::maybe_transpile_source(specifier, source)
+    })),
+    #[cfg(not(feature = "transpile"))]
+    extension_transpiler: None,
+    inspector: true,
+    is_main: true,
+    op_metrics_factory_fn: opts.op_metrics_factory_fn,
+    wait_for_inspector_disconnect_callback: Some(
+      make_wait_for_inspector_disconnect_callback(),
+    ),
+    validate_import_attributes_cb: Some(
+      create_validate_import_attributes_callback(enable_raw_imports.clone()),
+    ),
+    import_assertions_support: deno_core::ImportAssertionsSupport::Error,
+    maybe_op_stack_trace_callback: opts
+      .enable_stack_trace_arg_in_ops
+      .then(create_permissions_stack_trace_callback),
+    extension_code_cache: None,
+    v8_platform: None,
+    custom_module_evaluation_cb: None,
+    eval_context_code_cache_cbs: None,
+  });
+
+  js_runtime
+    .op_state()
+    .borrow_mut()
+    .put(EnableRawImports(enable_raw_imports));
+
+  js_runtime
+}
+
+pub fn create_permissions_stack_trace_callback()
+-> deno_core::OpStackTraceCallback {
+  Box::new(|stack: Vec<deno_core::error::JsStackFrame>| {
+    deno_permissions::prompter::set_current_stacktrace(Box::new(move || {
+      stack
+        .iter()
+        .map(|frame| {
+          deno_core::error::format_frame::<deno_core::error::NoAnsiColors>(
+            frame,
+          )
+        })
+        .collect()
+    }))
+  }) as _
+}
+
+pub struct UnconfiguredRuntimeOptions {
+  pub startup_snapshot: &'static [u8],
+  pub create_params: Option<v8::CreateParams>,
+  pub shared_array_buffer_store: Option<SharedArrayBufferStore>,
+  pub compiled_wasm_module_store: Option<CompiledWasmModuleStore>,
+  pub additional_extensions: Vec<Extension>,
+}
+
+pub struct UnconfiguredRuntime {
+  module_loader: Rc<PlaceholderModuleLoader>,
+  js_runtime: JsRuntime,
+}
+
+impl UnconfiguredRuntime {
+  pub fn new<
+    TInNpmPackageChecker: InNpmPackageChecker + 'static,
+    TNpmPackageFolderResolver: NpmPackageFolderResolver + 'static,
+    TExtNodeSys: ExtNodeSys + 'static,
+  >(
+    options: UnconfiguredRuntimeOptions,
+  ) -> Self {
+    let mut extensions = common_extensions::<
+      TInNpmPackageChecker,
+      TNpmPackageFolderResolver,
+      TExtNodeSys,
+    >(true, true);
+
+    extensions.extend(options.additional_extensions);
+
+    let module_loader =
+      Rc::new(PlaceholderModuleLoader(std::cell::RefCell::new(None)));
+
+    let js_runtime = common_runtime(CommonRuntimeOptions {
+      module_loader: module_loader.clone(),
+      startup_snapshot: Some(options.startup_snapshot),
+      create_params: options.create_params,
+      skip_op_registration: true,
+      shared_array_buffer_store: options.shared_array_buffer_store,
+      compiled_wasm_module_store: options.compiled_wasm_module_store,
+      extensions,
+      op_metrics_factory_fn: None,
+      enable_stack_trace_arg_in_ops: false,
+    });
+
+    UnconfiguredRuntime {
+      module_loader,
+      js_runtime,
+    }
+  }
+
+  fn hydrate(self, module_loader: Rc<dyn ModuleLoader>) -> JsRuntime {
+    let _ = self.module_loader.0.borrow_mut().insert(module_loader);
+    self.js_runtime
+  }
+}
+
+struct PlaceholderModuleLoader(
+  std::cell::RefCell<Option<Rc<dyn ModuleLoader>>>,
+);
+
+impl ModuleLoader for PlaceholderModuleLoader {
+  fn resolve(
+    &self,
+    specifier: &str,
+    referrer: &str,
+    kind: deno_core::ResolutionKind,
+  ) -> Result<ModuleSpecifier, deno_core::error::ModuleLoaderError> {
+    self
+      .0
+      .borrow_mut()
+      .clone()
+      .unwrap()
+      .resolve(specifier, referrer, kind)
+  }
+
+  fn load(
+    &self,
+    module_specifier: &ModuleSpecifier,
+    maybe_referrer: Option<&ModuleSpecifier>,
+    is_dyn_import: bool,
+    requested_module_type: deno_core::RequestedModuleType,
+  ) -> deno_core::ModuleLoadResponse {
+    self.0.borrow_mut().clone().unwrap().load(
+      module_specifier,
+      maybe_referrer,
+      is_dyn_import,
+      requested_module_type,
+    )
+  }
+
+  fn prepare_load(
+    &self,
+    module_specifier: &ModuleSpecifier,
+    maybe_referrer: Option<String>,
+    is_dyn_import: bool,
+    requested_module_type: RequestedModuleType,
+  ) -> std::pin::Pin<
+    Box<
+      dyn std::prelude::rust_2024::Future<
+          Output = Result<(), deno_core::error::ModuleLoaderError>,
+        >,
+    >,
+  > {
+    self.0.borrow_mut().clone().unwrap().prepare_load(
+      module_specifier,
+      maybe_referrer,
+      is_dyn_import,
+      requested_module_type,
+    )
+  }
+
+  fn finish_load(&self) {
+    self.0.borrow_mut().clone().unwrap().finish_load()
+  }
+
+  fn purge_and_prevent_code_cache(&self, module_specifier: &str) {
+    self
+      .0
+      .borrow_mut()
+      .clone()
+      .unwrap()
+      .purge_and_prevent_code_cache(module_specifier)
+  }
+
+  fn get_source_map(&self, file_name: &str) -> Option<Cow<'_, [u8]>> {
+    let v = self.0.borrow_mut().clone().unwrap();
+    let v = v.get_source_map(file_name);
+    v.map(|c| Cow::from(c.into_owned()))
+  }
+
+  fn get_source_mapped_source_line(
+    &self,
+    file_name: &str,
+    line_number: usize,
+  ) -> Option<String> {
+    self
+      .0
+      .borrow_mut()
+      .clone()
+      .unwrap()
+      .get_source_mapped_source_line(file_name, line_number)
+  }
+
+  fn get_host_defined_options<'s>(
+    &self,
+    scope: &mut v8::HandleScope<'s>,
+    name: &str,
+  ) -> Option<v8::Local<'s, v8::Data>> {
+    self
+      .0
+      .borrow_mut()
+      .clone()
+      .unwrap()
+      .get_host_defined_options(scope, name)
+  }
+}
