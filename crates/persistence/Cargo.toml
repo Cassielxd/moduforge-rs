@@ -24,7 +24,7 @@ uuid = { workspace = true, features = ["v4"] }
 zstd = "0.13"
 crc32fast = "1.4"
 time = { version = "0.3", features = ["formatting"] }
-rusqlite = { version = "0.37.0", features = ["bundled", "chrono", "serde_json"] }
+rusqlite = { version = "0.34.0", features = ["bundled", "chrono", "serde_json"] }
 tokio-util = { version = "0.7", features = ["rt"] }
 chrono = { workspace = true }
 
