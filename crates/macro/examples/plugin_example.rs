@@ -1,12 +1,14 @@
+use std::sync::Arc;
+
 use mf_macro::{mf_meta, mf_plugin, mf_plugin_config, mf_plugin_metadata, mf_plugin_with_config};
 use mf_state::{Transaction, State, error::StateResult};
 use mf_state::plugin::{PluginMetadata, PluginConfig};
 
 // 定义一些示例事务处理函数
 async fn logging_append_transaction(
-    _trs: &[Transaction],
-    _old_state: &State,
-    _new_state: &State,
+    _trs: &[Arc<Transaction>],
+    _old_state: &Arc<State>,
+    _new_state: &Arc<State>,
 ) -> StateResult<Option<Transaction>> {
     println!("📝 记录事务处理过程");
     Ok(None)
@@ -202,9 +204,9 @@ mf_plugin_with_config!(
             
             async fn append_transaction(
                 &self,
-                trs: &[Transaction],
-                _old_state: &State,
-                _new_state: &State,
+                trs: &[Arc<Transaction>],
+                _old_state: &Arc<State>,
+                _new_state: &Arc<State>,
             ) -> StateResult<Option<Transaction>> {
                 if self.log_level > 0 {
                     println!("🔧 [{}] 处理 {} 个事务", self.metadata.name, trs.len());

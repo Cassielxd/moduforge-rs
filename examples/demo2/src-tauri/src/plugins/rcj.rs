@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use mf_state::{plugin::PluginTrait, State, Transaction};
 use mf_state::plugin::PluginMetadata;
@@ -27,9 +29,9 @@ impl PluginTrait for RcjPlugin {
     }
     async fn append_transaction(
         &self,
-        _trs: &[Transaction],
-        _old_state: &State,
-        _new_state: &State,
+        _trs: &[Arc<Transaction>],
+        _old_state: &Arc<State>,
+        _new_state: &Arc<State>,
     ) -> anyhow::Result<Option<Transaction>> {
         // 计算 人材机 价格 并回填 设置meta 用作 单价构成 插件流转
         Ok(None)

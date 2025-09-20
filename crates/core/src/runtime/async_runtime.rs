@@ -361,7 +361,7 @@ impl ForgeAsyncRuntime {
 
         // 检查最后一个事务是否改变了文档
         if let Some(_) = transactions.last() {
-            current_state = Some(Arc::new(result.state));
+            current_state = Some(result.state);
         }
 
         // 执行后置中间件链
@@ -380,7 +380,7 @@ impl ForgeAsyncRuntime {
             self.base
                 .emit_event(Event::TrApply(
                     old_id,
-                    Arc::new(transactions),
+                    transactions,
                     state,
                 ))
                 .await?;
@@ -435,7 +435,7 @@ impl ForgeAsyncRuntime {
     pub async fn run_after_middleware(
         &mut self,
         state: &mut Option<Arc<State>>,
-        transactions: &mut Vec<Transaction>,
+        transactions: &mut Vec<Arc<Transaction>>,
     ) -> ForgeResult<()> {
         debug!("执行后置中间件链");
         for middleware in
@@ -541,7 +541,7 @@ impl ForgeAsyncRuntime {
 
                 let TransactionResult { state: new_state, transactions: trs } =
                     result;
-                *state = Some(Arc::new(new_state));
+                *state = Some(new_state);
                 transactions.extend(trs);
 
                 // 记录额外事务处理时间

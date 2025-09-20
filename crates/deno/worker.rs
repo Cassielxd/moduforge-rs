@@ -1,19 +1,26 @@
 // Copyright 2018-2025 the Deno authors. MIT license.
 use std::borrow::Cow;
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt;
+use std::path::Path;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 #[cfg(target_os = "linux")]
 use std::sync::LazyLock;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 use std::time::Instant;
-
+use deno_core::FsModuleLoader;
+use deno_core::futures::stream::StreamExt;
 use deno_broadcast_channel::InMemoryBroadcastChannel;
 use deno_cache::CacheImpl;
 use deno_cache::CreateCache;
 use deno_cache::SqliteBackedCache;
+use deno_core::CancelHandle;
 use deno_core::CompiledWasmModuleStore;
 use deno_core::Extension;
 use deno_core::InspectorSessionKind;
@@ -32,32 +39,50 @@ use deno_core::RuntimeOptions;
 use deno_core::SharedArrayBufferStore;
 use deno_core::SourceCodeCacheInfo;
 use deno_core::error::CoreError;
+use deno_core::error::CoreErrorKind;
 use deno_core::error::JsError;
 use deno_core::merge_op_metrics;
 use deno_core::v8;
 use deno_cron::local::LocalCronHandler;
 use deno_fs::FileSystem;
+use deno_fs::RealFs;
 use deno_io::Stdio;
 use deno_kv::dynamic::MultiBackendDbHandler;
 use deno_napi::DenoRtNativeAddonLoaderRc;
 use deno_node::ExtNodeSys;
 use deno_node::NodeExtInitServices;
 use deno_os::ExitCode;
+use deno_permissions::Permissions;
 use deno_permissions::PermissionsContainer;
 use deno_process::NpmProcessStateProviderRc;
+use deno_terminal::colors;
 use deno_tls::RootCertStoreProvider;
 use deno_tls::TlsKeys;
 use deno_web::BlobStore;
+use deno_web::MessagePort;
+use deno_core::futures::task::AtomicWaker;
+use deno_core::futures::channel::mpsc;
+use deno_web::create_entangled_message_port;
 use log::debug;
+use mf_state::State;
 use node_resolver::InNpmPackageChecker;
 use node_resolver::NpmPackageFolderResolver;
+use serde::Deserialize;
+use serde::Serialize;
+use deno_core::serde_json::json;
+use tokio::sync::oneshot;
+use url::Url;
 
 use crate::BootstrapOptions;
 use crate::FeatureChecker;
+use crate::WorkerExecutionMode;
+use crate::WorkerLogLevel;
+use crate::code_cache;
 use crate::code_cache::CodeCache;
 use crate::code_cache::CodeCacheType;
 use crate::inspector_server::InspectorServer;
 use crate::ops;
+use crate::permissions::RuntimePermissionDescriptorParser;
 use crate::shared::runtime;
 
 pub type FormatJsErrorFn = dyn Fn(&JsError) -> String + Sync + Send;
@@ -139,12 +164,214 @@ pub fn make_wait_for_inspector_disconnect_callback() -> Box<dyn Fn()> {
   })
 }
 
+static WORKER_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct MainWorkerId(u32);
+impl MainWorkerId {
+  pub fn new() -> MainWorkerId {
+    let id = WORKER_ID_COUNTER.fetch_add(1, Ordering::SeqCst);
+    MainWorkerId(id)
+  }
+}
+impl fmt::Display for MainWorkerId {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "worker-{}", self.0)
+  }
+}
+impl Default for MainWorkerId {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct ChannelRequest {
+    pub request_id: String,
+    pub trs:Vec<Arc::<mf_state::Transaction>>,
+    pub old_state: Arc<State>,
+    pub new_state: Arc<State>,
+    pub method_name: String,
+    pub args: serde_json::Value,
+    pub timestamp: u64,
+}
+
+/// 响应数据结构
+#[derive(Debug, Clone)]
+pub struct ChannelResponse {
+    pub request_id: String,
+    pub success: bool,
+    pub result: Option<mf_state::Transaction>,
+    pub error: Option<String>,
+    pub execution_time_ms: u64,
+}
+
+
+
+#[derive(Clone)]
+pub struct MainWorkerInternalHandle {
+  sender: mpsc::Sender<(ChannelRequest, oneshot::Sender<ChannelResponse>)>,
+  termination_signal: Arc<AtomicBool>,
+  has_terminated: Arc<AtomicBool>,
+  terminate_waker: Arc<AtomicWaker>,
+  isolate_handle: v8::IsolateHandle,
+  pub name: String,
+}
+
+impl MainWorkerInternalHandle {
+  /// 作为工作器向父级发送WorkerEvent
+  #[allow(clippy::result_large_err)]
+  pub fn post_event(
+    &self,
+    event: (ChannelRequest, oneshot::Sender<ChannelResponse>),
+  ) -> Result<(), mpsc::TrySendError<(ChannelRequest, oneshot::Sender<ChannelResponse>)>> {
+    let mut sender = self.sender.clone();
+    // 如果通道已关闭，
+    // 工作器必须已终止，但终止消息尚未收到。
+    //
+    // 因此只需将其视为工作器已终止并返回。
+    if sender.is_closed() {
+      self.has_terminated.store(true, Ordering::SeqCst);
+      return Ok(());
+    }
+    sender.try_send(event)
+  }
+
+  /// 检查此工作器是否已终止或正在终止
+  pub fn is_terminated(&self) -> bool {
+    self.has_terminated.load(Ordering::SeqCst)
+  }
+
+  /// 检查此工作器是否必须终止（因为设置了终止信号），如果是则终止它。
+  /// 返回工作器是否已终止或正在终止，与[`Self::is_terminated()`]相同。
+  pub fn terminate_if_needed(&mut self) -> bool {
+    let has_terminated = self.is_terminated();
+
+    if !has_terminated && self.termination_signal.load(Ordering::SeqCst) {
+      self.terminate();
+      return true;
+    }
+
+    has_terminated
+  }
+
+  /// 终止工作器
+  /// 此函数将设置terminated为true，终止隔离器并关闭消息通道
+  pub fn terminate(&mut self) {
+    self.terminate_waker.wake();
+
+    // 持有句柄的任何人都可以多次调用此函数。
+    // 但是只应该发生一次"终止"，所以我们这里需要一个保护。
+    let already_terminated = self.has_terminated.swap(true, Ordering::SeqCst);
+
+    if !already_terminated {
+      // 停止JavaScript执行
+      self.isolate_handle.terminate_execution();
+    }
+
+    // 通过关闭通道唤醒父级
+    self.sender.close_channel();
+  }
+}
+
+
+impl From<MainWorkerInternalHandle> for MainWorkerHandle {
+  fn from(handle: MainWorkerInternalHandle) -> Self {
+    MainWorkerHandle {
+      sender: handle.sender,
+      termination_signal: handle.termination_signal,
+      has_terminated: handle.has_terminated,
+      terminate_waker: handle.terminate_waker,
+      isolate_handle: handle.isolate_handle,
+    }
+  }
+}
+
+pub struct SendableMainWorkerHandle {
+  pub receiver: mpsc::Receiver<(ChannelRequest, oneshot::Sender<ChannelResponse>)>,
+  pub termination_signal: Arc<AtomicBool>,
+  pub has_terminated: Arc<AtomicBool>,
+  pub terminate_waker: Arc<AtomicWaker>,
+  pub isolate_handle: v8::IsolateHandle,
+}
+
+
+#[derive(Clone)]
+pub struct MainWorkerHandle {
+  pub sender: mpsc::Sender<(ChannelRequest, oneshot::Sender<ChannelResponse>)>,
+  termination_signal: Arc<AtomicBool>,
+  has_terminated: Arc<AtomicBool>,
+  terminate_waker: Arc<AtomicWaker>,
+  isolate_handle: v8::IsolateHandle,
+}
+
+impl MainWorkerHandle {
+  /// 终止工作器
+  /// 此函数将设置终止信号、关闭消息通道，
+  /// 并计划在两秒后终止隔离器。
+  pub fn terminate(self) {
+    use std::thread::sleep;
+    use std::thread::spawn;
+    use std::time::Duration;
+
+    let schedule_termination =
+      !self.termination_signal.swap(true, Ordering::SeqCst);
+    if schedule_termination && !self.has_terminated.load(Ordering::SeqCst) {
+      // 唤醒工作器的事件循环以便它可以终止。
+      self.terminate_waker.wake();
+
+      let has_terminated = self.has_terminated.clone();
+
+      // 计划终止隔离器的执行。
+      spawn(move || {
+        sleep(Duration::from_secs(2));
+
+        // 工作器的隔离器只能终止一次，所以我们这里需要一个保护。
+        let already_terminated = has_terminated.swap(true, Ordering::SeqCst);
+
+        if !already_terminated {
+          // 停止JavaScript执行
+          self.isolate_handle.terminate_execution();
+        }
+      });
+    }
+  }
+}
+
+pub fn create_main_handles(
+  isolate_handle: v8::IsolateHandle,
+  name: String
+) -> (MainWorkerInternalHandle, SendableMainWorkerHandle) {
+  let (ctrl_tx, ctrl_rx) = mpsc::channel::<(ChannelRequest, oneshot::Sender<ChannelResponse>)>(1);
+  let termination_signal = Arc::new(AtomicBool::new(false));
+  let has_terminated = Arc::new(AtomicBool::new(false));
+  let terminate_waker = Arc::new(AtomicWaker::new());
+  let internal_handle = MainWorkerInternalHandle {
+    name,
+    termination_signal: termination_signal.clone(),
+    has_terminated: has_terminated.clone(),
+    terminate_waker: terminate_waker.clone(),
+    isolate_handle: isolate_handle.clone(),
+    sender: ctrl_tx
+  };
+  let external_handle = SendableMainWorkerHandle {
+    receiver: ctrl_rx,
+    termination_signal,
+    has_terminated,
+    terminate_waker,
+    isolate_handle,
+  };
+  (internal_handle, external_handle)
+}
 /// 此工作器由Deno可执行文件中的几乎所有子命令创建和使用。
 ///
 /// 它提供`Deno`命名空间中可用的操作。
 ///
 /// 在程序执行期间创建的所有`WebWorker`都是此工作器的后代。
 pub struct MainWorker {
+  id: MainWorkerId,
+  pub name: String,
+  main_module: ModuleSpecifier,
   pub js_runtime: JsRuntime,
   should_break_on_first_statement: bool,
   should_wait_for_inspector_session: bool,
@@ -213,6 +440,8 @@ pub struct WorkerServiceOptions<
 }
 
 pub struct WorkerOptions {
+  pub worker_id: MainWorkerId,
+  pub name: String,
   pub bootstrap: BootstrapOptions,
 
   /// JsRuntime扩展，不要与ES模块混淆。
@@ -258,6 +487,8 @@ pub struct WorkerOptions {
 impl Default for WorkerOptions {
   fn default() -> Self {
     Self {
+      worker_id: MainWorkerId::new(),
+      name: "main".to_string(),
       create_web_worker_cb: Arc::new(|_| {
         unimplemented!("不支持web workers")
       }),
@@ -350,6 +581,30 @@ pub fn create_op_metrics(
 }
 
 impl MainWorker {
+  pub async fn run(&mut self) -> Result<i32, CoreError> {
+    let main_module = self.main_module.clone();
+    self.execute_main_module(&main_module).await?;
+    self.dispatch_load_event()?;
+
+    loop {
+      self
+        .run_event_loop(/* wait for inspector */ false)
+        .await?;
+
+      let web_continue = self.dispatch_beforeunload_event()?;
+      if !web_continue {
+        let node_continue = self.dispatch_process_beforeexit_event()?;
+        if !node_continue {
+          break;
+        }
+      }
+    }
+
+    self.dispatch_unload_event()?;
+    self.dispatch_process_exit_event()?;
+
+    Ok(self.exit_code())
+  }
   pub fn bootstrap_from_options<
     TInNpmPackageChecker: InNpmPackageChecker + 'static,
     TNpmPackageFolderResolver: NpmPackageFolderResolver + 'static,
@@ -362,11 +617,11 @@ impl MainWorker {
       TExtNodeSys,
     >,
     options: WorkerOptions,
-  ) -> Self {
-    let (mut worker, bootstrap_options) =
+  ) -> (Self,MainWorkerInternalHandle) {
+    let (mut worker, bootstrap_options,handle) =
       Self::from_options(main_module, services, options);
     worker.bootstrap(bootstrap_options);
-    worker
+    (worker,handle)
   }
 
   fn from_options<
@@ -381,7 +636,7 @@ impl MainWorker {
       TExtNodeSys,
     >,
     mut options: WorkerOptions,
-  ) -> (Self, BootstrapOptions) {
+  ) -> (Self, BootstrapOptions,MainWorkerInternalHandle) {
     fn create_cache_inner(options: &WorkerOptions) -> Option<CreateCache> {
       if let Ok(var) = std::env::var("DENO_CACHE_LSC_ENDPOINT") {
         let elems: Vec<_> = var.split(",").collect();
@@ -626,6 +881,15 @@ impl MainWorker {
           || options.should_wait_for_inspector_session,
       );
     }
+    let internal_handle = {
+      let handle = js_runtime.v8_isolate().thread_safe_handle();
+      let (internal_handle, external_handle) =
+        create_main_handles(handle, options.name.clone());
+      let op_state = js_runtime.op_state();
+      let mut op_state = op_state.borrow_mut();
+      op_state.put(external_handle);
+      internal_handle
+    };
 
     let (
       bootstrap_fn_global,
@@ -717,6 +981,9 @@ impl MainWorker {
     };
 
     let worker = Self {
+      id: options.worker_id,
+      name: options.name.clone(),
+      main_module: main_module.clone(),
       js_runtime,
       should_break_on_first_statement: options.should_break_on_first_statement,
       should_wait_for_inspector_session: options
@@ -730,7 +997,7 @@ impl MainWorker {
       dispatch_process_exit_event_fn_global,
       memory_trim_handle: None,
     };
-    (worker, options.bootstrap)
+    (worker, options.bootstrap,internal_handle)
   }
 
   pub fn bootstrap(&mut self, options: BootstrapOptions) {

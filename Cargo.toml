@@ -28,7 +28,7 @@ futures-util = "0.3"
 yrs-warp = "0.8.0"
 yrs = "0.18.2"
 tokio-tungstenite = "0.21.0"
-url = "2.5"
+
 ctor = "0.4.2"
 
 
@@ -56,7 +56,8 @@ rayon = "1.8"
 lru = "0.14.0"
 # 锁
 parking_lot = "0.12"
-
+url = { version = "2.5", features = ["serde", "expose_internals"] }
+urlpattern = "0.3.0"
 # 哈希
 ahash = "0.8"
 rust_decimal = "1"

@@ -45,6 +45,7 @@ pub mod tokio_util;
 pub mod transpile;
 pub mod web_worker;
 pub mod worker;
+pub mod mf;
 
 mod worker_bootstrap;
 pub use worker::UnconfiguredRuntime;

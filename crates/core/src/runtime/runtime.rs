@@ -570,7 +570,7 @@ impl ForgeRuntime {
     pub async fn run_after_middleware(
         &mut self,
         state: &mut Option<Arc<State>>,
-        transactions: &mut Vec<Transaction>,
+        transactions: &mut Vec<Arc<Transaction>>,
     ) -> ForgeResult<()> {
         debug!("执行后置中间件链");
         for middleware in &self.options.get_middleware_stack().middlewares {
@@ -620,7 +620,7 @@ impl ForgeRuntime {
                         "附加事务处理结果无效".to_string(),
                     ));
                 };
-                *state = Some(Arc::new(result.state));
+                *state = Some(result.state);
                 transactions.extend(result.transactions);
             }
         }
@@ -701,7 +701,7 @@ impl ForgeRuntime {
         transactions.extend(result.transactions);
         // 检查最后一个事务是否改变了文档
         if let Some(_) = transactions.last() {
-            state_update = Some(Arc::new(result.state));
+            state_update = Some(result.state);
         }
         // 执行后置中间件链，允许中间件在事务应用后执行额外操作
         self.run_after_middleware(&mut state_update, &mut transactions).await?;
@@ -712,7 +712,7 @@ impl ForgeRuntime {
                 .await?;
             self.emit_event(Event::TrApply(
                 old_id,
-                Arc::new(transactions),
+                transactions,
                 state,
             ))
             .await?;

@@ -56,9 +56,9 @@ impl PluginTrait for APlugin {
     }
     async fn append_transaction(
         &self,
-        trs: &[Transaction],
-        _: &State,
-        new_state: &State,
+        trs: &[Arc<Transaction>],
+        _: &Arc<State>,
+        new_state: &Arc<State>,
     ) -> StateResult<Option<Transaction>> {
         // 获取子单位工程 并汇总 前提 单位项目 计算完成之后
         let doc = new_state.doc();
@@ -113,9 +113,9 @@ impl PluginTrait for BPlugin {
     }
     async fn append_transaction(
         &self,
-        trs: &[Transaction],
-        old_state: &State,
-        new_state: &State,
+        trs: &[Arc<Transaction>],
+        old_state: &Arc<State>,
+        new_state: &Arc<State>,
     ) -> StateResult<Option<Transaction>> {
         // 如果 新增了 单位工程  需要计算并回填 金额相关数据
         let oss_pload =
@@ -169,7 +169,7 @@ impl Middleware for LogMiddleware {
     async fn after_dispatch(
         &self,
         _state: Option<Arc<State>>,
-        transactions: &[Transaction],
+        transactions: &[Arc<Transaction>],
     ) -> ForgeResult<Option<Transaction>> {
         println!(
             "我是日志后置处理器，总共产生了 {:?} 个事务",

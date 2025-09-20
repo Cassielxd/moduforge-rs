@@ -28,9 +28,9 @@ pub trait PluginTrait: Send + Sync + Debug {
     /// 允许插件在事务执行前修改或扩展事务内容
     async fn append_transaction(
         &self,
-        _: &[Transaction],
-        _: &State,
-        _: &State,
+        _: &[Arc<Transaction>],
+        _: &Arc<State>,
+        _: &Arc<State>,
     ) -> StateResult<Option<Transaction>> {
         Ok(None)
     }
@@ -104,9 +104,9 @@ impl PluginSpec {
     /// 执行事务追加
     async fn append_transaction<'a>(
         &self,
-        trs: &'a [Transaction],
-        old_state: &State,
-        new_state: &State,
+        trs: &'a [Arc<Transaction>],
+        old_state: &Arc<State>,
+        new_state: &Arc<State>,
     ) -> StateResult<Option<Transaction>> {
         let tr = self.tr.append_transaction(trs, old_state, new_state).await?;
         if let Some(mut tr) = tr {
@@ -166,9 +166,9 @@ impl Plugin {
     /// 应用事务追加逻辑
     pub async fn apply_append_transaction(
         &self,
-        trs: &[Transaction],
-        old_state: &State,
-        new_state: &State,
+        trs: &[Arc<Transaction>],
+        old_state: &Arc<State>,
+        new_state: &Arc<State>,
     ) -> StateResult<Option<Transaction>> {
         self.spec.append_transaction(trs, old_state, new_state).await
     }

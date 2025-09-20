@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
 
@@ -29,9 +29,9 @@ impl PluginTrait for FbfxCsxmPlugin {
     }
     async fn append_transaction(
         &self,
-        trs: &[Transaction],
-        _old_state: &State,
-        new_state: &State,
+        trs: &[Arc<Transaction>],
+        _old_state: &Arc<State>,
+        new_state: &Arc<State>,
     ) -> anyhow::Result<Option<Transaction>> {
         let mut rng = rand::rng();
         for tr in trs {

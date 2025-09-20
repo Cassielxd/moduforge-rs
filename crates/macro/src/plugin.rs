@@ -366,9 +366,9 @@ macro_rules! mf_plugin {
             $(
                 async fn append_transaction(
                     &self,
-                    trs: &[mf_state::transaction::Transaction],
-                    old_state: &mf_state::state::State,
-                    new_state: &mf_state::state::State,
+                    trs: &[std::sync::Arc<mf_state::transaction::Transaction>],
+                    old_state: &std::sync::Arc<mf_state::state::State>,
+                    new_state: &std::sync::Arc<mf_state::state::State>,
                 ) -> mf_state::error::StateResult<Option<mf_state::transaction::Transaction>> {
                     ($append_fn)(trs, old_state, new_state).await
                 }

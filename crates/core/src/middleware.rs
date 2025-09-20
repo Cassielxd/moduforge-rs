@@ -22,7 +22,7 @@ pub trait Middleware: Send + Sync {
     async fn after_dispatch(
         &self,
         _state: Option<Arc<State>>,
-        _transactions: &[Transaction],
+        _transactions: &[Arc<Transaction>],
     ) -> ForgeResult<Option<Transaction>> {
         Ok(None)
     }

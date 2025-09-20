@@ -141,14 +141,14 @@ impl State {
 
     /// 异步应用事务到当前状态
     pub async fn apply(
-        &self,
+        self:&Arc<Self>,
         transaction: Transaction,
     ) -> StateResult<TransactionResult> {
         let start_time = Instant::now();
         let initial_step_count = transaction.steps.len();
         tracing::info!("开始应用事务，初始步骤数: {}", initial_step_count);
         // 应用事务并获取结果
-        let result = self.apply_transaction(transaction).await?;
+        let result = self.apply_transaction(Arc::new(transaction)).await?;
         // 检查是否需要重新应用事务
         let duration = start_time.elapsed();
         tracing::debug!("事务应用成功，步骤数保持不变，耗时: {:?}", duration);
@@ -156,7 +156,7 @@ impl State {
     }
 
     pub async fn filter_transaction(
-        &self,
+        self:&Arc<Self>,
         tr: &Transaction,
         ignore: Option<usize>,
     ) -> StateResult<bool> {
@@ -176,8 +176,8 @@ impl State {
     /// 异步应用事务到当前状态
     /// 返回新的状态实例和应用事务的步骤
     pub async fn apply_transaction(
-        &self,
-        root_tr: Transaction,
+        self:&Arc<Self>,
+        root_tr: Arc<Transaction>,
     ) -> StateResult<TransactionResult> {
         tracing::info!("开始应用事务");
         if !self.filter_transaction(&root_tr, None).await? {
@@ -189,7 +189,7 @@ impl State {
         }
 
         let mut trs = Vec::new();
-        let mut new_state: State = self.apply_inner(&root_tr).await?;
+        let mut new_state: Arc<State> = self.apply_inner(&root_tr).await?;
         trs.push(root_tr.clone());
         let mut seen: Option<Vec<SeenState>> = None;
 
@@ -232,7 +232,7 @@ impl State {
                                 plugin.spec.tr.metadata().name.clone()
                             );
                             new_state = new_state.apply_inner(&tr).await?;
-                            trs.push(tr);
+                            trs.push(Arc::new(tr));
                             have_new = true;
                         }
                     }
@@ -255,9 +255,9 @@ impl State {
 
     /// 异步应用内部事务
     pub async fn apply_inner(
-        &self,
+        self:&Arc<Self>,
         tr: &Transaction,
-    ) -> StateResult<State> {
+    ) -> StateResult<Arc<State>> {
         let mut config = self.config.as_ref().clone();
         config.doc = Some(tr.doc());
         let mut new_instance = State::new(Arc::new(config))?;
@@ -275,7 +275,7 @@ impl State {
                 }
             }
         }
-        Ok(new_instance)
+        Ok(Arc::new(new_instance))
     }
 
     #[must_use]
@@ -436,13 +436,13 @@ pub struct StateConfig {
 }
 
 pub struct SeenState {
-    state: State,
+    state: Arc<State>,
     n: usize,
 }
 #[derive(Debug, Clone)]
 pub struct TransactionResult {
-    pub state: State,
-    pub transactions: Vec<Transaction>,
+    pub state: Arc<State>,
+    pub transactions: Vec<Arc<Transaction>>,
 }
 /// 配置结构体，存储编辑器的核心配置信息
 /// - 插件列表: 已加载的插件列表

@@ -12,7 +12,7 @@ pub async fn recover_state<E: EventStore + 'static>(
     configuration: &mf_state::Configuration,
     step_factory: &StepFactoryRegistry,
     batch: u32,
-) -> anyhow::Result<mf_state::State> {
+) -> anyhow::Result<Arc<mf_state::State>> {
     // 1) 快照
     let mut state = if let Some(snap) = store.latest_snapshot(doc_id).await? {
         let bytes = zstd::decode_all(std::io::Cursor::new(snap.state_blob))?;
@@ -21,10 +21,10 @@ pub async fn recover_state<E: EventStore + 'static>(
             node_pool: snap_data.node_pool,
             state_fields: snap_data.state_fields,
         };
-        mf_state::State::deserialize(&ser, configuration).await?
+        Arc::new(mf_state::State::deserialize(&ser, configuration).await?)
     } else {
         // 当无快照时，从配置生成空状态
-        mf_state::State::new(Arc::new(configuration.clone()))?
+        Arc::new(mf_state::State::new(Arc::new(configuration.clone()))?)
     };
 
     // 2) 事件重放

@@ -21,7 +21,7 @@ impl Middleware for CollectFbfxCsxmMiddleware {
     async fn after_dispatch(
         &self,
         _state: Option<Arc<State>>,
-        transactions: &[Transaction],
+        transactions: &[Arc<Transaction>],
     ) -> ForgeResult<Option<Transaction>> {
         println!("分部分项 措施项目 汇总");
         for tr in transactions {

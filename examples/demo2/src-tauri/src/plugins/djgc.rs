@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use mf_state::{plugin::PluginTrait, State, Transaction};
 use mf_state::plugin::PluginMetadata;
@@ -27,9 +29,9 @@ impl PluginTrait for DjgcPlugin {
     }
     async fn append_transaction(
         &self,
-        _trs: &[Transaction],
-        _old_state: &State,
-        _new_state: &State,
+        _trs: &[Arc<Transaction>],
+        _old_state: &Arc<State>,
+        _new_state: &Arc<State>,
     ) -> anyhow::Result<Option<Transaction>> {
         // 拿到人材机 meate 并计算 单价构成数据 并回填 设置meta 分部分项插件回填
 

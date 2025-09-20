@@ -114,7 +114,7 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # UUID generation
 uuid = { workspace = true }
-
+url= { workspace = true }
 # Local dependencies
 moduforge-state = { workspace = true }
 moduforge-model = { workspace = true }

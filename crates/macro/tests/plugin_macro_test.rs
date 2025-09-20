@@ -6,9 +6,9 @@ use async_trait::async_trait;
 
 // 测试事务处理函数
 async fn test_append_transaction(
-    _trs: &[Transaction],
-    _old_state: &State,
-    _new_state: &State,
+    _trs: &[Arc<Transaction>],
+    _old_state: &Arc<State>,
+    _new_state: &Arc<State>,
 ) -> StateResult<Option<Transaction>> {
     println!("处理事务");
     Ok(None)
@@ -147,9 +147,9 @@ mf_plugin_with_config!(
             
             async fn append_transaction(
                 &self,
-                _trs: &[Transaction],
-                _old_state: &State,
-                _new_state: &State,
+                _trs: &[Arc<Transaction>],
+                _old_state: &Arc<State>,
+                _new_state: &Arc<State>,
             ) -> StateResult<Option<Transaction>> {
                 Ok(None)
             }
