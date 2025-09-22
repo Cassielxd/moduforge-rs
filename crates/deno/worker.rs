@@ -35,6 +35,7 @@ use deno_core::OpMetricsFactoryFn;
 use deno_core::OpMetricsSummaryTracker;
 use deno_core::PollEventLoopOptions;
 use deno_core::RequestedModuleType;
+use deno_core::Resource;
 use deno_core::RuntimeOptions;
 use deno_core::SharedArrayBufferStore;
 use deno_core::SourceCodeCacheInfo;
@@ -199,6 +200,9 @@ pub struct ChannelRequest {
     pub method_name: String,
     pub args: serde_json::Value,
     pub timestamp: u64,
+}
+impl Resource for ChannelRequest {
+  
 }
 
 /// 响应数据结构
