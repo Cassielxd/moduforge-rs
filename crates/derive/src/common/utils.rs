@@ -70,7 +70,7 @@ pub fn is_option_type(ty: &Type) -> bool {
             } else {
                 false
             }
-        }
+        },
         _ => false,
     }
 }
@@ -108,12 +108,12 @@ pub fn extract_option_inner_type(ty: &Type) -> Option<&Type> {
         Type::Path(TypePath { path, .. }) => {
             // 获取路径的最后一个段
             let last_segment = path.segments.last()?;
-            
+
             // 确认是 Option 类型
             if last_segment.ident != "Option" {
                 return None;
             }
-            
+
             // 提取泛型参数
             match &last_segment.arguments {
                 PathArguments::AngleBracketed(args) => {
@@ -122,10 +122,10 @@ pub fn extract_option_inner_type(ty: &Type) -> Option<&Type> {
                         GenericArgument::Type(ty) => Some(ty),
                         _ => None,
                     })
-                }
+                },
                 _ => None,
             }
-        }
+        },
         _ => None,
     }
 }
@@ -164,7 +164,10 @@ pub fn extract_option_inner_type(ty: &Type) -> Option<&Type> {
 ///
 /// - **开闭原则**: 可扩展新的类型转换而不修改现有逻辑
 /// - **单一职责**: 只负责生成字段转换代码
-pub fn generate_field_conversion(field_name: &Ident, field_type: &Type) -> TokenStream2 {
+pub fn generate_field_conversion(
+    field_name: &Ident,
+    field_type: &Type,
+) -> TokenStream2 {
     if is_option_type(field_type) {
         // Option<T> 类型的转换逻辑
         quote! {
@@ -196,7 +199,7 @@ pub fn generate_field_conversion(field_name: &Ident, field_type: &Type) -> Token
 /// # 支持的类型
 ///
 /// - String, str (字符串类型)
-/// - i32, i64, u32, u64 (整数类型) 
+/// - i32, i64, u32, u64 (整数类型)
 /// - f32, f64 (浮点数类型)
 /// - bool (布尔类型)
 /// - usize, isize (指针大小整数类型)
@@ -208,21 +211,37 @@ pub fn generate_field_conversion(field_name: &Ident, field_type: &Type) -> Token
 pub fn is_supported_basic_type(ty: &Type) -> bool {
     // 支持的基本类型列表
     const SUPPORTED_TYPES: &[&str] = &[
-        "String", "str", "&str",
-        "i32", "i64", "u32", "u64", "i8", "i16", "u8", "u16", "i128", "u128",
-        "f32", "f64",
+        "String",
+        "str",
+        "&str",
+        "i32",
+        "i64",
+        "u32",
+        "u64",
+        "i8",
+        "i16",
+        "u8",
+        "u16",
+        "i128",
+        "u128",
+        "f32",
+        "f64",
         "bool",
-        "usize", "isize",
-        "serde_json::Value", "Value", "uuid::Uuid", "Uuid", "Vec<u8>", "Vec<String>"
+        "usize",
+        "isize",
+        "serde_json::Value",
+        "Value",
+        "uuid::Uuid",
+        "Uuid",
+        "Vec<u8>",
+        "Vec<String>",
     ];
-    
+
     // 获取类型的字符串表示并去除空格
     let type_str = quote! { #ty }.to_string().replace(" ", "");
-    
+
     // 检查是否精确匹配支持的类型（而不是简单的包含）
-    SUPPORTED_TYPES.iter().any(|&supported| {
-        type_str == supported
-    })
+    SUPPORTED_TYPES.iter().any(|&supported| type_str == supported)
 }
 
 /// 检查类型是否为支持的类型（包括 Option 包装）
@@ -303,34 +322,39 @@ pub fn extract_type_name(ty: &Type) -> String {
     match ty {
         Type::Path(type_path) => {
             // 提取路径的各个段
-            let segments: Vec<String> = type_path.path.segments
+            let segments: Vec<String> = type_path
+                .path
+                .segments
                 .iter()
                 .map(|segment| {
                     let ident = &segment.ident;
                     match &segment.arguments {
                         PathArguments::AngleBracketed(args) => {
                             // 处理泛型参数
-                            let args_str: Vec<String> = args.args
+                            let args_str: Vec<String> = args
+                                .args
                                 .iter()
                                 .map(|arg| match arg {
-                                    GenericArgument::Type(ty) => extract_type_name(ty),
+                                    GenericArgument::Type(ty) => {
+                                        extract_type_name(ty)
+                                    },
                                     _ => "?".to_string(),
                                 })
                                 .collect();
                             format!("{}<{}>", ident, args_str.join(", "))
-                        }
+                        },
                         _ => ident.to_string(),
                     }
                 })
                 .collect();
-            
+
             // 返回最后一个段作为类型名称
             segments.last().cloned().unwrap_or_else(|| "Unknown".to_string())
-        }
+        },
         _ => {
             // 对于其他类型，返回其 TokenStream 表示
             quote! { #ty }.to_string()
-        }
+        },
     }
 }
 
@@ -367,10 +391,9 @@ pub fn generate_attr_setter_code(
 ) -> TokenStream2 {
     let conversion = generate_field_conversion(field_name, field_type);
     let field_name_str = field_name.to_string();
-    let target_ident = syn::parse_str::<Ident>(target).unwrap_or_else(|_| {
-        syn::parse_str("target").unwrap()
-    });
-    
+    let target_ident = syn::parse_str::<Ident>(target)
+        .unwrap_or_else(|_| syn::parse_str("target").unwrap());
+
     quote! {
         #target_ident.set_attr(#field_name_str, Some(#conversion));
     }
@@ -403,13 +426,13 @@ pub fn is_valid_identifier(identifier: &str) -> bool {
     if identifier.is_empty() {
         return false;
     }
-    
+
     // 检查第一个字符是否为字母或下划线
     let first_char = identifier.chars().next().unwrap();
     if !first_char.is_alphabetic() && first_char != '_' {
         return false;
     }
-    
+
     // 检查其余字符是否为字母、数字或下划线
     identifier.chars().all(|c| c.is_alphanumeric() || c == '_')
 }
@@ -424,10 +447,10 @@ mod tests {
     fn test_is_option_type() {
         let option_string: Type = parse_quote! { Option<String> };
         assert!(is_option_type(&option_string));
-        
+
         let string: Type = parse_quote! { String };
         assert!(!is_option_type(&string));
-        
+
         let option_int: Type = parse_quote! { Option<i32> };
         assert!(is_option_type(&option_int));
     }
@@ -438,7 +461,7 @@ mod tests {
         let option_string: Type = parse_quote! { Option<String> };
         let inner = extract_option_inner_type(&option_string);
         assert!(inner.is_some());
-        
+
         let string: Type = parse_quote! { String };
         let inner = extract_option_inner_type(&string);
         assert!(inner.is_none());
@@ -449,16 +472,16 @@ mod tests {
     fn test_is_supported_type() {
         let string: Type = parse_quote! { String };
         assert!(is_supported_type(&string));
-        
+
         let option_string: Type = parse_quote! { Option<String> };
         assert!(is_supported_type(&option_string));
-        
+
         let vec_string: Type = parse_quote! { Vec<String> };
         assert!(!is_supported_type(&vec_string));
-        
+
         let i32_type: Type = parse_quote! { i32 };
         assert!(is_supported_type(&i32_type));
-        
+
         let option_i32: Type = parse_quote! { Option<i32> };
         assert!(is_supported_type(&option_i32));
     }
@@ -468,10 +491,10 @@ mod tests {
     fn test_extract_type_name() {
         let string: Type = parse_quote! { String };
         assert_eq!(extract_type_name(&string), "String");
-        
+
         let option_string: Type = parse_quote! { Option<String> };
         assert_eq!(extract_type_name(&option_string), "Option<String>");
-        
+
         let option_i32: Type = parse_quote! { Option<i32> };
         assert_eq!(extract_type_name(&option_i32), "Option<i32>");
     }
@@ -483,7 +506,7 @@ mod tests {
         assert!(is_valid_identifier("ValidName"));
         assert!(is_valid_identifier("valid123"));
         assert!(is_valid_identifier("_private"));
-        
+
         assert!(!is_valid_identifier(""));
         assert!(!is_valid_identifier("123invalid"));
         assert!(!is_valid_identifier("invalid-name"));
@@ -495,7 +518,7 @@ mod tests {
     fn test_generate_imports() {
         let imports = generate_imports();
         let imports_str = imports.to_string();
-        
+
         assert!(imports_str.contains("mf_model :: node_type :: NodeSpec"));
         assert!(imports_str.contains("mf_model :: schema :: AttributeSpec"));
         assert!(imports_str.contains("serde_json :: Value"));
@@ -506,15 +529,15 @@ mod tests {
     #[test]
     fn test_generate_field_conversion() {
         let field_name = syn::parse_str::<Ident>("test_field").unwrap();
-        
+
         // 测试普通类型转换
         let string_type: Type = parse_quote! { String };
         let conversion = generate_field_conversion(&field_name, &string_type);
         let conversion_str = conversion.to_string();
         assert!(conversion_str.contains("serde_json :: to_value"));
         assert!(conversion_str.contains("test_field"));
-        
-        // 测试 Option 类型转换  
+
+        // 测试 Option 类型转换
         let option_type: Type = parse_quote! { Option<String> };
         let conversion = generate_field_conversion(&field_name, &option_type);
         let conversion_str = conversion.to_string();

@@ -29,10 +29,11 @@ use super::{
 /// - **单例模式**: 确保全局只有一个注册表实例
 /// - **线程安全**: 支持多线程环境下的安全使用
 /// - **开闭原则**: 支持运行时添加新转换器
-static GLOBAL_REGISTRY: Lazy<Arc<RwLock<ConverterRegistryImpl>>> = Lazy::new(|| {
-    let registry = ConverterRegistryImpl::new();
-    Arc::new(RwLock::new(registry))
-});
+static GLOBAL_REGISTRY: Lazy<Arc<RwLock<ConverterRegistryImpl>>> =
+    Lazy::new(|| {
+        let registry = ConverterRegistryImpl::new();
+        Arc::new(RwLock::new(registry))
+    });
 
 /// 转换器注册表接口
 ///
@@ -57,7 +58,10 @@ pub trait ConverterRegistry {
     ///
     /// - **开闭原则**: 支持扩展新的转换器而不修改现有代码
     /// - **依赖注入**: 接受任何实现了 TypeConverter 的类型
-    fn register_converter(&mut self, converter: Box<dyn TypeConverter>);
+    fn register_converter(
+        &mut self,
+        converter: Box<dyn TypeConverter>,
+    );
 
     /// 查找支持指定类型的转换器
     ///
@@ -76,7 +80,10 @@ pub trait ConverterRegistry {
     ///
     /// - **策略模式**: 根据类型选择合适的转换策略
     /// - **单一职责**: 只负责转换器查找，不执行转换
-    fn find_converter_for_type(&self, field_type: &Type) -> Option<&dyn TypeConverter>;
+    fn find_converter_for_type(
+        &self,
+        field_type: &Type,
+    ) -> Option<&dyn TypeConverter>;
 
     /// 执行字段转换
     ///
@@ -100,7 +107,10 @@ pub trait ConverterRegistry {
     ///
     /// - **门面模式**: 提供统一的转换接口
     /// - **策略模式**: 内部选择合适的转换策略
-    fn convert_field(&self, field: &Field) -> MacroResult<TokenStream2>;
+    fn convert_field(
+        &self,
+        field: &Field,
+    ) -> MacroResult<TokenStream2>;
 
     /// 获取所有注册的转换器数量
     ///
@@ -177,9 +187,7 @@ impl ConverterRegistryImpl {
     /// - **工厂模式**: 自动创建和配置内置转换器
     /// - **单一职责**: 只负责注册表的初始化
     pub fn new() -> Self {
-        let mut registry = Self {
-            converters: Vec::new(),
-        };
+        let mut registry = Self { converters: Vec::new() };
 
         // 加载所有内置转换器
         registry.load_builtin_converters();
@@ -228,11 +236,15 @@ impl ConverterRegistryImpl {
     ///
     /// - **单一职责**: 只负责转换器插入和排序
     /// - **开闭原则**: 支持任意类型的转换器插入
-    fn register_converter_internal(&mut self, converter: Box<dyn TypeConverter>) {
+    fn register_converter_internal(
+        &mut self,
+        converter: Box<dyn TypeConverter>,
+    ) {
         let priority = converter.priority();
 
         // 找到合适的插入位置（保持优先级降序）
-        let insert_pos = self.converters
+        let insert_pos = self
+            .converters
             .iter()
             .position(|c| c.priority() < priority)
             .unwrap_or(self.converters.len());
@@ -251,25 +263,36 @@ impl Default for ConverterRegistryImpl {
 }
 
 impl ConverterRegistry for ConverterRegistryImpl {
-    fn register_converter(&mut self, converter: Box<dyn TypeConverter>) {
+    fn register_converter(
+        &mut self,
+        converter: Box<dyn TypeConverter>,
+    ) {
         self.register_converter_internal(converter);
     }
 
-    fn find_converter_for_type(&self, field_type: &Type) -> Option<&dyn TypeConverter> {
+    fn find_converter_for_type(
+        &self,
+        field_type: &Type,
+    ) -> Option<&dyn TypeConverter> {
         self.converters
             .iter()
             .find(|converter| converter.supports_type(field_type))
             .map(|boxed| boxed.as_ref())
     }
 
-    fn convert_field(&self, field: &Field) -> MacroResult<TokenStream2> {
+    fn convert_field(
+        &self,
+        field: &Field,
+    ) -> MacroResult<TokenStream2> {
         // 查找支持该字段类型的转换器
         if let Some(converter) = self.find_converter_for_type(&field.ty) {
             converter.convert_field_to_json_value(field)
         } else {
             // 没有找到支持的转换器
             let type_name = crate::common::utils::extract_type_name(&field.ty);
-            let field_name = field.ident.as_ref()
+            let field_name = field
+                .ident
+                .as_ref()
                 .map(|i| i.to_string())
                 .unwrap_or_else(|| "匿名字段".to_string());
 
@@ -343,7 +366,7 @@ impl GlobalConverterRegistry {
             Ok(mut registry) => {
                 registry.register_converter(converter);
                 Ok(())
-            }
+            },
             Err(e) => Err(format!("无法获取注册表写锁: {}", e)),
         }
     }
@@ -434,7 +457,7 @@ impl GlobalConverterRegistry {
             Ok(mut registry) => {
                 registry.clear_converters();
                 Ok(())
-            }
+            },
             Err(e) => Err(format!("无法获取注册表写锁: {}", e)),
         }
     }
@@ -462,7 +485,7 @@ impl GlobalConverterRegistry {
             Ok(mut registry) => {
                 registry.reload_default_converters();
                 Ok(())
-            }
+            },
             Err(e) => Err(format!("无法获取注册表写锁: {}", e)),
         }
     }
@@ -487,7 +510,7 @@ impl GlobalConverterRegistry {
         match GLOBAL_REGISTRY.read() {
             Ok(registry) => {
                 Ok(registry.find_converter_for_type(field_type).is_some())
-            }
+            },
             Err(e) => Err(format!("无法获取注册表读锁: {}", e)),
         }
     }
@@ -506,14 +529,14 @@ mod tests {
     #[test]
     fn test_registry_creation() {
         let registry = ConverterRegistryImpl::new();
-        
+
         // 应该包含所有内置转换器
         assert!(registry.converter_count() > 0);
-        
+
         // 验证支持基本类型
         let string_type: Type = parse_quote! { String };
         assert!(registry.find_converter_for_type(&string_type).is_some());
-        
+
         let i32_type: Type = parse_quote! { i32 };
         assert!(registry.find_converter_for_type(&i32_type).is_some());
     }
@@ -523,11 +546,11 @@ mod tests {
     fn test_converter_registration() {
         let mut registry = ConverterRegistryImpl::new();
         let initial_count = registry.converter_count();
-        
+
         // 注册新的转换器
         let custom_converter = Box::new(BuiltinTypeConverter::new());
         registry.register_converter(custom_converter);
-        
+
         // 验证转换器数量增加
         assert_eq!(registry.converter_count(), initial_count + 1);
     }
@@ -537,11 +560,11 @@ mod tests {
     fn test_converter_priority_ordering() {
         let mut registry = ConverterRegistryImpl::new();
         registry.clear_converters();
-        
+
         // 注册不同优先级的转换器
         registry.register_converter(Box::new(StringConverter::new())); // 优先级 90
         registry.register_converter(Box::new(NumericConverter::new())); // 优先级 95
-        
+
         // 验证数值转换器（高优先级）被优先选择
         let i32_type: Type = parse_quote! { i32 };
         let converter = registry.find_converter_for_type(&i32_type).unwrap();
@@ -552,15 +575,15 @@ mod tests {
     #[test]
     fn test_field_conversion() {
         let registry = ConverterRegistryImpl::new();
-        
+
         // 测试字符串字段转换
         let string_field: syn::Field = parse_quote! {
             name: String
         };
-        
+
         let result = registry.convert_field(&string_field);
         assert!(result.is_ok());
-        
+
         let code = result.unwrap();
         let code_str = code.to_string();
         assert!(code_str.contains("serde_json::to_value"));
@@ -571,16 +594,17 @@ mod tests {
     #[test]
     fn test_unsupported_type_error() {
         let registry = ConverterRegistryImpl::new();
-        
+
         // 测试不支持的类型
         let unsupported_field: syn::Field = parse_quote! {
             data: std::collections::BTreeMap<String, i32>
         };
-        
+
         let result = registry.convert_field(&unsupported_field);
         assert!(result.is_err());
-        
-        if let Err(MacroError::UnsupportedFieldType { field_name, .. }) = result {
+
+        if let Err(MacroError::UnsupportedFieldType { field_name, .. }) = result
+        {
             assert_eq!(field_name, "data");
         } else {
             panic!("期望 UnsupportedFieldType 错误");
@@ -592,11 +616,11 @@ mod tests {
     fn test_clear_and_reload() {
         let mut registry = ConverterRegistryImpl::new();
         let initial_count = registry.converter_count();
-        
+
         // 清空所有转换器
         registry.clear_converters();
         assert_eq!(registry.converter_count(), 0);
-        
+
         // 重新加载默认转换器
         registry.reload_default_converters();
         assert_eq!(registry.converter_count(), initial_count);
@@ -607,24 +631,24 @@ mod tests {
     fn test_global_registry() {
         // 获取初始转换器数量
         let initial_count = GlobalConverterRegistry::converter_count().unwrap();
-        
+
         // 注册自定义转换器
         let custom_converter = Box::new(BuiltinTypeConverter::new());
         let result = GlobalConverterRegistry::register(custom_converter);
         assert!(result.is_ok());
-        
+
         // 验证转换器数量增加
         let new_count = GlobalConverterRegistry::converter_count().unwrap();
         assert_eq!(new_count, initial_count + 1);
-        
+
         // 测试字段转换
         let field: syn::Field = parse_quote! {
             test: String
         };
-        
+
         let conversion_result = GlobalConverterRegistry::convert_field(&field);
         assert!(conversion_result.is_ok());
-        
+
         // 清理：重新加载默认转换器
         GlobalConverterRegistry::reload_defaults().unwrap();
     }
@@ -634,16 +658,20 @@ mod tests {
     fn test_type_support_checking() {
         // 测试支持的类型
         let string_type: Type = parse_quote! { String };
-        let supports_string = GlobalConverterRegistry::supports_type(&string_type).unwrap();
+        let supports_string =
+            GlobalConverterRegistry::supports_type(&string_type).unwrap();
         assert!(supports_string);
-        
+
         let i32_type: Type = parse_quote! { i32 };
-        let supports_i32 = GlobalConverterRegistry::supports_type(&i32_type).unwrap();
+        let supports_i32 =
+            GlobalConverterRegistry::supports_type(&i32_type).unwrap();
         assert!(supports_i32);
-        
+
         // 测试不支持的类型
-        let unsupported_type: Type = parse_quote! { std::collections::BTreeSet<String> };
-        let supports_unsupported = GlobalConverterRegistry::supports_type(&unsupported_type).unwrap();
+        let unsupported_type: Type =
+            parse_quote! { std::collections::BTreeSet<String> };
+        let supports_unsupported =
+            GlobalConverterRegistry::supports_type(&unsupported_type).unwrap();
         assert!(!supports_unsupported);
     }
 
@@ -658,14 +686,14 @@ mod tests {
     #[test]
     fn test_converter_finding_accuracy() {
         let registry = ConverterRegistryImpl::new();
-        
+
         // 测试各种类型的转换器查找
         let test_cases = vec![
             (parse_quote! { String }, "StringConverter"),
             (parse_quote! { i32 }, "NumericConverter"),
             (parse_quote! { bool }, "BooleanConverter"),
         ];
-        
+
         for (ty, _expected_name) in test_cases {
             if let Some(converter) = registry.find_converter_for_type(&ty) {
                 // 注意：由于优先级排序，实际选择的转换器可能是 BuiltinTypeConverter

@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-
 pub mod dependency;
 pub mod manager;
 pub mod plugin;

@@ -33,7 +33,8 @@ pub struct DjgcRowNode {
 
 lazy_static! {
     pub static ref DJGC: mf_core::node::Node = DjgcNode::node_definition();
-    pub static ref DJGC_NODE: mf_core::node::Node = DjgcRowNode::node_definition();
+    pub static ref DJGC_NODE: mf_core::node::Node =
+        DjgcRowNode::node_definition();
 }
 
 ///构建单价构成节点 节点定义

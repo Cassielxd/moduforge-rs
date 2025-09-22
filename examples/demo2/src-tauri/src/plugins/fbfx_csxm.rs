@@ -16,7 +16,7 @@ pub struct FbfxCsxmPlugin;
 #[async_trait]
 impl PluginTrait for FbfxCsxmPlugin {
     fn metadata(&self) -> PluginMetadata {
-        PluginMetadata{
+        PluginMetadata {
             name: "fbfx".to_string(),
             version: "1.0.0".to_string(),
             description: "分部分项插件".to_string(),

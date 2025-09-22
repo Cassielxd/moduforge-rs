@@ -3,8 +3,8 @@
 //! 提供 Node 和 Mark 的代码生成功能，将解析后的配置转换为可执行的 Rust 代码。
 //! 严格遵循单一职责原则，每个生成器只负责特定类型的代码生成。
 
-pub mod node_generator;
 pub mod mark_generator;
+pub mod node_generator;
 
 use crate::common::MacroResult;
 use proc_macro2::TokenStream as TokenStream2;
@@ -28,7 +28,7 @@ pub trait CodeGenerator {
     ///
     /// 成功时返回生成的代码 TokenStream，失败时返回生成错误
     fn generate(&self) -> MacroResult<TokenStream2>;
-    
+
     /// 获取生成器的名称
     ///
     /// 返回生成器的名称，用于调试和错误消息。
@@ -67,7 +67,7 @@ impl GeneratorFactory {
     ) -> node_generator::NodeGenerator<'a> {
         node_generator::NodeGenerator::new(input, config)
     }
-    
+
     /// 创建 Mark 代码生成器
     ///
     /// # 参数

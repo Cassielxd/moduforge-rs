@@ -25,7 +25,7 @@ use super::CodeGenerator;
 pub struct MarkGenerator<'a> {
     /// 派生宏的输入，包含结构体定义
     input: &'a DeriveInput,
-    
+
     /// Mark 配置信息，包含所有解析后的属性
     config: &'a MarkConfig,
 }
@@ -66,11 +66,11 @@ impl<'a> MarkGenerator<'a> {
     /// let config = AttributeParser::parse_mark_attributes(&input).unwrap();
     /// let generator = MarkGenerator::new(&input, &config);
     /// ```
-    pub fn new(input: &'a DeriveInput, config: &'a MarkConfig) -> Self {
-        Self {
-            input,
-            config,
-        }
+    pub fn new(
+        input: &'a DeriveInput,
+        config: &'a MarkConfig,
+    ) -> Self {
+        Self { input, config }
     }
 
     /// 生成 mark_definition() 方法的实现代码
@@ -117,11 +117,12 @@ impl<'a> MarkGenerator<'a> {
     /// - **属性精确性**: 只包含 #[attr] 标记的字段，符合标记定义语义
     pub fn generate_mark_definition_method(&self) -> MacroResult<TokenStream2> {
         let struct_name = &self.input.ident;
-        let mark_type = self.config.mark_type.as_ref()
-            .ok_or_else(|| MacroError::validation_error(
+        let mark_type = self.config.mark_type.as_ref().ok_or_else(|| {
+            MacroError::validation_error(
                 "Mark 配置缺少必需的 mark_type 属性",
                 self.input,
-            ))?;
+            )
+        })?;
 
         // 生成必要的导入语句
         let imports = self.generate_imports();
@@ -137,7 +138,7 @@ impl<'a> MarkGenerator<'a> {
             /// 和宏属性配置创建标记定义（而非具体实例）。
             ///
             /// # 返回值
-            /// 
+            ///
             /// 返回配置好的 `mf_core::mark::Mark` 定义
             ///
             /// # 生成说明
@@ -150,9 +151,9 @@ impl<'a> MarkGenerator<'a> {
             /// - **属性精确性**: 只包含 #[attr] 标记的字段，符合标记定义语义
             pub fn mark_definition() -> mf_core::mark::Mark {
                 #imports
-                
+
                 #spec_code
-                
+
                 // 创建并返回 Mark 定义
                 mf_core::mark::Mark::new(#mark_type, spec)
             }
@@ -199,15 +200,15 @@ impl<'a> MarkGenerator<'a> {
     /// - **开闭原则**: 通过配置和转换器支持扩展
     pub fn generate_to_mark_method(&self) -> MacroResult<TokenStream2> {
         let struct_name = &self.input.ident;
-        let mark_type = self.config.mark_type.as_ref()
-            .ok_or_else(|| MacroError::validation_error(
+        let mark_type = self.config.mark_type.as_ref().ok_or_else(|| {
+            MacroError::validation_error(
                 "Mark 配置缺少必需的 mark_type 属性",
                 self.input,
-            ))?;
+            )
+        })?;
 
         // 生成必要的导入语句
         let imports = self.generate_imports();
-
 
         // 生成 MarkSpec 构建代码
         let spec_code = self.generate_mark_spec_code()?;
@@ -220,7 +221,7 @@ impl<'a> MarkGenerator<'a> {
             /// 和宏属性配置创建相应的 Mark 实例。
             ///
             /// # 返回值
-            /// 
+            ///
             /// 返回配置好的 `mf_core::mark::Mark` 实例
             ///
             /// # 生成说明
@@ -231,9 +232,9 @@ impl<'a> MarkGenerator<'a> {
             /// - **里氏替换**: 生成的 Mark 可以替换手动创建的实例
             pub fn to_mark(&self) -> mf_core::mark::Mark {
                 #imports
-                
+
                 #spec_code
-                
+
                 // 创建并返回 Mark 实例
                 mf_core::mark::Mark::new(#mark_type, spec)
             }
@@ -261,7 +262,6 @@ impl<'a> MarkGenerator<'a> {
             use serde_json::Value as JsonValue;
         }
     }
-
 
     /// 生成 MarkSpec 构建代码
     ///
@@ -292,7 +292,7 @@ impl<'a> MarkGenerator<'a> {
 
         let spec_code = quote! {
             #attrs_code
-            
+
             let spec = mf_model::mark_type::MarkSpec {
                 attrs,
                 excludes: None,
@@ -315,7 +315,7 @@ impl<'a> MarkGenerator<'a> {
     /// 成功时返回属性映射构建代码，失败时返回生成错误
     fn generate_attrs_spec_code(&self) -> MacroResult<TokenStream2> {
         let attr_fields = &self.config.attr_fields;
-        
+
         if attr_fields.is_empty() {
             // 没有属性字段时，创建空的 attrs
             return Ok(quote! {
@@ -362,7 +362,7 @@ impl<'a> MarkGenerator<'a> {
     /// attrs_map.insert("field_name".to_string(), mf_model::schema::AttributeSpec {
     ///     default: Some(serde_json::json!("default_value"))
     /// });
-    /// 
+    ///
     /// // 如果没有 default 属性，使用类型默认值
     /// attrs_map.insert("field_name".to_string(), mf_model::schema::AttributeSpec {
     ///     default: Some(serde_json::json!(String::default()))
@@ -374,11 +374,15 @@ impl<'a> MarkGenerator<'a> {
     /// - **单一职责**: 只负责单个字段的属性设置代码生成
     /// - **里氏替换**: 对任何字段配置都能正确处理
     /// - **开闭原则**: 支持 default 属性扩展而不修改核心逻辑
-    fn generate_field_spec_code(&self, field_config: &FieldConfig) -> MacroResult<TokenStream2> {
+    fn generate_field_spec_code(
+        &self,
+        field_config: &FieldConfig,
+    ) -> MacroResult<TokenStream2> {
         let field_name = &field_config.name;
 
         // 生成默认值表达式
-        let default_value_expr = self.generate_default_value_expression(field_config)?;
+        let default_value_expr =
+            self.generate_default_value_expression(field_config)?;
 
         // 生成属性设置代码，创建 AttributeSpec
         let attr_code = quote! {
@@ -408,7 +412,10 @@ impl<'a> MarkGenerator<'a> {
     ///
     /// - **单一职责**: 专门负责默认值表达式生成
     /// - **开闭原则**: 支持新的默认值类型扩展
-    fn generate_default_value_expression(&self, field_config: &FieldConfig) -> MacroResult<TokenStream2> {
+    fn generate_default_value_expression(
+        &self,
+        field_config: &FieldConfig,
+    ) -> MacroResult<TokenStream2> {
         // 检查是否有 default 属性
         if let Some(default_value) = &field_config.default_value {
             // 使用 attr 中的 default 值
@@ -430,43 +437,43 @@ impl<'a> MarkGenerator<'a> {
     /// # 返回值
     ///
     /// 返回默认值的 JSON 表达式代码
-    fn generate_default_value_from_attr(&self, default_value: &crate::parser::default_value::DefaultValue) -> MacroResult<TokenStream2> {
+    fn generate_default_value_from_attr(
+        &self,
+        default_value: &crate::parser::default_value::DefaultValue,
+    ) -> MacroResult<TokenStream2> {
         use crate::parser::default_value::DefaultValueType;
 
         match &default_value.value_type {
-            DefaultValueType::String(s) => {
-                Ok(quote! { serde_json::json!(#s) })
-            }
+            DefaultValueType::String(s) => Ok(quote! { serde_json::json!(#s) }),
             DefaultValueType::Integer(i) => {
                 Ok(quote! { serde_json::json!(#i) })
-            }
-            DefaultValueType::Float(f) => {
-                Ok(quote! { serde_json::json!(#f) })
-            }
+            },
+            DefaultValueType::Float(f) => Ok(quote! { serde_json::json!(#f) }),
             DefaultValueType::Boolean(b) => {
                 Ok(quote! { serde_json::json!(#b) })
-            }
+            },
             DefaultValueType::Json(json_value) => {
                 // 对于 JSON 值，转换为字符串然后在运行时解析
-                let json_str = serde_json::to_string(json_value).unwrap_or_else(|_| "null".to_string());
-                Ok(quote! { 
+                let json_str = serde_json::to_string(json_value)
+                    .unwrap_or_else(|_| "null".to_string());
+                Ok(quote! {
                     serde_json::from_str(#json_str).unwrap_or_else(|_| serde_json::json!(null))
                 })
-            }
+            },
             DefaultValueType::CustomType(expr) => {
                 // 对于自定义类型表达式，直接执行表达式并序列化结果
-                let expr_tokens = syn::parse_str::<syn::Expr>(expr)
-                    .map_err(|_| MacroError::parse_error(
-                        &format!("无效的自定义类型表达式: {}", expr),
-                        self.input,
-                    ))?;
-                Ok(quote! { 
+                let expr_tokens =
+                    syn::parse_str::<syn::Expr>(expr).map_err(|_| {
+                        MacroError::parse_error(
+                            &format!("无效的自定义类型表达式: {}", expr),
+                            self.input,
+                        )
+                    })?;
+                Ok(quote! {
                     serde_json::to_value(#expr_tokens).unwrap_or_else(|_| serde_json::json!(null))
                 })
-            }
-            DefaultValueType::Null => {
-                Ok(quote! { serde_json::json!(null) })
-            }
+            },
+            DefaultValueType::Null => Ok(quote! { serde_json::json!(null) }),
         }
     }
 
@@ -491,23 +498,32 @@ impl<'a> MarkGenerator<'a> {
     /// "String" => serde_json::json!(String::default())
     /// "i32" => serde_json::json!(0)
     /// "bool" => serde_json::json!(false)
-    /// 
+    ///
     /// // 泛型类型
     /// "Option<String>" => serde_json::json!(null)
     /// "Vec<u8>" => serde_json::json!(Vec::<u8>::new())
-    /// 
+    ///
     /// // 自定义类型 (需要 Default + Serialize)
     /// "CustomStruct" => serde_json::to_value(<CustomStruct as Default>::default())
     /// ```
-    fn generate_type_default_value(&self, type_name: &str) -> MacroResult<TokenStream2> {
+    fn generate_type_default_value(
+        &self,
+        type_name: &str,
+    ) -> MacroResult<TokenStream2> {
         let default_expr = match type_name {
             "String" => quote! { serde_json::json!(String::default()) },
-            "i8" | "i16" | "i32" | "i64" | "i128" | "isize" => quote! { serde_json::json!(0) },
-            "u8" | "u16" | "u32" | "u64" | "u128" | "usize" => quote! { serde_json::json!(0) },
+            "i8" | "i16" | "i32" | "i64" | "i128" | "isize" => {
+                quote! { serde_json::json!(0) }
+            },
+            "u8" | "u16" | "u32" | "u64" | "u128" | "usize" => {
+                quote! { serde_json::json!(0) }
+            },
             "f32" | "f64" => quote! { serde_json::json!(0.0) },
             "bool" => quote! { serde_json::json!(false) },
             "serde_json::Value" | "Value" => quote! { serde_json::json!(null) },
-            "uuid::Uuid" | "Uuid" => quote! { serde_json::json!(uuid::Uuid::new_v4().to_string()) },
+            "uuid::Uuid" | "Uuid" => {
+                quote! { serde_json::json!(uuid::Uuid::new_v4().to_string()) }
+            },
             "Vec<u8>" => quote! { serde_json::json!(Vec::<u8>::new()) },
             "Vec<String>" => quote! { serde_json::json!(Vec::<String>::new()) },
             _ if type_name.starts_with("Option<") => {
@@ -518,7 +534,7 @@ impl<'a> MarkGenerator<'a> {
                 // 对于其他自定义类型，尝试使用 Default trait 并序列化
                 // 这要求类型实现 Default + Serialize traits
                 if let Ok(type_ident) = syn::parse_str::<syn::Type>(type_name) {
-                    quote! { 
+                    quote! {
                         serde_json::to_value(<#type_ident as Default>::default())
                             .unwrap_or_else(|_| serde_json::json!(null))
                     }
@@ -526,7 +542,7 @@ impl<'a> MarkGenerator<'a> {
                     // 如果类型解析失败，回退到 null
                     quote! { serde_json::json!(null) }
                 }
-            }
+            },
         };
 
         Ok(default_expr)
@@ -551,36 +567,42 @@ impl<'a> MarkGenerator<'a> {
                         for field in &fields_named.named {
                             if let Some(field_name) = &field.ident {
                                 // 检查是否是有 #[attr] 标记的字段
-                                let field_config = self.config.attr_fields.iter()
-                                    .find(|config| &config.name == &field_name.to_string());
+                                let field_config = self
+                                    .config
+                                    .attr_fields
+                                    .iter()
+                                    .find(|config| {
+                                        &config.name == &field_name.to_string()
+                                    });
 
                                 let field_info = FieldInfo {
                                     name: field_name.to_string(),
-                                    type_name: self.extract_type_name(&field.ty),
+                                    type_name: self
+                                        .extract_type_name(&field.ty),
                                     config: field_config.cloned(),
                                 };
 
                                 all_fields.push(field_info);
                             }
                         }
-                    }
+                    },
                     Fields::Unnamed(_) => {
                         return Err(MacroError::validation_error(
                             "不支持元组结构体",
                             self.input,
                         ));
-                    }
+                    },
                     Fields::Unit => {
                         // 单元结构体，没有字段
-                    }
+                    },
                 }
-            }
+            },
             _ => {
                 return Err(MacroError::validation_error(
                     "只支持结构体类型",
                     self.input,
                 ));
-            }
+            },
         }
 
         Ok(all_fields)
@@ -598,42 +620,73 @@ impl<'a> MarkGenerator<'a> {
     /// # 返回值
     ///
     /// 包含完整泛型信息的类型名称字符串
-    fn extract_type_name(&self, ty: &syn::Type) -> String {
-        use syn::{Type, TypePath, PathArguments, GenericArgument, AngleBracketedGenericArguments};
+    fn extract_type_name(
+        &self,
+        ty: &syn::Type,
+    ) -> String {
+        use syn::{
+            Type, TypePath, PathArguments, GenericArgument,
+            AngleBracketedGenericArguments,
+        };
 
         match ty {
             Type::Tuple(tuple) if tuple.elems.is_empty() => {
                 // Handle unit type ()
                 "()".to_string()
-            }
+            },
             Type::Path(TypePath { path, .. }) => {
                 // 构建完整的类型名称，包括泛型参数
-                let segments: Vec<String> = path.segments.iter().map(|seg| {
-                    let ident = seg.ident.to_string();
-                    match &seg.arguments {
-                        PathArguments::AngleBracketed(AngleBracketedGenericArguments { args, .. }) => {
-                            let type_args: Vec<String> = args.iter().map(|arg| {
-                                match arg {
-                                    GenericArgument::Type(inner_ty) => self.extract_type_name(inner_ty),
-                                    GenericArgument::Lifetime(_) => "".to_string(), // Skip lifetimes
-                                    GenericArgument::Const(_) => "".to_string(), // Skip const generics
-                                    GenericArgument::AssocType(_) => "".to_string(), // Skip associated types
-                                    GenericArgument::AssocConst(_) => "".to_string(), // Skip associated consts
-                                    GenericArgument::Constraint(_) => "".to_string(), // Skip constraints
-                                    _ => "".to_string(), // Handle any other cases
+                let segments: Vec<String> = path
+                    .segments
+                    .iter()
+                    .map(|seg| {
+                        let ident = seg.ident.to_string();
+                        match &seg.arguments {
+                            PathArguments::AngleBracketed(
+                                AngleBracketedGenericArguments { args, .. },
+                            ) => {
+                                let type_args: Vec<String> = args
+                                    .iter()
+                                    .map(|arg| {
+                                        match arg {
+                                            GenericArgument::Type(inner_ty) => {
+                                                self.extract_type_name(inner_ty)
+                                            },
+                                            GenericArgument::Lifetime(_) => {
+                                                "".to_string()
+                                            }, // Skip lifetimes
+                                            GenericArgument::Const(_) => {
+                                                "".to_string()
+                                            }, // Skip const generics
+                                            GenericArgument::AssocType(_) => {
+                                                "".to_string()
+                                            }, // Skip associated types
+                                            GenericArgument::AssocConst(_) => {
+                                                "".to_string()
+                                            }, // Skip associated consts
+                                            GenericArgument::Constraint(_) => {
+                                                "".to_string()
+                                            }, // Skip constraints
+                                            _ => "".to_string(), // Handle any other cases
+                                        }
+                                    })
+                                    .collect();
+                                if type_args.is_empty() {
+                                    ident
+                                } else {
+                                    format!(
+                                        "{}<{}>",
+                                        ident,
+                                        type_args.join(", ")
+                                    )
                                 }
-                            }).collect();
-                            if type_args.is_empty() {
-                                ident
-                            } else {
-                                format!("{}<{}>", ident, type_args.join(", "))
-                            }
+                            },
+                            _ => ident,
                         }
-                        _ => ident,
-                    }
-                }).collect();
+                    })
+                    .collect();
                 segments.join("::")
-            }
+            },
             _ => "Unknown".to_string(),
         }
     }
@@ -648,11 +701,12 @@ impl<'a> MarkGenerator<'a> {
     /// 成功时返回生成的代码 TokenStream，失败时返回生成错误
     pub fn generate_from_method(&self) -> MacroResult<TokenStream2> {
         let struct_name = &self.input.ident;
-        let mark_type = self.config.mark_type.as_ref()
-            .ok_or_else(|| MacroError::validation_error(
+        let mark_type = self.config.mark_type.as_ref().ok_or_else(|| {
+            MacroError::validation_error(
                 "Mark 配置缺少必需的 mark_type 属性",
                 self.input,
-            ))?;
+            )
+        })?;
 
         // 生成字段初始化代码
         let field_inits = self.generate_field_initializers()?;
@@ -669,7 +723,7 @@ impl<'a> MarkGenerator<'a> {
             /// * `mark` - 要转换的 Mark 实例
             ///
             /// # 返回值
-            /// 
+            ///
             /// 成功时返回结构体实例，失败时返回错误信息
             ///
             /// # 错误
@@ -686,12 +740,12 @@ impl<'a> MarkGenerator<'a> {
             /// - **类型安全**: 支持泛型类型和自定义类型的安全转换
             pub fn from(mark: &mf_model::mark::Mark) -> Result<Self, String> {
                 use serde_json::Value as JsonValue;
-                
+
                 // 验证标记类型匹配
                 if mark.r#type != #mark_type {
                     return Err(format!("标记类型不匹配: 期望 '{}', 实际 '{}'", #mark_type, mark.r#type));
                 }
-                
+
                 Ok(Self {
                     #field_inits
                 })
@@ -715,7 +769,8 @@ impl<'a> MarkGenerator<'a> {
         let mut field_inits = Vec::new();
 
         for field_info in all_fields {
-            let field_init = self.generate_field_initialization_from_info(&field_info)?;
+            let field_init =
+                self.generate_field_initialization_from_info(&field_info)?;
             field_inits.push(field_init);
         }
 
@@ -735,13 +790,18 @@ impl<'a> MarkGenerator<'a> {
     /// # 返回值
     ///
     /// 成功时返回字段初始化代码，失败时返回转换错误
-    fn generate_field_initialization_from_info(&self, field_info: &FieldInfo) -> MacroResult<TokenStream2> {
+    fn generate_field_initialization_from_info(
+        &self,
+        field_info: &FieldInfo,
+    ) -> MacroResult<TokenStream2> {
         let field_name = &field_info.name;
-        let field_ident = syn::parse_str::<syn::Ident>(field_name)
-            .map_err(|_| MacroError::parse_error(
-                &format!("无效的字段名称: {}", field_name),
-                self.input,
-            ))?;
+        let field_ident =
+            syn::parse_str::<syn::Ident>(field_name).map_err(|_| {
+                MacroError::parse_error(
+                    &format!("无效的字段名称: {}", field_name),
+                    self.input,
+                )
+            })?;
 
         // 生成字段值提取代码
         let extraction_code = if let Some(config) = &field_info.config {
@@ -768,7 +828,10 @@ impl<'a> MarkGenerator<'a> {
     /// # 返回值
     ///
     /// 成功时返回字段值提取代码，失败时返回转换错误
-    fn generate_field_extraction_code(&self, field_config: &FieldConfig) -> MacroResult<TokenStream2> {
+    fn generate_field_extraction_code(
+        &self,
+        field_config: &FieldConfig,
+    ) -> MacroResult<TokenStream2> {
         let field_name = &field_config.name;
         let type_name = &field_config.type_name;
 
@@ -983,7 +1046,7 @@ impl<'a> MarkGenerator<'a> {
                             mark.attrs.attrs.get(#field_name)
                                 .and_then(|v| serde_json::from_value(v.clone()).ok())
                         }
-                    }
+                    },
                 }
             },
             _ => {
@@ -993,7 +1056,7 @@ impl<'a> MarkGenerator<'a> {
                         .and_then(|v| serde_json::from_value(v.clone()).ok())
                         .unwrap_or_default()
                 }
-            }
+            },
         };
 
         Ok(extraction)
@@ -1010,7 +1073,10 @@ impl<'a> MarkGenerator<'a> {
     /// # 返回值
     ///
     /// 返回内部类型名称
-    fn extract_option_inner_type(&self, type_name: &str) -> String {
+    fn extract_option_inner_type(
+        &self,
+        type_name: &str,
+    ) -> String {
         if let Some(start) = type_name.find('<') {
             if let Some(end) = type_name.rfind('>') {
                 if start < end {
@@ -1034,7 +1100,10 @@ impl<'a> MarkGenerator<'a> {
     /// # 返回值
     ///
     /// 返回默认值表达式代码
-    fn generate_non_attr_field_default(&self, type_name: &str) -> MacroResult<TokenStream2> {
+    fn generate_non_attr_field_default(
+        &self,
+        type_name: &str,
+    ) -> MacroResult<TokenStream2> {
         let default_expr = match type_name {
             "String" => quote! { String::default() },
             "i8" | "i16" | "i32" | "i64" | "i128" | "isize" => quote! { 0 },
@@ -1046,7 +1115,7 @@ impl<'a> MarkGenerator<'a> {
             "Vec<String>" => quote! { Vec::new() },
             "()" => quote! { () },
             _ if type_name.starts_with("Option<") => {
-                quote! { None } 
+                quote! { None }
             },
             _ if type_name.contains("PhantomData") => {
                 quote! { std::marker::PhantomData }
@@ -1063,7 +1132,7 @@ impl<'a> MarkGenerator<'a> {
                     // 如果类型解析失败，使用通用 Default
                     quote! { Default::default() }
                 }
-            }
+            },
         };
 
         Ok(default_expr)
@@ -1076,35 +1145,41 @@ impl<'a> MarkGenerator<'a> {
     /// # 返回值
     ///
     /// 成功时返回生成的代码 TokenStream，失败时返回生成错误
-    pub fn generate_default_instance_method(&self) -> MacroResult<TokenStream2> {
+    pub fn generate_default_instance_method(
+        &self
+    ) -> MacroResult<TokenStream2> {
         // 获取所有字段信息
         let all_fields = self.extract_all_fields()?;
-        
+
         let mut field_inits = Vec::new();
-        
+
         for field_info in all_fields {
             let field_name = syn::parse_str::<syn::Ident>(&field_info.name)
-                .map_err(|_| MacroError::parse_error(
-                    &format!("无效的字段名称: {}", field_info.name),
-                    self.input,
-                ))?;
-            
+                .map_err(|_| {
+                    MacroError::parse_error(
+                        &format!("无效的字段名称: {}", field_info.name),
+                        self.input,
+                    )
+                })?;
+
             // 生成字段的默认值
             let default_value = if let Some(config) = &field_info.config {
                 if config.default_value.is_some() {
                     self.generate_default_value_for_instance(config)?
                 } else {
-                    self.generate_type_default_for_instance(&field_info.type_name)?
+                    self.generate_type_default_for_instance(
+                        &field_info.type_name,
+                    )?
                 }
             } else {
                 self.generate_type_default_for_instance(&field_info.type_name)?
             };
-            
+
             field_inits.push(quote! {
                 #field_name: #default_value
             });
         }
-        
+
         let method_impl = quote! {
             /// 创建默认实例
             ///
@@ -1120,27 +1195,35 @@ impl<'a> MarkGenerator<'a> {
                 }
             }
         };
-        
+
         Ok(method_impl)
     }
-    
+
     /// 为实例生成默认值表达式（用于字段初始化）
-    fn generate_default_value_for_instance(&self, field_config: &FieldConfig) -> MacroResult<TokenStream2> {
+    fn generate_default_value_for_instance(
+        &self,
+        field_config: &FieldConfig,
+    ) -> MacroResult<TokenStream2> {
         if let Some(default_value) = &field_config.default_value {
-            return self.generate_default_value_from_attr_for_instance(default_value, &field_config.type_name);
+            return self.generate_default_value_from_attr_for_instance(
+                default_value,
+                &field_config.type_name,
+            );
         }
-        
+
         self.generate_type_default_for_instance(&field_config.type_name)
     }
-    
+
     /// 从 attr 的 default 属性生成实例默认值表达式
-    fn generate_default_value_from_attr_for_instance(&self, default_value: &crate::parser::default_value::DefaultValue, target_type: &str) -> MacroResult<TokenStream2> {
+    fn generate_default_value_from_attr_for_instance(
+        &self,
+        default_value: &crate::parser::default_value::DefaultValue,
+        target_type: &str,
+    ) -> MacroResult<TokenStream2> {
         use crate::parser::default_value::DefaultValueType;
-        
+
         match &default_value.value_type {
-            DefaultValueType::String(s) => {
-                Ok(quote! { #s.to_string() })
-            }
+            DefaultValueType::String(s) => Ok(quote! { #s.to_string() }),
             DefaultValueType::Integer(i) => {
                 // 根据目标类型进行适当的转换
                 match target_type {
@@ -1158,41 +1241,42 @@ impl<'a> MarkGenerator<'a> {
                     "usize" => Ok(quote! { #i as usize }),
                     "f32" => Ok(quote! { #i as f32 }),
                     "f64" => Ok(quote! { #i as f64 }),
-                    _ => Ok(quote! { #i as i32 }) // 默认转换为 i32
+                    _ => Ok(quote! { #i as i32 }), // 默认转换为 i32
                 }
-            }
+            },
             DefaultValueType::Float(f) => {
                 // 根据目标类型进行适当的转换
                 match target_type {
                     "f32" => Ok(quote! { #f as f32 }),
                     "f64" => Ok(quote! { #f }),
-                    _ => Ok(quote! { #f })
+                    _ => Ok(quote! { #f }),
                 }
-            }
-            DefaultValueType::Boolean(b) => {
-                Ok(quote! { #b })
-            }
+            },
+            DefaultValueType::Boolean(b) => Ok(quote! { #b }),
             DefaultValueType::Json(_) => {
                 // 对于复杂的 JSON，使用字符串表示
                 Ok(quote! { String::default() })
-            }
+            },
             DefaultValueType::CustomType(expr) => {
                 // 对于自定义类型表达式，直接执行表达式
-                let expr_tokens = syn::parse_str::<syn::Expr>(expr)
-                    .map_err(|_| MacroError::parse_error(
-                        &format!("无效的自定义类型表达式: {}", expr),
-                        self.input,
-                    ))?;
+                let expr_tokens =
+                    syn::parse_str::<syn::Expr>(expr).map_err(|_| {
+                        MacroError::parse_error(
+                            &format!("无效的自定义类型表达式: {}", expr),
+                            self.input,
+                        )
+                    })?;
                 Ok(quote! { #expr_tokens })
-            }
-            DefaultValueType::Null => {
-                Ok(quote! { String::default() })
-            }
+            },
+            DefaultValueType::Null => Ok(quote! { String::default() }),
         }
     }
-    
+
     /// 生成类型的默认值表达式（用于实例创建）
-    fn generate_type_default_for_instance(&self, type_name: &str) -> MacroResult<TokenStream2> {
+    fn generate_type_default_for_instance(
+        &self,
+        type_name: &str,
+    ) -> MacroResult<TokenStream2> {
         let default_expr = match type_name {
             "String" => quote! { String::default() },
             "i8" | "i16" | "i32" | "i64" | "i128" | "isize" => quote! { 0 },
@@ -1214,14 +1298,16 @@ impl<'a> MarkGenerator<'a> {
             _ => {
                 // 对于其他自定义类型，尝试使用 Default trait，并提供更好的类型安全性
                 let type_ident = syn::parse_str::<syn::Type>(type_name)
-                    .map_err(|_| MacroError::parse_error(
-                        &format!("无效的类型名称: {}", type_name),
-                        self.input,
-                    ))?;
+                    .map_err(|_| {
+                        MacroError::parse_error(
+                            &format!("无效的类型名称: {}", type_name),
+                            self.input,
+                        )
+                    })?;
                 quote! { <#type_ident as Default>::default() }
-            }
+            },
         };
-        
+
         Ok(default_expr)
     }
 }
@@ -1243,7 +1329,7 @@ impl<'a> CodeGenerator for MarkGenerator<'a> {
     /// 生成完整的 Mark 代码
     ///
     /// 实现 CodeGenerator trait 的核心方法，生成完整的 Mark 转换代码。
-    /// 
+    ///
     /// # 返回值
     ///
     /// 成功时返回生成的代码 TokenStream，失败时返回生成错误
@@ -1257,19 +1343,20 @@ impl<'a> CodeGenerator for MarkGenerator<'a> {
         let mark_definition_method = self.generate_mark_definition_method()?;
         let to_mark_method = self.generate_to_mark_method()?;
         let from_method = self.generate_from_method()?;
-        let default_instance_method = self.generate_default_instance_method()?;
-        
+        let default_instance_method =
+            self.generate_default_instance_method()?;
+
         Ok(quote! {
             impl #struct_name {
                 #mark_definition_method
-                
+
                 #to_mark_method
-                
+
                 #from_method
-                
+
                 #default_instance_method
             }
-            
+
             impl From<#struct_name> for mf_core::mark::Mark {
                 /// 将结构体实例转换为 mf_core::mark::Mark
                 ///
@@ -1296,7 +1383,7 @@ impl<'a> CodeGenerator for MarkGenerator<'a> {
                     #struct_name::mark_definition()
                 }
             }
-            
+
             impl From<mf_model::mark::Mark> for #struct_name {
                 /// 从 mf_model::mark::Mark 转换为结构体实例
                 ///
@@ -1365,7 +1452,7 @@ mod tests {
 
         let config = AttributeParser::parse_mark_attributes(&input).unwrap();
         let generator = MarkGenerator::new(&input, &config);
-        
+
         assert_eq!(generator.name(), "MarkGenerator");
     }
 
@@ -1383,13 +1470,13 @@ mod tests {
 
         let config = AttributeParser::parse_mark_attributes(&input).unwrap();
         let generator = MarkGenerator::new(&input, &config);
-        
+
         let result = generator.generate();
         assert!(result.is_ok());
 
         let code = result.unwrap();
         let code_str = code.to_string();
-        
+
         // 验证生成的代码包含关键元素
         assert!(code_str.contains("impl TestMark"));
         assert!(code_str.contains("pub fn to_mark"));
@@ -1407,7 +1494,7 @@ mod tests {
             struct TestMark {
                 #[attr]
                 weight: String,
-                
+
                 #[attr]
                 color: Option<String>,
             }
@@ -1415,13 +1502,13 @@ mod tests {
 
         let config = AttributeParser::parse_mark_attributes(&input).unwrap();
         let generator = MarkGenerator::new(&input, &config);
-        
+
         let result = generator.generate();
         assert!(result.is_ok());
 
         let code = result.unwrap();
         let code_str = code.to_string();
-        
+
         // 验证生成的代码包含所有配置信息
         assert!(code_str.contains("styled"));
         assert!(code_str.contains("weight"));
@@ -1439,17 +1526,21 @@ mod tests {
 
         let config = AttributeParser::parse_mark_attributes(&input).unwrap();
         let generator = MarkGenerator::new(&input, &config);
-        
+
         let result = generator.generate();
         assert!(result.is_ok());
 
         let code = result.unwrap();
         let code_str = code.to_string();
-        
+
         // 验证生成的代码正确处理空属性情况
         assert!(code_str.contains("impl SimpleMark"));
         assert!(code_str.contains("simple"));
-        assert!(code_str.contains("imbl") && code_str.contains("HashMap") && code_str.contains("new"));
+        assert!(
+            code_str.contains("imbl")
+                && code_str.contains("HashMap")
+                && code_str.contains("new")
+        );
     }
 
     /// 测试导入语句生成
@@ -1463,11 +1554,14 @@ mod tests {
 
         let config = AttributeParser::parse_mark_attributes(&input).unwrap();
         let generator = MarkGenerator::new(&input, &config);
-        
+
         let imports = generator.generate_imports();
         let imports_str = imports.to_string();
-        
+
         // 验证生成的导入语句包含必要的类型
-        assert!(imports_str.contains("HashMap") || imports_str.contains("JsonValue"));
+        assert!(
+            imports_str.contains("HashMap")
+                || imports_str.contains("JsonValue")
+        );
     }
 }

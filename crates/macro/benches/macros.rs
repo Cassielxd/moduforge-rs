@@ -77,7 +77,7 @@ fn bench_batch_macro_usage(c: &mut Criterion) {
                         .collect();
                     criterion::black_box(nodes)
                 })
-            }
+            },
         );
     }
 
@@ -98,7 +98,7 @@ fn bench_batch_macro_usage(c: &mut Criterion) {
                         .collect();
                     criterion::black_box(marks)
                 })
-            }
+            },
         );
     }
 
@@ -112,23 +112,11 @@ fn bench_complex_macro_combinations(c: &mut Criterion) {
     // 复杂node结构
     group.bench_function("复杂node结构创建", |b| {
         b.iter(|| {
-            let document = node!(
-                "document",
-                "文档根节点",
-                "文档内容"
-            );
+            let document = node!("document", "文档根节点", "文档内容");
 
-            let section = node!(
-                "section",
-                "章节节点", 
-                "章节内容"
-            );
+            let section = node!("section", "章节节点", "章节内容");
 
-            let paragraph = node!(
-                "paragraph",
-                "段落节点",
-                "段落文本内容"
-            );
+            let paragraph = node!("paragraph", "段落节点", "段落文本内容");
 
             criterion::black_box((document, section, paragraph))
         })
@@ -192,11 +180,7 @@ fn bench_macro_compile_time_performance(c: &mut Criterion) {
 
     group.bench_function("中等复杂度node宏", |b| {
         b.iter(|| {
-            let node = node!(
-                "medium",
-                "中等复杂度节点",
-                "节点内容"
-            );
+            let node = node!("medium", "中等复杂度节点", "节点内容");
             criterion::black_box(node)
         })
     });

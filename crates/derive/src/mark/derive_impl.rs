@@ -65,8 +65,8 @@ use crate::generator::{GeneratorFactory, CodeGenerator};
 pub fn process_derive_mark(input: DeriveInput) -> MacroResult<TokenStream2> {
     // 第一阶段：属性解析
     // 从 DeriveInput 中提取和解析所有宏属性，构建 MarkConfig
-    let config = AttributeParser::parse_mark_attributes(&input)
-        .map_err(|e| {
+    let config =
+        AttributeParser::parse_mark_attributes(&input).map_err(|e| {
             // 为属性解析错误添加上下文信息
             MacroError::parse_error(
                 &format!("Mark 属性解析失败: {}", e),
@@ -76,26 +76,24 @@ pub fn process_derive_mark(input: DeriveInput) -> MacroResult<TokenStream2> {
 
     // 第二阶段：配置验证
     // 验证解析后的配置是否完整、有效和一致
-    Validator::validate_mark_config(&config)
-        .map_err(|e| {
-            // 为验证错误添加上下文信息
-            MacroError::validation_error(
-                &format!("Mark 配置验证失败: {}", e),
-                &input,
-            )
-        })?;
+    Validator::validate_mark_config(&config).map_err(|e| {
+        // 为验证错误添加上下文信息
+        MacroError::validation_error(
+            &format!("Mark 配置验证失败: {}", e),
+            &input,
+        )
+    })?;
 
     // 第三阶段：代码生成
     // 根据验证通过的配置生成 to_mark() 方法实现
     let generator = GeneratorFactory::create_mark_generator(&input, &config);
-    let generated_code = generator.generate()
-        .map_err(|e| {
-            // 为代码生成错误添加上下文信息
-            MacroError::generation_error(
-                &format!("Mark 代码生成失败: {}", e),
-                &input,
-            )
-        })?;
+    let generated_code = generator.generate().map_err(|e| {
+        // 为代码生成错误添加上下文信息
+        MacroError::generation_error(
+            &format!("Mark 代码生成失败: {}", e),
+            &input,
+        )
+    })?;
 
     Ok(generated_code)
 }
@@ -133,7 +131,7 @@ pub fn process_derive_mark_with_recovery(input: DeriveInput) -> TokenStream2 {
             quote::quote! {
                 compile_error!(#error_message);
             }
-        }
+        },
     }
 }
 
@@ -161,43 +159,45 @@ fn create_friendly_error_message(error: &MacroError) -> String {
                 "ModuForge Mark 派生宏解析错误:\n\n{}\n\n帮助信息:\n• 检查宏属性的语法是否正确\n• 确保所有必需的属性都已设置\n• 参考文档中的示例用法",
                 message
             )
-        }
+        },
         MacroError::ValidationError { message, .. } => {
             format!(
                 "ModuForge Mark 派生宏验证错误:\n\n{}\n\n帮助信息:\n• 检查字段类型是否受支持\n• 确保属性值符合要求\n• 验证配置的一致性",
                 message
             )
-        }
+        },
         MacroError::UnsupportedFieldType { field_name, field_type, .. } => {
             format!(
                 "ModuForge Mark 派生宏类型错误:\n\n字段 '{}' 的类型 '{}' 不受支持\n\n支持的类型包括:\n• 基本类型: String, i32, f64, bool 等\n• 可选类型: Option<T> (T 为任意支持的基本类型)\n\n如需支持其他类型，请参考自定义转换器文档",
                 field_name, field_type
             )
-        }
+        },
         MacroError::GenerationError { message, .. } => {
             format!(
                 "ModuForge Mark 派生宏代码生成错误:\n\n{}\n\n这通常是内部错误，请报告此问题:\n• 包含完整的错误信息\n• 提供导致错误的代码示例\n• 说明您的使用场景",
                 message
             )
-        }
+        },
         MacroError::MissingAttribute { attribute, .. } => {
             format!(
                 "ModuForge Mark 派生宏缺少属性错误:\n\n缺少必需的属性: {}\n\n帮助信息:\n• 确保在结构体上添加了所有必需的宏属性\n• 检查属性名称的拼写是否正确\n• 参考文档中的完整示例",
                 attribute
             )
-        }
-        MacroError::InvalidAttributeValue { attribute, value, reason, .. } => {
+        },
+        MacroError::InvalidAttributeValue {
+            attribute, value, reason, ..
+        } => {
             format!(
                 "ModuForge Mark 派生宏无效属性值错误:\n\n属性 '{}' 的值 '{}' 无效: {}\n\n帮助信息:\n• 检查属性值的格式是否符合要求\n• 确认属性值不为空且符合语法规则\n• 参考文档中的有效属性值示例",
                 attribute, value, reason
             )
-        }
+        },
         MacroError::SyntaxError(syn_error) => {
             format!(
                 "ModuForge Mark 派生宏语法错误:\n\n{}\n\n帮助信息:\n• 检查代码的语法是否正确\n• 确认所有括号和引号都已正确闭合\n• 验证结构体定义的完整性",
                 syn_error
             )
-        }
+        },
     }
 }
 
@@ -223,7 +223,7 @@ mod tests {
 
         let code = result.unwrap();
         let code_str = code.to_string();
-        
+
         // 验证生成的代码包含关键元素
         assert!(code_str.contains("impl TestMark"));
         assert!(code_str.contains("pub fn to_mark"));
@@ -240,7 +240,7 @@ mod tests {
             struct TestMark {
                 #[attr]
                 weight: String,
-                
+
                 #[attr]
                 color: Option<String>,
             }
@@ -251,7 +251,7 @@ mod tests {
 
         let code = result.unwrap();
         let code_str = code.to_string();
-        
+
         // 验证生成的代码包含所有配置信息
         assert!(code_str.contains("styled"));
         assert!(code_str.contains("weight"));
@@ -297,13 +297,15 @@ mod tests {
 
         // 验证错误类型和消息
         match result.unwrap_err() {
-            MacroError::UnsupportedFieldType { field_name, field_type, .. } => {
+            MacroError::UnsupportedFieldType {
+                field_name, field_type, ..
+            } => {
                 assert_eq!(field_name, "data");
                 assert!(field_type.contains("Vec"));
-            }
+            },
             MacroError::ValidationError { .. } => {
                 // 也可能在验证阶段被捕获
-            }
+            },
             _ => panic!("期望 UnsupportedFieldType 或 ValidationError"),
         }
     }
@@ -321,7 +323,7 @@ mod tests {
 
         let result = process_derive_mark_with_recovery(input);
         let result_str = result.to_string();
-        
+
         // 验证返回了编译错误而不是 panic
         assert!(result_str.contains("compile_error"));
     }
@@ -345,7 +347,8 @@ mod tests {
             span: None,
         };
 
-        let friendly_message = create_friendly_error_message(&unsupported_error);
+        let friendly_message =
+            create_friendly_error_message(&unsupported_error);
         assert!(friendly_message.contains("类型错误"));
         assert!(friendly_message.contains("test_field"));
         assert!(friendly_message.contains("Vec<String>"));
@@ -366,11 +369,15 @@ mod tests {
 
         let code = result.unwrap();
         let code_str = code.to_string();
-        
+
         // 验证生成的代码正确处理无属性情况
         assert!(code_str.contains("impl SimpleMark"));
         assert!(code_str.contains("simple"));
-        assert!(code_str.contains("imbl") && code_str.contains("HashMap") && code_str.contains("new"));
+        assert!(
+            code_str.contains("imbl")
+                && code_str.contains("HashMap")
+                && code_str.contains("new")
+        );
     }
 
     /// 测试复杂场景的端到端处理
@@ -382,19 +389,19 @@ mod tests {
             struct ComplexStyleMark {
                 #[attr]
                 weight: String,
-                
+
                 #[attr]
                 color: Option<String>,
-                
+
                 #[attr]
                 size: Option<f64>,
-                
+
                 #[attr]
                 opacity: Option<f32>,
-                
+
                 #[attr]
                 is_underlined: Option<bool>,
-                
+
                 // 非属性字段
                 internal_id: uuid::Uuid,
                 cached_data: Vec<u8>,
@@ -406,17 +413,17 @@ mod tests {
 
         let code = result.unwrap();
         let code_str = code.to_string();
-        
+
         // 验证所有配置都被正确处理
         assert!(code_str.contains("complex_style"));
-        
+
         // 验证所有属性字段都被处理
         assert!(code_str.contains("weight"));
         assert!(code_str.contains("color"));
         assert!(code_str.contains("size"));
         assert!(code_str.contains("opacity"));
         assert!(code_str.contains("is_underlined"));
-        
+
         // 验证非属性字段不出现在生成的代码中
         assert!(!code_str.contains("internal_id"));
         assert!(!code_str.contains("cached_data"));

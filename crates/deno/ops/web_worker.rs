@@ -17,53 +17,49 @@ use crate::web_worker::WebWorkerInternalHandle;
 use crate::web_worker::WorkerThreadType;
 
 deno_core::extension!(
-  deno_web_worker,
-  ops = [
-    op_worker_post_message,
-    op_worker_recv_message,
-    // Notify host that guest worker closes.
-    op_worker_close,
-    op_worker_get_type,
-    op_worker_sync_fetch,
-  ],
+    deno_web_worker,
+    ops = [
+        op_worker_post_message,
+        op_worker_recv_message,
+        // Notify host that guest worker closes.
+        op_worker_close,
+        op_worker_get_type,
+        op_worker_sync_fetch,
+    ],
 );
 
 #[op2]
 fn op_worker_post_message(
-  state: &mut OpState,
-  #[serde] data: JsMessageData,
+    state: &mut OpState,
+    #[serde] data: JsMessageData,
 ) -> Result<(), MessagePortError> {
-  let handle = state.borrow::<WebWorkerInternalHandle>().clone();
-  handle.port.send(state, data)
+    let handle = state.borrow::<WebWorkerInternalHandle>().clone();
+    handle.port.send(state, data)
 }
 
 #[op2(async(lazy), fast)]
 #[serde]
 async fn op_worker_recv_message(
-  state: Rc<RefCell<OpState>>,
+    state: Rc<RefCell<OpState>>
 ) -> Result<Option<JsMessageData>, MessagePortError> {
-  let handle = {
-    let state = state.borrow();
-    state.borrow::<WebWorkerInternalHandle>().clone()
-  };
-  handle
-    .port
-    .recv(state.clone())
-    .or_cancel(handle.cancel)
-    .await?
+    let handle = {
+        let state = state.borrow();
+        state.borrow::<WebWorkerInternalHandle>().clone()
+    };
+    handle.port.recv(state.clone()).or_cancel(handle.cancel).await?
 }
 
 #[op2(fast)]
 fn op_worker_close(state: &mut OpState) {
-  // Notify parent that we're finished
-  let mut handle = state.borrow_mut::<WebWorkerInternalHandle>().clone();
+    // Notify parent that we're finished
+    let mut handle = state.borrow_mut::<WebWorkerInternalHandle>().clone();
 
-  handle.terminate();
+    handle.terminate();
 }
 
 #[op2]
 #[serde]
 fn op_worker_get_type(state: &mut OpState) -> WorkerThreadType {
-  let handle = state.borrow::<WebWorkerInternalHandle>().clone();
-  handle.worker_type
+    let handle = state.borrow::<WebWorkerInternalHandle>().clone();
+    handle.worker_type
 }

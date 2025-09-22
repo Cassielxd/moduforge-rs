@@ -32,14 +32,17 @@ impl GlobalAttributeItem {
     pub fn key(&self) -> Option<&str> {
         self.attributes.keys().next().map(|s| s.as_str())
     }
-    
+
     /// Get all attribute keys
     pub fn keys(&self) -> Vec<&str> {
         self.attributes.keys().map(|s| s.as_str()).collect()
     }
-    
+
     /// Check if has attribute key
-    pub fn has_key(&self, key: &str) -> bool {
+    pub fn has_key(
+        &self,
+        key: &str,
+    ) -> bool {
         self.attributes.contains_key(key)
     }
 }

@@ -28,12 +28,12 @@ pub mod debug;
 pub mod error;
 pub mod error_helpers;
 pub mod event;
-#[cfg(test)]
-pub mod test_helpers;
 pub mod extension;
 pub mod extension_manager;
 pub mod helpers;
 pub mod history_manager;
+#[cfg(test)]
+pub mod test_helpers;
 
 pub mod mark;
 pub mod metrics;
@@ -48,7 +48,10 @@ pub mod types;
 #[cfg(feature = "build-tools")]
 pub mod build_tools;
 pub use error::{ForgeResult, error_utils};
-pub use error_helpers::{UnwrapHelpers, lock_helpers, collection_helpers, schema_helpers, state_helpers};
+pub use error_helpers::{
+    UnwrapHelpers, lock_helpers, collection_helpers, schema_helpers,
+    state_helpers,
+};
 
 // 公共 API 导出
 pub use runtime::async_processor::{

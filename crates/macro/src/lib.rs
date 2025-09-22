@@ -32,7 +32,7 @@
 //!
 //! ```rust
 //! use mf_macro::{
-//!     impl_command, mark, node, impl_plugin, 
+//!     impl_command, mark, node, impl_plugin,
 //!     mf_extension, mf_extension_with_config, mf_ops, mf_op, mf_global_attr,
 //!     mf_plugin, mf_plugin_with_config, mf_plugin_metadata, mf_plugin_config,
 //!     impl_state_field, derive_plugin_state

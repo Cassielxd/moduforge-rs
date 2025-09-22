@@ -32,7 +32,7 @@ pub fn get_schema_by_resolved_extensions(
             for item in extension.get_global_attributes().iter() {
                 extension_attributes.push(item);
             }
-            if let Some(t)=extension.get_node_transform(){
+            if let Some(t) = extension.get_node_transform() {
                 node_transforms.push(t);
             }
         }
@@ -48,14 +48,14 @@ pub fn get_schema_by_resolved_extensions(
         match extension {
             // 处理节点扩展
             Extensions::N(node_old) => {
-                let  node = {
-                    let mut newn =node_old.clone();
-                  for n_fn in  &node_transforms{
-                      if let Err(e) = n_fn(&mut newn){
-                          return Err(e);
-                      }
-                  }
-                  newn
+                let node = {
+                    let mut newn = node_old.clone();
+                    for n_fn in &node_transforms {
+                        if let Err(e) = n_fn(&mut newn) {
+                            return Err(e);
+                        }
+                    }
+                    newn
                 };
                 let name = node.name.clone();
                 // 检查是否为顶层节点

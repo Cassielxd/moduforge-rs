@@ -10,13 +10,13 @@ pub use document::{
 };
 pub use history::{TypeWrapper, encode_history_frames, decode_history_frames};
 pub use zipdoc::{
-    ZipDocumentWriter, ZipDocumentReader, MmapConfig, MmapStats, ZipStreamReader,
-    FileSizeCategory, ProcessingStrategy, FileInfo,
+    ZipDocumentWriter, ZipDocumentReader, MmapConfig, MmapStats,
+    ZipStreamReader, FileSizeCategory, ProcessingStrategy, FileInfo,
     formats::strategy::{
         SnapshotFormat, export_zip_with_format, import_zip_with_format,
         export_plugin_states_only, import_plugin_states_only,
-        has_plugin_states, list_zip_plugins
-    }
+        has_plugin_states, list_zip_plugins,
+    },
 };
 
 #[cfg(test)]

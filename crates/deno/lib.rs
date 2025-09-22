@@ -35,6 +35,7 @@ pub mod code_cache;
 pub mod fmt_errors;
 pub mod inspector_server;
 pub mod js;
+pub mod mf;
 pub mod ops;
 pub mod permissions;
 #[cfg(feature = "snapshot")]
@@ -45,7 +46,6 @@ pub mod tokio_util;
 pub mod transpile;
 pub mod web_worker;
 pub mod worker;
-pub mod mf;
 
 mod worker_bootstrap;
 pub use worker::UnconfiguredRuntime;
@@ -61,5 +61,3 @@ pub use deno_features::UNSTABLE_FEATURES;
 pub use deno_features::UnstableFeatureKind;
 pub use deno_os::exit;
 pub use shared::runtime;
-
-

@@ -16,7 +16,7 @@ pub struct DjgcPlugin;
 #[async_trait]
 impl PluginTrait for DjgcPlugin {
     fn metadata(&self) -> PluginMetadata {
-        PluginMetadata{
+        PluginMetadata {
             name: "djgc".to_string(),
             version: "1.0.0".to_string(),
             description: "单价构成插件".to_string(),

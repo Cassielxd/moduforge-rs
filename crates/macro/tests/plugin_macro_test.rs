@@ -1,6 +1,12 @@
-use mf_macro::{mf_plugin, mf_plugin_metadata, mf_plugin_config, mf_plugin_with_config};
-use mf_state::{Transaction, State, StateConfig, error::StateResult, resource::Resource};
-use mf_state::plugin::{PluginMetadata, PluginConfig, PluginTrait, StateField, PluginSpec};
+use mf_macro::{
+    mf_plugin, mf_plugin_metadata, mf_plugin_config, mf_plugin_with_config,
+};
+use mf_state::{
+    Transaction, State, StateConfig, error::StateResult, resource::Resource,
+};
+use mf_state::plugin::{
+    PluginMetadata, PluginConfig, PluginTrait, StateField, PluginSpec,
+};
 use std::sync::Arc;
 use async_trait::async_trait;
 
@@ -50,16 +56,13 @@ impl StateField for TestStateField {
         _old_state: &State,
         _new_state: &State,
     ) -> Arc<dyn Resource> {
-        let  state = value.downcast_arc::<TestPluginState>().unwrap().clone();
+        let state = value.downcast_arc::<TestPluginState>().unwrap().clone();
         state
     }
 }
 
 // 测试基础插件宏
-mf_plugin!(
-    basic_plugin,
-    docs = "基础测试插件"
-);
+mf_plugin!(basic_plugin, docs = "基础测试插件");
 
 // 测试带元数据的插件
 mf_plugin!(
@@ -128,23 +131,23 @@ mf_plugin_with_config!(
             enabled = enabled,
             priority = priority
         );
-        
+
         #[derive(Debug)]
         struct DynamicPlugin {
             metadata: PluginMetadata,
             config: PluginConfig,
         }
-        
+
         #[async_trait]
         impl PluginTrait for DynamicPlugin {
             fn metadata(&self) -> PluginMetadata {
                 self.metadata.clone()
             }
-            
+
             fn config(&self) -> PluginConfig {
                 self.config.clone()
             }
-            
+
             async fn append_transaction(
                 &self,
                 _trs: &[Arc<Transaction>],
@@ -154,7 +157,7 @@ mf_plugin_with_config!(
                 Ok(None)
             }
         }
-        
+
         PluginSpec {
             state_field: None,
             tr: Arc::new(DynamicPlugin { metadata, config }),
@@ -171,7 +174,7 @@ mod tests {
     fn test_basic_plugin_creation() {
         let plugin = basic_plugin::new();
         assert_eq!(plugin.get_name(), "basic_plugin");
-        
+
         let metadata = plugin.get_metadata();
         assert_eq!(metadata.name, "basic_plugin");
         assert_eq!(metadata.version, "1.0.0");
@@ -182,7 +185,7 @@ mod tests {
     fn test_metadata_plugin() {
         let plugin = metadata_plugin::new();
         let metadata = plugin.get_metadata();
-        
+
         assert_eq!(metadata.name, "metadata_plugin");
         assert_eq!(metadata.version, "1.0.0");
         assert_eq!(metadata.description, "带元数据的测试插件");
@@ -194,11 +197,17 @@ mod tests {
     fn test_config_plugin() {
         let plugin = config_plugin::new();
         let config = plugin.get_config();
-        
+
         assert_eq!(config.enabled, true);
         assert_eq!(config.priority, 10);
-        assert_eq!(config.settings.get("debug").unwrap(), &serde_json::json!(true));
-        assert_eq!(config.settings.get("timeout").unwrap(), &serde_json::json!(5000));
+        assert_eq!(
+            config.settings.get("debug").unwrap(),
+            &serde_json::json!(true)
+        );
+        assert_eq!(
+            config.settings.get("timeout").unwrap(),
+            &serde_json::json!(5000)
+        );
     }
 
     #[test]
@@ -206,7 +215,7 @@ mod tests {
         let plugin = full_plugin::new();
         let metadata = plugin.get_metadata();
         let config = plugin.get_config();
-        
+
         // 验证元数据
         assert_eq!(metadata.name, "full_plugin");
         assert_eq!(metadata.version, "2.0.0");
@@ -215,25 +224,28 @@ mod tests {
         assert_eq!(metadata.conflicts, vec!["conflict1"]);
         assert_eq!(metadata.state_fields, vec!["counter"]);
         assert_eq!(metadata.tags, vec!["test", "full"]);
-        
+
         // 验证配置
         assert_eq!(config.enabled, true);
         assert_eq!(config.priority, 20);
-        assert_eq!(config.settings.get("mode").unwrap(), &serde_json::json!("test"));
-        assert_eq!(config.settings.get("level").unwrap(), &serde_json::json!(3));
+        assert_eq!(
+            config.settings.get("mode").unwrap(),
+            &serde_json::json!("test")
+        );
+        assert_eq!(
+            config.settings.get("level").unwrap(),
+            &serde_json::json!(3)
+        );
     }
 
     #[test]
     fn test_configurable_plugin() {
-        let plugin = configurable_plugin::new(
-            "dynamic_plugin".to_string(),
-            true,
-            15
-        );
-        
+        let plugin =
+            configurable_plugin::new("dynamic_plugin".to_string(), true, 15);
+
         let metadata = plugin.get_metadata();
         let config = plugin.get_config();
-        
+
         assert_eq!(metadata.name, "dynamic_plugin");
         assert_eq!(metadata.description, "动态配置插件");
         assert_eq!(config.enabled, true);
@@ -245,10 +257,10 @@ mod tests {
         let plugin = full_plugin::new();
         // 基础功能验证
         assert_eq!(plugin.get_name(), "full_plugin");
-        
+
         let metadata = plugin.get_metadata();
         assert_eq!(metadata.name, "full_plugin");
-        
+
         let config = plugin.get_config();
         assert!(config.enabled);
     }
@@ -257,7 +269,7 @@ mod tests {
     fn test_plugin_spec_creation() {
         let spec = basic_plugin::spec();
         assert!(spec.state_field.is_none());
-        
+
         let spec = full_plugin::spec();
         assert!(spec.state_field.is_some());
     }

@@ -70,7 +70,10 @@ pub trait TypeConverter: Send + Sync {
     ///
     /// - **单一职责**: 只负责代码生成，不处理验证或其他逻辑
     /// - **里氏替换**: 任何实现都必须能生成有效的转换代码
-    fn convert_field_to_json_value(&self, field: &Field) -> MacroResult<TokenStream2>;
+    fn convert_field_to_json_value(
+        &self,
+        field: &Field,
+    ) -> MacroResult<TokenStream2>;
 
     /// 检查是否支持指定类型
     ///
@@ -95,7 +98,10 @@ pub trait TypeConverter: Send + Sync {
     ///
     /// - **单一职责**: 只负责类型支持性检查
     /// - **接口隔离**: 提供独立的支持性检查接口
-    fn supports_type(&self, field_type: &Type) -> bool;
+    fn supports_type(
+        &self,
+        field_type: &Type,
+    ) -> bool;
 
     /// 获取转换器的优先级
     ///
@@ -199,14 +205,13 @@ impl BuiltinTypeConverter {
         field: &Field,
         field_type: &Type,
     ) -> MacroResult<TokenStream2> {
-        let field_name = field.ident.as_ref()
-            .ok_or_else(|| MacroError::parse_error(
-                "字段缺少名称（不支持匿名字段）",
-                field,
-            ))?;
+        let field_name = field.ident.as_ref().ok_or_else(|| {
+            MacroError::parse_error("字段缺少名称（不支持匿名字段）", field)
+        })?;
 
         // 使用通用工具函数生成转换代码
-        let conversion_code = utils::generate_field_conversion(field_name, field_type);
+        let conversion_code =
+            utils::generate_field_conversion(field_name, field_type);
 
         Ok(conversion_code)
     }
@@ -233,7 +238,10 @@ impl BuiltinTypeConverter {
     ///
     /// - **单一职责**: 只负责基本类型支持性检查
     /// - **里氏替换**: 与接口中的 supports_type 方法一致
-    fn is_supported_basic_type(&self, field_type: &Type) -> bool {
+    fn is_supported_basic_type(
+        &self,
+        field_type: &Type,
+    ) -> bool {
         utils::is_supported_type(field_type)
     }
 }
@@ -273,11 +281,16 @@ impl TypeConverter for BuiltinTypeConverter {
     ///
     /// - **里氏替换**: 完全符合 TypeConverter 接口契约
     /// - **单一职责**: 只负责基本类型的转换代码生成
-    fn convert_field_to_json_value(&self, field: &Field) -> MacroResult<TokenStream2> {
+    fn convert_field_to_json_value(
+        &self,
+        field: &Field,
+    ) -> MacroResult<TokenStream2> {
         // 首先检查是否支持该类型
         if !self.supports_type(&field.ty) {
             let type_name = utils::extract_type_name(&field.ty);
-            let field_name = field.ident.as_ref()
+            let field_name = field
+                .ident
+                .as_ref()
                 .map(|i| i.to_string())
                 .unwrap_or_else(|| "匿名字段".to_string());
 
@@ -314,7 +327,10 @@ impl TypeConverter for BuiltinTypeConverter {
     ///
     /// - **里氏替换**: 与接口定义完全一致
     /// - **单一职责**: 只负责类型支持性判断
-    fn supports_type(&self, field_type: &Type) -> bool {
+    fn supports_type(
+        &self,
+        field_type: &Type,
+    ) -> bool {
         self.is_supported_basic_type(field_type)
     }
 
@@ -444,7 +460,12 @@ mod tests {
         let result = converter.convert_field_to_json_value(&unsupported_field);
         assert!(result.is_err());
 
-        if let Err(MacroError::UnsupportedFieldType { field_name, field_type, .. }) = result {
+        if let Err(MacroError::UnsupportedFieldType {
+            field_name,
+            field_type,
+            ..
+        }) = result
+        {
             assert_eq!(field_name, "data");
             assert!(field_type.contains("Vec"));
         } else {
@@ -490,19 +511,28 @@ mod tests {
 
         for ty in test_types {
             let supports = converter.supports_type(&ty);
-            
+
             // 创建一个测试字段
             let field: syn::Field = parse_quote! {
                 test_field: #ty
             };
 
-            let conversion_result = converter.convert_field_to_json_value(&field);
+            let conversion_result =
+                converter.convert_field_to_json_value(&field);
 
             // 支持性检查与实际转换应该一致
             if supports {
-                assert!(conversion_result.is_ok(), "类型 {:?} 声称支持但转换失败", ty);
+                assert!(
+                    conversion_result.is_ok(),
+                    "类型 {:?} 声称支持但转换失败",
+                    ty
+                );
             } else {
-                assert!(conversion_result.is_err(), "类型 {:?} 声称不支持但转换成功", ty);
+                assert!(
+                    conversion_result.is_err(),
+                    "类型 {:?} 声称不支持但转换成功",
+                    ty
+                );
             }
         }
     }

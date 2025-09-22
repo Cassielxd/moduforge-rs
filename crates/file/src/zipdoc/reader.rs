@@ -5,7 +5,6 @@ use zip::ZipArchive;
 use memmap2::{Mmap, MmapOptions};
 use tempfile::NamedTempFile;
 
-
 /// memmap2 优化配置
 #[derive(Debug, Clone)]
 pub struct MmapConfig {
@@ -96,8 +95,11 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
     }
 
     // 使用指定配置打开读取器
-    pub fn with_mmap_config(r: R, config: MmapConfig) -> io::Result<Self> {
-        Ok(Self { 
+    pub fn with_mmap_config(
+        r: R,
+        config: MmapConfig,
+    ) -> io::Result<Self> {
+        Ok(Self {
             zip: ZipArchive::new(r)?,
             mmap_config: config,
             mmap_cache: HashMap::new(),
@@ -114,9 +116,12 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
     }
 
     // 智能读取：基于文件信息自动选择最优策略
-    pub fn read_smart(&mut self, name: &str) -> io::Result<Vec<u8>> {
+    pub fn read_smart(
+        &mut self,
+        name: &str,
+    ) -> io::Result<Vec<u8>> {
         let file_info = self.get_file_info(name)?;
-        
+
         match file_info.recommended_strategy {
             ProcessingStrategy::Standard => {
                 // 小文件：标准读取
@@ -129,32 +134,42 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
                     Ok(data) => Ok(data.to_vec()),
                     Err(_) => {
                         // mmap 失败，回退到标准读取
-                        *self.access_count.entry(name.to_string()).or_insert(0) += 1;
+                        *self
+                            .access_count
+                            .entry(name.to_string())
+                            .or_insert(0) += 1;
                         self.read_standard(name)
-                    }
+                    },
                 }
             },
             ProcessingStrategy::Streaming => {
                 // 超大文件：流式读取（如果启用）
                 if self.mmap_config.enable_streaming {
-                    *self.access_count.entry(name.to_string()).or_insert(0) += 1;
+                    *self.access_count.entry(name.to_string()).or_insert(0) +=
+                        1;
                     self.read_huge_file_streaming(name)
                 } else {
                     // 流式处理未启用，尝试 mmap 或标准读取
                     match self.read_mmap(name) {
                         Ok(data) => Ok(data.to_vec()),
                         Err(_) => {
-                            *self.access_count.entry(name.to_string()).or_insert(0) += 1;
+                            *self
+                                .access_count
+                                .entry(name.to_string())
+                                .or_insert(0) += 1;
                             self.read_standard(name)
-                        }
+                        },
                     }
                 }
-            }
+            },
         }
     }
 
     // 强制使用 mmap 读取（返回引用，零拷贝）
-    pub fn read_mmap(&mut self, name: &str) -> io::Result<&[u8]> {
+    pub fn read_mmap(
+        &mut self,
+        name: &str,
+    ) -> io::Result<&[u8]> {
         // 检查缓存
         if self.mmap_cache.contains_key(name) {
             // 更新访问计数
@@ -169,15 +184,18 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
 
         // 创建新的 mmap 条目
         self.create_mmap_entry(name)?;
-        
+
         // 初始化访问计数
         self.access_count.insert(name.to_string(), 1);
-        
+
         Ok(&self.mmap_cache[name].mmap[..])
     }
 
     // 标准内存读取
-    pub fn read_standard(&mut self, name: &str) -> io::Result<Vec<u8>> {
+    pub fn read_standard(
+        &mut self,
+        name: &str,
+    ) -> io::Result<Vec<u8>> {
         let mut f = self.zip.by_name(name)?;
         let mut buf = Vec::with_capacity(f.size() as usize);
         std::io::copy(&mut f, &mut buf)?;
@@ -198,67 +216,72 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
     }
 
     // 读取所有插件状态
-    pub fn read_all_plugin_states(&mut self) -> io::Result<std::collections::HashMap<String, Vec<u8>>> {
+    pub fn read_all_plugin_states(
+        &mut self
+    ) -> io::Result<std::collections::HashMap<String, Vec<u8>>> {
         let mut plugin_states = std::collections::HashMap::new();
-        
+
         // 先收集所有插件文件名
         let mut plugin_files = Vec::new();
         for i in 0..self.zip.len() {
             let file = self.zip.by_index(i)?;
             let file_name = file.name().to_string();
-            
+
             if file_name.starts_with("plugins/") && !file_name.ends_with('/') {
-                let plugin_name = file_name
-                    .strip_prefix("plugins/")
-                    .unwrap()
-                    .to_string();
+                let plugin_name =
+                    file_name.strip_prefix("plugins/").unwrap().to_string();
                 plugin_files.push((plugin_name, file_name));
             }
         }
-        
+
         // 然后读取每个插件文件的数据
         for (plugin_name, file_name) in plugin_files {
             let data = self.read_all(&file_name)?;
             plugin_states.insert(plugin_name, data);
         }
-        
+
         Ok(plugin_states)
     }
 
     // 列出所有插件名称
     pub fn list_plugins(&mut self) -> io::Result<Vec<String>> {
         let mut plugins = Vec::new();
-        
+
         for i in 0..self.zip.len() {
             let file = self.zip.by_index(i)?;
             let file_name = file.name();
-            
+
             if file_name.starts_with("plugins/") && !file_name.ends_with('/') {
-                let plugin_name = file_name
-                    .strip_prefix("plugins/")
-                    .unwrap()
-                    .to_string();
+                let plugin_name =
+                    file_name.strip_prefix("plugins/").unwrap().to_string();
                 plugins.push(plugin_name);
             }
         }
-        
+
         Ok(plugins)
     }
 
     // 检查是否存在插件状态
-    pub fn has_plugin_state(&mut self, plugin_name: &str) -> bool {
+    pub fn has_plugin_state(
+        &mut self,
+        plugin_name: &str,
+    ) -> bool {
         let plugin_file_path = format!("plugins/{}", plugin_name);
         self.zip.by_name(&plugin_file_path).is_ok()
     }
 
     // 创建内存映射条目
-    fn create_mmap_entry(&mut self, name: &str) -> io::Result<()> {
+    fn create_mmap_entry(
+        &mut self,
+        name: &str,
+    ) -> io::Result<()> {
         // 创建临时文件
-        let mut temp_file = if let Some(ref temp_dir) = self.mmap_config.temp_dir {
-            NamedTempFile::new_in(temp_dir)?
-        } else {
-            NamedTempFile::new()?
-        };
+        let mut temp_file =
+            if let Some(ref temp_dir) = self.mmap_config.temp_dir {
+                NamedTempFile::new_in(temp_dir)?
+            } else {
+                NamedTempFile::new()?
+            };
 
         // 解压文件到临时文件
         {
@@ -275,17 +298,19 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
         let mmap = unsafe { MmapOptions::new().map(temp_file.as_file())? };
 
         // 添加到缓存
-        self.mmap_cache.insert(name.to_string(), MmapEntry {
-            _temp_file: temp_file,
-            mmap,
-        });
+        self.mmap_cache.insert(
+            name.to_string(),
+            MmapEntry { _temp_file: temp_file, mmap },
+        );
 
         Ok(())
     }
 
     // 清理最少使用的条目
     fn evict_least_used(&mut self) {
-        if let Some((lru_name, _)) = self.access_count.iter()
+        if let Some((lru_name, _)) = self
+            .access_count
+            .iter()
             .min_by_key(|(_, count)| **count)
             .map(|(name, count)| (name.clone(), *count))
         {
@@ -301,9 +326,8 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
 
     // 获取缓存统计信息
     pub fn mmap_stats(&self) -> MmapStats {
-        let total_size: u64 = self.mmap_cache.values()
-            .map(|entry| entry.mmap.len() as u64)
-            .sum();
+        let total_size: u64 =
+            self.mmap_cache.values().map(|entry| entry.mmap.len() as u64).sum();
 
         MmapStats {
             cached_entries: self.mmap_cache.len(),
@@ -320,21 +344,30 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
     }
 
     // 获取指定文件的大小（字节）
-    pub fn get_file_size(&mut self, name: &str) -> io::Result<u64> {
+    pub fn get_file_size(
+        &mut self,
+        name: &str,
+    ) -> io::Result<u64> {
         let f = self.zip.by_name(name)?;
         Ok(f.size())
     }
 
     // 获取指定文件的压缩大小（字节）
-    pub fn get_compressed_size(&mut self, name: &str) -> io::Result<u64> {
+    pub fn get_compressed_size(
+        &mut self,
+        name: &str,
+    ) -> io::Result<u64> {
         let f = self.zip.by_name(name)?;
         Ok(f.compressed_size())
     }
 
     // 检查文件大小类别
-    pub fn classify_file_size(&mut self, name: &str) -> io::Result<FileSizeCategory> {
+    pub fn classify_file_size(
+        &mut self,
+        name: &str,
+    ) -> io::Result<FileSizeCategory> {
         let file_size = self.get_file_size(name)?;
-        
+
         if file_size >= self.mmap_config.huge_file_threshold {
             Ok(FileSizeCategory::Huge)
         } else if file_size >= self.mmap_config.threshold {
@@ -345,12 +378,15 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
     }
 
     // 获取文件的详细信息
-    pub fn get_file_info(&mut self, name: &str) -> io::Result<FileInfo> {
+    pub fn get_file_info(
+        &mut self,
+        name: &str,
+    ) -> io::Result<FileInfo> {
         let (size, compressed_size) = {
             let f = self.zip.by_name(name)?;
             (f.size(), f.compressed_size())
         }; // f 在这里被销毁，释放了可变借用
-        
+
         let category = if size >= self.mmap_config.huge_file_threshold {
             FileSizeCategory::Huge
         } else if size >= self.mmap_config.threshold {
@@ -358,17 +394,17 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
         } else {
             FileSizeCategory::Small
         };
-        
+
         let recommended_strategy = self.recommend_processing_strategy(size);
-        
+
         Ok(FileInfo {
             name: name.to_string(),
             size,
             compressed_size,
-            compression_ratio: if size > 0 { 
-                compressed_size as f64 / size as f64 
-            } else { 
-                1.0 
+            compression_ratio: if size > 0 {
+                compressed_size as f64 / size as f64
+            } else {
+                1.0
             },
             category,
             recommended_strategy,
@@ -376,8 +412,13 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
     }
 
     // 推荐处理策略
-    pub fn recommend_processing_strategy(&self, file_size: u64) -> ProcessingStrategy {
-        if file_size >= self.mmap_config.huge_file_threshold && self.mmap_config.enable_streaming {
+    pub fn recommend_processing_strategy(
+        &self,
+        file_size: u64,
+    ) -> ProcessingStrategy {
+        if file_size >= self.mmap_config.huge_file_threshold
+            && self.mmap_config.enable_streaming
+        {
             ProcessingStrategy::Streaming
         } else if file_size >= self.mmap_config.threshold {
             ProcessingStrategy::MemoryMap
@@ -387,11 +428,14 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
     }
 
     // 预热缓存：为指定文件创建 mmap
-    pub fn preheat_mmap(&mut self, names: &[&str]) -> io::Result<()> {
+    pub fn preheat_mmap(
+        &mut self,
+        names: &[&str],
+    ) -> io::Result<()> {
         for &name in names {
             if !self.mmap_cache.contains_key(name) {
                 let file_size = self.get_file_size(name)?;
-                
+
                 if file_size >= self.mmap_config.threshold {
                     self.create_mmap_entry(name)?;
                 }
@@ -401,14 +445,17 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
     }
 
     // 流式读取超大文件
-    fn read_huge_file_streaming(&mut self, name: &str) -> io::Result<Vec<u8>> {
+    fn read_huge_file_streaming(
+        &mut self,
+        name: &str,
+    ) -> io::Result<Vec<u8>> {
         let mut file = self.zip.by_name(name)?;
         let total_size = file.size() as usize;
         let mut result = Vec::with_capacity(total_size);
-        
+
         let chunk_size = self.mmap_config.stream_chunk_size;
         let mut buffer = vec![0u8; chunk_size];
-        
+
         loop {
             let bytes_read = file.read(&mut buffer)?;
             if bytes_read == 0 {
@@ -416,26 +463,29 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
             }
             result.extend_from_slice(&buffer[..bytes_read]);
         }
-        
+
         Ok(result)
     }
 
     // 创建流式读取器（用于逐块处理）
-    pub fn create_stream_reader(&mut self, name: &str) -> io::Result<ZipStreamReader> {
+    pub fn create_stream_reader(
+        &mut self,
+        name: &str,
+    ) -> io::Result<ZipStreamReader> {
         // 一次性读取并分块存储，避免重复跳跃的性能问题
         let mut file = self.zip.by_name(name)?;
         let total_size = file.size();
         let chunk_size = self.mmap_config.stream_chunk_size;
-        
+
         let mut chunks = Vec::new();
         let mut buffer = vec![0u8; chunk_size];
-        
+
         loop {
             let bytes_read = file.read(&mut buffer)?;
             if bytes_read == 0 {
                 break;
             }
-            
+
             chunks.push(buffer[..bytes_read].to_vec());
         }
 
@@ -447,12 +497,16 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
     }
 
     // 智能处理：根据文件大小自动选择回调或直接返回策略
-    pub fn process_smart<F>(&mut self, name: &str, mut processor: F) -> io::Result<()>
+    pub fn process_smart<F>(
+        &mut self,
+        name: &str,
+        mut processor: F,
+    ) -> io::Result<()>
     where
         F: FnMut(&[u8]) -> io::Result<()>,
     {
         let file_info = self.get_file_info(name)?;
-        
+
         match file_info.recommended_strategy {
             ProcessingStrategy::Standard => {
                 // 小文件：直接读取后一次性回调
@@ -469,43 +523,55 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
                     },
                     Err(_) => {
                         // mmap 失败，回退到标准读取
-                        *self.access_count.entry(name.to_string()).or_insert(0) += 1;
+                        *self
+                            .access_count
+                            .entry(name.to_string())
+                            .or_insert(0) += 1;
                         let data = self.read_standard(name)?;
                         processor(&data)
-                    }
+                    },
                 }
             },
             ProcessingStrategy::Streaming => {
                 // 超大文件：强制使用流式回调处理
                 if self.mmap_config.enable_streaming {
-                    *self.access_count.entry(name.to_string()).or_insert(0) += 1;
+                    *self.access_count.entry(name.to_string()).or_insert(0) +=
+                        1;
                     self.process_huge_file(name, processor)
                 } else {
                     // 流式处理未启用，尝试 mmap 或回退
                     match self.read_mmap(name) {
                         Ok(data) => processor(data),
                         Err(_) => {
-                            *self.access_count.entry(name.to_string()).or_insert(0) += 1;
+                            *self
+                                .access_count
+                                .entry(name.to_string())
+                                .or_insert(0) += 1;
                             let data = self.read_standard(name)?;
                             processor(&data)
-                        }
+                        },
                     }
                 }
-            }
+            },
         }
     }
 
     // 智能批量处理：自动判断是否需要流式处理多个文件
-    pub fn process_files_smart<F>(&mut self, file_names: &[&str], mut processor: F) -> io::Result<()>
+    pub fn process_files_smart<F>(
+        &mut self,
+        file_names: &[&str],
+        mut processor: F,
+    ) -> io::Result<()>
     where
         F: FnMut(&str, &[u8]) -> io::Result<()>,
     {
         for &name in file_names {
             let file_info = self.get_file_info(name)?;
-            
+
             // 根据策略决定处理方式
             match file_info.recommended_strategy {
-                ProcessingStrategy::Standard | ProcessingStrategy::MemoryMap => {
+                ProcessingStrategy::Standard
+                | ProcessingStrategy::MemoryMap => {
                     // 小文件和中等文件：一次性处理
                     let data = self.read_smart(name)?;
                     processor(name, &data)?;
@@ -518,22 +584,26 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
                         Ok(())
                     })?;
                     processor(name, &accumulated_data)?;
-                }
+                },
             }
         }
-        
+
         Ok(())
     }
 
     // 处理超大文件的回调方式（避免内存占用）
-    pub fn process_huge_file<F>(&mut self, name: &str, mut processor: F) -> io::Result<()>
+    pub fn process_huge_file<F>(
+        &mut self,
+        name: &str,
+        mut processor: F,
+    ) -> io::Result<()>
     where
         F: FnMut(&[u8]) -> io::Result<()>,
     {
         let mut file = self.zip.by_name(name)?;
         let chunk_size = self.mmap_config.stream_chunk_size;
         let mut buffer = vec![0u8; chunk_size];
-        
+
         loop {
             let bytes_read = file.read(&mut buffer)?;
             if bytes_read == 0 {
@@ -541,7 +611,7 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
             }
             processor(&buffer[..bytes_read])?;
         }
-        
+
         Ok(())
     }
 }
@@ -560,8 +630,12 @@ pub struct MmapStats {
 }
 
 impl std::fmt::Display for MmapStats {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, 
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
+        write!(
+            f,
             "mmap 缓存: {}/{} 条目, {:.2} MB 总大小, 阈值 {:.2} MB",
             self.cached_entries,
             self.max_entries,
@@ -611,7 +685,10 @@ impl ZipStreamReader {
     }
 
     /// 逐块处理数据
-    pub fn process_chunks<F>(&mut self, mut processor: F) -> io::Result<()>
+    pub fn process_chunks<F>(
+        &mut self,
+        mut processor: F,
+    ) -> io::Result<()>
     where
         F: FnMut(&[u8]) -> io::Result<()>,
     {
@@ -624,16 +701,19 @@ impl ZipStreamReader {
     /// 流式读取所有数据到 Vec（适用于需要完整数据的场景）
     pub fn read_all_streaming(&mut self) -> io::Result<Vec<u8>> {
         let mut result = Vec::with_capacity(self.total_size as usize);
-        
+
         while let Some(chunk) = self.read_chunk()? {
             result.extend_from_slice(&chunk);
         }
-        
+
         Ok(result)
     }
 
     /// 计算数据的哈希值（无需加载到内存）
-    pub fn compute_hash<H>(&mut self, mut hasher: H) -> io::Result<()>
+    pub fn compute_hash<H>(
+        &mut self,
+        mut hasher: H,
+    ) -> io::Result<()>
     where
         H: FnMut(&[u8]),
     {
@@ -658,47 +738,47 @@ mod tests {
         {
             let cursor = Cursor::new(&mut zip_data);
             let mut writer = ZipDocumentWriter::new(cursor)?;
-            
+
             // 添加小文件（不会使用 mmap）
             writer.add_stored("small.txt", b"small content")?;
-            
+
             // 添加大文件（会使用 mmap）
             let large_content = vec![42u8; 2 * 1024 * 1024]; // 2MB
             writer.add_stored("large.bin", &large_content)?;
-            
+
             writer.finalize()?;
         }
 
         // 测试 memmap2 集成
         let cursor = Cursor::new(zip_data);
         let mut reader = ZipDocumentReader::new(cursor)?;
-        
+
         // 读取小文件（应该走标准路径）
         let small_data = reader.read_all("small.txt")?;
         assert_eq!(small_data, b"small content");
-        
+
         // 检查没有 mmap 缓存
         let stats = reader.mmap_stats();
         assert_eq!(stats.cached_entries, 0);
-        
+
         // 读取大文件（应该使用 mmap）
         let large_data = reader.read_all("large.bin")?;
         assert_eq!(large_data.len(), 2 * 1024 * 1024);
         assert!(large_data.iter().all(|&b| b == 42));
-        
+
         // 检查 mmap 缓存
         let stats = reader.mmap_stats();
         assert_eq!(stats.cached_entries, 1);
         assert_eq!(stats.total_cached_size, 2 * 1024 * 1024);
-        
+
         // 再次读取大文件（应该命中缓存）
         let large_data2 = reader.read_all("large.bin")?;
         assert_eq!(large_data2, large_data);
-        
+
         // 缓存应该保持不变
         let stats = reader.mmap_stats();
         assert_eq!(stats.cached_entries, 1);
-        
+
         Ok(())
     }
 
@@ -708,7 +788,7 @@ mod tests {
         {
             let cursor = Cursor::new(&mut zip_data);
             let mut writer = ZipDocumentWriter::new(cursor)?;
-            
+
             let test_data = vec![123u8; 3 * 1024 * 1024]; // 3MB
             writer.add_stored("test.bin", &test_data)?;
             writer.finalize()?;
@@ -716,17 +796,17 @@ mod tests {
 
         let cursor = Cursor::new(zip_data);
         let mut reader = ZipDocumentReader::new(cursor)?;
-        
+
         // 使用零拷贝读取
         let mmap_data = reader.read_mmap("test.bin")?;
         assert_eq!(mmap_data.len(), 3 * 1024 * 1024);
         assert!(mmap_data.iter().all(|&b| b == 123));
-        
+
         // 验证数据是内存映射的，不是拷贝的
         let stats = reader.mmap_stats();
         assert_eq!(stats.cached_entries, 1);
         assert_eq!(stats.total_cached_size, 3 * 1024 * 1024);
-        
+
         Ok(())
     }
 
@@ -734,7 +814,7 @@ mod tests {
     fn test_mmap_cache_eviction() -> io::Result<()> {
         let config = MmapConfig {
             threshold: 1024, // 1KB
-            max_maps: 2, // 最多2个
+            max_maps: 2,     // 最多2个
             temp_dir: None,
             huge_file_threshold: 100 * 1024 * 1024,
             stream_chunk_size: 8 * 1024 * 1024,
@@ -745,31 +825,31 @@ mod tests {
         {
             let cursor = Cursor::new(&mut zip_data);
             let mut writer = ZipDocumentWriter::new(cursor)?;
-            
+
             // 添加3个大文件
             for i in 1..=3 {
                 let content = vec![i as u8; 2048]; // 2KB each
                 writer.add_stored(&format!("file{}.bin", i), &content)?;
             }
-            
+
             writer.finalize()?;
         }
 
         let cursor = Cursor::new(zip_data);
         let mut reader = ZipDocumentReader::with_mmap_config(cursor, config)?;
-        
+
         // 读取前两个文件
         let _data1 = reader.read_all("file1.bin")?;
         let _data2 = reader.read_all("file2.bin")?;
-        
+
         assert_eq!(reader.mmap_stats().cached_entries, 2);
-        
+
         // 读取第三个文件，应该触发缓存清理
         let _data3 = reader.read_all("file3.bin")?;
-        
+
         // 仍然应该只有2个缓存条目
         assert_eq!(reader.mmap_stats().cached_entries, 2);
-        
+
         Ok(())
     }
 
@@ -788,29 +868,29 @@ mod tests {
         {
             let cursor = Cursor::new(&mut zip_data);
             let mut writer = ZipDocumentWriter::new(cursor)?;
-            
+
             // 添加一个小于阈值的文件
             let small_content = vec![1u8; 1024 * 1024]; // 1MB
             writer.add_stored("small.bin", &small_content)?;
-            
+
             // 添加一个大于阈值的文件
             let large_content = vec![2u8; 6 * 1024 * 1024]; // 6MB
             writer.add_stored("large.bin", &large_content)?;
-            
+
             writer.finalize()?;
         }
 
         let cursor = Cursor::new(zip_data);
         let mut reader = ZipDocumentReader::with_mmap_config(cursor, config)?;
-        
+
         // 读取小文件，不应该使用 mmap
         let _small_data = reader.read_all("small.bin")?;
         assert_eq!(reader.mmap_stats().cached_entries, 0);
-        
+
         // 读取大文件，应该使用 mmap
         let _large_data = reader.read_all("large.bin")?;
         assert_eq!(reader.mmap_stats().cached_entries, 1);
-        
+
         Ok(())
     }
 
@@ -820,33 +900,33 @@ mod tests {
         {
             let cursor = Cursor::new(&mut zip_data);
             let mut writer = ZipDocumentWriter::new(cursor)?;
-            
+
             for i in 1..=3 {
                 let content = vec![i as u8; 2 * 1024 * 1024]; // 2MB each
                 writer.add_stored(&format!("data{}.bin", i), &content)?;
             }
-            
+
             writer.finalize()?;
         }
 
         let cursor = Cursor::new(zip_data);
         let mut reader = ZipDocumentReader::new(cursor)?;
-        
+
         // 预热缓存
         reader.preheat_mmap(&["data1.bin", "data2.bin"])?;
-        
+
         // 应该有2个缓存条目
         let stats = reader.mmap_stats();
         assert_eq!(stats.cached_entries, 2);
-        
+
         // 后续读取应该直接命中缓存
         let _data1 = reader.read_mmap("data1.bin")?;
         let _data2 = reader.read_mmap("data2.bin")?;
-        
+
         // 缓存条目数量应该保持不变
         let stats = reader.mmap_stats();
         assert_eq!(stats.cached_entries, 2);
-        
+
         Ok(())
     }
 

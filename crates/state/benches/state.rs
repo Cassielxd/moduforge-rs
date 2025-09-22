@@ -4,7 +4,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 /// 基础状态基准测试
 fn bench_basic_state(c: &mut Criterion) {
     let mut group = c.benchmark_group("基础状态");
-    
+
     // Transaction创建基准测试
     group.bench_function("基础操作", |b| {
         b.iter(|| {
@@ -13,12 +13,9 @@ fn bench_basic_state(c: &mut Criterion) {
             criterion::black_box(result)
         })
     });
-    
+
     group.finish();
 }
 
-criterion_group!(
-    benches,
-    bench_basic_state
-);
+criterion_group!(benches, bench_basic_state);
 criterion_main!(benches);

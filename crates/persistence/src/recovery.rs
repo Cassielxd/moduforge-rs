@@ -42,7 +42,6 @@ pub async fn recover_state<E: EventStore + 'static>(
             for f in frames {
                 tr.step(step_factory.create(&f.type_id, &f.data))?;
             }
-            tr.commit();
             state = state.apply(tr).await?.state;
             from_lsn = ev.lsn;
         }

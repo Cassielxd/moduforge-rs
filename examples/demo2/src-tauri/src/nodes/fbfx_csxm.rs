@@ -170,5 +170,12 @@ lazy_static! {
     pub static ref CSXM: mf_core::node::Node = CsxmNode::node_definition();
 }
 pub fn init_fbfx_csxm_fields() -> Vec<mf_core::node::Node> {
-    vec![FB.clone(), QD.clone(), DE.clone(), RCJ.clone(), FBFX.clone(), CSXM.clone()]
+    vec![
+        FB.clone(),
+        QD.clone(),
+        DE.clone(),
+        RCJ.clone(),
+        FBFX.clone(),
+        CSXM.clone(),
+    ]
 }

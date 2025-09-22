@@ -9,31 +9,11 @@
 /// 遵循开闭原则，可以通过添加新的类型来扩展功能而不修改现有代码。
 pub const SUPPORTED_BASIC_TYPES: &[&str] = &[
     // 字符串类型
-    "String",
-    "str",
-    "&str",
-    
-    // 有符号整数类型  
-    "i8",
-    "i16", 
-    "i32",
-    "i64",
-    "i128",
-    "isize",
-    
+    "String", "str", "&str", // 有符号整数类型
+    "i8", "i16", "i32", "i64", "i128", "isize",
     // 无符号整数类型
-    "u8",
-    "u16",
-    "u32", 
-    "u64",
-    "u128",
-    "usize",
-    
-    // 浮点数类型
-    "f32",
-    "f64",
-    
-    // 布尔类型
+    "u8", "u16", "u32", "u64", "u128", "usize", // 浮点数类型
+    "f32", "f64", // 布尔类型
     "bool",
 ];
 
@@ -42,18 +22,18 @@ pub const SUPPORTED_BASIC_TYPES: &[&str] = &[
 /// 提供常见的节点类型名称作为示例和文档参考。
 /// 遵循接口隔离原则，为不同用途提供专门的常量集合。
 pub const COMMON_NODE_TYPES: &[&str] = &[
-    "paragraph",     // 段落节点
-    "heading",       // 标题节点
-    "text",          // 文本节点
-    "image",         // 图片节点
-    "link",          // 链接节点
-    "list",          // 列表节点
-    "list_item",     // 列表项节点
-    "table",         // 表格节点
-    "table_row",     // 表格行节点
-    "table_cell",    // 表格单元格节点
-    "code_block",    // 代码块节点
-    "blockquote",    // 引用块节点
+    "paragraph",       // 段落节点
+    "heading",         // 标题节点
+    "text",            // 文本节点
+    "image",           // 图片节点
+    "link",            // 链接节点
+    "list",            // 列表节点
+    "list_item",       // 列表项节点
+    "table",           // 表格节点
+    "table_row",       // 表格行节点
+    "table_cell",      // 表格单元格节点
+    "code_block",      // 代码块节点
+    "blockquote",      // 引用块节点
     "horizontal_rule", // 水平分割线节点
 ];
 
@@ -81,12 +61,12 @@ pub const COMMON_MARK_TYPES: &[&str] = &[
 pub mod required_attributes {
     /// Node 派生宏必需的属性
     pub const NODE_REQUIRED: &[&str] = &[
-        "node_type",     // 节点类型，必需
+        "node_type", // 节点类型，必需
     ];
-    
+
     /// Mark 派生宏必需的属性
     pub const MARK_REQUIRED: &[&str] = &[
-        "mark_type",     // 标记类型，必需
+        "mark_type", // 标记类型，必需
     ];
 }
 
@@ -97,18 +77,18 @@ pub mod required_attributes {
 pub mod optional_attributes {
     /// Node 派生宏可选的属性
     pub const NODE_OPTIONAL: &[&str] = &[
-        "marks",         // 支持的标记列表，可选
-        "content",       // 内容约束表达式，可选
+        "marks",   // 支持的标记列表，可选
+        "content", // 内容约束表达式，可选
     ];
-    
+
     /// Mark 派生宏可选的属性（暂时没有）
     pub const MARK_OPTIONAL: &[&str] = &[
         // 暂时没有可选属性
     ];
-    
+
     /// 字段级通用属性
     pub const FIELD_ATTRIBUTES: &[&str] = &[
-        "attr",          // 标记字段为属性，可用于字段级
+        "attr", // 标记字段为属性，可用于字段级
     ];
 }
 
@@ -118,28 +98,25 @@ pub mod optional_attributes {
 /// 遵循接口隔离原则，为不同类型的错误提供专门的消息模板。
 pub mod error_messages {
     /// 缺少必需属性的错误消息模板
-    pub const MISSING_ATTRIBUTE_TEMPLATE: &str = 
+    pub const MISSING_ATTRIBUTE_TEMPLATE: &str =
         "缺少必需的宏属性: {attribute}";
-    
+
     /// 无效属性值的错误消息模板
-    pub const INVALID_ATTRIBUTE_VALUE_TEMPLATE: &str = 
+    pub const INVALID_ATTRIBUTE_VALUE_TEMPLATE: &str =
         "无效的属性值 '{value}' 用于属性 '{attribute}': {reason}";
-    
+
     /// 不支持字段类型的错误消息模板
-    pub const UNSUPPORTED_FIELD_TYPE_TEMPLATE: &str = 
+    pub const UNSUPPORTED_FIELD_TYPE_TEMPLATE: &str =
         "不支持的字段类型 '{field_type}' 在字段 '{field_name}' 中";
-    
+
     /// 属性解析错误的消息模板
-    pub const PARSE_ERROR_TEMPLATE: &str = 
-        "属性解析错误: {message}";
-    
+    pub const PARSE_ERROR_TEMPLATE: &str = "属性解析错误: {message}";
+
     /// 代码生成错误的消息模板
-    pub const GENERATION_ERROR_TEMPLATE: &str = 
-        "代码生成错误: {message}";
-    
+    pub const GENERATION_ERROR_TEMPLATE: &str = "代码生成错误: {message}";
+
     /// 验证错误的消息模板
-    pub const VALIDATION_ERROR_TEMPLATE: &str = 
-        "验证错误: {message}";
+    pub const VALIDATION_ERROR_TEMPLATE: &str = "验证错误: {message}";
 }
 
 /// 修复建议模板
@@ -148,24 +125,20 @@ pub mod error_messages {
 /// 体现了友好的用户体验设计。
 pub mod suggestion_templates {
     /// 缺少 node_type 属性的修复建议
-    pub const MISSING_NODE_TYPE_SUGGESTION: &str = 
-        "请在结构体上添加 #[node_type = \"类型名\"] 属性，例如: #[node_type = \"paragraph\"]";
-    
+    pub const MISSING_NODE_TYPE_SUGGESTION: &str = "请在结构体上添加 #[node_type = \"类型名\"] 属性，例如: #[node_type = \"paragraph\"]";
+
     /// 缺少 mark_type 属性的修复建议
-    pub const MISSING_MARK_TYPE_SUGGESTION: &str = 
-        "请在结构体上添加 #[mark_type = \"类型名\"] 属性，例如: #[mark_type = \"bold\"]";
-    
+    pub const MISSING_MARK_TYPE_SUGGESTION: &str = "请在结构体上添加 #[mark_type = \"类型名\"] 属性，例如: #[mark_type = \"bold\"]";
+
     /// 无效属性值的修复建议
-    pub const INVALID_ATTRIBUTE_VALUE_SUGGESTION: &str = 
+    pub const INVALID_ATTRIBUTE_VALUE_SUGGESTION: &str =
         "请检查属性值格式是否正确，确保使用双引号包围字符串值";
-    
+
     /// 不支持字段类型的修复建议
-    pub const UNSUPPORTED_FIELD_TYPE_SUGGESTION: &str = 
-        "请使用支持的基本类型：String, i32, i64, f32, f64, bool 或其 Option 包装版本";
-    
+    pub const UNSUPPORTED_FIELD_TYPE_SUGGESTION: &str = "请使用支持的基本类型：String, i32, i64, f32, f64, bool 或其 Option 包装版本";
+
     /// 通用修复建议
-    pub const GENERAL_SUGGESTION: &str = 
-        "请检查宏的使用方式是否符合文档要求";
+    pub const GENERAL_SUGGESTION: &str = "请检查宏的使用方式是否符合文档要求";
 }
 
 /// 默认值配置
@@ -175,10 +148,10 @@ pub mod suggestion_templates {
 pub mod defaults {
     /// 默认的 Node 内容约束
     pub const DEFAULT_NODE_CONTENT: &str = "*";
-    
+
     /// 默认的属性映射初始容量
     pub const DEFAULT_ATTRS_CAPACITY: usize = 4;
-    
+
     /// 默认的标记列表分隔符
     pub const DEFAULT_MARKS_SEPARATOR: &str = ",";
 }
@@ -190,22 +163,22 @@ pub mod defaults {
 pub mod codegen {
     /// 生成的 Node 转换方法名称
     pub const NODE_CONVERTER_METHOD: &str = "to_node";
-    
+
     /// 生成的 Mark 转换方法名称  
     pub const MARK_CONVERTER_METHOD: &str = "to_mark";
-    
+
     /// 生成代码中的 Node 实例变量名
     pub const NODE_INSTANCE_VAR: &str = "node";
-    
+
     /// 生成代码中的 Mark 实例变量名
     pub const MARK_INSTANCE_VAR: &str = "mark";
-    
+
     /// 生成代码中的 NodeSpec 实例变量名
     pub const NODE_SPEC_VAR: &str = "node_spec";
-    
+
     /// 生成代码中的 MarkSpec 实例变量名
     pub const MARK_SPEC_VAR: &str = "mark_spec";
-    
+
     /// 生成代码中的属性映射变量名
     pub const ATTRS_MAP_VAR: &str = "attrs";
 }
@@ -216,28 +189,24 @@ pub mod codegen {
 /// 确保生成的文档具有一致的格式和内容。
 pub mod documentation {
     /// Node 转换方法的文档注释
-    pub const NODE_CONVERTER_DOC: &str = 
-        "将结构体转换为 mf_core::node::Node 实例\n\
+    pub const NODE_CONVERTER_DOC: &str = "将结构体转换为 mf_core::node::Node 实例\n\
          \n\
          此方法由 #[derive(Node)] 宏自动生成，\n\
          根据结构体的字段和宏属性配置创建相应的 Node 实例。";
-    
+
     /// Mark 转换方法的文档注释
-    pub const MARK_CONVERTER_DOC: &str = 
-        "将结构体转换为 mf_core::mark::Mark 实例\n\
+    pub const MARK_CONVERTER_DOC: &str = "将结构体转换为 mf_core::mark::Mark 实例\n\
          \n\
          此方法由 #[derive(Mark)] 宏自动生成，\n\
          根据结构体的字段和宏属性配置创建相应的 Mark 实例。";
-    
+
     /// 返回值说明
-    pub const RETURN_VALUE_DOC: &str = 
-        "# 返回值\n\
+    pub const RETURN_VALUE_DOC: &str = "# 返回值\n\
          \n\
          返回配置好的实例";
-    
+
     /// 示例代码说明
-    pub const EXAMPLE_DOC: &str = 
-        "# 示例\n\
+    pub const EXAMPLE_DOC: &str = "# 示例\n\
          \n\
          ```rust\n\
          // 创建实例\n\
@@ -254,16 +223,16 @@ pub mod documentation {
 pub mod validation {
     /// 标识符最小长度
     pub const MIN_IDENTIFIER_LENGTH: usize = 1;
-    
+
     /// 标识符最大长度
     pub const MAX_IDENTIFIER_LENGTH: usize = 100;
-    
+
     /// 属性值最大长度
     pub const MAX_ATTRIBUTE_VALUE_LENGTH: usize = 256;
-    
+
     /// 标记列表最大数量
     pub const MAX_MARKS_COUNT: usize = 10;
-    
+
     /// 字段属性最大数量
     pub const MAX_FIELD_ATTRIBUTES: usize = 100;
 }
@@ -275,10 +244,10 @@ pub mod validation {
 pub mod performance {
     /// 类型分析结果缓存大小
     pub const TYPE_ANALYSIS_CACHE_SIZE: usize = 100;
-    
+
     /// 代码生成缓存大小
     pub const CODEGEN_CACHE_SIZE: usize = 50;
-    
+
     /// 批处理字段数量阈值
     pub const BATCH_PROCESS_THRESHOLD: usize = 5;
 }
@@ -307,7 +276,7 @@ mod tests {
     }
 
     /// 测试常用标记类型列表
-    #[test] 
+    #[test]
     fn test_common_mark_types() {
         assert!(COMMON_MARK_TYPES.contains(&"bold"));
         assert!(COMMON_MARK_TYPES.contains(&"italic"));
@@ -333,16 +302,30 @@ mod tests {
     /// 测试错误消息模板格式
     #[test]
     fn test_error_message_templates() {
-        assert!(error_messages::MISSING_ATTRIBUTE_TEMPLATE.contains("{attribute}"));
-        assert!(error_messages::INVALID_ATTRIBUTE_VALUE_TEMPLATE.contains("{value}"));
-        assert!(error_messages::UNSUPPORTED_FIELD_TYPE_TEMPLATE.contains("{field_type}"));
+        assert!(
+            error_messages::MISSING_ATTRIBUTE_TEMPLATE.contains("{attribute}")
+        );
+        assert!(
+            error_messages::INVALID_ATTRIBUTE_VALUE_TEMPLATE
+                .contains("{value}")
+        );
+        assert!(
+            error_messages::UNSUPPORTED_FIELD_TYPE_TEMPLATE
+                .contains("{field_type}")
+        );
     }
 
     /// 测试修复建议模板
     #[test]
     fn test_suggestion_templates() {
-        assert!(suggestion_templates::MISSING_NODE_TYPE_SUGGESTION.contains("node_type"));
-        assert!(suggestion_templates::MISSING_MARK_TYPE_SUGGESTION.contains("mark_type"));
+        assert!(
+            suggestion_templates::MISSING_NODE_TYPE_SUGGESTION
+                .contains("node_type")
+        );
+        assert!(
+            suggestion_templates::MISSING_MARK_TYPE_SUGGESTION
+                .contains("mark_type")
+        );
         assert!(!suggestion_templates::GENERAL_SUGGESTION.is_empty());
     }
 
@@ -359,7 +342,10 @@ mod tests {
     #[test]
     fn test_validation_constants() {
         assert!(validation::MIN_IDENTIFIER_LENGTH > 0);
-        assert!(validation::MAX_IDENTIFIER_LENGTH > validation::MIN_IDENTIFIER_LENGTH);
+        assert!(
+            validation::MAX_IDENTIFIER_LENGTH
+                > validation::MIN_IDENTIFIER_LENGTH
+        );
         assert!(validation::MAX_MARKS_COUNT > 0);
         assert!(validation::MAX_FIELD_ATTRIBUTES > 0);
     }

@@ -33,7 +33,7 @@
 use mf_derive::{Node, Mark};
 
 /// 基本的 Node 派生宏测试结构体
-/// 
+///
 /// 这个结构体用于测试 Node 派生宏的基本功能，包括：
 /// - 基本的 node_type 属性设置
 /// - 简单的属性字段处理
@@ -42,8 +42,8 @@ use mf_derive::{Node, Mark};
 struct BasicNodeTest {
     #[attr]
     content: String,
-    
-    #[attr(default=1)]
+
+    #[attr(default = 1)]
     level: i32,
 }
 
@@ -62,22 +62,22 @@ struct BasicNodeTest {
 struct FullNodeTest {
     #[attr]
     title: String,
-    
+
     #[attr]
     subtitle: Option<String>,
-    
+
     #[attr]
     priority: i32,
-    
+
     #[attr]
     weight: Option<f64>,
-    
+
     #[attr]
     is_published: bool,
-    
+
     #[attr]
     tags: Option<String>,
-    
+
     // 非属性字段，应该被忽略
     #[attr]
     internal_id: uuid::Uuid,
@@ -95,7 +95,7 @@ struct FullNodeTest {
 struct BasicMarkTest {
     #[attr]
     level: String,
-    
+
     #[attr]
     color: Option<String>,
 }
@@ -111,19 +111,19 @@ struct BasicMarkTest {
 struct FullMarkTest {
     #[attr]
     font_family: String,
-    
+
     #[attr]
     font_size: Option<f32>,
-    
+
     #[attr]
     is_bold: bool,
-    
+
     #[attr]
     opacity: Option<f64>,
-    
+
     #[attr]
     z_index: i32,
-    
+
     // 非属性字段
     _phantom: std::marker::PhantomData<()>,
 }
@@ -140,16 +140,16 @@ struct FullMarkTest {
 struct NodeWithIdTest {
     #[id]
     document_id: String,
-    
+
     #[attr]
     title: String,
-    
+
     #[attr]
     content: Option<String>,
-    
+
     #[attr]
     version: i32,
-    
+
     // 普通字段（无标记）
     internal_data: Vec<u8>,
 }
@@ -163,11 +163,11 @@ struct NodeWithIdTest {
 struct NodeWithOptionalIdTest {
     #[id]
     section_id: Option<String>,
-    
-    #[attr(default="1")]
+
+    #[attr(default = "1")]
     name: String,
-    
-    #[attr(default="0")]
+
+    #[attr(default = "0")]
     order: i32,
 }
 
@@ -185,19 +185,16 @@ struct MinimalNodeWithIdTest {
 mod tests {
     use super::*;
 
-
     /// 测试完整 Node 派生宏功能
-    #[test]  
+    #[test]
     fn test_full_node_derivation() {
         // 调用生成的 node_definition() 静态方法，返回使用默认值的 Node 定义
         let mf_node = FullNodeTest::node_definition();
         println!("{mf_node:?}");
-        
+
         // 验证节点类型
         assert_eq!(mf_node.name, "rich_content");
-        
     }
-
 
     /// 测试反向 From trait 的实现（从 mf_model::node::Node 转换为结构体）
     #[test]
@@ -207,13 +204,11 @@ mod tests {
         attrs_map.insert("title".to_string(), serde_json::json!("测试标题"));
         attrs_map.insert("priority".to_string(), serde_json::json!(1));
         attrs_map.insert("is_published".to_string(), serde_json::json!(true));
-        
+
         let node = mf_model::node::Node {
             id: "test_node".into(),
             r#type: "rich_content".to_string(),
-            attrs: mf_model::attrs::Attrs {
-                attrs: attrs_map,
-            },
+            attrs: mf_model::attrs::Attrs { attrs: attrs_map },
             content: imbl::Vector::new(),
             marks: imbl::Vector::new(),
         };
@@ -243,34 +238,32 @@ mod tests {
         attrs_map.insert("priority".to_string(), serde_json::json!(5));
         attrs_map.insert("is_published".to_string(), serde_json::json!(false));
         // 注意：internal_id 和 cache_data 也有 #[attr] 标记，但通常不会从外部设置
-        
+
         let node = mf_model::node::Node {
             id: "test_all_fields".into(),
             r#type: "rich_content".to_string(),
-            attrs: mf_model::attrs::Attrs {
-                attrs: attrs_map,
-            },
+            attrs: mf_model::attrs::Attrs { attrs: attrs_map },
             content: imbl::Vector::new(),
             marks: imbl::Vector::new(),
         };
 
         // 使用 .into() 方法转换
         let struct_instance: FullNodeTest = node.into();
-        
+
         // 验证从 attrs 中提取的字段
         assert_eq!(struct_instance.title, "测试标题");
         assert_eq!(struct_instance.priority, 5);
         assert_eq!(struct_instance.is_published, false);
-        
+
         // 验证没有在 attrs 中设置的字段使用了默认值
         assert_eq!(struct_instance.subtitle, None);
         assert_eq!(struct_instance.weight, None);
         assert_eq!(struct_instance.tags, None);
-        
+
         // 验证自定义类型字段
         // internal_id 应该是一个新生成的 UUID（因为 attrs 中没有设置）
         assert_ne!(struct_instance.internal_id.to_string(), "");
-        
+
         // cache_data 应该是空 Vec（因为 attrs 中没有设置）
         assert!(struct_instance.cache_data.is_empty());
 
@@ -278,32 +271,30 @@ mod tests {
     }
 
     /// 测试自定义类型字段的处理
-    #[test] 
+    #[test]
     fn test_custom_type_field_handling() {
         // 测试包含 Uuid 和 Vec<u8> 自定义类型的结构体
         let mut attrs_map = imbl::HashMap::new();
         attrs_map.insert("title".to_string(), serde_json::json!("测试"));
-        
+
         let node = mf_model::node::Node {
             id: "test_custom".into(),
             r#type: "rich_content".to_string(),
-            attrs: mf_model::attrs::Attrs {
-                attrs: attrs_map,
-            },
+            attrs: mf_model::attrs::Attrs { attrs: attrs_map },
             content: imbl::Vector::new(),
             marks: imbl::Vector::new(),
         };
 
         // 转换应该成功
         let struct_instance: FullNodeTest = node.into();
-        
+
         // 验证基本字段
         assert_eq!(struct_instance.title, "测试");
-        
+
         // 验证自定义类型字段使用了默认值
         // internal_id 应该是一个新生成的 UUID
         assert_ne!(struct_instance.internal_id.to_string(), "");
-        
+
         // cache_data 应该是空 Vec
         assert!(struct_instance.cache_data.is_empty());
 
@@ -321,16 +312,16 @@ mod tests {
             version: 1,
             internal_data: vec![1, 2, 3],
         };
-        
+
         // 转换为 Node
         let node = node_instance.to_node();
-        
+
         // 验证 ID 字段被正确映射
         assert_eq!(node.id.as_ref(), "doc_123");
-        
+
         // 验证节点类型
         assert_eq!(node.r#type, "document");
-        
+
         // 验证属性字段被正确映射
         assert_eq!(
             node.attrs.attrs.get("title").and_then(|v| v.as_str()),
@@ -344,13 +335,13 @@ mod tests {
             node.attrs.attrs.get("version").and_then(|v| v.as_i64()),
             Some(1)
         );
-        
+
         // 验证非 attr 字段不会出现在节点属性中
         assert!(node.attrs.attrs.get("internal_data").is_none());
-        
+
         println!("带有 ID 字段的 to_node() 转换测试通过");
     }
-    
+
     /// 测试从 Node 转换为带有 ID 字段的结构体
     #[test]
     fn test_node_with_id_from_node_conversion() {
@@ -359,37 +350,35 @@ mod tests {
         attrs_map.insert("title".to_string(), serde_json::json!("测试文档"));
         attrs_map.insert("content".to_string(), serde_json::json!("这是内容"));
         attrs_map.insert("version".to_string(), serde_json::json!(2));
-        
+
         let node = mf_model::node::Node {
             id: "doc_456".into(),
             r#type: "document".to_string(),
-            attrs: mf_model::attrs::Attrs {
-                attrs: attrs_map,
-            },
+            attrs: mf_model::attrs::Attrs { attrs: attrs_map },
             content: imbl::Vector::new(),
             marks: imbl::Vector::new(),
         };
-        
+
         // 使用 from() 方法转换
         let struct_result = NodeWithIdTest::from(&node);
         assert!(struct_result.is_ok());
-        
+
         let struct_instance = struct_result.unwrap();
-        
+
         // 验证 ID 字段被正确提取
         assert_eq!(struct_instance.document_id, "doc_456");
-        
+
         // 验证属性字段被正确提取
         assert_eq!(struct_instance.title, "测试文档");
         assert_eq!(struct_instance.content, Some("这是内容".to_string()));
         assert_eq!(struct_instance.version, 2);
-        
+
         // 验证非 attr 字段使用了默认值
         assert!(struct_instance.internal_data.is_empty());
-        
+
         println!("从 Node 转换为带有 ID 字段的结构体测试通过");
     }
-    
+
     /// 测试通过 From trait 的双向转换
     #[test]
     fn test_node_with_id_bidirectional_conversion() {
@@ -401,17 +390,17 @@ mod tests {
             version: 5,
             internal_data: vec![4, 5, 6],
         };
-        
+
         // 转换为 Node
         let node: mf_model::node::Node = original.into();
-        
+
         // 验证 Node 的内容
         assert_eq!(node.id.as_ref(), "bidirectional_test");
         assert_eq!(node.r#type, "document");
-        
+
         // 从 Node 转换回结构体
         let recovered: NodeWithIdTest = node.into();
-        
+
         // 验证恢复的结构体
         assert_eq!(recovered.document_id, "bidirectional_test");
         assert_eq!(recovered.title, "双向转换测试");
@@ -419,10 +408,10 @@ mod tests {
         assert_eq!(recovered.version, 5);
         // 注意：internal_data 不是 attr 字段，所以会被重置为默认值
         assert!(recovered.internal_data.is_empty());
-        
+
         println!("双向转换测试通过");
     }
-    
+
     /// 测试可选 ID 字段的处理
     #[test]
     fn test_optional_id_field() {
@@ -432,60 +421,57 @@ mod tests {
             name: "测试章节".to_string(),
             order: 1,
         };
-        
+
         let node = node_with_id.to_node();
         assert_eq!(node.id.as_ref(), "section_123");
         assert_eq!(node.r#type, "section");
-        
+
         // 测试没有值的可选 ID
         let node_without_id = NodeWithOptionalIdTest {
             section_id: None,
             name: "无 ID 章节".to_string(),
             order: 2,
         };
-        
+
         let node2 = node_without_id.to_node();
         assert_eq!(node2.id.as_ref(), "default_id"); // 应该使用默认 ID
         assert_eq!(node2.r#type, "section");
-        
+
         // 测试反向转换
         let mut attrs_map = imbl::HashMap::new();
         attrs_map.insert("name".to_string(), serde_json::json!("恢复章节"));
         attrs_map.insert("order".to_string(), serde_json::json!(3));
-        
+
         let node3 = mf_model::node::Node {
             id: "recovered_section".into(),
             r#type: "section".to_string(),
-            attrs: mf_model::attrs::Attrs {
-                attrs: attrs_map,
-            },
+            attrs: mf_model::attrs::Attrs { attrs: attrs_map },
             content: imbl::Vector::new(),
             marks: imbl::Vector::new(),
         };
-        
+
         let recovered = NodeWithOptionalIdTest::from(&node3).unwrap();
         assert_eq!(recovered.section_id, Some("recovered_section".to_string()));
         assert_eq!(recovered.name, "恢复章节");
         assert_eq!(recovered.order, 3);
-        
+
         println!("可选 ID 字段测试通过");
     }
-    
+
     /// 测试最小化结构体（只有 ID 字段）
     #[test]
     fn test_minimal_node_with_id() {
-        let minimal = MinimalNodeWithIdTest {
-            node_id: "minimal_123".to_string(),
-        };
-        
+        let minimal =
+            MinimalNodeWithIdTest { node_id: "minimal_123".to_string() };
+
         // 转换为 Node
         let node = minimal.to_node();
         assert_eq!(node.id.as_ref(), "minimal_123");
         assert_eq!(node.r#type, "minimal");
-        
+
         // 验证没有额外的属性
         assert!(node.attrs.attrs.is_empty());
-        
+
         // 测试反向转换
         let node2 = mf_model::node::Node {
             id: "minimal_456".into(),
@@ -494,13 +480,13 @@ mod tests {
             content: imbl::Vector::new(),
             marks: imbl::Vector::new(),
         };
-        
+
         let recovered = MinimalNodeWithIdTest::from(&node2).unwrap();
         assert_eq!(recovered.node_id, "minimal_456");
-        
+
         println!("最小化结构体测试通过");
     }
-    
+
     /// 测试类型不匹配时的错误处理
     #[test]
     fn test_id_field_type_mismatch_error() {
@@ -512,19 +498,19 @@ mod tests {
             content: imbl::Vector::new(),
             marks: imbl::Vector::new(),
         };
-        
+
         // 尝试转换，应该返回错误
         let result = NodeWithIdTest::from(&node);
         assert!(result.is_err());
-        
+
         let error_message = result.unwrap_err();
         assert!(error_message.contains("节点类型不匹配"));
         assert!(error_message.contains("期望 'document'"));
         assert!(error_message.contains("实际 'wrong_type'"));
-        
+
         println!("类型不匹配错误处理测试通过");
     }
-    
+
     /// 测试 From trait 转换失败时的降级处理
     #[test]
     fn test_id_field_fallback_to_default_instance() {
@@ -536,10 +522,10 @@ mod tests {
             content: imbl::Vector::new(),
             marks: imbl::Vector::new(),
         };
-        
+
         // 使用 Into trait，这应该会降级到 default_instance()
         let struct_instance: NodeWithIdTest = node.into();
-        
+
         // 验证使用了默认值（由 default_instance 方法生成）
         // 注意：这里的具体值取决于 default_instance 的实现
         assert!(!struct_instance.document_id.is_empty()); // ID 字段应该有某个有意义的默认的 ID
@@ -548,8 +534,7 @@ mod tests {
         assert_eq!(struct_instance.content, None); // Option 字段使用 None 默认值
         assert_eq!(struct_instance.version, 0); // i32 的默认值
         assert!(struct_instance.internal_data.is_empty()); // Vec 的默认值
-        
+
         println!("降级处理测试通过");
     }
-
 }

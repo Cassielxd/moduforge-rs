@@ -63,10 +63,15 @@ impl StringConverter {
     ///
     /// - **单一职责**: 只负责字符串类型识别
     /// - **里氏替换**: 任何字符串类型都能正确识别
-    fn is_string_type(&self, field_type: &Type) -> bool {
+    fn is_string_type(
+        &self,
+        field_type: &Type,
+    ) -> bool {
         if utils::is_option_type(field_type) {
             // Option<T> 类型，检查内部类型
-            if let Some(inner_type) = utils::extract_option_inner_type(field_type) {
+            if let Some(inner_type) =
+                utils::extract_option_inner_type(field_type)
+            {
                 self.is_basic_string_type(inner_type)
             } else {
                 false
@@ -89,7 +94,10 @@ impl StringConverter {
     /// # 返回值
     ///
     /// 如果是基本字符串类型则返回 true，否则返回 false
-    fn is_basic_string_type(&self, field_type: &Type) -> bool {
+    fn is_basic_string_type(
+        &self,
+        field_type: &Type,
+    ) -> bool {
         let type_name = utils::extract_type_name(field_type);
         matches!(type_name.as_str(), "String" | "str" | "&str")
     }
@@ -102,10 +110,15 @@ impl Default for StringConverter {
 }
 
 impl TypeConverter for StringConverter {
-    fn convert_field_to_json_value(&self, field: &Field) -> MacroResult<TokenStream2> {
+    fn convert_field_to_json_value(
+        &self,
+        field: &Field,
+    ) -> MacroResult<TokenStream2> {
         if !self.supports_type(&field.ty) {
             let type_name = utils::extract_type_name(&field.ty);
-            let field_name = field.ident.as_ref()
+            let field_name = field
+                .ident
+                .as_ref()
                 .map(|i| i.to_string())
                 .unwrap_or_else(|| "匿名字段".to_string());
 
@@ -116,18 +129,20 @@ impl TypeConverter for StringConverter {
             ));
         }
 
-        let field_name = field.ident.as_ref()
-            .ok_or_else(|| MacroError::parse_error(
-                "字段缺少名称（不支持匿名字段）",
-                field,
-            ))?;
+        let field_name = field.ident.as_ref().ok_or_else(|| {
+            MacroError::parse_error("字段缺少名称（不支持匿名字段）", field)
+        })?;
 
         // 生成字符串转换代码
-        let conversion_code = utils::generate_field_conversion(field_name, &field.ty);
+        let conversion_code =
+            utils::generate_field_conversion(field_name, &field.ty);
         Ok(conversion_code)
     }
 
-    fn supports_type(&self, field_type: &Type) -> bool {
+    fn supports_type(
+        &self,
+        field_type: &Type,
+    ) -> bool {
         self.is_string_type(field_type)
     }
 
@@ -178,10 +193,15 @@ impl NumericConverter {
     /// # 返回值
     ///
     /// 如果是数值类型则返回 true，否则返回 false
-    fn is_numeric_type(&self, field_type: &Type) -> bool {
+    fn is_numeric_type(
+        &self,
+        field_type: &Type,
+    ) -> bool {
         if utils::is_option_type(field_type) {
             // Option<T> 类型，检查内部类型
-            if let Some(inner_type) = utils::extract_option_inner_type(field_type) {
+            if let Some(inner_type) =
+                utils::extract_option_inner_type(field_type)
+            {
                 self.is_basic_numeric_type(inner_type)
             } else {
                 false
@@ -196,12 +216,26 @@ impl NumericConverter {
     ///
     /// 判断类型是否为基本的数值类型（不包括 Option 包装）。
     /// 遵循单一职责原则，专门负责基本数值类型检查。
-    fn is_basic_numeric_type(&self, field_type: &Type) -> bool {
+    fn is_basic_numeric_type(
+        &self,
+        field_type: &Type,
+    ) -> bool {
         let type_name = utils::extract_type_name(field_type);
-        matches!(type_name.as_str(),
-            "i8" | "i16" | "i32" | "i64" | "i128" | "isize" |
-            "u8" | "u16" | "u32" | "u64" | "u128" | "usize" |
-            "f32" | "f64"
+        matches!(
+            type_name.as_str(),
+            "i8" | "i16"
+                | "i32"
+                | "i64"
+                | "i128"
+                | "isize"
+                | "u8"
+                | "u16"
+                | "u32"
+                | "u64"
+                | "u128"
+                | "usize"
+                | "f32"
+                | "f64"
         )
     }
 }
@@ -213,10 +247,15 @@ impl Default for NumericConverter {
 }
 
 impl TypeConverter for NumericConverter {
-    fn convert_field_to_json_value(&self, field: &Field) -> MacroResult<TokenStream2> {
+    fn convert_field_to_json_value(
+        &self,
+        field: &Field,
+    ) -> MacroResult<TokenStream2> {
         if !self.supports_type(&field.ty) {
             let type_name = utils::extract_type_name(&field.ty);
-            let field_name = field.ident.as_ref()
+            let field_name = field
+                .ident
+                .as_ref()
                 .map(|i| i.to_string())
                 .unwrap_or_else(|| "匿名字段".to_string());
 
@@ -227,18 +266,20 @@ impl TypeConverter for NumericConverter {
             ));
         }
 
-        let field_name = field.ident.as_ref()
-            .ok_or_else(|| MacroError::parse_error(
-                "字段缺少名称（不支持匿名字段）",
-                field,
-            ))?;
+        let field_name = field.ident.as_ref().ok_or_else(|| {
+            MacroError::parse_error("字段缺少名称（不支持匿名字段）", field)
+        })?;
 
         // 生成数值转换代码
-        let conversion_code = utils::generate_field_conversion(field_name, &field.ty);
+        let conversion_code =
+            utils::generate_field_conversion(field_name, &field.ty);
         Ok(conversion_code)
     }
 
-    fn supports_type(&self, field_type: &Type) -> bool {
+    fn supports_type(
+        &self,
+        field_type: &Type,
+    ) -> bool {
         self.is_numeric_type(field_type)
     }
 
@@ -279,10 +320,15 @@ impl BooleanConverter {
     ///
     /// 判断给定类型是否为布尔类型。
     /// 遵循单一职责原则，专门负责布尔类型识别。
-    fn is_boolean_type(&self, field_type: &Type) -> bool {
+    fn is_boolean_type(
+        &self,
+        field_type: &Type,
+    ) -> bool {
         if utils::is_option_type(field_type) {
             // Option<T> 类型，检查内部类型
-            if let Some(inner_type) = utils::extract_option_inner_type(field_type) {
+            if let Some(inner_type) =
+                utils::extract_option_inner_type(field_type)
+            {
                 self.is_basic_boolean_type(inner_type)
             } else {
                 false
@@ -294,7 +340,10 @@ impl BooleanConverter {
     }
 
     /// 检查是否为基本布尔类型
-    fn is_basic_boolean_type(&self, field_type: &Type) -> bool {
+    fn is_basic_boolean_type(
+        &self,
+        field_type: &Type,
+    ) -> bool {
         let type_name = utils::extract_type_name(field_type);
         type_name == "bool"
     }
@@ -307,10 +356,15 @@ impl Default for BooleanConverter {
 }
 
 impl TypeConverter for BooleanConverter {
-    fn convert_field_to_json_value(&self, field: &Field) -> MacroResult<TokenStream2> {
+    fn convert_field_to_json_value(
+        &self,
+        field: &Field,
+    ) -> MacroResult<TokenStream2> {
         if !self.supports_type(&field.ty) {
             let type_name = utils::extract_type_name(&field.ty);
-            let field_name = field.ident.as_ref()
+            let field_name = field
+                .ident
+                .as_ref()
                 .map(|i| i.to_string())
                 .unwrap_or_else(|| "匿名字段".to_string());
 
@@ -321,18 +375,20 @@ impl TypeConverter for BooleanConverter {
             ));
         }
 
-        let field_name = field.ident.as_ref()
-            .ok_or_else(|| MacroError::parse_error(
-                "字段缺少名称（不支持匿名字段）",
-                field,
-            ))?;
+        let field_name = field.ident.as_ref().ok_or_else(|| {
+            MacroError::parse_error("字段缺少名称（不支持匿名字段）", field)
+        })?;
 
         // 生成布尔转换代码
-        let conversion_code = utils::generate_field_conversion(field_name, &field.ty);
+        let conversion_code =
+            utils::generate_field_conversion(field_name, &field.ty);
         Ok(conversion_code)
     }
 
-    fn supports_type(&self, field_type: &Type) -> bool {
+    fn supports_type(
+        &self,
+        field_type: &Type,
+    ) -> bool {
         self.is_boolean_type(field_type)
     }
 
@@ -387,7 +443,10 @@ impl SpecialTypeConverter {
     /// - **开闭原则**: 为未来扩展预留接口
     /// - **单一职责**: 只负责特殊类型识别
     #[allow(unused_variables)]
-    fn is_special_type(&self, _field_type: &Type) -> bool {
+    fn is_special_type(
+        &self,
+        _field_type: &Type,
+    ) -> bool {
         // 暂时不支持任何特殊类型，为未来扩展预留
         // 未来可以在这里添加对 Vec、HashMap、自定义类型等的支持
         false
@@ -401,21 +460,25 @@ impl Default for SpecialTypeConverter {
 }
 
 impl TypeConverter for SpecialTypeConverter {
-    fn convert_field_to_json_value(&self, field: &Field) -> MacroResult<TokenStream2> {
+    fn convert_field_to_json_value(
+        &self,
+        field: &Field,
+    ) -> MacroResult<TokenStream2> {
         // 当前不支持任何特殊类型，直接返回错误
         let type_name = utils::extract_type_name(&field.ty);
-        let field_name = field.ident.as_ref()
+        let field_name = field
+            .ident
+            .as_ref()
             .map(|i| i.to_string())
             .unwrap_or_else(|| "匿名字段".to_string());
 
-        Err(MacroError::unsupported_field_type(
-            &field_name,
-            &type_name,
-            field,
-        ))
+        Err(MacroError::unsupported_field_type(&field_name, &type_name, field))
     }
 
-    fn supports_type(&self, field_type: &Type) -> bool {
+    fn supports_type(
+        &self,
+        field_type: &Type,
+    ) -> bool {
         self.is_special_type(field_type)
     }
 
@@ -633,7 +696,12 @@ mod tests {
         let result = converter.convert_field_to_json_value(&field);
         assert!(result.is_err());
 
-        if let Err(MacroError::UnsupportedFieldType { field_name, field_type, .. }) = result {
+        if let Err(MacroError::UnsupportedFieldType {
+            field_name,
+            field_type,
+            ..
+        }) = result
+        {
             assert_eq!(field_name, "data");
             assert!(field_type.contains("Vec"));
         } else {
@@ -702,7 +770,8 @@ mod tests {
             let supported = converters.iter().any(|c| c.supports_type(&ty));
             assert_eq!(
                 supported, should_be_supported,
-                "类型 {:?} 的支持状态不正确", ty
+                "类型 {:?} 的支持状态不正确",
+                ty
             );
         }
     }

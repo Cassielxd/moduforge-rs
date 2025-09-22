@@ -1,4 +1,6 @@
-use mf_macro::{mf_extension, mf_extension_with_config, mf_op, mf_global_attr, mf_ops};
+use mf_macro::{
+    mf_extension, mf_extension_with_config, mf_op, mf_global_attr, mf_ops,
+};
 use mf_core::ForgeResult;
 use mf_state::ops::GlobalResourceManager;
 
@@ -78,23 +80,23 @@ mod tests {
     fn test_config_extension_creation() {
         let ext = config_extension::init(true, 1000);
         assert_eq!(ext.get_global_attributes().len(), 2);
-        
+
         // Check that debug_mode attribute was added
         let attrs = ext.get_global_attributes();
         let debug_attr = attrs.iter().find(|attr| attr.has_key("debug_mode"));
         assert!(debug_attr.is_some());
-        
+
         let max_size_attr = attrs.iter().find(|attr| attr.has_key("max_size"));
         assert!(max_size_attr.is_some());
     }
 
-    #[test] 
+    #[test]
     fn test_ops_block() {
         // Test that the macro generates a function - for now just test compilation
         // TODO: Fix the issue with ops function call in test context
         // let ops = test_ops_block();
         // assert_eq!(ops.len(), 1);
-        
+
         // Direct test of operation function
         use mf_state::ops::GlobalResourceManager;
         let manager = GlobalResourceManager::default();

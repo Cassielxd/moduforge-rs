@@ -132,7 +132,9 @@ pub use builtin_converters::{
     StringConverter, NumericConverter, BooleanConverter, SpecialTypeConverter,
     get_all_builtin_converters,
 };
-pub use converter_registry::{ConverterRegistry, ConverterRegistryImpl, GlobalConverterRegistry};
+pub use converter_registry::{
+    ConverterRegistry, ConverterRegistryImpl, GlobalConverterRegistry,
+};
 
 /// 转换器模块的便利函数
 ///
@@ -228,14 +230,12 @@ pub mod utils {
     pub fn get_supported_types() -> Vec<&'static str> {
         vec![
             // 字符串类型
-            "String", "&str", "str",
-            // 有符号整数类型
+            "String", "&str", "str", // 有符号整数类型
             "i8", "i16", "i32", "i64", "i128", "isize",
             // 无符号整数类型
             "u8", "u16", "u32", "u64", "u128", "usize",
             // 浮点数类型
-            "f32", "f64",
-            // 布尔类型
+            "f32", "f64", // 布尔类型
             "bool",
         ]
     }
@@ -287,7 +287,9 @@ pub mod utils {
 mod tests {
     use super::*;
     use syn::parse_quote;
-    use crate::converter::utils::{convert_field, is_type_supported, get_supported_types};
+    use crate::converter::utils::{
+        convert_field, is_type_supported, get_supported_types,
+    };
 
     /// 测试模块重新导出
     #[test]
@@ -360,7 +362,11 @@ mod tests {
 
         for field in test_fields {
             // 检查类型支持性
-            assert!(is_type_supported(&field.ty), "类型应该被支持: {:?}", field.ty);
+            assert!(
+                is_type_supported(&field.ty),
+                "类型应该被支持: {:?}",
+                field.ty
+            );
 
             // 执行转换
             let result = convert_field(&field);
@@ -370,8 +376,8 @@ mod tests {
             let code = result.unwrap();
             let code_str = code.to_string();
             assert!(
-                code_str.contains("serde_json::to_value") || 
-                code_str.contains("JsonValue::Null"),
+                code_str.contains("serde_json::to_value")
+                    || code_str.contains("JsonValue::Null"),
                 "生成的代码应该包含转换逻辑"
             );
         }
@@ -388,7 +394,11 @@ mod tests {
 
         for field in unsupported_fields {
             // 检查类型不被支持
-            assert!(!is_type_supported(&field.ty), "类型不应该被支持: {:?}", field.ty);
+            assert!(
+                !is_type_supported(&field.ty),
+                "类型不应该被支持: {:?}",
+                field.ty
+            );
 
             // 转换应该失败
             let result = convert_field(&field);
@@ -397,9 +407,11 @@ mod tests {
             // 验证错误类型
             if let Err(error) = result {
                 match error {
-                    crate::common::MacroError::UnsupportedFieldType { .. } => {
+                    crate::common::MacroError::UnsupportedFieldType {
+                        ..
+                    } => {
                         // 正确的错误类型
-                    }
+                    },
                     _ => panic!("期望 UnsupportedFieldType 错误"),
                 }
             }

@@ -17,46 +17,36 @@
 //! - **里氏替换原则 (LSP)**: 错误类型和工具函数可以无缝替换使用
 
 /// 错误处理模块
-/// 
+///
 /// 提供统一的错误类型定义和编译时错误消息生成功能。
 /// 遵循单一职责原则，专门负责宏系统的错误处理。
 pub mod error;
 
 /// 工具函数模块
-/// 
+///
 /// 提供类型检查、代码生成等辅助功能。
 /// 遵循接口隔离原则，为不同的工具功能提供专门的接口。
 pub mod utils;
 
 /// 常量定义模块
-/// 
+///
 /// 定义宏系统使用的各种常量，包括支持的类型、错误消息模板等。
 /// 遵循开闭原则，通过常量配置支持功能扩展。
 pub mod constants;
 
 // 重新导出核心类型和函数，遵循接口隔离原则
-pub use error::{MacroError, MacroResult, create_compile_error, create_compile_error_with_suggestion};
+pub use error::{
+    MacroError, MacroResult, create_compile_error,
+    create_compile_error_with_suggestion,
+};
 pub use utils::{
-    generate_imports,
-    is_option_type,
-    extract_option_inner_type,
-    generate_field_conversion,
-    is_supported_type,
-    extract_type_name,
-    generate_attr_setter_code,
-    is_valid_identifier,
+    generate_imports, is_option_type, extract_option_inner_type,
+    generate_field_conversion, is_supported_type, extract_type_name,
+    generate_attr_setter_code, is_valid_identifier,
 };
 pub use constants::{
-    SUPPORTED_BASIC_TYPES,
-    COMMON_NODE_TYPES,
-    COMMON_MARK_TYPES,
-    required_attributes,
-    optional_attributes,
-    error_messages,
-    suggestion_templates,
-    defaults,
-    codegen,
-    documentation,
-    validation,
+    SUPPORTED_BASIC_TYPES, COMMON_NODE_TYPES, COMMON_MARK_TYPES,
+    required_attributes, optional_attributes, error_messages,
+    suggestion_templates, defaults, codegen, documentation, validation,
     performance,
 };

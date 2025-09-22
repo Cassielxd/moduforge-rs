@@ -41,22 +41,22 @@ use crate::common::{MacroError, MacroResult};
 #[derive(Debug, Clone)]
 pub struct DefaultValue {
     /// 原始字符串值
-    /// 
+    ///
     /// 保存用户在宏属性中输入的原始字符串，用于错误报告和调试
     pub raw_value: String,
-    
+
     /// 解析后的值类型
-    /// 
+    ///
     /// 将原始字符串解析为强类型的值，确保类型安全
     pub value_type: DefaultValueType,
-    
+
     /// 是否为 JSON 格式
-    /// 
+    ///
     /// 标识此默认值是否为 JSON 格式，用于约束类型检查
     pub is_json: bool,
-    
+
     /// 源码位置信息（用于错误报告）
-    /// 
+    ///
     /// 记录默认值在源码中的位置，提供精确的错误定位
     pub span: Option<Span>,
 }
@@ -83,39 +83,39 @@ pub struct DefaultValue {
 #[derive(Debug, Clone, PartialEq)]
 pub enum DefaultValueType {
     /// 字符串类型默认值
-    /// 
+    ///
     /// 存储解析后的字符串值，已去除引号
     String(String),
-    
+
     /// 整数类型默认值
-    /// 
+    ///
     /// 存储解析后的整数值，使用 i64 作为统一表示
     Integer(i64),
-    
+
     /// 浮点数类型默认值
-    /// 
+    ///
     /// 存储解析后的浮点数值，使用 f64 作为统一表示
     Float(f64),
-    
+
     /// 布尔类型默认值
-    /// 
+    ///
     /// 存储解析后的布尔值
     Boolean(bool),
-    
+
     /// JSON 类型默认值
-    /// 
+    ///
     /// 存储解析后的 JSON 值，用于复杂数据结构的默认值
     Json(serde_json::Value),
-    
+
     /// 自定义类型默认值
-    /// 
+    ///
     /// 存储原始字符串表达式，用于自定义类型的默认值
     /// 这允许用户在 #[attr(default="CustomStruct::new()")] 中指定自定义构造函数
     /// 或 #[attr(default="CustomStruct::default()")] 使用默认构造
     CustomType(String),
-    
+
     /// 空值类型默认值
-    /// 
+    ///
     /// 用于表示 Option 类型的 None 值
     Null,
 }
@@ -190,10 +190,13 @@ impl DefaultValueParser {
     /// - JSON 语法错误会返回详细的错误信息
     /// - 数值格式错误会退化到字符串解析
     /// - 所有错误都包含原始输入和位置信息
-    pub fn parse(raw_value: &str, span: Option<Span>) -> MacroResult<DefaultValue> {
+    pub fn parse(
+        raw_value: &str,
+        span: Option<Span>,
+    ) -> MacroResult<DefaultValue> {
         // 去除首尾空白字符
         let trimmed_value = raw_value.trim();
-        
+
         // 检查是否为空值
         if trimmed_value.is_empty() {
             return Ok(DefaultValue {
@@ -203,7 +206,7 @@ impl DefaultValueParser {
                 span,
             });
         }
-        
+
         // 1. 优先检查 JSON 格式
         if Self::is_json_format(trimmed_value) {
             match serde_json::from_str::<serde_json::Value>(trimmed_value) {
@@ -214,17 +217,17 @@ impl DefaultValueParser {
                         is_json: true,
                         span,
                     });
-                }
+                },
                 Err(json_err) => {
                     return Err(MacroError::default_value_parse_error(
                         &format!("JSON 解析失败: {}", json_err),
                         raw_value,
                         span.unwrap_or_else(Span::call_site),
                     ));
-                }
+                },
             }
         }
-        
+
         // 2. 检查布尔值
         match trimmed_value {
             "true" => {
@@ -234,7 +237,7 @@ impl DefaultValueParser {
                     is_json: false,
                     span,
                 });
-            }
+            },
             "false" => {
                 return Ok(DefaultValue {
                     raw_value: raw_value.to_string(),
@@ -242,7 +245,7 @@ impl DefaultValueParser {
                     is_json: false,
                     span,
                 });
-            }
+            },
             "null" => {
                 return Ok(DefaultValue {
                     raw_value: raw_value.to_string(),
@@ -250,10 +253,10 @@ impl DefaultValueParser {
                     is_json: false,
                     span,
                 });
-            }
-            _ => {}
+            },
+            _ => {},
         }
-        
+
         // 3. 尝试解析数值（整数优先）
         if let Ok(int_value) = trimmed_value.parse::<i64>() {
             return Ok(DefaultValue {
@@ -263,7 +266,7 @@ impl DefaultValueParser {
                 span,
             });
         }
-        
+
         // 4. 尝试解析浮点数
         if let Ok(float_value) = trimmed_value.parse::<f64>() {
             // 确保是有效的浮点数（不是 NaN 或无穷大）
@@ -276,17 +279,19 @@ impl DefaultValueParser {
                 });
             }
         }
-        
+
         // 5. 检查是否为自定义类型表达式
         if Self::is_custom_type_expression(trimmed_value) {
             return Ok(DefaultValue {
                 raw_value: raw_value.to_string(),
-                value_type: DefaultValueType::CustomType(trimmed_value.to_string()),
+                value_type: DefaultValueType::CustomType(
+                    trimmed_value.to_string(),
+                ),
                 is_json: false,
                 span,
             });
         }
-        
+
         // 6. 默认情况：作为字符串处理
         Ok(DefaultValue {
             raw_value: raw_value.to_string(),
@@ -295,7 +300,7 @@ impl DefaultValueParser {
             span,
         })
     }
-    
+
     /// 检测是否为 JSON 格式
     ///
     /// 通过简单的启发式规则判断字符串是否可能是 JSON 格式。
@@ -330,25 +335,25 @@ impl DefaultValueParser {
     /// ```
     fn is_json_format(value: &str) -> bool {
         let trimmed = value.trim();
-        
+
         // 检查长度（最短的 JSON 是 "{}" 或 "[]"）
         if trimmed.len() < 2 {
             return false;
         }
-        
+
         // 检查 JSON 对象格式
         if trimmed.starts_with('{') && trimmed.ends_with('}') {
             return true;
         }
-        
+
         // 检查 JSON 数组格式
         if trimmed.starts_with('[') && trimmed.ends_with(']') {
             return true;
         }
-        
+
         false
     }
-    
+
     /// 检测是否为自定义类型表达式
     ///
     /// 自定义类型表达式的识别规则（满足任一即可）：
@@ -393,10 +398,10 @@ impl DefaultValueParser {
     /// // 模块路径 + 构造函数
     /// assert!(DefaultValueParser::is_custom_type_expression("MyStruct::new()"));
     /// assert!(DefaultValueParser::is_custom_type_expression("std::collections::HashMap::new()"));
-    /// 
+    ///
     /// // 链式调用
     /// assert!(DefaultValueParser::is_custom_type_expression("Builder::new().build()"));
-    /// 
+    ///
     /// // 不是自定义类型表达式
     /// assert!(!DefaultValueParser::is_custom_type_expression("simple string"));
     /// assert!(!DefaultValueParser::is_custom_type_expression("42"));
@@ -410,19 +415,19 @@ impl DefaultValueParser {
     /// - 用户需要确保表达式结果实现 Default + Serialize traits
     fn is_custom_type_expression(value: &str) -> bool {
         let trimmed = value.trim();
-        
+
         // 空字符串不是自定义类型表达式
         if trimmed.is_empty() {
             return false;
         }
-        
+
         // 检查是否包含 :: （模块路径分隔符）
         let has_namespace = trimmed.contains("::");
-        
+
         // 检查是否以 () 结尾（方法调用）
-        let has_method_call = trimmed.ends_with("()") || 
-                             trimmed.contains("(") && trimmed.ends_with(")");
-        
+        let has_method_call = trimmed.ends_with("()")
+            || trimmed.contains("(") && trimmed.ends_with(")");
+
         // 检查常见的构造函数模式
         let common_constructors = [
             "::new()",
@@ -432,22 +437,23 @@ impl DefaultValueParser {
             "::empty()",
             "::create()",
         ];
-        
-        let has_common_constructor = common_constructors.iter()
-            .any(|pattern| trimmed.contains(pattern));
-        
+
+        let has_common_constructor =
+            common_constructors.iter().any(|pattern| trimmed.contains(pattern));
+
         // 检查链式调用模式（包含多个方法调用）
-        let method_call_count = trimmed.matches("()").count() + 
-                               trimmed.matches(')').count() - trimmed.matches("()").count();
+        let method_call_count = trimmed.matches("()").count()
+            + trimmed.matches(')').count()
+            - trimmed.matches("()").count();
         let has_chaining = method_call_count > 1;
-        
+
         // 自定义类型表达式的判断条件（满足任一即可）：
         // 1. 有命名空间且有方法调用
         // 2. 有常见构造函数模式
         // 3. 有链式调用
-        has_namespace && has_method_call || 
-        has_common_constructor || 
-        has_chaining
+        has_namespace && has_method_call
+            || has_common_constructor
+            || has_chaining
     }
 }
 
@@ -486,7 +492,7 @@ impl DefaultValue {
             DefaultValueType::Null => "Null",
         }
     }
-    
+
     /// 检查是否为数值类型
     ///
     /// 判断默认值是否为数值类型（整数或浮点数）。
@@ -501,9 +507,12 @@ impl DefaultValue {
     /// - **单一职责**: 专门负责数值类型判断
     /// - **接口隔离**: 提供专用的类型检查接口
     pub fn is_numeric(&self) -> bool {
-        matches!(self.value_type, DefaultValueType::Integer(_) | DefaultValueType::Float(_))
+        matches!(
+            self.value_type,
+            DefaultValueType::Integer(_) | DefaultValueType::Float(_)
+        )
     }
-    
+
     /// 检查是否为字符串类型
     ///
     /// 判断默认值是否为字符串类型。
@@ -515,7 +524,7 @@ impl DefaultValue {
     pub fn is_string(&self) -> bool {
         matches!(self.value_type, DefaultValueType::String(_))
     }
-    
+
     /// 检查是否为布尔类型
     ///
     /// 判断默认值是否为布尔类型。
@@ -527,7 +536,7 @@ impl DefaultValue {
     pub fn is_boolean(&self) -> bool {
         matches!(self.value_type, DefaultValueType::Boolean(_))
     }
-    
+
     /// 检查是否为空值类型
     ///
     /// 判断默认值是否为空值类型（null）。
@@ -539,7 +548,7 @@ impl DefaultValue {
     pub fn is_null(&self) -> bool {
         matches!(self.value_type, DefaultValueType::Null)
     }
-    
+
     /// 检查是否为自定义类型
     ///
     /// 判断默认值是否为自定义类型表达式。
@@ -555,10 +564,13 @@ impl DefaultValue {
 
 impl PartialEq for DefaultValue {
     /// 比较两个 DefaultValue 是否相等
-    /// 
+    ///
     /// 忽略 span 字段，只比较值相关的字段。
     /// 这样做是合理的，因为 span 只是位置信息，不影响值的语义。
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(
+        &self,
+        other: &Self,
+    ) -> bool {
         self.raw_value == other.raw_value
             && self.value_type == other.value_type
             && self.is_json == other.is_json
@@ -586,9 +598,16 @@ impl MacroError {
     ///
     /// - **单一职责**: 专门负责默认值解析错误创建
     /// - **接口隔离**: 提供专用的错误创建接口
-    pub fn default_value_parse_error(reason: &str, value: &str, span: Span) -> Self {
+    pub fn default_value_parse_error(
+        reason: &str,
+        value: &str,
+        span: Span,
+    ) -> Self {
         MacroError::ParseError {
-            message: format!("默认值解析失败: {} (问题值: '{}')", reason, value),
+            message: format!(
+                "默认值解析失败: {} (问题值: '{}')",
+                reason, value
+            ),
             span: Some(span),
         }
     }
@@ -604,99 +623,116 @@ mod tests {
     fn test_parse_string_default() {
         let result = DefaultValueParser::parse("hello world", None);
         assert!(result.is_ok());
-        
+
         let default_value = result.unwrap();
         assert_eq!(default_value.raw_value, "hello world");
-        assert!(matches!(default_value.value_type, DefaultValueType::String(ref s) if s == "hello world"));
+        assert!(
+            matches!(default_value.value_type, DefaultValueType::String(ref s) if s == "hello world")
+        );
         assert!(!default_value.is_json);
         assert_eq!(default_value.type_name(), "String");
         assert!(default_value.is_string());
     }
-    
+
     /// 测试整数默认值解析
     #[test]
     fn test_parse_integer_default() {
         let result = DefaultValueParser::parse("42", None);
         assert!(result.is_ok());
-        
+
         let default_value = result.unwrap();
         assert_eq!(default_value.raw_value, "42");
-        assert!(matches!(default_value.value_type, DefaultValueType::Integer(42)));
+        assert!(matches!(
+            default_value.value_type,
+            DefaultValueType::Integer(42)
+        ));
         assert!(!default_value.is_json);
         assert_eq!(default_value.type_name(), "Integer");
         assert!(default_value.is_numeric());
     }
-    
+
     /// 测试负整数默认值解析
     #[test]
     fn test_parse_negative_integer_default() {
         let result = DefaultValueParser::parse("-100", None);
         assert!(result.is_ok());
-        
+
         let default_value = result.unwrap();
-        assert!(matches!(default_value.value_type, DefaultValueType::Integer(-100)));
+        assert!(matches!(
+            default_value.value_type,
+            DefaultValueType::Integer(-100)
+        ));
         assert!(default_value.is_numeric());
     }
-    
+
     /// 测试浮点数默认值解析
     #[test]
     fn test_parse_float_default() {
         let result = DefaultValueParser::parse("3.14159", None);
         assert!(result.is_ok());
-        
+
         let default_value = result.unwrap();
         assert_eq!(default_value.raw_value, "3.14159");
-        assert!(matches!(default_value.value_type, DefaultValueType::Float(f) if (f - 3.14159).abs() < f64::EPSILON));
+        assert!(
+            matches!(default_value.value_type, DefaultValueType::Float(f) if (f - 3.14159).abs() < f64::EPSILON)
+        );
         assert!(!default_value.is_json);
         assert_eq!(default_value.type_name(), "Float");
         assert!(default_value.is_numeric());
     }
-    
+
     /// 测试布尔值默认值解析
     #[test]
     fn test_parse_boolean_default() {
         // 测试 true
         let result = DefaultValueParser::parse("true", None);
         assert!(result.is_ok());
-        
+
         let default_value = result.unwrap();
-        assert!(matches!(default_value.value_type, DefaultValueType::Boolean(true)));
+        assert!(matches!(
+            default_value.value_type,
+            DefaultValueType::Boolean(true)
+        ));
         assert_eq!(default_value.type_name(), "Boolean");
         assert!(default_value.is_boolean());
-        
+
         // 测试 false
         let result = DefaultValueParser::parse("false", None);
         assert!(result.is_ok());
-        
+
         let default_value = result.unwrap();
-        assert!(matches!(default_value.value_type, DefaultValueType::Boolean(false)));
+        assert!(matches!(
+            default_value.value_type,
+            DefaultValueType::Boolean(false)
+        ));
         assert!(default_value.is_boolean());
     }
-    
+
     /// 测试 null 值默认值解析
     #[test]
     fn test_parse_null_default() {
         let result = DefaultValueParser::parse("null", None);
         assert!(result.is_ok());
-        
+
         let default_value = result.unwrap();
         assert!(matches!(default_value.value_type, DefaultValueType::Null));
         assert_eq!(default_value.type_name(), "Null");
         assert!(default_value.is_null());
     }
-    
+
     /// 测试 JSON 对象默认值解析
     #[test]
     fn test_parse_json_object_default() {
-        let json_str = r#"{"key": "value", "number": 123, "nested": {"inner": true}}"#;
+        let json_str =
+            r#"{"key": "value", "number": 123, "nested": {"inner": true}}"#;
         let result = DefaultValueParser::parse(json_str, None);
         assert!(result.is_ok());
-        
+
         let default_value = result.unwrap();
         assert_eq!(default_value.raw_value, json_str);
         assert!(default_value.is_json);
         assert_eq!(default_value.type_name(), "Json");
-        
+
         if let DefaultValueType::Json(json_value) = &default_value.value_type {
             assert_eq!(json_value["key"], "value");
             assert_eq!(json_value["number"], 123);
@@ -705,17 +741,17 @@ mod tests {
             panic!("期望 JSON 类型");
         }
     }
-    
+
     /// 测试 JSON 数组默认值解析
     #[test]
     fn test_parse_json_array_default() {
         let json_str = r#"["item1", "item2", {"key": "value"}]"#;
         let result = DefaultValueParser::parse(json_str, None);
         assert!(result.is_ok());
-        
+
         let default_value = result.unwrap();
         assert!(default_value.is_json);
-        
+
         if let DefaultValueType::Json(json_value) = &default_value.value_type {
             assert!(json_value.is_array());
             let array = json_value.as_array().unwrap();
@@ -727,42 +763,46 @@ mod tests {
             panic!("期望 JSON 类型");
         }
     }
-    
+
     /// 测试无效 JSON 的错误处理
     #[test]
     fn test_parse_invalid_json() {
         let invalid_json = r#"{"invalid": json}"#; // 修正：添加结尾括号但使用无效的 JSON 语法
         let result = DefaultValueParser::parse(invalid_json, None);
         assert!(result.is_err());
-        
+
         if let Err(MacroError::ParseError { message, .. }) = result {
             assert!(message.contains("JSON 解析失败"));
         } else {
             panic!("期望 ParseError");
         }
     }
-    
+
     /// 测试空字符串处理
     #[test]
     fn test_parse_empty_string() {
         let result = DefaultValueParser::parse("", None);
         assert!(result.is_ok());
-        
+
         let default_value = result.unwrap();
-        assert!(matches!(default_value.value_type, DefaultValueType::String(ref s) if s.is_empty()));
+        assert!(
+            matches!(default_value.value_type, DefaultValueType::String(ref s) if s.is_empty())
+        );
     }
-    
+
     /// 测试空白字符串处理
     #[test]
     fn test_parse_whitespace_string() {
         let result = DefaultValueParser::parse("   ", None);
         assert!(result.is_ok());
-        
+
         let default_value = result.unwrap();
         // 应该被trim为空字符串
-        assert!(matches!(default_value.value_type, DefaultValueType::String(ref s) if s.is_empty()));
+        assert!(
+            matches!(default_value.value_type, DefaultValueType::String(ref s) if s.is_empty())
+        );
     }
-    
+
     /// 测试 JSON 格式检测
     #[test]
     fn test_is_json_format() {
@@ -772,7 +812,7 @@ mod tests {
         assert!(DefaultValueParser::is_json_format("{}"));
         assert!(DefaultValueParser::is_json_format("[]"));
         assert!(DefaultValueParser::is_json_format("  {  }  ")); // 带空格
-        
+
         // 无效的 JSON 格式
         assert!(!DefaultValueParser::is_json_format("simple string"));
         assert!(!DefaultValueParser::is_json_format("42"));
@@ -782,48 +822,64 @@ mod tests {
         assert!(!DefaultValueParser::is_json_format(""));
         assert!(!DefaultValueParser::is_json_format("a"));
     }
-    
+
     /// 测试复杂数值格式
     #[test]
     fn test_parse_complex_numbers() {
         // 测试十六进制（应该作为字符串处理）
         let result = DefaultValueParser::parse("0x42", None);
         assert!(result.is_ok());
-        assert!(matches!(result.unwrap().value_type, DefaultValueType::String(_)));
-        
+        assert!(matches!(
+            result.unwrap().value_type,
+            DefaultValueType::String(_)
+        ));
+
         // 测试科学计数法
         let result = DefaultValueParser::parse("1.23e-4", None);
         assert!(result.is_ok());
-        assert!(matches!(result.unwrap().value_type, DefaultValueType::Float(_)));
-        
+        assert!(matches!(
+            result.unwrap().value_type,
+            DefaultValueType::Float(_)
+        ));
+
         // 测试极大数值
         let result = DefaultValueParser::parse("999999999999999999999", None);
         assert!(result.is_ok());
         // 可能超出 i64 范围，应该作为字符串处理或者浮点数
         let default_value = result.unwrap();
         // 这取决于具体的实现，可能是 Integer、Float 或 String
-        assert!(matches!(default_value.value_type, DefaultValueType::Integer(_) | DefaultValueType::Float(_) | DefaultValueType::String(_)));
+        assert!(matches!(
+            default_value.value_type,
+            DefaultValueType::Integer(_)
+                | DefaultValueType::Float(_)
+                | DefaultValueType::String(_)
+        ));
     }
-    
+
     /// 测试 Unicode 字符串
     #[test]
     fn test_parse_unicode_string() {
         let unicode_str = "你好世界 🦀";
         let result = DefaultValueParser::parse(unicode_str, None);
         assert!(result.is_ok());
-        
+
         let default_value = result.unwrap();
-        assert!(matches!(default_value.value_type, DefaultValueType::String(ref s) if s == unicode_str));
+        assert!(
+            matches!(default_value.value_type, DefaultValueType::String(ref s) if s == unicode_str)
+        );
     }
-    
+
     /// 测试边界情况：看起来像 JSON 但不是
     #[test]
     fn test_parse_json_like_strings() {
         // 不完整的对象
         let result = DefaultValueParser::parse("{incomplete", None);
         assert!(result.is_ok());
-        assert!(matches!(result.unwrap().value_type, DefaultValueType::String(_)));
-        
+        assert!(matches!(
+            result.unwrap().value_type,
+            DefaultValueType::String(_)
+        ));
+
         // 单引号（无效 JSON）
         let result = DefaultValueParser::parse("{'key': 'value'}", None);
         assert!(result.is_err()); // 应该尝试解析为 JSON 但失败

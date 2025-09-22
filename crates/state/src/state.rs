@@ -2,6 +2,7 @@ use mf_model::{
     id_generator::IdGenerator, mark::Mark, node_pool::NodePool, schema::Schema,
 };
 use imbl::HashMap as ImHashMap;
+use mf_transform::transform::Transform;
 use std::fmt::{self, Debug};
 use std::{
     collections::HashMap,
@@ -141,7 +142,7 @@ impl State {
 
     /// 异步应用事务到当前状态
     pub async fn apply(
-        self:&Arc<Self>,
+        self: &Arc<Self>,
         transaction: Transaction,
     ) -> StateResult<TransactionResult> {
         let start_time = Instant::now();
@@ -156,7 +157,7 @@ impl State {
     }
 
     pub async fn filter_transaction(
-        self:&Arc<Self>,
+        self: &Arc<Self>,
         tr: &Transaction,
         ignore: Option<usize>,
     ) -> StateResult<bool> {
@@ -176,7 +177,7 @@ impl State {
     /// 异步应用事务到当前状态
     /// 返回新的状态实例和应用事务的步骤
     pub async fn apply_transaction(
-        self:&Arc<Self>,
+        self: &Arc<Self>,
         root_tr: Arc<Transaction>,
     ) -> StateResult<TransactionResult> {
         tracing::info!("开始应用事务");
@@ -187,7 +188,7 @@ impl State {
                 transactions: vec![root_tr],
             });
         }
-
+        let shared = root_tr.get_draft();
         let mut trs = Vec::new();
         let mut new_state: Arc<State> = self.apply_inner(&root_tr).await?;
         trs.push(root_tr.clone());
@@ -211,6 +212,15 @@ impl State {
                         )
                         .await?
                     {
+                        if !Arc::ptr_eq(&tr.get_draft(), &shared) {
+                            let steps = tr.steps.clone();
+                            tr.set_transform(
+                                Transform::new_shared(shared.clone())
+                            );
+                            for step in steps {
+                                tr.step(step.clone())?;
+                            }
+                        }
                         if new_state.filter_transaction(&tr, Some(i)).await? {
                             tr.set_meta("rootTr", root_tr.clone());
                             if seen.is_none() {
@@ -245,6 +255,8 @@ impl State {
 
             if !have_new {
                 tracing::info!("事务应用完成，共 {} 个步骤", trs.len());
+                Arc::make_mut(&mut new_state).node_pool =
+                    NodePool::new(Arc::new(shared.read().unwrap().clone()));
                 return Ok(TransactionResult {
                     state: new_state,
                     transactions: trs,
@@ -255,7 +267,7 @@ impl State {
 
     /// 异步应用内部事务
     pub async fn apply_inner(
-        self:&Arc<Self>,
+        self: &Arc<Self>,
         tr: &Transaction,
     ) -> StateResult<Arc<State>> {
         let mut config = self.config.as_ref().clone();

@@ -14,16 +14,16 @@ use crate::common::{MacroError, MacroResult, utils};
 pub struct FieldTypeInfo {
     /// 原始类型名称（完整的类型表示）
     pub original_type: String,
-    
+
     /// 简化的类型名称（用于显示和错误消息）
     pub simple_name: String,
-    
+
     /// 是否为 Option<T> 包装类型
     pub is_optional: bool,
-    
+
     /// 内部类型（如果是 Option<T>，则为 T 的类型信息）
     pub inner_type: Option<Box<FieldTypeInfo>>,
-    
+
     /// 是否为支持的基本类型
     pub is_supported: bool,
 }
@@ -36,16 +36,16 @@ pub struct FieldTypeInfo {
 pub struct FieldAnalysis {
     /// 字段名称
     pub name: String,
-    
+
     /// 字段的类型信息
     pub type_info: FieldTypeInfo,
-    
+
     /// 是否带有 #[attr] 标记
     pub is_marked_as_attr: bool,
-    
+
     /// 字段的所有属性标记
     pub attributes: Vec<String>,
-    
+
     /// 原始字段引用（用于错误定位）
     pub original_field: Field,
 }
@@ -100,13 +100,15 @@ impl FieldAnalyzer {
     pub fn analyze_field_type(field_type: &Type) -> FieldTypeInfo {
         let original_type = quote::quote! { #field_type }.to_string();
         let simple_name = utils::extract_type_name(field_type);
-        
+
         // 检查是否为 Option 类型
         if utils::is_option_type(field_type) {
             // 分析 Option 的内部类型
-            if let Some(inner_type) = utils::extract_option_inner_type(field_type) {
+            if let Some(inner_type) =
+                utils::extract_option_inner_type(field_type)
+            {
                 let inner_info = Self::analyze_field_type(inner_type);
-                
+
                 FieldTypeInfo {
                     original_type,
                     simple_name,
@@ -127,7 +129,7 @@ impl FieldAnalyzer {
         } else {
             // 普通类型（非 Option）
             let is_supported = utils::is_supported_basic_type(field_type);
-            
+
             FieldTypeInfo {
                 original_type,
                 simple_name,
@@ -137,7 +139,7 @@ impl FieldAnalyzer {
             }
         }
     }
-    
+
     /// 分析单个字段
     ///
     /// 对字段进行完整分析，包括类型信息和属性标记。
@@ -181,19 +183,21 @@ impl FieldAnalyzer {
     /// ```
     pub fn analyze_field(field: &Field) -> MacroResult<FieldAnalysis> {
         // 提取字段名称
-        let field_name = field.ident.as_ref()
-            .ok_or_else(|| MacroError::parse_error(
-                "字段缺少名称（不支持匿名字段）",
-                field,
-            ))?
+        let field_name = field
+            .ident
+            .as_ref()
+            .ok_or_else(|| {
+                MacroError::parse_error("字段缺少名称（不支持匿名字段）", field)
+            })?
             .to_string();
-        
+
         // 分析字段类型
         let type_info = Self::analyze_field_type(&field.ty);
-        
+
         // 分析字段属性
-        let (is_marked_as_attr, attributes) = Self::analyze_field_attributes(field)?;
-        
+        let (is_marked_as_attr, attributes) =
+            Self::analyze_field_attributes(field)?;
+
         Ok(FieldAnalysis {
             name: field_name,
             type_info,
@@ -202,7 +206,7 @@ impl FieldAnalyzer {
             original_field: field.clone(),
         })
     }
-    
+
     /// 分析多个字段
     ///
     /// 批量分析多个字段，并返回所有字段的分析结果。
@@ -228,15 +232,15 @@ impl FieldAnalyzer {
     /// - **开闭原则**: 可扩展不同的批处理策略
     pub fn analyze_fields(fields: &[Field]) -> MacroResult<Vec<FieldAnalysis>> {
         let mut analyses = Vec::with_capacity(fields.len());
-        
+
         for field in fields {
             let analysis = Self::analyze_field(field)?;
             analyses.push(analysis);
         }
-        
+
         Ok(analyses)
     }
-    
+
     /// 过滤带有属性标记的字段
     ///
     /// 从字段分析结果中筛选出带有 #[attr] 标记的字段。
@@ -259,12 +263,12 @@ impl FieldAnalyzer {
     ///
     /// - **接口隔离**: 提供专门的过滤接口
     /// - **单一职责**: 只负责属性字段的筛选
-    pub fn filter_attr_fields(analyses: &[FieldAnalysis]) -> Vec<&FieldAnalysis> {
-        analyses.iter()
-            .filter(|analysis| analysis.is_marked_as_attr)
-            .collect()
+    pub fn filter_attr_fields(
+        analyses: &[FieldAnalysis]
+    ) -> Vec<&FieldAnalysis> {
+        analyses.iter().filter(|analysis| analysis.is_marked_as_attr).collect()
     }
-    
+
     /// 验证字段类型的支持性
     ///
     /// 检查字段类型是否被宏系统支持。
@@ -288,7 +292,9 @@ impl FieldAnalyzer {
     ///
     /// - **单一职责**: 只负责类型支持性验证
     /// - **开闭原则**: 可扩展支持新的类型验证规则
-    pub fn validate_field_type_support(analysis: &FieldAnalysis) -> MacroResult<()> {
+    pub fn validate_field_type_support(
+        analysis: &FieldAnalysis
+    ) -> MacroResult<()> {
         if !analysis.type_info.is_supported {
             return Err(MacroError::unsupported_field_type(
                 &analysis.name,
@@ -296,7 +302,7 @@ impl FieldAnalyzer {
                 &analysis.original_field,
             ));
         }
-        
+
         // 对于 Option 类型，还需要验证内部类型
         if analysis.type_info.is_optional {
             if let Some(inner_type) = &analysis.type_info.inner_type {
@@ -309,10 +315,10 @@ impl FieldAnalyzer {
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// 批量验证字段类型支持性
     ///
     /// 对多个字段进行类型支持性验证。
@@ -336,13 +342,15 @@ impl FieldAnalyzer {
     ///
     /// - **单一职责**: 专门负责批量类型验证
     /// - **里氏替换**: 可以替换单个字段验证使用
-    pub fn validate_all_field_types(analyses: &[FieldAnalysis]) -> MacroResult<()> {
+    pub fn validate_all_field_types(
+        analyses: &[FieldAnalysis]
+    ) -> MacroResult<()> {
         for analysis in analyses {
             Self::validate_field_type_support(analysis)?;
         }
         Ok(())
     }
-    
+
     /// 分析字段的属性标记
     ///
     /// 提取和分析字段上的所有属性标记。
@@ -366,28 +374,30 @@ impl FieldAnalyzer {
     ///
     /// - **单一职责**: 只负责属性标记的分析
     /// - **接口隔离**: 提供简洁的属性分析接口
-    fn analyze_field_attributes(field: &Field) -> MacroResult<(bool, Vec<String>)> {
+    fn analyze_field_attributes(
+        field: &Field
+    ) -> MacroResult<(bool, Vec<String>)> {
         let mut is_marked_as_attr = false;
         let mut attributes = Vec::new();
-        
+
         for attr in &field.attrs {
             if let Some(ident) = attr.path().get_ident() {
                 let attr_name = ident.to_string();
                 attributes.push(attr_name.clone());
-                
+
                 // 检查是否为 #[attr] 标记
                 if attr_name == "attr" {
                     is_marked_as_attr = true;
-                    
+
                     // 验证 #[attr] 属性的格式
                     Self::validate_attr_attribute(attr)?;
                 }
             }
         }
-        
+
         Ok((is_marked_as_attr, attributes))
     }
-    
+
     /// 验证 #[attr] 属性的格式
     ///
     /// 确保 #[attr] 属性使用正确的格式。
@@ -415,21 +425,21 @@ impl FieldAnalyzer {
             syn::Meta::Path(_) => {
                 // #[attr] 格式，正确
                 Ok(())
-            }
+            },
             syn::Meta::List(_) => {
                 // #[attr(...)] 格式，暂不支持
                 Err(MacroError::parse_error(
                     "#[attr] 不支持参数，请使用简单的 #[attr] 标记",
                     attr,
                 ))
-            }
+            },
             syn::Meta::NameValue(_) => {
                 // #[attr = "..."] 格式，暂不支持
                 Err(MacroError::parse_error(
                     "#[attr] 不支持值赋值，请使用简单的 #[attr] 标记",
                     attr,
                 ))
-            }
+            },
         }
     }
 }
@@ -457,7 +467,7 @@ impl FieldTypeInfo {
     pub fn codegen_type_name(&self) -> &str {
         &self.simple_name
     }
-    
+
     /// 获取基础类型名称
     ///
     /// 返回去除 Option 包装后的基础类型名称。
@@ -492,7 +502,7 @@ impl FieldTypeInfo {
             &self.simple_name
         }
     }
-    
+
     /// 检查是否为字符串类型
     ///
     /// 判断类型是否为字符串相关类型（String, &str, str）。
@@ -517,7 +527,7 @@ impl FieldTypeInfo {
         let base_name = self.base_type_name();
         matches!(base_name, "String" | "str" | "&str")
     }
-    
+
     /// 检查是否为数值类型
     ///
     /// 判断类型是否为数值相关类型。
@@ -539,10 +549,21 @@ impl FieldTypeInfo {
     /// - **开闭原则**: 可扩展支持新的数值类型
     pub fn is_numeric_type(&self) -> bool {
         let base_name = self.base_type_name();
-        matches!(base_name, 
-            "i8" | "i16" | "i32" | "i64" | "i128" | "isize" |
-            "u8" | "u16" | "u32" | "u64" | "u128" | "usize" |
-            "f32" | "f64"
+        matches!(
+            base_name,
+            "i8" | "i16"
+                | "i32"
+                | "i64"
+                | "i128"
+                | "isize"
+                | "u8"
+                | "u16"
+                | "u32"
+                | "u64"
+                | "u128"
+                | "usize"
+                | "f32"
+                | "f64"
         )
     }
 }
@@ -575,7 +596,7 @@ impl FieldAnalysis {
                 &self.original_field,
             ));
         }
-        
+
         // 检查字段名称是否为有效标识符
         if !utils::is_valid_identifier(&self.name) {
             return Err(MacroError::validation_error(
@@ -583,13 +604,13 @@ impl FieldAnalysis {
                 &self.original_field,
             ));
         }
-        
+
         // 检查类型支持性
         FieldAnalyzer::validate_field_type_support(self)?;
-        
+
         Ok(())
     }
-    
+
     /// 生成字段的显示信息
     ///
     /// 创建用于错误消息和调试的字段描述信息。
@@ -617,7 +638,11 @@ impl FieldAnalysis {
             self.name,
             self.type_info.simple_name,
             if self.type_info.is_optional { "可选, " } else { "必需, " },
-            if self.is_marked_as_attr { "带属性标记, " } else { "无属性标记, " },
+            if self.is_marked_as_attr {
+                "带属性标记, "
+            } else {
+                "无属性标记, "
+            },
             if self.type_info.is_supported { "支持" } else { "不支持" }
         )
     }
@@ -633,23 +658,23 @@ mod tests {
     fn test_analyze_basic_field_type() {
         let field_type: Type = parse_quote! { String };
         let type_info = FieldAnalyzer::analyze_field_type(&field_type);
-        
+
         assert_eq!(type_info.simple_name, "String");
         assert!(!type_info.is_optional);
         assert!(type_info.is_supported);
         assert!(type_info.inner_type.is_none());
     }
-    
+
     /// 测试 Option 类型的字段分析
     #[test]
     fn test_analyze_option_field_type() {
         let field_type: Type = parse_quote! { Option<i32> };
         let type_info = FieldAnalyzer::analyze_field_type(&field_type);
-        
+
         assert_eq!(type_info.simple_name, "Option<i32>");
         assert!(type_info.is_optional);
         assert!(type_info.is_supported);
-        
+
         // 检查内部类型
         assert!(type_info.inner_type.is_some());
         let inner_type = type_info.inner_type.unwrap();
@@ -657,17 +682,17 @@ mod tests {
         assert!(!inner_type.is_optional);
         assert!(inner_type.is_supported);
     }
-    
+
     /// 测试不支持类型的字段分析
     #[test]
     fn test_analyze_unsupported_field_type() {
         let field_type: Type = parse_quote! { Vec<String> };
         let type_info = FieldAnalyzer::analyze_field_type(&field_type);
-        
+
         assert!(!type_info.is_supported);
         assert!(!type_info.is_optional);
     }
-    
+
     /// 测试单个字段的完整分析
     #[test]
     fn test_analyze_complete_field() {
@@ -675,10 +700,10 @@ mod tests {
             #[attr]
             name: String
         };
-        
+
         let result = FieldAnalyzer::analyze_field(&field);
         assert!(result.is_ok());
-        
+
         let analysis = result.unwrap();
         assert_eq!(analysis.name, "name");
         assert!(analysis.is_marked_as_attr);
@@ -686,23 +711,23 @@ mod tests {
         assert!(!analysis.type_info.is_optional);
         assert!(analysis.attributes.contains(&"attr".to_string()));
     }
-    
+
     /// 测试没有属性标记的字段分析
     #[test]
     fn test_analyze_field_without_attr() {
         let field: Field = parse_quote! {
             name: String
         };
-        
+
         let result = FieldAnalyzer::analyze_field(&field);
         assert!(result.is_ok());
-        
+
         let analysis = result.unwrap();
         assert_eq!(analysis.name, "name");
         assert!(!analysis.is_marked_as_attr);
         assert!(analysis.attributes.is_empty());
     }
-    
+
     /// 测试多个字段的批量分析
     #[test]
     fn test_analyze_multiple_fields() {
@@ -719,27 +744,27 @@ mod tests {
                 description: String
             },
         ];
-        
+
         let result = FieldAnalyzer::analyze_fields(&fields);
         assert!(result.is_ok());
-        
+
         let analyses = result.unwrap();
         assert_eq!(analyses.len(), 3);
-        
+
         // 检查第一个字段
         assert_eq!(analyses[0].name, "name");
         assert!(analyses[0].is_marked_as_attr);
-        
+
         // 检查第二个字段
         assert_eq!(analyses[1].name, "age");
         assert!(analyses[1].is_marked_as_attr);
         assert!(analyses[1].type_info.is_optional);
-        
+
         // 检查第三个字段
         assert_eq!(analyses[2].name, "description");
         assert!(!analyses[2].is_marked_as_attr);
     }
-    
+
     /// 测试属性字段过滤功能
     #[test]
     fn test_filter_attr_fields() {
@@ -756,15 +781,15 @@ mod tests {
                 description: String
             },
         ];
-        
+
         let analyses = FieldAnalyzer::analyze_fields(&fields).unwrap();
         let attr_fields = FieldAnalyzer::filter_attr_fields(&analyses);
-        
+
         assert_eq!(attr_fields.len(), 2);
         assert_eq!(attr_fields[0].name, "name");
         assert_eq!(attr_fields[1].name, "age");
     }
-    
+
     /// 测试字段类型支持性验证
     #[test]
     fn test_validate_field_type_support() {
@@ -775,7 +800,7 @@ mod tests {
         };
         let analysis = FieldAnalyzer::analyze_field(&field).unwrap();
         assert!(FieldAnalyzer::validate_field_type_support(&analysis).is_ok());
-        
+
         // 测试不支持的类型
         let field: Field = parse_quote! {
             #[attr]
@@ -784,7 +809,7 @@ mod tests {
         let analysis = FieldAnalyzer::analyze_field(&field).unwrap();
         assert!(FieldAnalyzer::validate_field_type_support(&analysis).is_err());
     }
-    
+
     /// 测试 FieldTypeInfo 的辅助方法
     #[test]
     fn test_field_type_info_helpers() {
@@ -793,13 +818,13 @@ mod tests {
         let type_info = FieldAnalyzer::analyze_field_type(&string_type);
         assert!(type_info.is_string_type());
         assert!(!type_info.is_numeric_type());
-        
+
         // 测试数值类型识别
         let numeric_type: Type = parse_quote! { i32 };
         let type_info = FieldAnalyzer::analyze_field_type(&numeric_type);
         assert!(!type_info.is_string_type());
         assert!(type_info.is_numeric_type());
-        
+
         // 测试 Option<String> 类型
         let option_string: Type = parse_quote! { Option<String> };
         let type_info = FieldAnalyzer::analyze_field_type(&option_string);
@@ -807,7 +832,7 @@ mod tests {
         assert!(!type_info.is_numeric_type());
         assert_eq!(type_info.base_type_name(), "String");
     }
-    
+
     /// 测试字段属性验证
     #[test]
     fn test_field_attribute_validation() {
@@ -818,7 +843,7 @@ mod tests {
         };
         let analysis = FieldAnalyzer::analyze_field(&field).unwrap();
         assert!(analysis.validate_as_attribute().is_ok());
-        
+
         // 测试没有属性标记的字段
         let field: Field = parse_quote! {
             name: String
@@ -826,7 +851,7 @@ mod tests {
         let analysis = FieldAnalyzer::analyze_field(&field).unwrap();
         assert!(analysis.validate_as_attribute().is_err());
     }
-    
+
     /// 测试字段信息显示
     #[test]
     fn test_field_display_info() {
@@ -836,27 +861,27 @@ mod tests {
         };
         let analysis = FieldAnalyzer::analyze_field(&field).unwrap();
         let display = analysis.display_info();
-        
+
         assert!(display.contains("name"));
         assert!(display.contains("Option<String>"));
         assert!(display.contains("可选"));
         assert!(display.contains("带属性标记"));
         assert!(display.contains("支持"));
     }
-    
+
     /// 测试无效的 #[attr] 属性格式
     #[test]
     fn test_invalid_attr_attribute_formats() {
         // 注意：由于 syn 解析限制，这里主要测试我们能够处理的格式
         // 实际的语法错误会在更早的解析阶段被 syn 捕获
-        
+
         let field: Field = parse_quote! {
             #[attr]
             name: String
         };
         let result = FieldAnalyzer::analyze_field(&field);
         assert!(result.is_ok());
-        
+
         let analysis = result.unwrap();
         assert!(analysis.is_marked_as_attr);
     }

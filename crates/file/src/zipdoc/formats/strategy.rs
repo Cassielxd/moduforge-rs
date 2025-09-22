@@ -250,7 +250,7 @@ where
 {
     let file = std::fs::File::create(path)?;
     let mut zw = ZipDocumentWriter::new(file)?;
-    
+
     // 添加元数据（如果提供）
     if let Some(meta) = meta_json {
         zw.add_json("meta.json", meta)?;
@@ -270,7 +270,7 @@ where
                     .to_string()
             }
         };
-        
+
         let default_meta = serde_json::json!({
             "type": "plugin_states_backup",
             "version": "1.0",
@@ -279,7 +279,7 @@ where
         });
         zw.add_json("meta.json", &default_meta)?;
     }
-    
+
     // 添加插件状态
     zw.add_plugin_states(plugin_states)?;
     let _ = zw.finalize()?;
@@ -288,18 +288,18 @@ where
 
 // 便利函数：只导入插件状态
 pub fn import_plugin_states_only<P>(
-    path: P,
+    path: P
 ) -> io::Result<(serde_json::Value, std::collections::HashMap<String, Vec<u8>>)>
 where
     P: AsRef<Path>,
 {
     let file = std::fs::File::open(path)?;
     let mut zr = ZipDocumentReader::new(file)?;
-    
+
     let meta_json = zr.read_all("meta.json")?;
     let meta_val: serde_json::Value = serde_json::from_slice(&meta_json)
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-    
+
     let plugin_states = zr.read_all_plugin_states()?;
     Ok((meta_val, plugin_states))
 }

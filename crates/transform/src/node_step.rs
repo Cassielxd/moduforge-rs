@@ -279,7 +279,8 @@ mod tests {
 
         // Add a node first
         let node = create_test_node("test");
-        tree.add_node(&"root".into(), &vec![node]).expect("测试中添加节点应该成功");
+        tree.add_node(&"root".into(), &vec![node])
+            .expect("测试中添加节点应该成功");
 
         let step = RemoveNodeStep::new("root".into(), vec!["test".into()]);
         let result = step.apply(&mut tree, schema.clone());
@@ -303,9 +304,12 @@ mod tests {
         let target = create_test_node("target");
         let node = create_test_node("node");
 
-        tree.add_node(&"root".into(), &vec![source]).expect("测试中添加源节点应该成功");
-        tree.add_node(&"root".into(), &vec![target]).expect("测试中添加目标节点应该成功");
-        tree.add_node(&"source".into(), &vec![node]).expect("测试中添加子节点应该成功");
+        tree.add_node(&"root".into(), &vec![source])
+            .expect("测试中添加源节点应该成功");
+        tree.add_node(&"root".into(), &vec![target])
+            .expect("测试中添加目标节点应该成功");
+        tree.add_node(&"source".into(), &vec![node])
+            .expect("测试中添加子节点应该成功");
 
         let step = MoveNodeStep::new(
             "source".into(),
@@ -318,7 +322,8 @@ mod tests {
         assert!(result.is_ok());
 
         // Verify node was moved
-        let target_node = tree.get_node(&"target".into()).expect("目标节点应该存在");
+        let target_node =
+            tree.get_node(&"target".into()).expect("目标节点应该存在");
         assert!(target_node.content.contains(&"node".into()));
 
         // Test invert

@@ -15,10 +15,12 @@ use deno_core::OpState;
 use deno_features::FeatureChecker;
 
 /// 用于检查不稳定特性的辅助器。用于同步操作。
-pub fn check_unstable(state: &OpState, feature: &str, api_name: &str) {
-  state
-    .borrow::<Arc<FeatureChecker>>()
-    .check_or_exit(feature, api_name);
+pub fn check_unstable(
+    state: &OpState,
+    feature: &str,
+    api_name: &str,
+) {
+    state.borrow::<Arc<FeatureChecker>>().check_or_exit(feature, api_name);
 }
 
 pub struct TestingFeaturesEnabled(pub bool);

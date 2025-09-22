@@ -51,37 +51,31 @@
 //! ```
 
 /// 属性解析器模块
-/// 
+///
 /// 提供 Node 和 Mark 宏属性的解析功能。
 /// 遵循单一职责原则，专门负责属性解析和配置构建。
 pub mod attribute_parser;
 
 /// 字段分析器模块
-/// 
+///
 /// 提供结构体字段的类型分析和属性检查功能。
 /// 遵循接口隔离原则，为字段分析提供专门的接口。
 pub mod field_analyzer;
 
 /// 验证器模块
-/// 
+///
 /// 提供配置验证和错误检查功能。
 /// 遵循开闭原则，支持扩展新的验证规则。
 pub mod validation;
 
 /// 默认值处理器模块
-/// 
+///
 /// 提供默认值的解析、验证和类型化表示功能。
 /// 遵循单一职责原则，专门负责默认值相关的所有逻辑。
 pub mod default_value;
 
 // 重新导出核心类型和函数，遵循接口隔离原则
-pub use attribute_parser::{
-    AttributeParser, NodeConfig, MarkConfig, FieldConfig
-};
-pub use field_analyzer::{
-    FieldAnalyzer, FieldTypeInfo, FieldAnalysis
-};
+pub use attribute_parser::{AttributeParser, NodeConfig, MarkConfig, FieldConfig};
+pub use field_analyzer::{FieldAnalyzer, FieldTypeInfo, FieldAnalysis};
 pub use validation::Validator;
-pub use default_value::{
-    DefaultValue, DefaultValueType, DefaultValueParser
-};
+pub use default_value::{DefaultValue, DefaultValueType, DefaultValueParser};

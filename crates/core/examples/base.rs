@@ -220,6 +220,7 @@ impl OSSUpload {
 async fn main() -> ForgeResult<()> {
     let mut editor = ForgeAsyncRuntime::create(get_ops()).await?;
     let doc = editor.doc();
+    dbg!(doc.clone());
     let mut tr: Transaction = Transaction::new(editor.get_state());
     let schema = &tr.schema;
     let dw_node =
@@ -227,6 +228,6 @@ async fn main() -> ForgeResult<()> {
     tr.add_node(doc.root_id().clone(), vec![dw_node])?;
     editor.dispatch(tr).await?;
     // 运行编辑器
-    //dbg!(editor.doc());
+    dbg!(editor.doc());
     Ok(())
 }

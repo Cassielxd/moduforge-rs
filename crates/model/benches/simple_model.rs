@@ -5,7 +5,7 @@ use serde_json::json;
 /// 基础节点操作基准测试
 fn bench_basic_node_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("基础节点操作");
-    
+
     // 节点创建基准测试
     group.bench_function("节点创建", |b| {
         let mut counter = 0;
@@ -15,7 +15,7 @@ fn bench_basic_node_operations(c: &mut Criterion) {
                 "paragraph".to_string(),
                 Attrs::default(),
                 vec![],
-                vec![]
+                vec![],
             );
             counter += 1;
             criterion::black_box(node)
@@ -29,12 +29,10 @@ fn bench_basic_node_operations(c: &mut Criterion) {
             "paragraph".to_string(),
             Attrs::default(),
             vec![],
-            vec![]
+            vec![],
         );
-        
-        b.iter(|| {
-            criterion::black_box(node.clone())
-        })
+
+        b.iter(|| criterion::black_box(node.clone()))
     });
 
     group.finish();
@@ -63,10 +61,8 @@ fn bench_attrs_operations(c: &mut Criterion) {
             map.insert(format!("attr_{}", i), json!(format!("value_{}", i)));
         }
         let attrs = Attrs::from(map);
-        
-        b.iter(|| {
-            criterion::black_box(attrs.get_safe("attr_25"))
-        })
+
+        b.iter(|| criterion::black_box(attrs.get_safe("attr_25")))
     });
 
     group.finish();
@@ -77,9 +73,7 @@ fn bench_id_generator(c: &mut Criterion) {
     let mut group = c.benchmark_group("ID生成");
 
     group.bench_function("ID生成", |b| {
-        b.iter(|| {
-            criterion::black_box(IdGenerator::get_id())
-        })
+        b.iter(|| criterion::black_box(IdGenerator::get_id()))
     });
 
     // 批量ID生成
@@ -89,12 +83,11 @@ fn bench_id_generator(c: &mut Criterion) {
             id_count,
             |b, &count| {
                 b.iter(|| {
-                    let ids: Vec<Box<str>> = (0..count)
-                        .map(|_| IdGenerator::get_id())
-                        .collect();
+                    let ids: Vec<Box<str>> =
+                        (0..count).map(|_| IdGenerator::get_id()).collect();
                     criterion::black_box(ids)
                 })
-            }
+            },
         );
     }
 
@@ -110,18 +103,16 @@ fn bench_serialization(c: &mut Criterion) {
         let mut map = imbl::HashMap::new();
         map.insert("class".to_string(), json!("highlight"));
         map.insert("id".to_string(), json!("test-123"));
-        
+
         let node = Node::new(
             "test_node",
             "paragraph".to_string(),
             Attrs::from(map),
             vec!["child1".into(), "child2".into()],
-            vec![]
+            vec![],
         );
-        
-        b.iter(|| {
-            criterion::black_box(serde_json::to_string(&node).unwrap())
-        })
+
+        b.iter(|| criterion::black_box(serde_json::to_string(&node).unwrap()))
     });
 
     // JSON反序列化
@@ -129,18 +120,20 @@ fn bench_serialization(c: &mut Criterion) {
         let mut map = imbl::HashMap::new();
         map.insert("class".to_string(), json!("highlight"));
         map.insert("id".to_string(), json!("test-123"));
-        
+
         let node = Node::new(
             "test_node",
             "paragraph".to_string(),
             Attrs::from(map),
             vec!["child1".into(), "child2".into()],
-            vec![]
+            vec![],
         );
         let json_str = serde_json::to_string(&node).unwrap();
-        
+
         b.iter(|| {
-            criterion::black_box(serde_json::from_str::<Node>(&json_str).unwrap())
+            criterion::black_box(
+                serde_json::from_str::<Node>(&json_str).unwrap(),
+            )
         })
     });
 

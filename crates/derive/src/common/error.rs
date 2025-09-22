@@ -18,7 +18,7 @@ pub enum MacroError {
     ///
     /// 当结构体缺少必需的宏属性（如 `node_type` 或 `mark_type`）时触发此错误
     #[error("缺少必需的宏属性: {attribute}")]
-    MissingAttribute { 
+    MissingAttribute {
         /// 缺少的属性名称
         attribute: String,
         /// 错误发生的代码位置
@@ -98,9 +98,9 @@ impl MacroError {
     ///
     /// 将 MacroError 转换为 `proc_macro2::TokenStream`，
     /// 以便在编译时显示友好的错误消息。
-    /// 
+    ///
     /// # 设计原则体现
-    /// 
+    ///
     /// - **单一职责**: 只负责错误到 TokenStream 的转换
     /// - **里氏替换**: 所有 MacroError 类型都能统一转换
     ///
@@ -129,7 +129,10 @@ impl MacroError {
     /// # 返回值
     ///
     /// 返回带有位置信息的 MacroError
-    pub fn missing_attribute<T: Spanned>(attribute: &str, spanned: &T) -> Self {
+    pub fn missing_attribute<T: Spanned>(
+        attribute: &str,
+        spanned: &T,
+    ) -> Self {
         Self::MissingAttribute {
             attribute: attribute.to_string(),
             span: Some(spanned.span()),
@@ -201,7 +204,10 @@ impl MacroError {
     /// # 返回值
     ///
     /// 返回带有位置信息的 MacroError
-    pub fn parse_error<T: Spanned>(message: &str, spanned: &T) -> Self {
+    pub fn parse_error<T: Spanned>(
+        message: &str,
+        spanned: &T,
+    ) -> Self {
         Self::ParseError {
             message: message.to_string(),
             span: Some(spanned.span()),
@@ -220,7 +226,10 @@ impl MacroError {
     /// # 返回值
     ///
     /// 返回带有位置信息的 MacroError
-    pub fn validation_error<T: Spanned>(message: &str, spanned: &T) -> Self {
+    pub fn validation_error<T: Spanned>(
+        message: &str,
+        spanned: &T,
+    ) -> Self {
         Self::ValidationError {
             message: message.to_string(),
             span: Some(spanned.span()),
@@ -239,7 +248,10 @@ impl MacroError {
     /// # 返回值
     ///
     /// 返回带有位置信息的 MacroError
-    pub fn generation_error<T: Spanned>(message: &str, spanned: &T) -> Self {
+    pub fn generation_error<T: Spanned>(
+        message: &str,
+        spanned: &T,
+    ) -> Self {
         Self::GenerationError {
             message: message.to_string(),
             span: Some(spanned.span()),
@@ -285,19 +297,20 @@ impl MacroError {
                         "请在结构体上添加 #[mark_type = \"类型名\"] 属性，例如: #[mark_type = \"bold\"]"
                     ),
                     _ => format!(
-                        "请在结构体上添加 #[{} = \"值\"] 属性", attribute
+                        "请在结构体上添加 #[{} = \"值\"] 属性",
+                        attribute
                     ),
                 }
-            }
+            },
             Self::InvalidAttributeValue { attribute, .. } => {
                 format!("请检查 #{} 属性的值格式是否正确", attribute)
-            }
+            },
             Self::UnsupportedFieldType { field_name, field_type, .. } => {
                 format!(
                     "字段 '{}' 的类型 '{}' 不受支持，请使用支持的基本类型：String, i32, i64, f32, f64, bool 或其 Option 包装版本",
                     field_name, field_type
                 )
-            }
+            },
             _ => "请检查宏的使用方式是否符合文档要求".to_string(),
         }
     }
@@ -340,7 +353,10 @@ pub fn create_compile_error(message: &str) -> TokenStream2 {
 /// # 返回值
 ///
 /// 返回包含错误和建议的 TokenStream
-pub fn create_compile_error_with_suggestion(error_msg: &str, suggestion: &str) -> TokenStream2 {
+pub fn create_compile_error_with_suggestion(
+    error_msg: &str,
+    suggestion: &str,
+) -> TokenStream2 {
     let combined_message = format!("{}\n\n修复建议: {}", error_msg, suggestion);
     quote! {
         compile_error!(#combined_message);
@@ -357,11 +373,11 @@ mod tests {
     fn test_missing_attribute_error() {
         let tokens = quote! { struct Test {} };
         let error = MacroError::missing_attribute("node_type", &tokens);
-        
+
         // 验证错误消息格式
         let error_str = error.to_string();
         assert!(error_str.contains("缺少必需的宏属性: node_type"));
-        
+
         // 验证修复建议
         let suggestion = error.suggestion();
         assert!(suggestion.contains("node_type"));
@@ -369,16 +385,16 @@ mod tests {
     }
 
     /// 测试无效属性值错误的创建和转换
-    #[test]  
+    #[test]
     fn test_invalid_attribute_value_error() {
         let tokens = quote! { #[node_type = ""] };
         let error = MacroError::invalid_attribute_value(
-            "node_type", 
-            "", 
-            "值不能为空", 
-            &tokens
+            "node_type",
+            "",
+            "值不能为空",
+            &tokens,
         );
-        
+
         let error_str = error.to_string();
         assert!(error_str.contains("无效的属性值"));
         assert!(error_str.contains("node_type"));
@@ -392,10 +408,10 @@ mod tests {
             message: "测试错误".to_string(),
             span: None,
         };
-        
+
         let compile_error = error.to_compile_error();
         let compile_error_str = compile_error.to_string();
-        
+
         // 验证生成的编译错误包含 compile_error! 宏
         assert!(compile_error_str.contains("compile_error"));
         assert!(compile_error_str.contains("测试错误"));
@@ -408,16 +424,16 @@ mod tests {
             attribute: "node_type".to_string(),
             span: None,
         };
-        
+
         let suggestion = missing_node_type.suggestion();
         assert!(suggestion.contains("node_type"));
         assert!(suggestion.contains("paragraph"));
-        
+
         let missing_mark_type = MacroError::MissingAttribute {
             attribute: "mark_type".to_string(),
             span: None,
         };
-        
+
         let suggestion = missing_mark_type.suggestion();
         assert!(suggestion.contains("mark_type"));
         assert!(suggestion.contains("bold"));

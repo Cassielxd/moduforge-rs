@@ -16,7 +16,7 @@ pub struct RcjPlugin;
 #[async_trait]
 impl PluginTrait for RcjPlugin {
     fn metadata(&self) -> PluginMetadata {
-        PluginMetadata{
+        PluginMetadata {
             name: "rcj".to_string(),
             version: "1.0.0".to_string(),
             description: "人材机插件".to_string(),

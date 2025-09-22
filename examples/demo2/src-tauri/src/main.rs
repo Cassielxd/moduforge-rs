@@ -29,15 +29,21 @@ fn handle_tauri_error(error: tauri::Error) {
 }
 
 // 窗体管理辅助函数
-fn register_window(window_id: &str, parent_id: Option<String>) {
+fn register_window(
+    window_id: &str,
+    parent_id: Option<String>,
+) {
     let mut manager = WINDOW_MANAGER.lock().unwrap();
 
     // 注册当前窗口
-    manager.insert(window_id.to_string(), WindowRelation {
-        parent: parent_id.clone(),
-        children: Vec::new(),
-        is_minimized: false,
-    });
+    manager.insert(
+        window_id.to_string(),
+        WindowRelation {
+            parent: parent_id.clone(),
+            children: Vec::new(),
+            is_minimized: false,
+        },
+    );
 
     // 如果有父窗口，将当前窗口添加到父窗口的子窗口列表中
     if let Some(ref parent) = parent_id {
@@ -73,12 +79,16 @@ fn unregister_window(window_id: &str) {
 
 fn get_child_windows(parent_id: &str) -> Vec<String> {
     let manager = WINDOW_MANAGER.lock().unwrap();
-    manager.get(parent_id)
+    manager
+        .get(parent_id)
         .map(|relation| relation.children.clone())
         .unwrap_or_default()
 }
 
-fn set_window_minimized(window_id: &str, minimized: bool) {
+fn set_window_minimized(
+    window_id: &str,
+    minimized: bool,
+) {
     let mut manager = WINDOW_MANAGER.lock().unwrap();
     if let Some(relation) = manager.get_mut(window_id) {
         relation.is_minimized = minimized;
@@ -87,13 +97,17 @@ fn set_window_minimized(window_id: &str, minimized: bool) {
 
 fn is_window_minimized(window_id: &str) -> bool {
     let manager = WINDOW_MANAGER.lock().unwrap();
-    manager.get(window_id)
+    manager
+        .get(window_id)
         .map(|relation| relation.is_minimized)
         .unwrap_or(false)
 }
 
 // 设置主窗口事件监听
-fn setup_main_window_events(app: &AppHandle, window: &tauri::WebviewWindow) {
+fn setup_main_window_events(
+    app: &AppHandle,
+    window: &tauri::WebviewWindow,
+) {
     let app_handle = app.clone();
     let window_id = window.label().to_string();
 
@@ -105,7 +119,9 @@ fn setup_main_window_events(app: &AppHandle, window: &tauri::WebviewWindow) {
                 // 获取所有子窗口并关闭
                 let child_windows = get_child_windows(&window_id);
                 for child_id in child_windows {
-                    if let Some(child_window) = app_handle.get_webview_window(&child_id) {
+                    if let Some(child_window) =
+                        app_handle.get_webview_window(&child_id)
+                    {
                         unregister_window(&child_id);
                         let _ = child_window.close();
                         println!("已关闭子窗口: {}", child_id);
@@ -114,14 +130,14 @@ fn setup_main_window_events(app: &AppHandle, window: &tauri::WebviewWindow) {
 
                 // 注销主窗口
                 unregister_window(&window_id);
-            }
+            },
             WindowEvent::Resized(_) => {
                 // 可以在这里处理窗口大小变化
-            }
+            },
             WindowEvent::Moved(_) => {
                 // 可以在这里处理窗口位置变化
-            }
-            _ => {}
+            },
+            _ => {},
         }
     });
 }
@@ -274,52 +290,54 @@ async fn create_module_window(
     let window_label = format!("module-{}", module_key);
     if let Some(existing_window) = app.get_webview_window(&window_label) {
         println!("模块窗口已存在，简单恢复显示");
-        
+
         // 像工作台一样简单处理：只做基本的显示和聚焦
         existing_window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
-        existing_window.set_focus().map_err(|e| format!("设置焦点失败: {}", e))?;
-        existing_window.unminimize().map_err(|e| format!("取消最小化失败: {}", e))?;
-        
+        existing_window
+            .set_focus()
+            .map_err(|e| format!("设置焦点失败: {}", e))?;
+        existing_window
+            .unminimize()
+            .map_err(|e| format!("取消最小化失败: {}", e))?;
+
         println!("模块窗口恢复完成: {}", window_label);
         return Ok(());
     }
 
     // 处理 URL：区分开发环境和生产环境
-    let webview_url = if url.starts_with("http://") || url.starts_with("https://") {
-        // 开发环境：外部 URL
-        let parsed_url = url.parse().map_err(|e| {
-            let error_msg = format!("URL解析失败: {} - URL: {}", e, url);
-            println!("{}", error_msg);
-            error_msg
-        })?;
-        println!("使用外部URL: {:?}", parsed_url);
-        tauri::WebviewUrl::External(parsed_url)
-    } else {
-        // 生产环境：应用内路径
-        println!("使用应用内路径: {}", url);
-        tauri::WebviewUrl::App(url.into())
-    };
+    let webview_url =
+        if url.starts_with("http://") || url.starts_with("https://") {
+            // 开发环境：外部 URL
+            let parsed_url = url.parse().map_err(|e| {
+                let error_msg = format!("URL解析失败: {} - URL: {}", e, url);
+                println!("{}", error_msg);
+                error_msg
+            })?;
+            println!("使用外部URL: {:?}", parsed_url);
+            tauri::WebviewUrl::External(parsed_url)
+        } else {
+            // 生产环境：应用内路径
+            println!("使用应用内路径: {}", url);
+            tauri::WebviewUrl::App(url.into())
+        };
 
     // 创建新的模块窗口
     println!("开始创建窗口，标签: {}", window_label);
-    let module_window = tauri::WebviewWindowBuilder::new(
-        &app,
-        &window_label,
-        webview_url,
-    )
-    .title(&title)
-    .inner_size(1200.0, 800.0)
-    .min_inner_size(900.0, 600.0)
-    .resizable(true)
-    .decorations(false)  // 使用自定义头部组件，不显示原生标题栏
-    .visible(true)
-    .focused(true)
-    .center()
-    .build()
-    .map_err(|e| {
-        println!("创建模块窗口失败: {}", e);
-        format!("创建模块窗口失败: {}", e)
-    })?;
+    let module_window =
+        tauri::WebviewWindowBuilder::new(&app, &window_label, webview_url)
+            .title(&title)
+            .inner_size(1200.0, 800.0)
+            .min_inner_size(900.0, 600.0)
+            .resizable(true)
+            .decorations(false) // 使用自定义头部组件，不显示原生标题栏
+            .visible(true)
+            .focused(true)
+            .center()
+            .build()
+            .map_err(|e| {
+                println!("创建模块窗口失败: {}", e);
+                format!("创建模块窗口失败: {}", e)
+            })?;
 
     println!("模块窗口创建成功: {}", window_label);
 
@@ -329,32 +347,34 @@ async fn create_module_window(
     // 设置模块窗口事件监听
     let app_handle = app.clone();
     let window_id_clone = window_label.clone();
-    
+
     module_window.on_window_event(move |event| {
         match event {
             tauri::WindowEvent::CloseRequested { .. } => {
                 println!("模块窗口即将关闭: {}", window_id_clone);
-                
+
                 // 获取所有子窗口并关闭
                 let child_windows = get_child_windows(&window_id_clone);
                 for child_id in child_windows {
-                    if let Some(child_window) = app_handle.get_webview_window(&child_id) {
+                    if let Some(child_window) =
+                        app_handle.get_webview_window(&child_id)
+                    {
                         unregister_window(&child_id);
                         let _ = child_window.close();
                         println!("已关闭子窗口: {}", child_id);
                     }
                 }
-                
+
                 // 注销模块窗口
                 unregister_window(&window_id_clone);
-            }
+            },
             tauri::WindowEvent::Resized(_) => {
                 // 处理窗口大小变化
-            }
+            },
             tauri::WindowEvent::Moved(_) => {
                 // 处理窗口位置变化
-            }
-            _ => {}
+            },
+            _ => {},
         }
     });
 
@@ -382,22 +402,29 @@ async fn create_child_window(
     height: Option<f64>,
     parent_window: Option<String>,
 ) -> Result<(), String> {
-    println!("创建子窗口: {} - {} - URL: {} - Modal: {:?}", window_id, title, url, modal);
+    println!(
+        "创建子窗口: {} - {} - URL: {} - Modal: {:?}",
+        window_id, title, url, modal
+    );
     println!("父窗口参数: {:?}", parent_window);
 
     let is_modal = modal.unwrap_or(false);
     let window_width = width.unwrap_or(800.0);
     let window_height = height.unwrap_or(600.0);
     let parent_id = parent_window.clone().unwrap_or_else(|| "main".to_string());
-    
+
     println!("处理后的父窗口ID: {} (模态: {})", parent_id, is_modal);
 
     // 检查窗口是否已存在
     if let Some(existing_window) = app.get_webview_window(&window_id) {
         println!("子窗口已存在，显示并聚焦");
         existing_window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
-        existing_window.set_focus().map_err(|e| format!("设置焦点失败: {}", e))?;
-        existing_window.unminimize().map_err(|e| format!("取消最小化失败: {}", e))?;
+        existing_window
+            .set_focus()
+            .map_err(|e| format!("设置焦点失败: {}", e))?;
+        existing_window
+            .unminimize()
+            .map_err(|e| format!("取消最小化失败: {}", e))?;
         return Ok(());
     }
 
@@ -417,41 +444,37 @@ async fn create_child_window(
     }
 
     // 处理 URL
-    let webview_url = if url.starts_with("http://") || url.starts_with("https://") {
-        let parsed_url = url.parse().map_err(|e| {
-            let error_msg = format!("URL解析失败: {} - URL: {}", e, url);
-            println!("{}", error_msg);
-            error_msg
-        })?;
-        tauri::WebviewUrl::External(parsed_url)
-    } else {
-        tauri::WebviewUrl::App(url.into())
-    };
+    let webview_url =
+        if url.starts_with("http://") || url.starts_with("https://") {
+            let parsed_url = url.parse().map_err(|e| {
+                let error_msg = format!("URL解析失败: {} - URL: {}", e, url);
+                println!("{}", error_msg);
+                error_msg
+            })?;
+            tauri::WebviewUrl::External(parsed_url)
+        } else {
+            tauri::WebviewUrl::App(url.into())
+        };
 
     // 创建子窗口
-    let mut window_builder = tauri::WebviewWindowBuilder::new(
-        &app,
-        &window_id,
-        webview_url,
-    )
-    .title(&title)
-    .inner_size(window_width, window_height)
-    .resizable(true)
-    .decorations(false) // 使用自定义头部组件，不显示原生标题栏
-    .visible(true)
-    .focused(true)
-    .center()
-    .skip_taskbar(true); // 子窗口不在状态栏显示
+    let mut window_builder =
+        tauri::WebviewWindowBuilder::new(&app, &window_id, webview_url)
+            .title(&title)
+            .inner_size(window_width, window_height)
+            .resizable(true)
+            .decorations(false) // 使用自定义头部组件，不显示原生标题栏
+            .visible(true)
+            .focused(true)
+            .center()
+            .skip_taskbar(true); // 子窗口不在状态栏显示
 
     // 模态窗口不设置always_on_top，而是通过父窗口禁用来实现模态效果
     // 这样用户仍然可以在窗口间切换，但无法与被禁用的父窗口交互
 
-    let child_window = window_builder
-        .build()
-        .map_err(|e| {
-            println!("创建子窗口失败: {}", e);
-            format!("创建子窗口失败: {}", e)
-        })?;
+    let child_window = window_builder.build().map_err(|e| {
+        println!("创建子窗口失败: {}", e);
+        format!("创建子窗口失败: {}", e)
+    })?;
 
     // 注册窗口关系
     register_window(&window_id, Some(parent_id.clone()));
@@ -470,7 +493,9 @@ async fn create_child_window(
 
                 // 如果是模态窗口，重新启用父窗口
                 if is_modal {
-                    if let Some(parent_win) = app_handle.get_webview_window(&parent_id_clone) {
+                    if let Some(parent_win) =
+                        app_handle.get_webview_window(&parent_id_clone)
+                    {
                         let _ = parent_win.emit("window-enabled", true);
                         println!("已重新启用父窗口: {}", parent_id_clone);
                     }
@@ -478,8 +503,8 @@ async fn create_child_window(
 
                 // 注销窗口关系
                 unregister_window(&window_id_clone);
-            }
-            _ => {}
+            },
+            _ => {},
         }
     });
 
@@ -540,7 +565,9 @@ async fn minimize_window_with_children(
     let child_windows = get_child_windows(&window_id);
     for child_id in child_windows {
         if let Some(child_window) = app.get_webview_window(&child_id) {
-            child_window.minimize().map_err(|e| format!("最小化子窗口失败: {}", e))?;
+            child_window
+                .minimize()
+                .map_err(|e| format!("最小化子窗口失败: {}", e))?;
             set_window_minimized(&child_id, true);
             println!("已最小化子窗口: {}", child_id);
         }
@@ -569,8 +596,12 @@ async fn restore_window_with_children(
     let child_windows = get_child_windows(&window_id);
     for child_id in child_windows {
         if let Some(child_window) = app.get_webview_window(&child_id) {
-            child_window.unminimize().map_err(|e| format!("恢复子窗口失败: {}", e))?;
-            child_window.show().map_err(|e| format!("显示子窗口失败: {}", e))?;
+            child_window
+                .unminimize()
+                .map_err(|e| format!("恢复子窗口失败: {}", e))?;
+            child_window
+                .show()
+                .map_err(|e| format!("显示子窗口失败: {}", e))?;
             // 注意：子窗口通常不需要立即获取焦点，让用户决定
             set_window_minimized(&child_id, false);
             println!("已恢复并显示子窗口: {}", child_id);
@@ -595,7 +626,9 @@ async fn close_window_with_children(
     for child_id in child_windows {
         if let Some(child_window) = app.get_webview_window(&child_id) {
             unregister_window(&child_id);
-            child_window.close().map_err(|e| format!("关闭子窗口失败: {}", e))?;
+            child_window
+                .close()
+                .map_err(|e| format!("关闭子窗口失败: {}", e))?;
             println!("已关闭子窗口: {}", child_id);
         }
     }
@@ -612,11 +645,13 @@ async fn close_window_with_children(
 
 // 获取父窗口ID的命令
 #[tauri::command]
-async fn get_parent_window(window_id: String) -> Result<Option<String>, String> {
+async fn get_parent_window(
+    window_id: String
+) -> Result<Option<String>, String> {
     let manager = WINDOW_MANAGER.lock().unwrap();
-    let parent_id = manager.get(&window_id)
-        .and_then(|relation| relation.parent.clone());
-    
+    let parent_id =
+        manager.get(&window_id).and_then(|relation| relation.parent.clone());
+
     println!("获取父窗口: {} -> {:?}", window_id, parent_id);
     Ok(parent_id)
 }
@@ -634,7 +669,7 @@ async fn show_existing_window(
         window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
         window.set_focus().map_err(|e| format!("设置焦点失败: {}", e))?;
         window.unminimize().map_err(|e| format!("取消最小化失败: {}", e))?;
-        
+
         println!("已显示现有窗口: {}", window_id);
         Ok(())
     } else {
@@ -653,7 +688,8 @@ async fn send_window_message(
     println!("发送消息到窗口: {} -> {:?}", target_window_id, payload);
 
     if let Some(target_window) = app.get_webview_window(&target_window_id) {
-        target_window.emit("data-exchange", &payload)
+        target_window
+            .emit("data-exchange", &payload)
             .map_err(|e| format!("发送消息失败: {}", e))?;
         println!("消息已发送到窗口: {}", target_window_id);
     } else {
@@ -685,7 +721,7 @@ async fn broadcast_to_children(
                 },
                 Err(e) => {
                     println!("发送到子窗口失败: {} - {}", child_id, e);
-                }
+                },
             }
         }
     }
@@ -750,7 +786,6 @@ async fn main() -> anyhow::Result<()> {
 
             Ok(())
         })
-
         .invoke_handler(tauri::generate_handler![
             handle_login_success,
             handle_logout,

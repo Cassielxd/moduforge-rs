@@ -152,7 +152,10 @@ macro_rules! mf_meta {
 }
 
 /// 创建插件元数据的辅助宏 (已废弃，请使用 mf_meta!)
-#[deprecated(since = "2.0.0", note = "请使用 mf_meta! 宏代替，它不需要重复指定插件名称")]
+#[deprecated(
+    since = "2.0.0",
+    note = "请使用 mf_meta! 宏代替，它不需要重复指定插件名称"
+)]
 #[macro_export]
 macro_rules! mf_plugin_metadata {
     ($name:expr) => {{
@@ -167,7 +170,7 @@ macro_rules! mf_plugin_metadata {
             tags: vec![],
         }
     }};
-    
+
     ($name:expr, version = $version:expr) => {{
         mf_state::plugin::PluginMetadata {
             name: $name.to_string(),
@@ -180,8 +183,8 @@ macro_rules! mf_plugin_metadata {
             tags: vec![],
         }
     }};
-    
-    ($name:expr, 
+
+    ($name:expr,
      version = $version:expr,
      description = $desc:expr,
      author = $author:expr
@@ -213,7 +216,7 @@ macro_rules! mf_plugin_config {
             settings: std::collections::HashMap::new(),
         }
     }};
-    
+
     (enabled = $enabled:expr, priority = $priority:expr) => {{
         mf_state::plugin::PluginConfig {
             enabled: $enabled,
@@ -221,7 +224,7 @@ macro_rules! mf_plugin_config {
             settings: std::collections::HashMap::new(),
         }
     }};
-    
+
     (enabled = $enabled:expr, priority = $priority:expr, settings = { $($key:expr => $value:expr),* $(,)? }) => {{
         let mut settings = std::collections::HashMap::new();
         $(
@@ -236,14 +239,14 @@ macro_rules! mf_plugin_config {
 }
 
 /// 定义具有声明式语法的 ModuForge 插件，类似于 extension! 宏的设计
-/// 
+///
 /// # 示例
-/// 
+///
 /// ```rust
 /// use mf_macro::{mf_plugin, mf_plugin_metadata, mf_plugin_config};
 /// use mf_state::{Transaction, State, plugin::PluginMetadata, plugin::PluginConfig};
 /// use mf_state::error::StateResult;
-/// 
+///
 /// // 定义事务处理函数
 /// async fn validate_transaction(
 ///     _trs: &[Transaction],
@@ -253,12 +256,12 @@ macro_rules! mf_plugin_config {
 ///     println!("验证事务");
 ///     Ok(None)
 /// }
-/// 
+///
 /// async fn filter_transaction(tr: &Transaction, _state: &State) -> bool {
 ///     // 简单的过滤逻辑
 ///     true
 /// }
-/// 
+///
 /// // 使用声明式语法创建插件
 /// mf_plugin!(
 ///     validation_plugin,
@@ -278,7 +281,7 @@ macro_rules! mf_plugin_config {
 ///     filter_transaction = filter_transaction,
 ///     docs = "用于事务验证和安全检查的插件"
 /// );
-/// 
+///
 /// // 使用方法
 /// let plugin = validation_plugin::new();
 /// let spec = validation_plugin::spec();
@@ -296,13 +299,13 @@ macro_rules! mf_plugin {
         $(,)?
     ) => {
         $( #[doc = $docs] )?
-        /// 
+        ///
         /// 用于框架的 ModuForge 插件。
         /// 要使用它，请调用 new() 方法获取插件实例或 spec() 方法获取插件规范：
-        /// 
+        ///
         /// ```rust,ignore
         /// use mf_state::plugin::{Plugin, PluginSpec};
-        /// 
+        ///
         #[doc = concat!("let plugin = ", stringify!($name), "::new();")]
         #[doc = concat!("let spec = ", stringify!($name), "::spec();")]
         /// ```
@@ -316,7 +319,7 @@ macro_rules! mf_plugin {
                 let spec = Self::spec();
                 mf_state::plugin::Plugin::new(spec)
             }
-            
+
             /// 获取插件规范
             pub fn spec() -> mf_state::plugin::PluginSpec {
                 let trait_impl = std::sync::Arc::new(Self);
@@ -356,13 +359,13 @@ macro_rules! mf_plugin {
                     }
                 }
             }
-            
+
             $(
                 fn config(&self) -> mf_state::plugin::PluginConfig {
                     $config
                 }
             )?
-            
+
             $(
                 async fn append_transaction(
                     &self,
@@ -373,7 +376,7 @@ macro_rules! mf_plugin {
                     ($append_fn)(trs, old_state, new_state).await
                 }
             )?
-            
+
             $(
                 async fn filter_transaction(
                     &self,
@@ -384,7 +387,7 @@ macro_rules! mf_plugin {
                 }
             )?
         }
-        
+
     };
 }
 
@@ -399,7 +402,7 @@ macro_rules! mf_plugin_with_config {
         $(,)?
     ) => {
         $( #[doc = $docs] )?
-        /// 
+        ///
         /// 可配置的 ModuForge 插件。
         #[allow(non_camel_case_types)]
         #[derive(Debug)]
@@ -411,7 +414,7 @@ macro_rules! mf_plugin_with_config {
                 let spec = Self::spec($( $config_field ),+);
                 mf_state::plugin::Plugin::new(spec)
             }
-            
+
             /// 使用配置获取插件规范
             pub fn spec( $( $config_field: $config_type ),+ ) -> mf_state::plugin::PluginSpec {
                 ($init_fn)($( $config_field ),+)

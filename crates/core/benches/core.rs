@@ -52,7 +52,7 @@ fn bench_configuration_system(c: &mut Criterion) {
                 let is_valid = config.validate();
                 criterion::black_box((config, is_valid))
             },
-            criterion::BatchSize::SmallInput
+            criterion::BatchSize::SmallInput,
         )
     });
 
@@ -66,7 +66,10 @@ fn bench_history_manager(c: &mut Criterion) {
     // HistoryManager创建
     group.bench_function("HistoryManager创建", |b| {
         b.iter(|| {
-            let history_manager = HistoryManager::<String>::new("initial".to_string(), Some(1000));
+            let history_manager = HistoryManager::<String>::new(
+                "initial".to_string(),
+                Some(1000),
+            );
             criterion::black_box(history_manager)
         })
     });
@@ -80,7 +83,10 @@ fn bench_history_manager(c: &mut Criterion) {
                 persistence_interval: Duration::from_secs(60),
                 enable_incremental_snapshots: true,
             };
-            let history_manager = HistoryManager::<String>::with_config("initial".to_string(), config);
+            let history_manager = HistoryManager::<String>::with_config(
+                "initial".to_string(),
+                config,
+            );
             criterion::black_box(history_manager)
         })
     });
@@ -129,7 +135,7 @@ fn bench_error_handling(c: &mut Criterion) {
     // ForgeError创建
     group.bench_function("ForgeError创建", |b| {
         b.iter(|| {
-            let error = ForgeError::State { 
+            let error = ForgeError::State {
                 message: "运行时错误".to_string(),
                 source: None,
             };
@@ -190,7 +196,10 @@ fn bench_integration_features(c: &mut Criterion) {
         b.iter(|| {
             let config = ForgeConfig::for_environment(Environment::Development);
             let history_config = config.history.clone();
-            let history_manager = HistoryManager::<String>::with_config("initial".to_string(), history_config);
+            let history_manager = HistoryManager::<String>::with_config(
+                "initial".to_string(),
+                history_config,
+            );
             criterion::black_box((config, history_manager))
         })
     });
@@ -207,7 +216,7 @@ fn bench_integration_features(c: &mut Criterion) {
                 .cache_config(CacheConfig::default())
                 .build()
                 .expect("配置构建失败");
-            
+
             let is_valid = config.validate();
             criterion::black_box((config, is_valid))
         })

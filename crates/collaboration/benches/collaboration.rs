@@ -11,13 +11,16 @@ fn bench_data_structures(c: &mut Criterion) {
     group.bench_function("RoomSnapshot创建", |b| {
         b.iter(|| {
             let mut nodes = HashMap::new();
-            nodes.insert("node1".to_string(), NodeData {
-                id: "node1".to_string(),
-                node_type: "paragraph".to_string(),
-                attrs: HashMap::new(),
-                content: vec!["Hello World".to_string()],
-                marks: vec![],
-            });
+            nodes.insert(
+                "node1".to_string(),
+                NodeData {
+                    id: "node1".to_string(),
+                    node_type: "paragraph".to_string(),
+                    attrs: HashMap::new(),
+                    content: vec!["Hello World".to_string()],
+                    marks: vec![],
+                },
+            );
 
             let snapshot = RoomSnapshot {
                 room_id: "test_room".to_string(),
@@ -94,7 +97,7 @@ fn bench_batch_data_processing(c: &mut Criterion) {
                         .collect();
                     criterion::black_box(nodes)
                 })
-            }
+            },
         );
     }
 
@@ -113,10 +116,10 @@ fn bench_batch_data_processing(c: &mut Criterion) {
                                 attrs: HashMap::new(),
                                 content: vec![format!("Content {} {}", i, j)],
                                 marks: vec![],
-                            }
+                            },
                         );
                     }
-                    
+
                     RoomSnapshot {
                         room_id: format!("room_{}", i),
                         root_id: "root".to_string(),
@@ -169,13 +172,16 @@ fn bench_serialization(c: &mut Criterion) {
     // RoomSnapshot 序列化
     group.bench_function("RoomSnapshot序列化", |b| {
         let mut nodes = HashMap::new();
-        nodes.insert("node1".to_string(), NodeData {
-            id: "node1".to_string(),
-            node_type: "paragraph".to_string(),
-            attrs: HashMap::new(),
-            content: vec!["Content".to_string()],
-            marks: vec![],
-        });
+        nodes.insert(
+            "node1".to_string(),
+            NodeData {
+                id: "node1".to_string(),
+                node_type: "paragraph".to_string(),
+                attrs: HashMap::new(),
+                content: vec!["Content".to_string()],
+                marks: vec![],
+            },
+        );
 
         let snapshot = RoomSnapshot {
             room_id: "test_room".to_string(),
@@ -222,10 +228,8 @@ fn bench_room_management(c: &mut Criterion) {
         ];
 
         b.iter(|| {
-            let processed_statuses: Vec<String> = statuses
-                .iter()
-                .map(|status| format!("{:?}", status))
-                .collect();
+            let processed_statuses: Vec<String> =
+                statuses.iter().map(|status| format!("{:?}", status)).collect();
             criterion::black_box(processed_statuses)
         })
     });
@@ -240,10 +244,10 @@ fn bench_room_management(c: &mut Criterion) {
                     let rooms: Vec<RoomInfo> = (0..count)
                         .map(|i| RoomInfo {
                             room_id: format!("room_{}", i),
-                            status: if i % 2 == 0 { 
-                                RoomStatus::Initialized 
-                            } else { 
-                                RoomStatus::Created 
+                            status: if i % 2 == 0 {
+                                RoomStatus::Initialized
+                            } else {
+                                RoomStatus::Created
                             },
                             node_count: i * 10,
                             client_count: i % 5,
@@ -252,7 +256,7 @@ fn bench_room_management(c: &mut Criterion) {
                         .collect();
                     criterion::black_box(rooms)
                 })
-            }
+            },
         );
     }
 
@@ -272,17 +276,25 @@ fn bench_complex_operations(c: &mut Criterion) {
                 attrs: {
                     let mut attrs = HashMap::new();
                     for i in 0..10 {
-                        attrs.insert(format!("attr_{}", i), json!(format!("value_{}", i)));
+                        attrs.insert(
+                            format!("attr_{}", i),
+                            json!(format!("value_{}", i)),
+                        );
                     }
                     attrs
                 },
-                content: (0..20).map(|i| format!("Content line {}", i)).collect(),
+                content: (0..20)
+                    .map(|i| format!("Content line {}", i))
+                    .collect(),
                 marks: (0..5)
                     .map(|i| MarkData {
                         mark_type: format!("mark_{}", i),
                         attrs: {
                             let mut mark_attrs = HashMap::new();
-                            mark_attrs.insert("style".to_string(), json!(format!("style_{}", i)));
+                            mark_attrs.insert(
+                                "style".to_string(),
+                                json!(format!("style_{}", i)),
+                            );
                             mark_attrs
                         },
                     })
@@ -296,30 +308,37 @@ fn bench_complex_operations(c: &mut Criterion) {
     group.bench_function("大型RoomSnapshot处理", |b| {
         b.iter(|| {
             let mut nodes = HashMap::new();
-            
+
             // 创建大量节点
             for i in 0..100 {
                 nodes.insert(
                     format!("node_{}", i),
                     NodeData {
                         id: format!("node_{}", i),
-                        node_type: if i % 3 == 0 { "heading" } else { "paragraph" }.to_string(),
+                        node_type: if i % 3 == 0 {
+                            "heading"
+                        } else {
+                            "paragraph"
+                        }
+                        .to_string(),
                         attrs: {
                             let mut attrs = HashMap::new();
                             attrs.insert("index".to_string(), json!(i));
                             attrs.insert("level".to_string(), json!(i % 3 + 1));
                             attrs
                         },
-                        content: vec![format!("Large content for node {}", i).repeat(5)],
-                        marks: if i % 5 == 0 { 
+                        content: vec![
+                            format!("Large content for node {}", i).repeat(5),
+                        ],
+                        marks: if i % 5 == 0 {
                             vec![MarkData {
                                 mark_type: "bold".to_string(),
                                 attrs: HashMap::new(),
                             }]
-                        } else { 
-                            vec![] 
+                        } else {
+                            vec![]
                         },
-                    }
+                    },
                 );
             }
 
@@ -356,10 +375,8 @@ fn bench_memory_performance(c: &mut Criterion) {
                 .collect();
 
             // 计算总内容长度来避免优化掉计算
-            let total_content: usize = nodes
-                .iter()
-                .map(|n| n.content.len())
-                .sum();
+            let total_content: usize =
+                nodes.iter().map(|n| n.content.len()).sum();
 
             criterion::black_box((nodes, total_content))
         })
@@ -373,7 +390,10 @@ fn bench_memory_performance(c: &mut Criterion) {
             attrs: {
                 let mut attrs = HashMap::new();
                 for i in 0..20 {
-                    attrs.insert(format!("key_{}", i), json!(format!("value_{}", i)));
+                    attrs.insert(
+                        format!("key_{}", i),
+                        json!(format!("value_{}", i)),
+                    );
                 }
                 attrs
             },

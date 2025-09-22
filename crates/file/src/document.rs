@@ -21,7 +21,7 @@ pub enum SegmentType {
     History,
     Index,
     Directory,
-    PluginState,  // 新增：插件状态段
+    PluginState, // 新增：插件状态段
 }
 
 // 段目录项：记录段的类型、偏移、长度与 CRC

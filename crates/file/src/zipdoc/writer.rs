@@ -75,7 +75,7 @@ impl<W: Write + Seek> ZipDocumentWriter<W> {
         }
         self.zip.write_all(bytes)
     }
-    
+
     // 添加插件状态目录和文件（二进制存储）
     pub fn add_plugin_state(
         &mut self,
@@ -86,7 +86,7 @@ impl<W: Write + Seek> ZipDocumentWriter<W> {
         let opts = SimpleFileOptions::default()
             .compression_method(CompressionMethod::Deflated);
         self.zip.start_file(&plugin_file_path, opts)?;
-        
+
         if let Some(entries) =
             self.manifest.get_mut("entries").and_then(|v| v.as_array_mut())
         {
@@ -100,9 +100,12 @@ impl<W: Write + Seek> ZipDocumentWriter<W> {
         }
         self.zip.write_all(state_data)
     }
-    
+
     // 批量添加插件状态
-    pub fn add_plugin_states<I>(&mut self, plugin_states: I) -> io::Result<()>
+    pub fn add_plugin_states<I>(
+        &mut self,
+        plugin_states: I,
+    ) -> io::Result<()>
     where
         I: IntoIterator<Item = (String, Vec<u8>)>,
     {
@@ -157,25 +160,28 @@ mod tests {
 
         // 添加插件状态
         writer.add_plugin_state("test_plugin", b"test state data").unwrap();
-        writer.add_plugin_state("another_plugin", b"another state data").unwrap();
+        writer
+            .add_plugin_state("another_plugin", b"another state data")
+            .unwrap();
 
         let result = writer.finalize().unwrap();
         let final_data = result.into_inner();
 
         // 验证数据已写入
         assert!(!final_data.is_empty());
-        
+
         // 验证 manifest 包含插件条目
         let cursor = Cursor::new(&final_data);
         let mut reader = crate::zipdoc::ZipDocumentReader::new(cursor).unwrap();
-        
+
         let plugins = reader.list_plugins().unwrap();
         assert_eq!(plugins.len(), 2);
         assert!(plugins.contains(&"test_plugin".to_string()));
         assert!(plugins.contains(&"another_plugin".to_string()));
 
         // 验证插件状态可以读取
-        let test_state = reader.read_plugin_state("test_plugin").unwrap().unwrap();
+        let test_state =
+            reader.read_plugin_state("test_plugin").unwrap().unwrap();
         assert_eq!(test_state, b"test state data");
     }
 
@@ -197,7 +203,7 @@ mod tests {
 
         let cursor = Cursor::new(&final_data);
         let mut reader = crate::zipdoc::ZipDocumentReader::new(cursor).unwrap();
-        
+
         let all_states = reader.read_all_plugin_states().unwrap();
         assert_eq!(all_states.len(), 3);
 

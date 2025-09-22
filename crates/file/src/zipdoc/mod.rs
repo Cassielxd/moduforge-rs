@@ -6,7 +6,7 @@ mod writer;
 pub use writer::ZipDocumentWriter;
 pub use reader::{
     ZipDocumentReader, MmapConfig, MmapStats, ZipStreamReader,
-    FileSizeCategory, ProcessingStrategy, FileInfo
+    FileSizeCategory, ProcessingStrategy, FileInfo,
 };
 pub use snapshot::{
     SnapshotShardMeta, write_snapshot_shards, read_snapshot_shards,

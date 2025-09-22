@@ -11,68 +11,65 @@ use deno_core::SourceMapData;
 use deno_error::JsErrorBox;
 
 deno_error::js_error_wrapper!(
-  deno_ast::ParseDiagnostic,
-  JsParseDiagnostic,
-  "Error"
+    deno_ast::ParseDiagnostic,
+    JsParseDiagnostic,
+    "Error"
 );
 deno_error::js_error_wrapper!(
-  deno_ast::TranspileError,
-  JsTranspileError,
-  "Error"
+    deno_ast::TranspileError,
+    JsTranspileError,
+    "Error"
 );
 
 pub fn maybe_transpile_source(
-  name: ModuleName,
-  source: ModuleCodeString,
+    name: ModuleName,
+    source: ModuleCodeString,
 ) -> Result<(ModuleCodeString, Option<SourceMapData>), JsErrorBox> {
-  // 始终转译`node:`内置模块，因为它们可能是TypeScript。
-  let media_type = if name.starts_with("node:") {
-    MediaType::TypeScript
-  } else {
-    MediaType::from_path(Path::new(&name))
-  };
+    // 始终转译`node:`内置模块，因为它们可能是TypeScript。
+    let media_type = if name.starts_with("node:") {
+        MediaType::TypeScript
+    } else {
+        MediaType::from_path(Path::new(&name))
+    };
 
-  match media_type {
-    MediaType::TypeScript => {}
-    MediaType::JavaScript => return Ok((source, None)),
-    MediaType::Mjs => return Ok((source, None)),
-    _ => panic!(
-      "不支持的媒体类型用于快照 {media_type:?} 文件 {}",
-      name
-    ),
-  }
+    match media_type {
+        MediaType::TypeScript => {},
+        MediaType::JavaScript => return Ok((source, None)),
+        MediaType::Mjs => return Ok((source, None)),
+        _ => panic!("不支持的媒体类型用于快照 {media_type:?} 文件 {}", name),
+    }
 
-  let parsed = deno_ast::parse_module(ParseParams {
-    specifier: deno_core::url::Url::parse(&name).unwrap(),
-    text: source.into(),
-    media_type,
-    capture_tokens: false,
-    scope_analysis: false,
-    maybe_syntax: None,
-  })
-  .map_err(|e| JsErrorBox::from_err(JsParseDiagnostic(e)))?;
-  let transpiled_source = parsed
-    .transpile(
-      &deno_ast::TranspileOptions {
-        imports_not_used_as_values: deno_ast::ImportsNotUsedAsValues::Remove,
-        ..Default::default()
-      },
-      &deno_ast::TranspileModuleOptions::default(),
-      &deno_ast::EmitOptions {
-        source_map: if cfg!(debug_assertions) {
-          SourceMapOption::Separate
-        } else {
-          SourceMapOption::None
-        },
-        ..Default::default()
-      },
-    )
-    .map_err(|e| JsErrorBox::from_err(JsTranspileError(e)))?
-    .into_source();
+    let parsed = deno_ast::parse_module(ParseParams {
+        specifier: deno_core::url::Url::parse(&name).unwrap(),
+        text: source.into(),
+        media_type,
+        capture_tokens: false,
+        scope_analysis: false,
+        maybe_syntax: None,
+    })
+    .map_err(|e| JsErrorBox::from_err(JsParseDiagnostic(e)))?;
+    let transpiled_source = parsed
+        .transpile(
+            &deno_ast::TranspileOptions {
+                imports_not_used_as_values:
+                    deno_ast::ImportsNotUsedAsValues::Remove,
+                ..Default::default()
+            },
+            &deno_ast::TranspileModuleOptions::default(),
+            &deno_ast::EmitOptions {
+                source_map: if cfg!(debug_assertions) {
+                    SourceMapOption::Separate
+                } else {
+                    SourceMapOption::None
+                },
+                ..Default::default()
+            },
+        )
+        .map_err(|e| JsErrorBox::from_err(JsTranspileError(e)))?
+        .into_source();
 
-  let maybe_source_map: Option<SourceMapData> = transpiled_source
-    .source_map
-    .map(|sm| sm.into_bytes().into());
-  let source_text = transpiled_source.text;
-  Ok((source_text.into(), maybe_source_map))
+    let maybe_source_map: Option<SourceMapData> =
+        transpiled_source.source_map.map(|sm| sm.into_bytes().into());
+    let source_text = transpiled_source.text;
+    Ok((source_text.into(), maybe_source_map))
 }
