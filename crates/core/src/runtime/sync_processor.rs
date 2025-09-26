@@ -136,7 +136,7 @@ where
                     if current_retry < self.max_retries {
                         current_retry += 1;
                         metrics::task_retried();
-                        thread::sleep(self.retry_delay);
+                        tokio::time::sleep(self.retry_delay).await;
                         continue;
                     }
                     let result = TaskResult {

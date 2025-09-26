@@ -48,9 +48,9 @@ async fn security_filter_transaction(
 }
 
 async fn validation_append_transaction(
-    trs: &[Transaction],
-    _old_state: &State,
-    _new_state: &State,
+    trs: &[Arc<Transaction>],
+    _old_state: &Arc<State>,
+    _new_state: &Arc<State>,
 ) -> StateResult<Option<Transaction>> {
     println!("✅ 验证 {} 个事务", trs.len());
     Ok(None)

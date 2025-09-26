@@ -213,11 +213,10 @@ impl State {
                         .await?
                     {
                         if !Arc::ptr_eq(&tr.get_draft(), &shared) {
-                            let steps = tr.steps.clone();
                             tr.set_transform(
                                 Transform::new_shared(shared.clone())
                             );
-                            for step in steps {
+                            for step in tr.steps.take(tr.steps.len()).iter() {
                                 tr.step(step.clone())?;
                             }
                         }

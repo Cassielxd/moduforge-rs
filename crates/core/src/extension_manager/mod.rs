@@ -347,79 +347,8 @@ impl ExtensionManager {
         &self.plugins
     }
 
-    /// 动态添加扩展并重新构建schema
-    ///
-    /// # 参数
-    /// * `new_extensions` - 要添加的新扩展列表
-    ///
-    /// # 返回值
-    /// * `ForgeResult<()>` - 成功或错误
-    ///
-    /// # 示例
-    /// ```rust
-    /// use mf_core::{ExtensionManager, types::Extensions, node::Node};
-    /// use mf_model::node_type::NodeSpec;
-    ///
-    /// let mut manager = ExtensionManager::new(&vec![])?;
-    ///
-    /// let new_node = Node::create("dynamic_node", NodeSpec::default());
-    /// manager.add_extensions(vec![Extensions::N(new_node)])?;
-    /// ```
-    pub fn add_extensions(
-        &mut self,
-        new_extensions: Vec<Extensions>,
-    ) -> ForgeResult<()> {
-        // 获取当前所有扩展
-        let mut all_extensions = Vec::new();
 
-        // 从当前schema重建扩展列表（这是一个简化的实现）
-        // 在实际应用中，你可能需要保存原始的扩展列表
-        for (name, node_type) in &self.schema.nodes {
-            let node = crate::node::Node::create(name, node_type.spec.clone());
-            all_extensions.push(Extensions::N(node));
-        }
-
-        for (name, mark_type) in &self.schema.marks {
-            let mark = crate::mark::Mark::new(name, mark_type.spec.clone());
-            all_extensions.push(Extensions::M(mark));
-        }
-
-        // 添加新扩展
-        all_extensions.extend(new_extensions);
-
-        // 重新构建ExtensionManager
-        let new_manager = Self::new(&all_extensions)?;
-
-        // 更新当前实例
-        self.schema = new_manager.schema;
-        self.plugins = new_manager.plugins;
-        self.op_fns = new_manager.op_fns;
-
-        Ok(())
-    }
-
-    /// 动态添加XML文件扩展
-    ///
-    /// # 参数
-    /// * `xml_file_path` - XML schema文件路径
-    ///
-    /// # 返回值
-    /// * `ForgeResult<()>` - 成功或错误
-    pub fn add_xml_file(
-        &mut self,
-        xml_file_path: &str,
-    ) -> ForgeResult<()> {
-        let extensions =
-            XmlSchemaParser::parse_multi_file_to_extensions(xml_file_path)
-                .map_err(|e| {
-                    crate::error::error_utils::config_error(format!(
-                        "解析XML文件 {} 失败: {}",
-                        xml_file_path, e
-                    ))
-                })?;
-
-        self.add_extensions(extensions)
-    }
+   
 
     /// 添加从快照恢复的插件
     pub fn add_restored_plugins(
@@ -430,27 +359,6 @@ impl ExtensionManager {
         Ok(())
     }
 
-    /// 动态添加XML内容扩展
-    ///
-    /// # 参数
-    /// * `xml_content` - XML schema内容
-    ///
-    /// # 返回值
-    /// * `ForgeResult<()>` - 成功或错误
-    pub fn add_xml_content(
-        &mut self,
-        xml_content: &str,
-    ) -> ForgeResult<()> {
-        let extensions = XmlSchemaParser::parse_to_extensions(xml_content)
-            .map_err(|e| {
-                crate::error::error_utils::config_error(format!(
-                    "解析XML内容失败: {}",
-                    e
-                ))
-            })?;
-
-        self.add_extensions(extensions)
-    }
 }
 
 #[cfg(test)]
@@ -621,59 +529,5 @@ mod tests {
         assert!(schema.marks.contains_key("xml_mark"));
     }
 
-    #[test]
-    fn test_dynamic_extension_addition() {
-        use crate::node::Node;
-        use mf_model::node_type::NodeSpec;
 
-        // 创建初始的ExtensionManager
-        let xml_content = r#"
-        <?xml version="1.0" encoding="UTF-8"?>
-        <schema>
-          <nodes>
-            <node name="initial_node">
-              <desc>初始节点</desc>
-            </node>
-          </nodes>
-        </schema>
-        "#;
-
-        let mut manager =
-            ExtensionManager::from_xml_string(xml_content).unwrap();
-
-        // 验证初始状态
-        assert_eq!(manager.get_schema().nodes.len(), 1);
-        assert!(manager.get_schema().nodes.contains_key("initial_node"));
-
-        // 动态添加新的扩展
-        let new_node = Node::create("dynamic_node", NodeSpec::default());
-        let result = manager.add_extensions(vec![Extensions::N(new_node)]);
-        assert!(result.is_ok());
-
-        // 验证添加后的状态
-        assert_eq!(manager.get_schema().nodes.len(), 2);
-        assert!(manager.get_schema().nodes.contains_key("initial_node"));
-        assert!(manager.get_schema().nodes.contains_key("dynamic_node"));
-
-        // 动态添加XML内容
-        let additional_xml = r#"
-        <?xml version="1.0" encoding="UTF-8"?>
-        <schema>
-          <nodes>
-            <node name="xml_dynamic_node">
-              <desc>动态添加的XML节点</desc>
-            </node>
-          </nodes>
-        </schema>
-        "#;
-
-        let result = manager.add_xml_content(additional_xml);
-        assert!(result.is_ok());
-
-        // 验证最终状态
-        assert_eq!(manager.get_schema().nodes.len(), 3);
-        assert!(manager.get_schema().nodes.contains_key("initial_node"));
-        assert!(manager.get_schema().nodes.contains_key("dynamic_node"));
-        assert!(manager.get_schema().nodes.contains_key("xml_dynamic_node"));
-    }
 }
