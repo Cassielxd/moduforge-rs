@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use mf_core::{
-    middleware::Middleware, EditorOptionsBuilder, Extension, Extensions,
-    ForgeAsyncRuntime, ForgeResult, RuntimeOptions,
+    middleware::Middleware, EditorOptionsBuilder, Extension, Extensions, ForgeActorRuntime, ForgeAsyncRuntime, ForgeResult, RuntimeOptions
 };
 use mf_model::{imbl::HashMap, NodeId};
 use mf_state::{
@@ -60,6 +59,7 @@ impl PluginTrait for APlugin {
         _: &Arc<State>,
         new_state: &Arc<State>,
     ) -> StateResult<Option<Transaction>> {
+        println!("APlugin: append_transaction 被调用，事务数量: {}", trs.len());
         // 获取子单位工程 并汇总 前提 单位项目 计算完成之后
         let doc = new_state.doc();
         let mut price = 0;
@@ -117,11 +117,12 @@ impl PluginTrait for BPlugin {
         old_state: &Arc<State>,
         new_state: &Arc<State>,
     ) -> StateResult<Option<Transaction>> {
+        println!("BPlugin: append_transaction 被调用，事务数量: {}", trs.len());
         // 如果 新增了 单位工程  需要计算并回填 金额相关数据
         let oss_pload =
             new_state.resource_manager().get::<OSSUpload>().unwrap();
         let sum = oss_pload.upload(1, 2);
-        println!("计算结果{}", sum);
+        dbg!("计算结果{}", sum);
         let mut new_tr = new_state.tr();
         for tr in trs {
             for step in &tr.steps {
@@ -140,7 +141,7 @@ impl PluginTrait for BPlugin {
             }
         }
         if new_tr.doc_changed() {
-            println!("产生新的 单位工程 事务");
+            dbg!("产生新的 单位工程 事务");
             return Ok(Some(new_tr));
         }
         Ok(None)
@@ -183,6 +184,7 @@ fn get_ops() -> RuntimeOptions {
     //添加默认插件
     EditorOptionsBuilder::new()
         .add_middleware(LogMiddleware)
+        // 从XML schema文件加载节点定义
         .add_extension({
             let mut ext = Extension::new();
             ext.add_plugin(Arc::new(Plugin::new(PluginSpec {
@@ -218,16 +220,27 @@ impl OSSUpload {
 
 #[tokio::main]
 async fn main() -> ForgeResult<()> {
-    let mut editor = ForgeAsyncRuntime::create(get_ops()).await?;
-    let doc = editor.doc();
+    println!("开始创建编辑器...");
+    let mut editor = ForgeActorRuntime::create(get_ops()).await?;
+    println!("编辑器创建成功");
+    
+    let doc = editor.get_state().await?.doc();
+    println!("获取初始文档状态:");
     dbg!(doc.clone());
-    let mut tr: Transaction = Transaction::new(editor.get_state());
+    
+    let state = editor.get_state().await?;
+    let mut tr: Transaction = Transaction::new(&state);
     let schema = &tr.schema;
     let dw_node =
         schema.nodes["dwgc"].create_and_fill(None, None, vec![], None, schema);
     tr.add_node(doc.root_id().clone(), vec![dw_node])?;
+    
+    println!("准备分发事务...");
     editor.dispatch(tr).await?;
+    println!("事务分发完成");
+    
     // 运行编辑器
-    dbg!(editor.doc());
+    println!("获取最终文档状态:");
+    dbg!(editor.get_state().await?.doc());
     Ok(())
 }

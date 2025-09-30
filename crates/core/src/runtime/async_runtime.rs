@@ -40,7 +40,9 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+use async_trait::async_trait;
 use crate::runtime::runtime::ForgeRuntime;
+use crate::runtime::runtime_trait::RuntimeTrait;
 use crate::types::ProcessorResult;
 use crate::{
     config::{ForgeConfig, PerformanceConfig},
@@ -51,6 +53,7 @@ use crate::{
     types::RuntimeOptions,
     ForgeResult,
 };
+use mf_model::schema::Schema;
 use mf_state::{
     state::TransactionResult,
     transaction::{Command, Transaction},
@@ -258,7 +261,7 @@ impl ForgeAsyncRuntime {
         debug!("正在执行命令: {}", cmd_name);
 
         // 创建事务并应用命令
-        let mut tr = self.get_tr();
+        let mut tr = self.base.get_tr();
         command.execute(&mut tr).await?;
         tr.commit()?;
         // 使用高性能处理引擎处理事务
@@ -305,7 +308,7 @@ impl ForgeAsyncRuntime {
     ) -> ForgeResult<()> {
         let start_time = std::time::Instant::now();
         let mut current_transaction = transaction;
-        let old_id = self.get_state().version;
+        let old_id = self.get_state().await?.version;
         // 前置中间件处理
         let middleware_start = std::time::Instant::now();
         self.run_before_middleware(&mut current_transaction).await?;
@@ -395,40 +398,15 @@ impl ForgeAsyncRuntime {
         &mut self,
         transaction: &mut Transaction,
     ) -> ForgeResult<()> {
-        debug!("执行前置中间件链");
-        for middleware in
-            &self.base.get_options().get_middleware_stack().middlewares
-        {
-            let timeout = Duration::from_millis(
-                self.base.get_config().performance.middleware_timeout_ms,
-            );
-            match tokio::time::timeout(
-                timeout,
-                middleware.before_dispatch(transaction),
-            )
-            .await
-            {
-                Ok(Ok(())) => {
-                    // 中间件执行成功
-                    continue;
-                },
-                Ok(Err(e)) => {
-                    return Err(error_utils::middleware_error(format!(
-                        "前置中间件执行失败: {}",
-                        e
-                    )));
-                },
-                Err(_) => {
-                    return Err(error_utils::middleware_error(format!(
-                        "前置中间件执行超时（{}ms）",
-                        self.base
-                            .get_config()
-                            .performance
-                            .middleware_timeout_ms
-                    )));
-                },
-            }
-        }
+        use crate::helpers::middleware_helper::MiddlewareHelper;
+
+        MiddlewareHelper::run_before_middleware(
+            transaction,
+            &self.base.get_options().get_middleware_stack(),
+            self.base.get_config(),
+        )
+        .await?;
+
         transaction.commit()?;
         Ok(())
     }
@@ -577,5 +555,81 @@ impl ForgeAsyncRuntime {
 
         debug!("异步运行时已成功关闭");
         Ok(())
+    }
+}
+
+// ==================== RuntimeTrait 实现 ====================
+
+#[async_trait]
+impl RuntimeTrait for ForgeAsyncRuntime {
+    async fn dispatch(&mut self, transaction: Transaction) -> ForgeResult<()> {
+        // 使用高性能的 dispatch_flow 而不是基类的 dispatch
+        self.dispatch_flow(transaction).await
+    }
+
+    async fn dispatch_with_meta(
+        &mut self,
+        transaction: Transaction,
+        description: String,
+        meta: serde_json::Value,
+    ) -> ForgeResult<()> {
+        // 使用高性能的 dispatch_flow_with_meta
+        self.dispatch_flow_with_meta(transaction, description, meta).await
+    }
+
+    async fn command(&mut self, command: Arc<dyn Command>) -> ForgeResult<()> {
+        self.command(command).await
+    }
+
+    async fn command_with_meta(
+        &mut self,
+        command: Arc<dyn Command>,
+        description: String,
+        meta: serde_json::Value,
+    ) -> ForgeResult<()> {
+        self.command_with_meta(command, description, meta).await
+    }
+
+    async fn get_state(&self) -> ForgeResult<Arc<State>> {
+        Ok(self.base.get_state().clone())
+    }
+
+    async fn get_tr(&self) -> ForgeResult<Transaction> {
+        Ok(self.base.get_tr())
+    }
+
+    async fn get_schema(&self) -> ForgeResult<Arc<Schema>> {
+        Ok(self.base.get_schema())
+    }
+
+    async fn undo(&mut self) -> ForgeResult<()> {
+        self.base.undo();
+        Ok(())
+    }
+
+    async fn redo(&mut self) -> ForgeResult<()> {
+        self.base.redo();
+        Ok(())
+    }
+
+    async fn jump(&mut self, steps: isize) -> ForgeResult<()> {
+        self.base.jump(steps);
+        Ok(())
+    }
+
+    fn get_config(&self) -> &ForgeConfig {
+        self.base.get_config()
+    }
+
+    fn update_config(&mut self, config: ForgeConfig) {
+        self.base.update_config(config);
+    }
+
+    fn get_options(&self) -> &RuntimeOptions {
+        self.base.get_options()
+    }
+
+    async fn destroy(&mut self) -> ForgeResult<()> {
+        self.shutdown().await
     }
 }

@@ -44,6 +44,9 @@ pub mod schema_parser;
 pub mod snapshot;
 pub mod types;
 
+// 新的Actor系统模块
+pub mod actors;
+
 // 构建工具模块（仅在构建时可用）
 #[cfg(feature = "build-tools")]
 pub mod build_tools;
@@ -58,6 +61,10 @@ pub use runtime::async_processor::{
     AsyncProcessor, ProcessorError, TaskProcessor, TaskResult, TaskStatus,
 };
 pub use runtime::async_runtime::ForgeAsyncRuntime;
+// 新的Actor运行时
+pub use runtime::actor_runtime::ForgeActorRuntime;
+// 运行时统一接口
+pub use runtime::runtime_trait::{RuntimeTrait, RuntimeFactory};
 pub use config::{
     ForgeConfig, ForgeConfigBuilder, Environment, ProcessorConfig,
     PerformanceConfig, EventConfig, HistoryConfig, ExtensionConfig,
@@ -76,3 +83,11 @@ pub use runtime::sync_processor::{
     SyncProcessor, TaskProcessor as SyncTaskProcessor,
 };
 pub use types::*;
+
+// Actor系统相关导出
+pub use actors::{
+    ForgeActorSystem, ActorSystemConfig,
+    transaction_processor::{TransactionMessage, TransactionStats},
+    state_actor::{StateMessage, HistoryInfo, StateSnapshot},
+    event_bus::{EventBusMessage, EventBusStats},
+};

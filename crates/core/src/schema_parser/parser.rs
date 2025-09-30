@@ -639,6 +639,12 @@ impl XmlSchemaParser {
                         Self::convert_xml_attrs_to_spec(xml_attrs.attrs)?;
                     node.set_attrs(attrs);
                 }
+                // 检查是否为顶级节点
+                if let Some(top_node_name) = &xml_schema.top_node {
+                    if xml_node.name == *top_node_name {
+                        node.set_top_node();
+                    }
+                }
                 extensions.push(Extensions::N(node));
             }
         }

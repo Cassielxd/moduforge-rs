@@ -19,7 +19,7 @@ use crate::{
 };
 
 // 事件类型定义
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Event {
     Create(Arc<State>),
     TrApply(u64, Vec<Arc<Transaction>>, Arc<State>), // 事务应用后 + 是否成功

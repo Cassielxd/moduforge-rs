@@ -1,17 +1,24 @@
 use std::sync::Arc;
 use std::time::Instant;
 
+use async_trait::async_trait;
+
 use crate::{
     config::ForgeConfig,
     debug::{debug, error, info},
     error::{error_utils, ForgeResult},
     event::{Event, EventBus},
     extension_manager::ExtensionManager,
-    helpers::create_doc,
+    helpers::{
+        create_doc,
+        event_helper::EventHelper,
+        history_helper::HistoryHelper,
+        middleware_helper::MiddlewareHelper,
+        snapshot_helper::SnapshotHelper,
+    },
     history_manager::HistoryManager,
     metrics,
-    runtime::sync_flow::FlowEngine,
-    snapshot::SnapshotManager,
+    runtime::{runtime_trait::RuntimeTrait, sync_flow::FlowEngine},
     types::{HistoryEntryWithMeta, ProcessorResult, RuntimeOptions},
 };
 
@@ -56,19 +63,14 @@ impl ForgeRuntime {
         let start_time = Instant::now();
         info!("正在从快照创建编辑器实例: {}", snapshot_path);
 
-        // 1. 加载和验证快照
-        let snapshot = SnapshotManager::load_from_file(snapshot_path)?;
-        SnapshotManager::validate_snapshot(&snapshot)?;
+        // 1. 加载和验证快照，恢复扩展管理器
+        let (snapshot, extension_manager) = SnapshotHelper::load_and_restore(snapshot_path)?;
 
-        // 2. 从快照恢复扩展管理器
-        let extension_manager =
-            SnapshotManager::restore_extension_manager(&snapshot)?;
-
-        // 3. 使用快照中的配置，可选择与运行时选项合并
+        // 2. 使用快照中的配置，可选择与运行时选项合并
         let config = snapshot.config;
         let options = options.unwrap_or_default();
 
-        // 4. 快速构建运行时（跳过耗时的初始化步骤）
+        // 3. 快速构建运行时（跳过耗时的初始化步骤）
         let runtime =
             Self::create_from_snapshot_data(options, config, extension_manager)
                 .await?;
@@ -276,8 +278,6 @@ impl ForgeRuntime {
 
         debug!("已初始化扩展管理器");
 
-        let event_bus = EventBus::with_config(config.event.clone());
-        debug!("已创建文档和事件总线");
         let op_state = GlobalResourceManager::new();
         for op_fn in extension_manager.get_op_fns() {
             op_fn(&op_state)?;
@@ -297,7 +297,15 @@ impl ForgeRuntime {
         let state: Arc<State> = Arc::new(state);
         debug!("已创建编辑器状态");
 
-        let mut runtime = ForgeRuntime {
+        // 使用 EventHelper 创建并初始化事件总线
+        let event_bus = EventHelper::create_and_init_event_bus(
+            &config,
+            &options,
+            state.clone(),
+        )
+        .await?;
+
+        let runtime = ForgeRuntime {
             event_bus,
             state: state.clone(),
             flow_engine: Arc::new(FlowEngine::new()?),
@@ -313,39 +321,11 @@ impl ForgeRuntime {
             options,
             config,
         };
-        runtime.init().await?;
         info!("编辑器实例创建成功");
         metrics::editor_creation_duration(start_time.elapsed());
         Ok(runtime)
     }
 
-    /// 初始化编辑器，设置事件处理器并启动事件循环
-    async fn init(&mut self) -> ForgeResult<()> {
-        debug!("正在初始化编辑器");
-        // 适配新的事件处理器 trait 约束（Send + Sync）
-        let handlers: Vec<
-            Arc<
-                dyn crate::event::EventHandler<crate::event::Event>
-                    + Send
-                    + Sync,
-            >,
-        > = self.options.get_event_handlers();
-        self.event_bus.add_event_handlers(handlers)?;
-        self.event_bus.start_event_loop();
-        debug!("事件总线已启动");
-
-        self.event_bus
-            .broadcast_blocking(Event::Create(self.state.clone()))
-            .map_err(|e| {
-                error!("广播创建事件失败: {}", e);
-                error_utils::event_error(format!(
-                    "Failed to broadcast create event: {}",
-                    e
-                ))
-            })?;
-        debug!("已广播创建事件");
-        Ok(())
-    }
 
     /// 创建扩展管理器 - 自动处理XML schema配置
     ///
@@ -359,99 +339,9 @@ impl ForgeRuntime {
         options: &RuntimeOptions,
         config: &ForgeConfig,
     ) -> ForgeResult<ExtensionManager> {
-        // 检查是否有配置的XML schema路径
-        if !config.extension.xml_schema_paths.is_empty() {
-            debug!(
-                "使用配置的XML schema路径: {:?}",
-                config.extension.xml_schema_paths
-            );
-
-            // 转换为字符串引用
-            let paths: Vec<&str> = config
-                .extension
-                .xml_schema_paths
-                .iter()
-                .map(|s| s.as_str())
-                .collect();
-            let extension_manager = ExtensionManager::from_xml_files(&paths)?;
-
-            // 合并现有的扩展
-            let merged_extensions =
-                Self::merge_extensions_with_xml(options, extension_manager)?;
-            return Ok(merged_extensions);
-        }
-
-        // 检查默认的 schema/main.xml 文件
-        let default_schema_path = "schema/main.xml";
-        if std::path::Path::new(default_schema_path).exists() {
-            debug!("使用默认的 schema 文件: {}", default_schema_path);
-            let extension_manager =
-                ExtensionManager::from_xml_file(default_schema_path)?;
-            let merged_extensions =
-                Self::merge_extensions_with_xml(options, extension_manager)?;
-            return Ok(merged_extensions);
-        }
-
-        // 没有找到任何XML schema，使用默认配置
-        debug!("未找到XML schema配置，使用默认扩展");
-        ExtensionManager::new(&options.get_extensions())
-    }
-
-    /// 合并XML扩展和现有扩展
-    ///
-    /// # 参数
-    /// * `options` - 运行时选项
-    /// * `xml_extension_manager` - 从XML加载的扩展管理器
-    ///
-    /// # 返回值
-    /// * `ForgeResult<ExtensionManager>` - 合并后的扩展管理器
-    fn merge_extensions_with_xml(
-        options: &RuntimeOptions,
-        xml_extension_manager: ExtensionManager,
-    ) -> ForgeResult<ExtensionManager> {
-        let schema = xml_extension_manager.get_schema();
-        let mut all_extensions = Vec::new();
-
-        // 先添加XML扩展（优先级更高）
-        for (name, node_type) in &schema.nodes {
-            let node = crate::node::Node::create(name, node_type.spec.clone());
-            all_extensions.push(crate::types::Extensions::N(node));
-        }
-
-        for (name, mark_type) in &schema.marks {
-            let mark = crate::mark::Mark::new(name, mark_type.spec.clone());
-            all_extensions.push(crate::types::Extensions::M(mark));
-        }
-
-        // 再添加现有扩展（避免重复）
-        for ext in options.get_extensions() {
-            let name = match &ext {
-                crate::types::Extensions::N(node) => &node.name,
-                crate::types::Extensions::M(mark) => &mark.name,
-                crate::types::Extensions::E(_) => {
-                    // 直接添加事件扩展，不需要检查重复
-                    all_extensions.push(ext);
-                    continue;
-                },
-            };
-
-            // 检查是否已经存在
-            let exists = match &ext {
-                crate::types::Extensions::N(_) => {
-                    schema.nodes.contains_key(name)
-                },
-                crate::types::Extensions::M(_) => {
-                    schema.marks.contains_key(name)
-                },
-                crate::types::Extensions::E(_) => false, // 事件扩展总是添加
-            };
-
-            if !exists {
-                all_extensions.push(ext);
-            }
-        }
-
-        ExtensionManager::new(&all_extensions)
+        crate::helpers::runtime_common::ExtensionManagerHelper::create_extension_manager(
+            options, config,
+        )
     }
 
     /// 从快照数据创建运行时实例（跳过耗时初始化）
@@ -462,9 +352,6 @@ impl ForgeRuntime {
     ) -> ForgeResult<Self> {
         let start_time = Instant::now();
         info!("正在从快照数据创建编辑器实例");
-
-        let event_bus = EventBus::with_config(config.event.clone());
-        debug!("已创建事件总线");
 
         let op_state = GlobalResourceManager::new();
         for op_fn in extension_manager.get_op_fns() {
@@ -485,7 +372,15 @@ impl ForgeRuntime {
         let state: Arc<State> = Arc::new(state);
         debug!("已创建编辑器状态");
 
-        let mut runtime = ForgeRuntime {
+        // 使用 EventHelper 创建并初始化事件总线
+        let event_bus = EventHelper::create_and_init_event_bus(
+            &config,
+            &options,
+            state.clone(),
+        )
+        .await?;
+
+        let runtime = ForgeRuntime {
             event_bus,
             state: state.clone(),
             flow_engine: Arc::new(FlowEngine::new()?),
@@ -501,7 +396,6 @@ impl ForgeRuntime {
             options,
             config,
         };
-        runtime.init().await?;
 
         debug!("快照运行时创建耗时: {:?}", start_time.elapsed());
         Ok(runtime)
@@ -510,10 +404,7 @@ impl ForgeRuntime {
     /// 销毁编辑器实例
     pub async fn destroy(&mut self) -> ForgeResult<()> {
         debug!("正在销毁编辑器实例");
-        // 广播销毁事件（业务通知）
-        self.event_bus.broadcast(Event::Destroy).await?;
-        // 停止事件循环（控制信号）
-        self.event_bus.destroy().await?;
+        EventHelper::destroy_event_bus(&mut self.event_bus).await?;
         debug!("编辑器实例销毁成功");
         Ok(())
     }
@@ -522,50 +413,18 @@ impl ForgeRuntime {
         &mut self,
         event: Event,
     ) -> ForgeResult<()> {
-        metrics::event_emitted(event.name());
-        self.event_bus.broadcast(event).await?;
-        Ok(())
+        EventHelper::emit_event(&mut self.event_bus, event).await
     }
     pub async fn run_before_middleware(
         &mut self,
         transaction: &mut Transaction,
     ) -> ForgeResult<()> {
-        debug!("执行前置中间件链");
-        for middleware in &self.options.get_middleware_stack().middlewares {
-            let start_time = Instant::now();
-            let timeout = std::time::Duration::from_millis(
-                self.config.performance.middleware_timeout_ms,
-            );
-            match tokio::time::timeout(
-                timeout,
-                middleware.before_dispatch(transaction),
-            )
-            .await
-            {
-                Ok(Ok(())) => {
-                    // 中间件执行成功
-                    metrics::middleware_execution_duration(
-                        start_time.elapsed(),
-                        "before",
-                        middleware.name().as_str(),
-                    );
-                    continue;
-                },
-                Ok(Err(e)) => {
-                    return Err(error_utils::middleware_error(format!(
-                        "前置中间件执行失败: {}",
-                        e
-                    )));
-                },
-                Err(_) => {
-                    return Err(error_utils::middleware_error(format!(
-                        "前置中间件执行超时（{}ms）",
-                        self.config.performance.middleware_timeout_ms
-                    )));
-                },
-            }
-        }
-        Ok(())
+        MiddlewareHelper::run_before_middleware(
+            transaction,
+            &self.options.get_middleware_stack(),
+            &self.config,
+        )
+        .await
     }
     pub async fn run_after_middleware(
         &mut self,
@@ -739,11 +598,7 @@ impl ForgeRuntime {
         meta: serde_json::Value,
     ) -> ForgeResult<()> {
         self.state = state.clone();
-        self.history_manager.insert(HistoryEntryWithMeta::new(
-            state,
-            description,
-            meta,
-        ));
+        HistoryHelper::insert(&mut self.history_manager, state, description, meta);
         Ok(())
     }
 
@@ -836,24 +691,18 @@ impl ForgeRuntime {
     }
 
     pub fn undo(&mut self) {
-        self.history_manager.jump(-1);
-        self.state = self.history_manager.get_present().state;
-        metrics::history_operation("undo");
+        self.state = HistoryHelper::undo(&mut self.history_manager);
     }
 
     pub fn redo(&mut self) {
-        self.history_manager.jump(1);
-        self.state = self.history_manager.get_present().state;
-        metrics::history_operation("redo");
+        self.state = HistoryHelper::redo(&mut self.history_manager);
     }
 
     pub fn jump(
         &mut self,
         n: isize,
     ) {
-        self.history_manager.jump(n);
-        self.state = self.history_manager.get_present().state;
-        metrics::history_operation("jump");
+        self.state = HistoryHelper::jump(&mut self.history_manager, n);
     }
     pub fn get_history_manager(&self) -> &HistoryManager<HistoryEntryWithMeta> {
         &self.history_manager
@@ -862,6 +711,80 @@ impl ForgeRuntime {
 impl Drop for ForgeRuntime {
     fn drop(&mut self) {
         // 在 Drop 中只能使用同步方法
-        self.event_bus.destroy_blocking();
+        EventHelper::destroy_event_bus_blocking(&mut self.event_bus);
+    }
+}
+
+// ==================== RuntimeTrait 实现 ====================
+
+#[async_trait]
+impl RuntimeTrait for ForgeRuntime {
+    async fn dispatch(&mut self, transaction: Transaction) -> ForgeResult<()> {
+        self.dispatch(transaction).await
+    }
+
+    async fn dispatch_with_meta(
+        &mut self,
+        transaction: Transaction,
+        description: String,
+        meta: serde_json::Value,
+    ) -> ForgeResult<()> {
+        self.dispatch_with_meta(transaction, description, meta).await
+    }
+
+    async fn command(&mut self, command: Arc<dyn Command>) -> ForgeResult<()> {
+        self.command(command).await
+    }
+
+    async fn command_with_meta(
+        &mut self,
+        command: Arc<dyn Command>,
+        description: String,
+        meta: serde_json::Value,
+    ) -> ForgeResult<()> {
+        self.command_with_meta(command, description, meta).await
+    }
+
+    async fn get_state(&self) -> ForgeResult<Arc<State>> {
+        Ok(self.get_state().clone())
+    }
+
+    async fn get_tr(&self) -> ForgeResult<Transaction> {
+        Ok(self.get_tr())
+    }
+
+    async fn get_schema(&self) -> ForgeResult<Arc<Schema>> {
+        Ok(self.get_schema())
+    }
+
+    async fn undo(&mut self) -> ForgeResult<()> {
+        self.undo();
+        Ok(())
+    }
+
+    async fn redo(&mut self) -> ForgeResult<()> {
+        self.redo();
+        Ok(())
+    }
+
+    async fn jump(&mut self, steps: isize) -> ForgeResult<()> {
+        self.jump(steps);
+        Ok(())
+    }
+
+    fn get_config(&self) -> &ForgeConfig {
+        self.get_config()
+    }
+
+    fn update_config(&mut self, config: ForgeConfig) {
+        self.update_config(config);
+    }
+
+    fn get_options(&self) -> &RuntimeOptions {
+        self.get_options()
+    }
+
+    async fn destroy(&mut self) -> ForgeResult<()> {
+        self.destroy().await
     }
 }
