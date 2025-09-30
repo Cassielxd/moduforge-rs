@@ -13,7 +13,7 @@ use crate::transaction::Transaction;
 #[async_trait]
 pub trait PluginTrait: Send + Sync + Debug {
     /// 获取插件元数据（静态信息）- 提供默认实现
-    fn metadata(&self) -> PluginMetadata;
+    fn metadata(&self) -> PluginMetadata ;
 
     /// 获取插件配置（静态配置）- 提供默认实现
     fn config(&self) -> PluginConfig {
@@ -109,7 +109,12 @@ impl PluginSpec {
         new_state: &Arc<State>,
     ) -> StateResult<Option<Transaction>> {
         let tr = self.tr.append_transaction(trs, old_state, new_state).await?;
-        if let Some(mut tr) = tr { Ok(Some(tr)) } else { Ok(None) }
+        if let Some(mut tr) = tr {
+            let _ = tr.commit(); // 在插件系统中，commit 错误可以被忽略
+            Ok(Some(tr))
+        } else {
+            Ok(None)
+        }
     }
 }
 /// 插件实例结构体

@@ -608,6 +608,7 @@ impl ForgeRuntime {
 
             if let Some(mut transaction) = middleware_result {
                 // 由运行时统一提交事务，再通过相同的 flow 引擎处理
+                transaction.commit()?;
                 let task_result = self
                     .flow_engine
                     .submit((self.state.clone(), transaction))
@@ -633,6 +634,7 @@ impl ForgeRuntime {
         metrics::command_executed(command.name().as_str());
         let mut tr = self.get_tr();
         command.execute(&mut tr).await?;
+        tr.commit()?;
         self.dispatch(tr).await
     }
 
@@ -646,6 +648,7 @@ impl ForgeRuntime {
         metrics::command_executed(command.name().as_str());
         let mut tr = self.get_tr();
         command.execute(&mut tr).await?;
+        tr.commit()?;
         self.dispatch_with_meta(tr, description, meta).await
     }
 
@@ -707,8 +710,12 @@ impl ForgeRuntime {
         if let Some(state) = state_update {
             self.update_state_with_meta(state.clone(), description, meta)
                 .await?;
-            self.emit_event(Event::TrApply(old_id, transactions, state))
-                .await?;
+            self.emit_event(Event::TrApply(
+                old_id,
+                transactions,
+                state,
+            ))
+            .await?;
         }
         Ok(())
     }
