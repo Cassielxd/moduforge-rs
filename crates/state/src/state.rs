@@ -464,20 +464,25 @@ impl Configuration {
         doc: Option<Arc<NodePool>>,
         resource_manager: Option<Arc<GlobalResourceManager>>,
     ) -> StateResult<Self> {
-        let config = Configuration {
+        // 使用 Builder 模式构建插件管理器
+        let plugin_manager = if let Some(plugin_list) = plugins {
+            use crate::plugin::PluginManagerBuilder;
+
+            let mut builder = PluginManagerBuilder::new();
+            for plugin in plugin_list {
+                builder.register_plugin(plugin)?;
+            }
+            builder.build()?
+        } else {
+            PluginManager::new()
+        };
+
+        Ok(Configuration {
             doc,
-            plugin_manager: PluginManager::new(),
+            plugin_manager,
             schema,
             resource_manager: resource_manager
                 .unwrap_or_else(|| Arc::new(GlobalResourceManager::default())),
-        };
-
-        if let Some(plugin_list) = plugins {
-            for plugin in plugin_list {
-                config.plugin_manager.register_plugin(plugin).await?
-            }
-            config.plugin_manager.finalize_registration().await?;
-        }
-        Ok(config)
+        })
     }
 }
