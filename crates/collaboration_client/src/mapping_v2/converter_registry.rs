@@ -348,8 +348,15 @@ where
     T: Step + 'static,
     C: super::typed_converter::TypedStepConverter<T> + Default + 'static,
 {
-    let mut registry = global_registry().write().unwrap();
-    registry.register_converter::<T, C>();
+    match global_registry().write() {
+        Ok(mut registry) => {
+            registry.register_converter::<T, C>();
+        }
+        Err(e) => {
+            tracing::error!("无法获取全局注册表写锁以注册转换器: {}", e);
+            // 这是严重错误，但不应该 panic，记录日志即可
+        }
+    }
 }
 
 /// 使用全局注册表转换步骤的便捷函数
@@ -358,12 +365,18 @@ pub fn convert_step_global(
     txn: &mut TransactionMut,
     context: &ConversionContext,
 ) -> ConversionResult<StepResult> {
-    let registry = global_registry().read().unwrap();
+    let registry = global_registry().read().map_err(|e| {
+        ConversionError::Custom {
+            message: format!("无法获取全局注册表读锁: {}", e),
+        }
+    })?;
     registry.convert_step(step, txn, context)
 }
 
 /// 获取全局注册表的性能统计
 pub fn get_global_performance_stats()
 -> std::sync::RwLockReadGuard<'static, StaticConverterRegistry> {
-    global_registry().read().unwrap()
+    global_registry().read().expect(
+        "获取全局注册表读锁失败：这是一个严重的内部错误，请报告此问题"
+    )
 }

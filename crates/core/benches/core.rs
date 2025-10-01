@@ -81,7 +81,6 @@ fn bench_history_manager(c: &mut Criterion) {
                 max_entries: 1000,
                 enable_compression: true,
                 persistence_interval: Duration::from_secs(60),
-                enable_incremental_snapshots: true,
             };
             let history_manager = HistoryManager::<String>::with_config(
                 "initial".to_string(),

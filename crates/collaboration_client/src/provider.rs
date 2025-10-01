@@ -273,9 +273,18 @@ impl WebsocketProvider {
         // 延迟 100 毫秒，以避免与 yrs-warp 的初始事务发生竞争
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
+        // 确保客户端连接存在
+        let conn = match self.client_conn.as_ref() {
+            Some(conn) => conn,
+            None => {
+                tracing::error!("尝试设置监听器时客户端连接不存在");
+                return;
+            }
+        };
+
         // 1. 监听文档变更
         let doc_subscription = {
-            let sink = self.client_conn.as_ref().unwrap().sink();
+            let sink = conn.sink();
             let client_id = self.client_id.clone();
             let awareness_lock = self.awareness.read().await;
             let doc = awareness_lock.doc();
@@ -321,7 +330,15 @@ impl WebsocketProvider {
 
         {
             let awareness_lock = self.awareness.write().await;
-            let sink = self.client_conn.as_ref().unwrap().sink();
+            // 再次安全获取连接（虽然上面已经检查过，但为了代码清晰性）
+            let conn = match self.client_conn.as_ref() {
+                Some(conn) => conn,
+                None => {
+                    tracing::error!("尝试设置 awareness 监听器时客户端连接不存在");
+                    return;
+                }
+            };
+            let sink = conn.sink();
 
             // 修复 on_update 签名以匹配 yrs v0.18.8
             let awareness_subscription = awareness_lock.on_update(move |event| {

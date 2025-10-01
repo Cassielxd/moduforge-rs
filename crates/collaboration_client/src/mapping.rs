@@ -36,8 +36,19 @@ pub fn convert_steps_batch(
     txn: &mut yrs::TransactionMut,
     context: &ConversionContext,
 ) -> Vec<ConversionResult<crate::types::StepResult>> {
-    let registry = global_registry().read().unwrap();
-    registry.convert_steps_batch(steps, txn, context)
+    match global_registry().read() {
+        Ok(registry) => registry.convert_steps_batch(steps, txn, context),
+        Err(e) => {
+            // 如果锁获取失败，返回所有步骤的错误结果
+            tracing::error!("无法获取全局注册表读锁进行批量转换: {}", e);
+            steps
+                .iter()
+                .map(|_| Err(ConversionError::Custom {
+                    message: format!("全局注册表锁获取失败: {}", e),
+                }))
+                .collect()
+        }
+    }
 }
 
 /// 便捷函数：创建转换上下文
@@ -83,23 +94,35 @@ impl Mapper {
 
     /// 获取性能统计信息
     pub fn get_performance_stats() -> String {
-        let registry = global_registry().read().unwrap();
-        let stats = registry.get_performance_stats();
-        format!(
-            "性能统计:\n\
-             - 总转换次数: {}\n\
-             - 成功率: {:.2}%\n\
-             - 运行时间: {:?}",
-            stats.get_total_conversions(),
-            stats.get_success_rate() * 100.0,
-            stats.get_uptime()
-        )
+        match global_registry().read() {
+            Ok(registry) => {
+                let stats = registry.get_performance_stats();
+                format!(
+                    "性能统计:\n\
+                     - 总转换次数: {}\n\
+                     - 成功率: {:.2}%\n\
+                     - 运行时间: {:?}",
+                    stats.get_total_conversions(),
+                    stats.get_success_rate() * 100.0,
+                    stats.get_uptime()
+                )
+            }
+            Err(e) => {
+                tracing::error!("无法获取全局注册表读锁以获取性能统计: {}", e);
+                format!("性能统计: 无法获取（锁错误: {}）", e)
+            }
+        }
     }
 
     /// 获取注册的转换器数量
     pub fn converter_count() -> usize {
-        let registry = global_registry().read().unwrap();
-        registry.converter_count()
+        match global_registry().read() {
+            Ok(registry) => registry.converter_count(),
+            Err(e) => {
+                tracing::error!("无法获取全局注册表读锁以获取转换器数量: {}", e);
+                0 // 返回 0 作为失败时的默认值
+            }
+        }
     }
 }
 

@@ -50,8 +50,16 @@ impl DependencyManager {
 
         // 遍历图中的所有边，找出缺失的依赖
         for edge in self.dependency_graph.edge_indices() {
-            let (source_idx, target_idx) =
-                self.dependency_graph.edge_endpoints(edge).unwrap();
+            // 安全地获取边的端点，理论上不会失败，因为边索引来自图本身
+            let endpoints = match self.dependency_graph.edge_endpoints(edge) {
+                Some(endpoints) => endpoints,
+                None => {
+                    tracing::warn!("无法获取边端点，跳过: {:?}", edge);
+                    continue;
+                }
+            };
+
+            let (source_idx, target_idx) = endpoints;
             let dependent = self.dependency_graph[source_idx].clone();
             let dependency = self.dependency_graph[target_idx].clone();
 
