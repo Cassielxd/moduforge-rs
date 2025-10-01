@@ -37,9 +37,10 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 
 /// 运行环境类型
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum Environment {
     /// 开发环境 - 较长超时时间，详细日志
+    #[default]
     Development,
     /// 测试环境 - 中等超时时间，适度日志
     Testing,
@@ -47,12 +48,6 @@ pub enum Environment {
     Production,
     /// 自定义环境
     Custom,
-}
-
-impl Default for Environment {
-    fn default() -> Self {
-        Environment::Development
-    }
 }
 
 /// 任务处理器配置
@@ -221,36 +216,29 @@ impl Default for CacheConfig {
 }
 
 /// 统一的 Forge 配置结构
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ForgeConfig {
     /// 运行环境
+    #[serde(default)]
     pub environment: Environment,
     /// 任务处理器配置
+    #[serde(default)]
     pub processor: ProcessorConfig,
     /// 性能监控配置
+    #[serde(default)]
     pub performance: PerformanceConfig,
     /// 事件系统配置
+    #[serde(default)]
     pub event: EventConfig,
     /// 历史记录配置
+    #[serde(default)]
     pub history: HistoryConfig,
     /// 扩展系统配置
+    #[serde(default)]
     pub extension: ExtensionConfig,
     /// 缓存配置
+    #[serde(default)]
     pub cache: CacheConfig,
-}
-
-impl Default for ForgeConfig {
-    fn default() -> Self {
-        Self {
-            environment: Environment::default(),
-            processor: ProcessorConfig::default(),
-            performance: PerformanceConfig::default(),
-            event: EventConfig::default(),
-            history: HistoryConfig::default(),
-            extension: ExtensionConfig::default(),
-            cache: CacheConfig::default(),
-        }
-    }
 }
 
 impl ForgeConfig {

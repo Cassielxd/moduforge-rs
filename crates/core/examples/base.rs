@@ -64,30 +64,30 @@ impl PluginTrait for APlugin {
         // 获取子单位工程 并汇总 前提 单位项目 计算完成之后
         let doc = new_state.doc();
         let mut price = 0;
-        let mut totalPrice = 0;
+        let mut total_price = 0;
         let mut new_tr = new_state.tr();
 
         for tr in trs {
-            if let Some(dwgcKeys) = tr.get_meta::<Vec<NodeId>>("dwgcKeys") {
-                for id in dwgcKeys {
+            if let Some(dwgc_keys) = tr.get_meta::<Vec<NodeId>>("dwgcKeys") {
+                for id in dwgc_keys {
                     if let Some(node) = doc.get_node(&id) {
                         let price1 = node
                             .attrs
                             .get_value::<i64>("price")
                             .unwrap_or_default();
                         price += price1;
-                        let totalPrice1 = node
+                        let total_price1 = node
                             .attrs
                             .get_value::<i64>("totalPrice")
                             .unwrap_or_default();
-                        totalPrice += totalPrice1;
+                        total_price += total_price1;
                     }
                 }
             }
         }
         let mut map = HashMap::new();
         map.insert("price".to_string(), price.into());
-        map.insert("totalPrice".to_string(), totalPrice.into());
+        map.insert("totalPrice".to_string(), total_price.into());
         new_tr.set_node_attribute(doc.root_id().clone(), map)?;
         println!("产生新的 汇总 事务");
         Ok(Some(new_tr))
@@ -115,7 +115,7 @@ impl PluginTrait for BPlugin {
     async fn append_transaction(
         &self,
         trs: &[Arc<Transaction>],
-        old_state: &Arc<State>,
+        _old_state: &Arc<State>,
         new_state: &Arc<State>,
     ) -> StateResult<Option<Transaction>> {
         println!("BPlugin: append_transaction 被调用，事务数量: {}", trs.len());

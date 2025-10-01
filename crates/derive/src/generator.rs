@@ -3,6 +3,9 @@
 //! 提供 Node 和 Mark 的代码生成功能，将解析后的配置转换为可执行的 Rust 代码。
 //! 严格遵循单一职责原则，每个生成器只负责特定类型的代码生成。
 
+// Library code may have unused items that are part of the public API
+#![allow(dead_code, clippy::only_used_in_recursion)]
+
 pub mod mark_generator;
 pub mod node_generator;
 

@@ -173,15 +173,7 @@ where
 {
     let opt: Option<String> = Option::deserialize(deserializer)?;
     match opt {
-        Some(s) => {
-            if s == "true" {
-                Ok(Some(true))
-            } else if s == "false" {
-                Ok(Some(false))
-            } else {
-                Ok(Some(false))
-            }
-        },
-        None => Ok(Some(false)),
+        Some(s) if s == "true" => Ok(Some(true)),
+        _ => Ok(Some(false)),
     }
 }

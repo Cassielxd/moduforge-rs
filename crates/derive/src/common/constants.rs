@@ -258,6 +258,7 @@ mod tests {
 
     /// 测试支持类型列表的完整性
     #[test]
+    #[allow(clippy::const_is_empty)]
     fn test_supported_basic_types() {
         assert!(SUPPORTED_BASIC_TYPES.contains(&"String"));
         assert!(SUPPORTED_BASIC_TYPES.contains(&"i32"));
@@ -268,6 +269,7 @@ mod tests {
 
     /// 测试常用节点类型列表
     #[test]
+    #[allow(clippy::const_is_empty)]
     fn test_common_node_types() {
         assert!(COMMON_NODE_TYPES.contains(&"paragraph"));
         assert!(COMMON_NODE_TYPES.contains(&"heading"));
@@ -277,6 +279,7 @@ mod tests {
 
     /// 测试常用标记类型列表
     #[test]
+    #[allow(clippy::const_is_empty)]
     fn test_common_mark_types() {
         assert!(COMMON_MARK_TYPES.contains(&"bold"));
         assert!(COMMON_MARK_TYPES.contains(&"italic"));
@@ -317,6 +320,7 @@ mod tests {
 
     /// 测试修复建议模板
     #[test]
+    #[allow(clippy::const_is_empty)]
     fn test_suggestion_templates() {
         assert!(
             suggestion_templates::MISSING_NODE_TYPE_SUGGESTION
@@ -340,6 +344,7 @@ mod tests {
 
     /// 测试验证规则常量的合理性
     #[test]
+    #[allow(clippy::assertions_on_constants, clippy::const_is_empty)]
     fn test_validation_constants() {
         assert!(validation::MIN_IDENTIFIER_LENGTH > 0);
         assert!(
@@ -352,6 +357,7 @@ mod tests {
 
     /// 测试性能常量的合理性
     #[test]
+    #[allow(clippy::assertions_on_constants)]
     fn test_performance_constants() {
         assert!(performance::TYPE_ANALYSIS_CACHE_SIZE > 0);
         assert!(performance::CODEGEN_CACHE_SIZE > 0);

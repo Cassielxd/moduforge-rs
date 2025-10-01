@@ -95,6 +95,7 @@ fn set_window_minimized(
     }
 }
 
+#[allow(dead_code)]
 fn is_window_minimized(window_id: &str) -> bool {
     let manager = WINDOW_MANAGER.lock().unwrap();
     manager
@@ -392,6 +393,7 @@ async fn create_module_window(
 
 // 创建子窗口的命令（支持模态和非模态）
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 async fn create_child_window(
     app: AppHandle,
     window_id: String,

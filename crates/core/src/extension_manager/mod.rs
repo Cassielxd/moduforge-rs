@@ -2,19 +2,18 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use mf_model::schema::Schema;
-use mf_state::{ops::GlobalResourceManager, plugin::Plugin};
+use mf_state::plugin::Plugin;
 
 use crate::{
     helpers::get_schema_by_resolved_extensions::get_schema_by_resolved_extensions,
     metrics, types::Extensions, ForgeResult, XmlSchemaParser,
+    extension::OpFn,
 };
 /// 扩展管理器
 pub struct ExtensionManager {
     plugins: Vec<Arc<Plugin>>,
     schema: Arc<Schema>,
-    op_fns: Vec<
-        Arc<dyn Fn(&GlobalResourceManager) -> ForgeResult<()> + Send + Sync>,
-    >,
+    op_fns: OpFn,
 }
 /// ExtensionManager构建器
 ///
@@ -330,11 +329,7 @@ impl ExtensionManager {
             .add_xml_files(xml_file_paths)
             .build()
     }
-    pub fn get_op_fns(
-        &self
-    ) -> &Vec<
-        Arc<dyn Fn(&GlobalResourceManager) -> ForgeResult<()> + Send + Sync>,
-    > {
+    pub fn get_op_fns(&self) -> &OpFn {
         &self.op_fns
     }
 
@@ -506,7 +501,7 @@ mod tests {
             .build();
 
         if let Err(ref e) = result {
-            println!("Error: {:?}", e);
+            println!("Error: {e:?}");
         }
         assert!(result.is_ok());
 

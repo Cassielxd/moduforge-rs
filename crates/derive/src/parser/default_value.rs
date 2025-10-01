@@ -672,9 +672,12 @@ mod tests {
 
         let default_value = result.unwrap();
         assert_eq!(default_value.raw_value, "3.14159");
-        assert!(
-            matches!(default_value.value_type, DefaultValueType::Float(f) if (f - 3.14159).abs() < f64::EPSILON)
-        );
+        #[allow(clippy::approx_constant)]
+        {
+            assert!(
+                matches!(default_value.value_type, DefaultValueType::Float(f) if (f - 3.14159).abs() < f64::EPSILON)
+            );
+        }
         assert!(!default_value.is_json);
         assert_eq!(default_value.type_name(), "Float");
         assert!(default_value.is_numeric());

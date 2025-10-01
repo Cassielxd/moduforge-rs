@@ -403,15 +403,13 @@ impl Utils {
 
             // 提取属性
             let mut attrs = Attrs::default();
-            if let Some(attrs_map) = node_map.get(txn, "attrs") {
-                if let yrs::types::Value::YMap(attrs_yrs_map) = attrs_map {
-                    for (key, value) in attrs_yrs_map.iter(txn) {
-                        if let yrs::types::Value::Any(any_value) = value {
-                            if let Some(json_value) =
-                                Utils::yrs_any_to_json_value(&any_value)
-                            {
-                                attrs.insert(key.to_string(), json_value);
-                            }
+            if let Some(yrs::types::Value::YMap(attrs_yrs_map)) = node_map.get(txn, "attrs") {
+                for (key, value) in attrs_yrs_map.iter(txn) {
+                    if let yrs::types::Value::Any(any_value) = value {
+                        if let Some(json_value) =
+                            Utils::yrs_any_to_json_value(&any_value)
+                        {
+                            attrs.insert(key.to_string(), json_value);
                         }
                     }
                 }
@@ -419,68 +417,57 @@ impl Utils {
 
             // 提取内容（子节点ID列表）
             let mut content = imbl::Vector::new();
-            if let Some(content_array) = node_map.get(txn, "content") {
-                if let yrs::types::Value::YArray(content_yrs_array) =
-                    content_array
-                {
-                    for item in content_yrs_array.iter(txn) {
-                        if let yrs::types::Value::Any(any) = item {
-                            content.push_back(NodeId::from(any.to_string()));
-                        }
+            if let Some(yrs::types::Value::YArray(content_yrs_array)) = node_map.get(txn, "content") {
+                for item in content_yrs_array.iter(txn) {
+                    if let yrs::types::Value::Any(any) = item {
+                        content.push_back(NodeId::from(any.to_string()));
                     }
                 }
             }
 
             // 提取标记
             let mut marks = imbl::Vector::new();
-            if let Some(marks_array) = node_map.get(txn, "marks") {
-                if let yrs::types::Value::YArray(marks_yrs_array) = marks_array
-                {
-                    for item in marks_yrs_array.iter(txn) {
-                        if let yrs::types::Value::YMap(mark_map) = item {
-                            let mark_type = mark_map
-                                .get(txn, "type")
-                                .and_then(|v| match v {
-                                    yrs::types::Value::Any(any) => {
-                                        Some(any.to_string())
-                                    },
-                                    _ => None,
-                                })
-                                .unwrap_or_else(|| "unknown".to_string());
+            if let Some(yrs::types::Value::YArray(marks_yrs_array)) = node_map.get(txn, "marks") {
+                for item in marks_yrs_array.iter(txn) {
+                    if let yrs::types::Value::YMap(mark_map) = item {
+                        let mark_type = mark_map
+                            .get(txn, "type")
+                            .and_then(|v| match v {
+                                yrs::types::Value::Any(any) => {
+                                    Some(any.to_string())
+                                },
+                                _ => None,
+                            })
+                            .unwrap_or_else(|| "unknown".to_string());
 
-                            let mut mark_attrs = Attrs::default();
-                            if let Some(mark_attrs_map) =
-                                mark_map.get(txn, "attrs")
+                        let mut mark_attrs = Attrs::default();
+                        if let Some(yrs::types::Value::YMap(attrs_yrs_map)) =
+                            mark_map.get(txn, "attrs")
+                        {
+                            for (key, value) in attrs_yrs_map.iter(txn)
                             {
-                                if let yrs::types::Value::YMap(attrs_yrs_map) =
-                                    mark_attrs_map
+                                if let yrs::types::Value::Any(
+                                    any_value,
+                                ) = value
                                 {
-                                    for (key, value) in attrs_yrs_map.iter(txn)
+                                    if let Some(json_value) =
+                                        Utils::yrs_any_to_json_value(
+                                            &any_value,
+                                        )
                                     {
-                                        if let yrs::types::Value::Any(
-                                            any_value,
-                                        ) = value
-                                        {
-                                            if let Some(json_value) =
-                                                Utils::yrs_any_to_json_value(
-                                                    &any_value,
-                                                )
-                                            {
-                                                mark_attrs.insert(
-                                                    key.to_string(),
-                                                    json_value,
-                                                );
-                                            }
-                                        }
+                                        mark_attrs.insert(
+                                            key.to_string(),
+                                            json_value,
+                                        );
                                     }
                                 }
                             }
-
-                            marks.push_back(Mark {
-                                r#type: mark_type,
-                                attrs: mark_attrs,
-                            });
                         }
+
+                        marks.push_back(Mark {
+                            r#type: mark_type,
+                            attrs: mark_attrs,
+                        });
                     }
                 }
             }

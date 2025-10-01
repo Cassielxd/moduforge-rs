@@ -16,6 +16,9 @@
 //! - **里氏替换原则 (LSP)**: 所有转换器都可以无缝替换使用
 //! - **接口隔离原则 (ISP)**: 提供专门的转换接口，不强制依赖不需要的功能
 //! - **依赖倒置原则 (DIP)**: 依赖于抽象接口而非具体实现
+
+// Library code may have unused items that are part of the public API
+#![allow(dead_code)]
 //!
 //! # 使用方式
 //!

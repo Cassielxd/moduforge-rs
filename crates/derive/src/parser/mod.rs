@@ -16,6 +16,9 @@
 //! - **接口隔离原则 (ISP)**: 提供专门的解析、分析和验证接口
 //! - **开闭原则 (OCP)**: 通过配置化支持扩展新的解析规则
 //! - **里氏替换原则 (LSP)**: 所有解析器都可以无缝替换使用
+
+// Library code may have unused items that are part of the public API
+#![allow(dead_code)]
 //!
 //! # 使用流程
 //!

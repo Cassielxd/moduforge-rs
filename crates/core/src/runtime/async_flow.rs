@@ -61,7 +61,7 @@ impl FlowEngine {
         u64,
         tokio::sync::mpsc::Receiver<TaskResult<TaskParams, ProcessorResult>>,
     )> {
-        self.processor.submit_task(params, 0).await.map_err(Into::into)
+        self.processor.submit_task(params, 0).await
     }
 
     pub async fn submit_transactions(

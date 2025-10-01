@@ -146,7 +146,7 @@ impl<'a> NodeGenerator<'a> {
     /// - **语义清晰**: 方法名明确表示返回的是定义而非实例
     /// - **属性精确性**: 只包含 #[attr] 标记的字段，符合节点定义语义
     pub fn generate_node_definition_method(&self) -> MacroResult<TokenStream2> {
-        let struct_name = &self.input.ident;
+        let _struct_name = &self.input.ident;
         let node_type = self.config.node_type.as_ref().ok_or_else(|| {
             MacroError::validation_error(
                 "Node 配置缺少必需的 node_type 属性",
@@ -1106,7 +1106,7 @@ impl<'a> NodeGenerator<'a> {
     /// - **字段分离**: #[attr] 字段从 attrs 提取，非 #[attr] 字段使用默认值
     /// - **类型安全**: 支持泛型类型和自定义类型的安全转换
     pub fn generate_from_method(&self) -> MacroResult<TokenStream2> {
-        let struct_name = &self.input.ident;
+        let _struct_name = &self.input.ident;
         let node_type = self.config.node_type.as_ref().ok_or_else(|| {
             MacroError::validation_error(
                 "Node 配置缺少必需的 node_type 属性",
@@ -1931,6 +1931,7 @@ mod tests {
         assert!(code_str.contains("to_string"));
 
         // 测试浮点数到字符串的转换
+        #[allow(clippy::approx_constant)]
         let float_default = DefaultValue {
             raw_value: "3.14".to_string(),
             value_type: DefaultValueType::Float(3.14),

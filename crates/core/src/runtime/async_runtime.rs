@@ -363,7 +363,7 @@ impl ForgeAsyncRuntime {
         transactions.extend(result.transactions);
 
         // 检查最后一个事务是否改变了文档
-        if let Some(_) = transactions.last() {
+        if transactions.last().is_some() {
             current_state = Some(result.state);
         }
 

@@ -129,7 +129,7 @@ pub mod collection_helpers {
 
     /// 安全地从 Vec 获取值
     pub fn get_at_index<'a, T>(
-        vec: &'a Vec<T>,
+        vec: &'a [T],
         index: usize,
         context: &str,
     ) -> ForgeResult<&'a T> {
@@ -192,26 +192,6 @@ pub mod state_helpers {
     }
 }
 
-/// 测试辅助宏，只在测试时编译
-#[cfg(test)]
-pub mod test_helpers {
-    /// 测试中的 unwrap 替代，提供更好的错误信息
-    macro_rules! test_unwrap {
-        ($expr:expr, $msg:expr) => {
-            $expr.expect(&format!(
-                "测试失败 [{}:{}]: {}",
-                file!(),
-                line!(),
-                $msg
-            ))
-        };
-        ($expr:expr) => {
-            $expr.expect(&format!("测试失败 [{}:{}]", file!(), line!()))
-        };
-    }
-
-    pub(crate) use test_unwrap;
-}
 
 #[cfg(test)]
 mod tests {

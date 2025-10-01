@@ -10,6 +10,9 @@ use tokio::select;
 
 use crate::{metrics, ForgeResult};
 
+/// Type alias for complex receiver type
+type QueueReceiver<T, O> = Arc<tokio::sync::Mutex<Option<mpsc::Receiver<QueuedTask<T, O>>>>>;
+
 /// 任务处理的结果状态
 /// - Pending: 任务等待处理
 /// - Processing: 任务正在处理中
@@ -154,7 +157,7 @@ where
     O: Send + Sync,
 {
     queue: mpsc::Sender<QueuedTask<T, O>>,
-    queue_rx: Arc<tokio::sync::Mutex<Option<mpsc::Receiver<QueuedTask<T, O>>>>>,
+    queue_rx: QueueReceiver<T, O>,
     next_task_id: Arc<tokio::sync::Mutex<u64>>,
     stats: Arc<tokio::sync::Mutex<ProcessorStats>>,
 }
@@ -379,11 +382,9 @@ where
                         break;
                     }
 
-                    if let Some(result) = join_set.join_next().await {
-                        if let Err(e) = result {
-                            if !e.is_cancelled() {
-                                debug!("任务执行失败: {}", e);
-                            }
+                    if let Some(Err(e)) = join_set.join_next().await {
+                        if !e.is_cancelled() {
+                            debug!("任务执行失败: {}", e);
                         }
                     }
                 }
@@ -628,7 +629,7 @@ mod tests {
             task: i32,
         ) -> Result<String, ProcessorError> {
             tokio::time::sleep(Duration::from_millis(100)).await;
-            Ok(format!("Processed: {}", task))
+            Ok(format!("Processed: {task}"))
         }
     }
 

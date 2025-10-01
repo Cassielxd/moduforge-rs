@@ -146,7 +146,7 @@ impl CollabEditor {
             })
         })
         .await
-        .map_err(|e| ForgeError::Internal {
+        .map_err(|_e| ForgeError::Internal {
             message: "服务器异常，请检查服务器是否启动".to_string(),
             location: None,
         })?;
@@ -239,7 +239,7 @@ impl CollabEditor {
 
     pub fn get_resource<T: Resource>(
         &self,
-        rid: ResourceId,
+        _rid: ResourceId,
     ) -> Option<Arc<T>> {
         // 注意：这里需要异步访问 editor，但为了保持接口兼容性，暂时 panic
         panic!("get_resource 需要异步访问，请使用 get_resource_async")
@@ -518,13 +518,13 @@ impl CollabSyncManager {
                         }
                     }
                 },
-                SyncEventType::MapChange(path, changes) => {
+                SyncEventType::MapChange(_path, changes) => {
                     for change in changes {
                         match change {
                             EntryChangeType::Inserted(value) => {
                                 println!("处理 Inserted 事件: {value:?}");
                             },
-                            EntryChangeType::Updated(value, value1) => {
+                            EntryChangeType::Updated(value, _value1) => {
                                 println!("处理 Updated 事件: {value:?}");
                             },
                             EntryChangeType::Removed(value) => {

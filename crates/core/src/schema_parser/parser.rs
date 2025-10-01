@@ -809,15 +809,9 @@ impl XmlSchemaParser {
     ) -> XmlSchemaResult<HashMap<String, AttributeSpec>> {
         let mut attrs = HashMap::new();
         for xml_attr in xml_attrs {
-            let default_value = if let Some(default_value) = xml_attr.default {
-                Some(default_value)
-            } else {
-                None
-            };
-
             attrs.insert(
                 xml_attr.name.clone(),
-                AttributeSpec { default: default_value },
+                AttributeSpec { default: xml_attr.default },
             );
         }
         Ok(attrs)

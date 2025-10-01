@@ -1376,6 +1376,7 @@ mod tests {
 
     /// 测试有效的 Node 配置验证
     #[test]
+    #[allow(clippy::field_reassign_with_default)]
     fn test_valid_node_config_validation() {
         let mut config = NodeConfig::default();
         config.node_type = Some("paragraph".to_string());
@@ -1401,6 +1402,7 @@ mod tests {
 
     /// 测试有效的 Mark 配置验证
     #[test]
+    #[allow(clippy::field_reassign_with_default)]
     fn test_valid_mark_config_validation() {
         let mut config = MarkConfig::default();
         config.mark_type = Some("bold".to_string());
@@ -1426,6 +1428,7 @@ mod tests {
 
     /// 测试无效的标识符验证
     #[test]
+    #[allow(clippy::field_reassign_with_default)]
     fn test_invalid_identifier_validation() {
         let mut config = NodeConfig::default();
         config.node_type = Some("invalid-identifier".to_string()); // 包含连字符
@@ -1436,6 +1439,7 @@ mod tests {
 
     /// 测试 marks 列表验证
     #[test]
+    #[allow(clippy::field_reassign_with_default)]
     fn test_marks_list_validation() {
         // 测试有效的 marks 列表
         let mut config = NodeConfig::default();
@@ -1458,6 +1462,7 @@ mod tests {
 
     /// 测试 content 表达式验证
     #[test]
+    #[allow(clippy::field_reassign_with_default)]
     fn test_content_expression_validation() {
         let mut config = NodeConfig::default();
         config.node_type = Some("paragraph".to_string());
@@ -1565,6 +1570,7 @@ mod tests {
         assert!(result.is_ok());
 
         // 测试浮点数到字符串的转换
+        #[allow(clippy::approx_constant)]
         let float_config = FieldConfig {
             name: "price".to_string(),
             field: field.clone(),

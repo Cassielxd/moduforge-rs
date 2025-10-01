@@ -1359,6 +1359,7 @@ mod tests {
 
     /// 测试 NodeConfig 验证功能
     #[test]
+    #[allow(clippy::field_reassign_with_default)]
     fn test_node_config_validation() {
         // 测试有效配置
         let mut config = NodeConfig::default();
@@ -1384,6 +1385,7 @@ mod tests {
 
     /// 测试 MarkConfig 验证功能
     #[test]
+    #[allow(clippy::field_reassign_with_default)]
     fn test_mark_config_validation() {
         // 测试有效配置
         let mut config = MarkConfig::default();

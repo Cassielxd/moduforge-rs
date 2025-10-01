@@ -97,7 +97,7 @@ impl IncStateField {
             // 添加标记
             if let Some(add_mark_step) = step.downcast_ref::<AddMarkStep>() {
                 let node = tr.doc().get_node(&add_mark_step.id);
-                if let Some(_) = node {
+                if node.is_some() {
                     operations.push(Operation::AddMark(
                         add_mark_step.id.clone(),
                         add_mark_step.marks.clone(),
@@ -109,7 +109,7 @@ impl IncStateField {
                 step.downcast_ref::<RemoveMarkStep>()
             {
                 let node = tr.doc().get_node(&remove_mark_step.id);
-                if let Some(_) = node {
+                if node.is_some() {
                     operations.push(Operation::RemoveMark(
                         remove_mark_step.id.clone(),
                         remove_mark_step.mark_types.clone(),

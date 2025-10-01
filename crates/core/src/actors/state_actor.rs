@@ -283,19 +283,14 @@ impl StateActorManager {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::config::HistoryConfig;
-
     #[tokio::test]
     async fn test_state_actor_basic_operations() {
         // 创建测试状态和历史管理器
         // 注意：这需要实际的State实现，这里只是占位测试
-        assert!(true);
     }
 
     #[tokio::test]
     async fn test_state_actor_history_operations() {
         // 测试撤销/重做功能
-        assert!(true);
     }
 }

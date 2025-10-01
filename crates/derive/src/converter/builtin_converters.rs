@@ -533,7 +533,7 @@ pub fn get_all_builtin_converters() -> Vec<Box<dyn TypeConverter>> {
     ];
 
     // 按优先级降序排序
-    converters.sort_by(|a, b| b.priority().cmp(&a.priority()));
+    converters.sort_by_key(|b| std::cmp::Reverse(b.priority()));
 
     converters
 }

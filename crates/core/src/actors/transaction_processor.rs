@@ -217,7 +217,7 @@ impl TransactionProcessorActor {
         let mut transactions = Vec::new();
         transactions.extend(result.transactions);
 
-        if let Some(_) = transactions.last() {
+        if transactions.last().is_some() {
             state_update = Some(result.state);
         }
 
@@ -450,14 +450,11 @@ impl TransactionProcessorManager {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[tokio::test]
     async fn test_transaction_processor_actor_creation() {
         // 这里只是基本的Actor创建测试
         // 完整的兼容性测试将在集成测试中进行
 
         // 注意：这需要其他Actor的模拟实现，暂时只测试基本结构
-        assert!(true); // 占位测试
     }
 }

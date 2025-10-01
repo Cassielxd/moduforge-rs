@@ -92,6 +92,7 @@ struct FullNodeTest {
 /// - 简单的属性字段处理
 #[derive(Mark)]
 #[mark_type = "emphasis"]
+#[allow(dead_code)]
 struct BasicMarkTest {
     #[attr]
     level: String,
@@ -108,6 +109,7 @@ struct BasicMarkTest {
 /// - 可选和非可选字段混合
 #[derive(Mark)]
 #[mark_type = "styling"]
+#[allow(dead_code)]
 struct FullMarkTest {
     #[attr]
     font_family: String,

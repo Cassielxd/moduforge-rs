@@ -434,7 +434,7 @@ impl ForgeRuntime {
         let mut transactions = Vec::new();
         transactions.extend(result.transactions);
         // 检查最后一个事务是否改变了文档
-        if let Some(_) = transactions.last() {
+        if transactions.last().is_some() {
             state_update = Some(result.state);
         }
         // 执行后置中间件链，允许中间件在事务应用后执行额外操作
@@ -562,8 +562,7 @@ impl ForgeRuntime {
     }
 
     pub fn get_tr(&self) -> Transaction {
-        let tr = self.get_state().tr();
-        tr
+        self.get_state().tr()
     }
 
     pub fn undo(&mut self) {

@@ -115,7 +115,7 @@ impl<'a> MarkGenerator<'a> {
     /// - **语义清晰**: 方法名明确表示返回的是定义而非实例
     /// - **属性精确性**: 只包含 #[attr] 标记的字段，符合标记定义语义
     pub fn generate_mark_definition_method(&self) -> MacroResult<TokenStream2> {
-        let struct_name = &self.input.ident;
+        let _struct_name = &self.input.ident;
         let mark_type = self.config.mark_type.as_ref().ok_or_else(|| {
             MacroError::validation_error(
                 "Mark 配置缺少必需的 mark_type 属性",
@@ -198,7 +198,7 @@ impl<'a> MarkGenerator<'a> {
     /// - **单一职责**: 只负责生成 to_mark() 方法代码
     /// - **开闭原则**: 通过配置和转换器支持扩展
     pub fn generate_to_mark_method(&self) -> MacroResult<TokenStream2> {
-        let struct_name = &self.input.ident;
+        let _struct_name = &self.input.ident;
         let mark_type = self.config.mark_type.as_ref().ok_or_else(|| {
             MacroError::validation_error(
                 "Mark 配置缺少必需的 mark_type 属性",
@@ -699,7 +699,7 @@ impl<'a> MarkGenerator<'a> {
     ///
     /// 成功时返回生成的代码 TokenStream，失败时返回生成错误
     pub fn generate_from_method(&self) -> MacroResult<TokenStream2> {
-        let struct_name = &self.input.ident;
+        let _struct_name = &self.input.ident;
         let mark_type = self.config.mark_type.as_ref().ok_or_else(|| {
             MacroError::validation_error(
                 "Mark 配置缺少必需的 mark_type 属性",

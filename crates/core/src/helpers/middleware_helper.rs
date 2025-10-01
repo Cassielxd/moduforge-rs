@@ -89,7 +89,7 @@ impl MiddlewareHelper {
     /// * `ForgeResult<()>` - 成功或错误
     pub async fn run_after_middleware(
         state: &mut Option<Arc<State>>,
-        transactions: &mut Vec<Arc<Transaction>>,
+        transactions: &mut [Arc<Transaction>],
         middleware_stack: &MiddlewareStack,
         config: &ForgeConfig,
     ) -> ForgeResult<()> {

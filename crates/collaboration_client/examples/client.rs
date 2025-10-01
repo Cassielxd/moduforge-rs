@@ -66,7 +66,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     SyncEvent::ConnectionChanged(status) => {
                         println!("🔌 连接状态: {status:?}");
                     },
-                    _ => {},
                 }
             }
         });
@@ -96,13 +95,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }));
-        provider.subscription(nodes_map.observe_deep(move |txn, events| {
+        provider.subscription(nodes_map.observe_deep(move |_txn, events| {
             for event in events.iter() {
                 match event {
-                    yrs::types::Event::Array(array_event) => {
+                    yrs::types::Event::Array(_array_event) => {
                         // 更新了 标记数组 需要转换成 step
                     },
-                    yrs::types::Event::Map(map_event) => {
+                    yrs::types::Event::Map(_map_event) => {
                         // 更新了 节点属性 需要转换成 step 或者 添加节点
                     },
                     _ => {},

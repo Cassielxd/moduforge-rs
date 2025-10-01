@@ -2,6 +2,7 @@ pub mod async_flow;
 pub mod async_processor;
 pub mod async_runtime;
 pub mod async_utils;
+#[allow(clippy::module_inception)]
 pub mod runtime;
 pub mod runtime_trait;
 pub mod sync_flow;

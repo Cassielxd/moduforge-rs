@@ -269,10 +269,8 @@ impl<T: Send + Sync + Clone + 'static> EventBus<T> {
                             if join_set.len() >= config.max_concurrent_handlers {
                                 debug!("事件处理任务数量达到上限，等待部分任务完成...");
                                 // 等待至少一个任务完成
-                                if let Some(result) = join_set.join_next().await {
-                                    if let Err(e) = result {
-                                        debug!("事件处理任务错误: {}", e);
-                                    }
+                                if let Some(Err(e)) = join_set.join_next().await {
+                                    debug!("事件处理任务错误: {}", e);
                                 }
                             }
 
@@ -287,6 +285,7 @@ impl<T: Send + Sync + Clone + 'static> EventBus<T> {
                             join_set.spawn(async move {
                                 // 为该事件并发执行所有 handler
                                 let mut handler_set = tokio::task::JoinSet::new();
+                                #[allow(clippy::unnecessary_to_owned)]
                                 for handler in handlers.iter().cloned() {
                                     let event_for_task = event.clone();
                                     handler_set.spawn(async move {
