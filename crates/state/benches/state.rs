@@ -9,7 +9,7 @@ fn bench_basic_state(c: &mut Criterion) {
     group.bench_function("基础操作", |b| {
         b.iter(|| {
             // 简单的状态操作基准测试
-            let result = (0..50).fold(0, |acc, x| acc + x);
+            let result = (0..50).sum::<i32>();
             criterion::black_box(result)
         })
     });

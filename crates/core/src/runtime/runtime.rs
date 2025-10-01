@@ -5,14 +5,12 @@ use async_trait::async_trait;
 
 use crate::{
     config::ForgeConfig,
-    debug::{debug, error, info},
+    debug::{debug, info},
     error::{error_utils, ForgeResult},
     event::{Event, EventBus},
     extension_manager::ExtensionManager,
     helpers::{
-        create_doc,
-        event_helper::EventHelper,
-        history_helper::HistoryHelper,
+        create_doc, event_helper::EventHelper, history_helper::HistoryHelper,
         middleware_helper::MiddlewareHelper,
     },
     history_manager::HistoryManager,
@@ -40,7 +38,6 @@ pub struct ForgeRuntime {
     config: ForgeConfig,
 }
 impl ForgeRuntime {
-
     /// 创建新的编辑器实例
     ///
     /// 此方法会自动从以下位置加载XML schema配置：
@@ -263,7 +260,6 @@ impl ForgeRuntime {
         Ok(runtime)
     }
 
-
     /// 创建扩展管理器 - 自动处理XML schema配置
     ///
     /// # 参数
@@ -280,7 +276,6 @@ impl ForgeRuntime {
             options, config,
         )
     }
-
 
     /// 销毁编辑器实例
     pub async fn destroy(&mut self) -> ForgeResult<()> {
@@ -334,8 +329,7 @@ impl ForgeRuntime {
                 },
                 Ok(Err(e)) => {
                     return Err(error_utils::middleware_error(format!(
-                        "后置中间件执行失败: {}",
-                        e
+                        "后置中间件执行失败: {e}"
                     )));
                 },
                 Err(_) => {
@@ -450,12 +444,8 @@ impl ForgeRuntime {
         if let Some(state) = state_update {
             self.update_state_with_meta(state.clone(), description, meta)
                 .await?;
-            self.emit_event(Event::TrApply(
-                old_id,
-                transactions,
-                state,
-            ))
-            .await?;
+            self.emit_event(Event::TrApply(old_id, transactions, state))
+                .await?;
         }
         Ok(())
     }
@@ -479,7 +469,12 @@ impl ForgeRuntime {
         meta: serde_json::Value,
     ) -> ForgeResult<()> {
         self.state = state.clone();
-        HistoryHelper::insert(&mut self.history_manager, state, description, meta);
+        HistoryHelper::insert(
+            &mut self.history_manager,
+            state,
+            description,
+            meta,
+        );
         Ok(())
     }
 
@@ -600,7 +595,10 @@ impl Drop for ForgeRuntime {
 
 #[async_trait]
 impl RuntimeTrait for ForgeRuntime {
-    async fn dispatch(&mut self, transaction: Transaction) -> ForgeResult<()> {
+    async fn dispatch(
+        &mut self,
+        transaction: Transaction,
+    ) -> ForgeResult<()> {
         self.dispatch(transaction).await
     }
 
@@ -613,7 +611,10 @@ impl RuntimeTrait for ForgeRuntime {
         self.dispatch_with_meta(transaction, description, meta).await
     }
 
-    async fn command(&mut self, command: Arc<dyn Command>) -> ForgeResult<()> {
+    async fn command(
+        &mut self,
+        command: Arc<dyn Command>,
+    ) -> ForgeResult<()> {
         self.command(command).await
     }
 
@@ -648,7 +649,10 @@ impl RuntimeTrait for ForgeRuntime {
         Ok(())
     }
 
-    async fn jump(&mut self, steps: isize) -> ForgeResult<()> {
+    async fn jump(
+        &mut self,
+        steps: isize,
+    ) -> ForgeResult<()> {
         self.jump(steps);
         Ok(())
     }
@@ -657,7 +661,10 @@ impl RuntimeTrait for ForgeRuntime {
         self.get_config()
     }
 
-    fn update_config(&mut self, config: ForgeConfig) {
+    fn update_config(
+        &mut self,
+        config: ForgeConfig,
+    ) {
         self.update_config(config);
     }
 

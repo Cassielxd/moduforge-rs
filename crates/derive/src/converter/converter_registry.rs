@@ -367,7 +367,7 @@ impl GlobalConverterRegistry {
                 registry.register_converter(converter);
                 Ok(())
             },
-            Err(e) => Err(format!("无法获取注册表写锁: {}", e)),
+            Err(e) => Err(format!("无法获取注册表写锁: {e}")),
         }
     }
 
@@ -410,7 +410,7 @@ impl GlobalConverterRegistry {
         match GLOBAL_REGISTRY.read() {
             Ok(registry) => registry.convert_field(field),
             Err(e) => Err(MacroError::GenerationError {
-                message: format!("无法获取注册表读锁: {}", e),
+                message: format!("无法获取注册表读锁: {e}"),
                 span: None,
             }),
         }
@@ -431,7 +431,7 @@ impl GlobalConverterRegistry {
     pub fn converter_count() -> Result<usize, String> {
         match GLOBAL_REGISTRY.read() {
             Ok(registry) => Ok(registry.converter_count()),
-            Err(e) => Err(format!("无法获取注册表读锁: {}", e)),
+            Err(e) => Err(format!("无法获取注册表读锁: {e}")),
         }
     }
 
@@ -458,7 +458,7 @@ impl GlobalConverterRegistry {
                 registry.clear_converters();
                 Ok(())
             },
-            Err(e) => Err(format!("无法获取注册表写锁: {}", e)),
+            Err(e) => Err(format!("无法获取注册表写锁: {e}")),
         }
     }
 
@@ -486,7 +486,7 @@ impl GlobalConverterRegistry {
                 registry.reload_default_converters();
                 Ok(())
             },
-            Err(e) => Err(format!("无法获取注册表写锁: {}", e)),
+            Err(e) => Err(format!("无法获取注册表写锁: {e}")),
         }
     }
 
@@ -511,7 +511,7 @@ impl GlobalConverterRegistry {
             Ok(registry) => {
                 Ok(registry.find_converter_for_type(field_type).is_some())
             },
-            Err(e) => Err(format!("无法获取注册表读锁: {}", e)),
+            Err(e) => Err(format!("无法获取注册表读锁: {e}")),
         }
     }
 }
@@ -703,7 +703,7 @@ mod tests {
                     "找到的转换器应该支持该类型"
                 );
             } else {
-                panic!("应该能找到支持 {:?} 的转换器", ty);
+                panic!("应该能找到支持 {ty:?} 的转换器");
             }
         }
     }

@@ -10,7 +10,7 @@ use crate::{
     config::ForgeConfig,
     debug::debug,
     error::{error_utils, ForgeResult},
-    event::{Event, EventBus, EventHandler},
+    event::{Event, EventBus},
     metrics,
     types::RuntimeOptions,
 };
@@ -35,7 +35,7 @@ impl EventHelper {
         runtime_options: &RuntimeOptions,
         state: Arc<State>,
     ) -> ForgeResult<EventBus<Event>> {
-        let mut event_bus = EventBus::with_config(config.event.clone());
+        let  event_bus = EventBus::with_config(config.event.clone());
         debug!("已创建事件总线");
 
         // 注册事件处理器
@@ -47,11 +47,9 @@ impl EventHelper {
         debug!("事件总线已启动");
 
         // 广播创建事件
-        event_bus
-            .broadcast_blocking(Event::Create(state))
-            .map_err(|e| {
-                error_utils::event_error(format!("广播 Create 事件失败: {}", e))
-            })?;
+        event_bus.broadcast_blocking(Event::Create(state)).map_err(|e| {
+            error_utils::event_error(format!("广播 Create 事件失败: {e}"))
+        })?;
 
         Ok(event_bus)
     }
@@ -97,7 +95,9 @@ impl EventHelper {
     ///
     /// # 返回值
     /// * `ForgeResult<()>` - 成功或错误
-    pub async fn destroy_event_bus(event_bus: &mut EventBus<Event>) -> ForgeResult<()> {
+    pub async fn destroy_event_bus(
+        event_bus: &mut EventBus<Event>
+    ) -> ForgeResult<()> {
         // 先广播销毁事件
         event_bus.broadcast(Event::Destroy).await?;
         // 然后停止事件循环

@@ -182,8 +182,7 @@ impl SyncService {
         } else {
             tracing::error!("🔄 从 YrsManager 中移除房间 '{}' 失败", room_id);
             return Err(crate::error::TransmissionError::SyncError(format!(
-                "Failed to offline room: {}",
-                room_id
+                "Failed to offline room: {room_id}"
             )));
         }
 

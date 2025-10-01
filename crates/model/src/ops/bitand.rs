@@ -20,7 +20,7 @@ impl<'a> BitAnd<String> for NodeRef<'a> {
 
         for child_id in children {
             if let Some(node) = self.tree.get_node(&child_id) {
-                if node.r#type.to_string() != node_type {
+                if node.r#type != node_type {
                     nodes_to_remove.push(child_id);
                 }
             }

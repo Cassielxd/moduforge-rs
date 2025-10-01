@@ -16,9 +16,8 @@ use crate::{
 
 use super::error::{XmlSchemaError, XmlSchemaResult};
 use super::types::{
-    deserialize_optional_bool, deserialize_optional_value, XmlAttr, XmlAttrs,
-    XmlGlobalAttribute, XmlGlobalAttributes, XmlInclude, XmlIncludes,
-    XmlImport, XmlImports, XmlMark, XmlMarks, XmlNode, XmlNodes, XmlSchema,
+    XmlAttr, XmlAttrs,
+    XmlGlobalAttribute, XmlMark, XmlMarks, XmlNode, XmlNodes, XmlSchema,
     XmlSchemaWithReferences,
 };
 
@@ -75,8 +74,7 @@ impl XmlSchemaParser {
         let root_path =
             std::path::Path::new(file_path).canonicalize().map_err(|e| {
                 XmlSchemaError::FileNotFound(format!(
-                    "无法找到文件 {}: {}",
-                    file_path, e
+                    "无法找到文件 {file_path}: {e}"
                 ))
             })?;
 
@@ -106,15 +104,13 @@ impl XmlSchemaParser {
 
         let canonical_path = file_path.canonicalize().map_err(|e| {
             XmlSchemaError::FileNotFound(format!(
-                "无法解析文件路径 {:?}: {}",
-                file_path, e
+                "无法解析文件路径 {file_path:?}: {e}"
             ))
         })?;
 
         if context.parsed_files.contains(&canonical_path) {
             return Err(XmlSchemaError::CircularReference(format!(
-                "检测到循环引用: {:?}",
-                canonical_path
+                "检测到循环引用: {canonical_path:?}"
             )));
         }
 
@@ -124,8 +120,7 @@ impl XmlSchemaParser {
         let xml_content =
             std::fs::read_to_string(&canonical_path).map_err(|e| {
                 XmlSchemaError::FileNotFound(format!(
-                    "无法读取文件 {:?}: {}",
-                    canonical_path, e
+                    "无法读取文件 {canonical_path:?}: {e}"
                 ))
             })?;
 
@@ -197,8 +192,7 @@ impl XmlSchemaParser {
 
         path.canonicalize().map_err(|e| {
             XmlSchemaError::PathResolutionError(format!(
-                "无法解析路径 {} (基于 {:?}): {}",
-                relative_path, base_path, e
+                "无法解析路径 {relative_path} (基于 {base_path:?}): {e}"
             ))
         })
     }
@@ -209,8 +203,7 @@ impl XmlSchemaParser {
         let root_path =
             std::path::Path::new(file_path).canonicalize().map_err(|e| {
                 XmlSchemaError::FileNotFound(format!(
-                    "无法找到文件 {}: {}",
-                    file_path, e
+                    "无法找到文件 {file_path}: {e}"
                 ))
             })?;
 
@@ -243,15 +236,13 @@ impl XmlSchemaParser {
 
         let canonical_path = file_path.canonicalize().map_err(|e| {
             XmlSchemaError::FileNotFound(format!(
-                "无法解析文件路径 {:?}: {}",
-                file_path, e
+                "无法解析文件路径 {file_path:?}: {e}"
             ))
         })?;
 
         if context.parsed_files.contains(&canonical_path) {
             return Err(XmlSchemaError::CircularReference(format!(
-                "检测到循环引用: {:?}",
-                canonical_path
+                "检测到循环引用: {canonical_path:?}"
             )));
         }
 
@@ -261,8 +252,7 @@ impl XmlSchemaParser {
         let xml_content =
             std::fs::read_to_string(&canonical_path).map_err(|e| {
                 XmlSchemaError::FileNotFound(format!(
-                    "无法读取文件 {:?}: {}",
-                    canonical_path, e
+                    "无法读取文件 {canonical_path:?}: {e}"
                 ))
             })?;
 
@@ -351,15 +341,13 @@ impl XmlSchemaParser {
 
         let canonical_path = file_path_buf.canonicalize().map_err(|e| {
             XmlSchemaError::FileNotFound(format!(
-                "无法解析文件路径 {}: {}",
-                file_path, e
+                "无法解析文件路径 {file_path}: {e}"
             ))
         })?;
 
         if context.parsed_files.contains(&canonical_path) {
             return Err(XmlSchemaError::CircularReference(format!(
-                "检测到循环引用: {:?}",
-                canonical_path
+                "检测到循环引用: {canonical_path:?}"
             )));
         }
 
@@ -369,8 +357,7 @@ impl XmlSchemaParser {
         let xml_content =
             std::fs::read_to_string(&canonical_path).map_err(|e| {
                 XmlSchemaError::FileNotFound(format!(
-                    "无法读取文件 {:?}: {}",
-                    canonical_path, e
+                    "无法读取文件 {canonical_path:?}: {e}"
                 ))
             })?;
 
@@ -451,15 +438,13 @@ impl XmlSchemaParser {
 
         let canonical_path = file_path_buf.canonicalize().map_err(|e| {
             XmlSchemaError::FileNotFound(format!(
-                "无法解析文件路径 {}: {}",
-                file_path, e
+                "无法解析文件路径 {file_path}: {e}"
             ))
         })?;
 
         if context.parsed_files.contains(&canonical_path) {
             return Err(XmlSchemaError::CircularReference(format!(
-                "检测到循环引用: {:?}",
-                canonical_path
+                "检测到循环引用: {canonical_path:?}"
             )));
         }
 
@@ -469,8 +454,7 @@ impl XmlSchemaParser {
         let xml_content =
             std::fs::read_to_string(&canonical_path).map_err(|e| {
                 XmlSchemaError::FileNotFound(format!(
-                    "无法读取文件 {:?}: {}",
-                    canonical_path, e
+                    "无法读取文件 {canonical_path:?}: {e}"
                 ))
             })?;
 
@@ -583,8 +567,7 @@ impl XmlSchemaParser {
         for (name, node_spec) in source.nodes {
             if target.nodes.contains_key(&name) && !allow_override {
                 return Err(XmlSchemaError::DuplicateNodeName(format!(
-                    "节点 '{}' 已存在，不允许覆盖",
-                    name
+                    "节点 '{name}' 已存在，不允许覆盖"
                 )));
             }
             target.nodes.insert(name, node_spec);
@@ -593,8 +576,7 @@ impl XmlSchemaParser {
         for (name, mark_spec) in source.marks {
             if target.marks.contains_key(&name) && !allow_override {
                 return Err(XmlSchemaError::DuplicateMarkName(format!(
-                    "标记 '{}' 已存在，不允许覆盖",
-                    name
+                    "标记 '{name}' 已存在，不允许覆盖"
                 )));
             }
             target.marks.insert(name, mark_spec);

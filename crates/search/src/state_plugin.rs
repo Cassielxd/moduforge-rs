@@ -37,33 +37,34 @@ impl std::fmt::Debug for TantivyIndexStateField {
 
 #[async_trait]
 impl StateField for TantivyIndexStateField {
+    type Value = TantivySearchIndexResource;
+
     async fn init(
         &self,
         _config: &mf_state::state::StateConfig,
         _instance: &State,
-    ) -> Arc<dyn mf_state::resource::Resource> {
+    ) -> Arc<Self::Value> {
         Arc::new(TantivySearchIndexResource { service: self.service.clone() })
     }
 
     async fn apply(
         &self,
         tr: &Transaction,
-        value: Arc<dyn mf_state::resource::Resource>,
+        value: Arc<Self::Value>,
         old_state: &State,
         new_state: &State,
-    ) -> Arc<dyn mf_state::resource::Resource> {
-        if let Some(res) = value.downcast_arc::<TantivySearchIndexResource>() {
-            let svc = res.service.clone();
-            let steps: Vec<Arc<dyn mf_transform::step::Step>> =
-                tr.steps.iter().cloned().collect();
-            let pool_before: Arc<NodePool> = old_state.doc();
-            let pool_after: Arc<NodePool> = new_state.doc();
-            let _ = svc.handle(IndexEvent::TransactionCommitted {
-                pool_before: Some(pool_before),
-                pool_after: pool_after,
-                steps,
-            });
-        }
+    ) -> Arc<Self::Value> {
+        // ✅ 不再需要 downcast，直接使用类型安全的 value
+        let svc = value.service.clone();
+        let steps: Vec<Arc<dyn mf_transform::step::Step>> =
+            tr.steps.iter().cloned().collect();
+        let pool_before: Arc<NodePool> = old_state.doc();
+        let pool_after: Arc<NodePool> = new_state.doc();
+        drop(svc.handle(IndexEvent::TransactionCommitted {
+            pool_before: Some(pool_before),
+            pool_after,
+            steps,
+        }));
         value
     }
 }
@@ -90,8 +91,8 @@ pub fn create_tantivy_index_plugin(
 ) -> Result<Arc<Plugin>> {
     ensure_default_step_indexers();
     let service = Arc::new(create_tantivy_service(index_dir)?);
-    let field: Arc<dyn StateField> =
-        Arc::new(TantivyIndexStateField { service });
+    // StateField 自动实现 ErasedStateField（通过 blanket impl）
+    let field = Arc::new(TantivyIndexStateField { service });
     let spec = PluginSpec {
         state_field: Some(field),
         tr: Arc::new(TantivyIndexPluginTrait {}),

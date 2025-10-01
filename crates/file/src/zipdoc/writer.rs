@@ -40,7 +40,7 @@ impl<W: Write + Seek> ZipDocumentWriter<W> {
             .compression_method(CompressionMethod::Deflated);
         self.zip.start_file(name, opts)?;
         let data = serde_json::to_vec(value)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(io::Error::other)?;
         // 记录到 manifest.entries（若存在且为数组）
         if let Some(entries) =
             self.manifest.get_mut("entries").and_then(|v| v.as_array_mut())
@@ -82,7 +82,7 @@ impl<W: Write + Seek> ZipDocumentWriter<W> {
         plugin_name: &str,
         state_data: &[u8],
     ) -> io::Result<()> {
-        let plugin_file_path = format!("plugins/{}", plugin_name);
+        let plugin_file_path = format!("plugins/{plugin_name}");
         let opts = SimpleFileOptions::default()
             .compression_method(CompressionMethod::Deflated);
         self.zip.start_file(&plugin_file_path, opts)?;
@@ -141,9 +141,9 @@ impl<W: Write + Seek> ZipDocumentWriter<W> {
             .compression_method(CompressionMethod::Deflated);
         self.zip.start_file("manifest.json", opts)?;
         let data = serde_json::to_vec(&self.manifest)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(io::Error::other)?;
         self.zip.write_all(&data)?;
-        self.zip.finish().map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+        self.zip.finish().map_err(io::Error::other)
     }
 }
 

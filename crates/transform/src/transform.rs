@@ -100,7 +100,7 @@ impl Transform {
         step: Arc<dyn Step>,
     ) {
         // 生成反向步骤
-        if let Some(invert_step) = step.invert(&self.base_doc.get_inner()) {
+        if let Some(invert_step) = step.invert(self.base_doc.get_inner()) {
             self.invert_steps.push_back(invert_step);
         }
 
@@ -181,7 +181,9 @@ impl Transform {
     /// 返回 TransformResult 以处理状态错误
     pub fn commit(&mut self) -> TransformResult<()> {
         if self.needs_recompute && self.draft.is_some() {
-            let draft_tree = self.draft.as_ref()
+            let draft_tree = self
+                .draft
+                .as_ref()
                 .ok_or_else(|| anyhow::anyhow!("尝试提交时草稿状态意外丢失"))?;
             let new_doc = NodePool::new(Arc::new(draft_tree.clone()));
             self.base_doc = new_doc.clone();

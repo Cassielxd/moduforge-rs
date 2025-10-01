@@ -96,7 +96,7 @@ impl<'a> BitOr<Mark> for MarkRef<'a> {
         });
 
         if !mark_exists {
-            self.tree.add_mark(&self.key.clone(), &vec![mark])?;
+            self.tree.add_mark(&self.key.clone(), &[mark])?;
         }
 
         Ok(MarkRef::new(self.tree, self.key.clone()))

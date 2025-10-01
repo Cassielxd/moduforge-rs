@@ -6,6 +6,7 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 /// 写入持久性与延迟之间的权衡。
 ///
@@ -30,7 +31,7 @@ pub struct PersistOptions {
     pub compression: bool,
 }
 
-/// 事件存储的“仅追加”记录。
+/// 事件存储的"仅追加"记录。
 ///
 /// 不变式：
 /// - `lsn` 为后端分配的单调递增日志序号
@@ -39,7 +40,7 @@ pub struct PersistOptions {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PersistedEvent {
     pub lsn: i64,
-    pub tr_id: u64,
+    pub tr_id: Uuid, // ✅ 改用 UUID 作为事务唯一标识
     pub doc_id: String,
     pub ts: i64,
     pub actor: Option<String>,

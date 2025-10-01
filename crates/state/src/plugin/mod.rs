@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod dependency;
 pub mod manager;
+#[allow(clippy::module_inception)]
 pub mod plugin;
 
 pub use plugin::*;

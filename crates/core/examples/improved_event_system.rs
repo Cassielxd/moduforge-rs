@@ -114,18 +114,18 @@ async fn main() -> ForgeResult<()> {
 
     // 添加快速处理器
     for i in 0..5 {
-        let handler = Arc::new(FastHandler { id: format!("fast-{}", i) });
+        let handler = Arc::new(FastHandler { id: format!("fast-{i}") });
         let id = event_bus.add_event_handler(handler)?;
         handler_ids.push(id);
-        println!("添加快速处理器: ID={}", id);
+        println!("添加快速处理器: ID={id}");
     }
 
     // 添加慢速处理器
     for i in 0..3 {
-        let handler = Arc::new(SlowHandler { id: format!("slow-{}", i) });
+        let handler = Arc::new(SlowHandler { id: format!("slow-{i}") });
         let id = event_bus.add_event_handler(handler)?;
         handler_ids.push(id);
-        println!("添加慢速处理器: ID={}", id);
+        println!("添加慢速处理器: ID={id}");
     }
 
     // 批量添加不稳定处理器
@@ -133,7 +133,7 @@ async fn main() -> ForgeResult<()> {
         (0..3)
             .map(|i| {
                 Arc::new(FlakyHandler {
-                    id: format!("flaky-{}", i),
+                    id: format!("flaky-{i}"),
                     failure_rate: 0.3, // 30% 失败率
                 })
                     as Arc<dyn EventHandler<TestEvent> + Send + Sync>
@@ -142,7 +142,7 @@ async fn main() -> ForgeResult<()> {
 
     let flaky_ids = event_bus.add_event_handlers(flaky_handlers)?;
     handler_ids.extend(flaky_ids.iter());
-    println!("批量添加不稳定处理器: {:?}", flaky_ids);
+    println!("批量添加不稳定处理器: {flaky_ids:?}");
 
     println!("总处理器数量: {}", event_bus.handler_count());
 
@@ -159,10 +159,10 @@ async fn main() -> ForgeResult<()> {
 
     for i in 0..event_count {
         let event = match i % 3 {
-            0 => TestEvent::UserAction(format!("action-{}", i)),
+            0 => TestEvent::UserAction(format!("action-{i}")),
             1 => TestEvent::SystemEvent(i as u64),
             2 => TestEvent::PerformanceMetric {
-                name: format!("metric-{}", i),
+                name: format!("metric-{i}"),
                 value: i as f64 * 0.1,
             },
             _ => unreachable!(), // i % 3 只能是 0, 1, 2
@@ -172,12 +172,12 @@ async fn main() -> ForgeResult<()> {
 
         // 每100个事件打印一次进度
         if i % 100 == 0 {
-            println!("已发送 {} 个事件", i);
+            println!("已发送 {i} 个事件");
         }
     }
 
     let send_duration = start_time.elapsed();
-    println!("发送 {} 个事件耗时: {:?}", event_count, send_duration);
+    println!("发送 {event_count} 个事件耗时: {send_duration:?}");
     println!(
         "发送速率: {:.2} 事件/秒",
         event_count as f64 / send_duration.as_secs_f64()
@@ -204,12 +204,12 @@ async fn main() -> ForgeResult<()> {
     let remove_count = 3;
     let removed_ids = &handler_ids[0..remove_count];
     let removed = event_bus.remove_event_handlers(removed_ids)?;
-    println!("移除了 {} 个处理器", removed);
+    println!("移除了 {removed} 个处理器");
     println!("剩余处理器数量: {}", event_bus.handler_count());
 
     // 发送更多事件测试
     for i in 0..100 {
-        let event = TestEvent::UserAction(format!("after-removal-{}", i));
+        let event = TestEvent::UserAction(format!("after-removal-{i}"));
         event_bus.broadcast(event).await?;
     }
 

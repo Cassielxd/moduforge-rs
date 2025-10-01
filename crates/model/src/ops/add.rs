@@ -68,7 +68,7 @@ impl<'a> Add<Mark> for MarkRef<'a> {
         self,
         mark: Mark,
     ) -> Self::Output {
-        self.tree.add_mark(&self.key.clone(), &vec![mark])?;
+        self.tree.add_mark(&self.key.clone(), &[mark])?;
         Ok(MarkRef::new(self.tree, self.key.clone()))
     }
 }

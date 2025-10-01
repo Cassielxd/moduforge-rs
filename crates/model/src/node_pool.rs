@@ -15,6 +15,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 // 用于生成唯一ID的计数器
 static POOL_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
+// 节点查询条件函数类型别名
+type NodeCondition = Box<dyn Fn(&Node) -> bool + Send + Sync>;
+type NodeConditionRef<'a> = Box<dyn Fn(&Node) -> bool + Send + Sync + 'a>;
+
 /// 线程安全的节点池封装
 ///
 /// 使用 [`Arc`] 实现快速克隆，内部使用不可变数据结构保证线程安全
@@ -29,7 +33,7 @@ pub struct NodePool {
 impl NodePool {
     pub fn new(inner: Arc<Tree>) -> Arc<NodePool> {
         let id = POOL_ID_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let pool = Self { inner, key: format!("pool_{}", id) };
+        let pool = Self { inner, key: format!("pool_{id}") };
         let pool: Arc<NodePool> = Arc::new(pool);
 
         pool
@@ -71,7 +75,7 @@ impl NodePool {
         let id = POOL_ID_COUNTER.fetch_add(1, Ordering::SeqCst);
         let pool = Self {
             inner: Arc::new(Tree::from(nodes)),
-            key: format!("pool_{}", id),
+            key: format!("pool_{id}"),
         };
         let pool: Arc<NodePool> = Arc::new(pool);
         pool
@@ -84,13 +88,13 @@ impl NodePool {
         &self,
         id: &NodeId,
     ) -> Option<Arc<Node>> {
-        self.inner.get_node(id).map(|node| node.clone())
+        self.inner.get_node(id)
     }
     pub fn get_parent_node(
         &self,
         id: &NodeId,
     ) -> Option<Arc<Node>> {
-        self.inner.get_parent_node(id).map(|node| node.clone())
+        self.inner.get_parent_node(id)
     }
 
     /// 检查节点是否存在
@@ -329,8 +333,7 @@ impl NodePool {
                 } else {
                     // 节点不在父节点的children列表中，可能是数据不一致
                     eprintln!(
-                        "Warning: Node {:?} not found in parent's children list",
-                        node_id
+                        "Warning: Node {node_id:?} not found in parent's children list"
                     );
                 }
             }
@@ -351,8 +354,7 @@ impl NodePool {
                 } else {
                     // 节点不在父节点的children列表中，可能是数据不一致
                     eprintln!(
-                        "Warning: Node {:?} not found in parent's children list",
-                        node_id
+                        "Warning: Node {node_id:?} not found in parent's children list"
                     );
                 }
             }
@@ -526,8 +528,8 @@ impl NodePool {
     /// # 返回值
     ///
     /// 返回所有满足条件的节点
-    pub fn parallel_batch_query<'a, P>(
-        &'a self,
+    pub fn parallel_batch_query<P>(
+        &self,
         batch_size: usize,
         predicate: P,
     ) -> Vec<Arc<Node>>
@@ -547,7 +549,7 @@ impl NodePool {
                 // 按批次处理节点
                 nodes
                     .chunks(batch_size)
-                    .flat_map(|chunk| predicate(chunk))
+                    .flat_map(&predicate)
                     .collect::<Vec<_>>()
             })
             .collect()
@@ -563,8 +565,8 @@ impl NodePool {
     /// # 返回值
     ///
     /// 返回转换后的结果列表
-    pub fn parallel_query_map<'a, P, T, F>(
-        &'a self,
+    pub fn parallel_query_map<P, T, F>(
+        &self,
         predicate: P,
         transform: F,
     ) -> Vec<T>
@@ -584,7 +586,7 @@ impl NodePool {
                 shard
                     .values()
                     .filter(|node| predicate(node))
-                    .map(|node| transform(node))
+                    .map(&transform)
                     .collect::<Vec<T>>()
             })
             .collect()
@@ -631,7 +633,7 @@ impl NodePool {
                 shard
                     .values()
                     .filter(|node| predicate(node))
-                    .fold(init.clone(), |acc, node| fold(acc, node))
+                    .fold(init.clone(), &fold)
             })
             // 合并所有分片的结果
             .reduce(|| init.clone(), |a, _b| fold(a, &dummy_node))
@@ -652,7 +654,7 @@ impl NodePool {
 /// 查询条件构建器
 pub struct QueryEngine<'a> {
     pool: &'a NodePool,
-    conditions: Vec<Box<dyn Fn(&Node) -> bool + Send + Sync + 'a>>,
+    conditions: Vec<NodeConditionRef<'a>>,
 }
 
 impl<'a> QueryEngine<'a> {
@@ -680,7 +682,7 @@ impl<'a> QueryEngine<'a> {
         let key = key.to_string();
         let value = value.clone();
         self.conditions.push(Box::new(move |node| {
-            node.attrs.get(&key).map_or(false, |v| v == &value)
+            node.attrs.get(&key) == Some(&value)
         }));
         self
     }
@@ -713,7 +715,7 @@ impl<'a> QueryEngine<'a> {
     ) -> Self {
         let pool = self.pool.clone();
         self.conditions.push(Box::new(move |node| {
-            pool.get_node_depth(&node.id).map_or(false, |d| d == depth)
+            pool.get_node_depth(&node.id) == Some(depth)
         }));
         self
     }
@@ -860,7 +862,7 @@ impl OptimizedQueryEngine {
         let start = Instant::now();
         engine.build_indices()?;
         let duration = start.elapsed();
-        println!("索引构建完成，耗时: {:?}", duration);
+        println!("索引构建完成，耗时: {duration:?}");
         Ok(engine)
     }
 
@@ -914,16 +916,16 @@ impl OptimizedQueryEngine {
             // 批量收集节点信息，使用引用避免克隆
             for node in shard {
                 // 收集类型信息
-                type_nodes.push((node.r#type.clone(), Arc::clone(&node)));
+                type_nodes.push((node.r#type.clone(), Arc::clone(node)));
 
                 // 收集深度信息
                 if let Some(depth) = self.pool.get_node_depth(&node.id) {
-                    depth_nodes.push((depth, Arc::clone(&node)));
+                    depth_nodes.push((depth, Arc::clone(node)));
                 }
 
                 // 收集标记信息
                 for mark in &node.marks {
-                    mark_nodes.push((mark.r#type.clone(), Arc::clone(&node)));
+                    mark_nodes.push((mark.r#type.clone(), Arc::clone(node)));
                 }
             }
 
@@ -982,9 +984,7 @@ impl OptimizedQueryEngine {
                             .or_insert_with(|| Vec::with_capacity(v.len()))
                             .extend(v);
                     }
-                } else {
-                    return;
-                }
+                } 
             }
         });
 
@@ -1031,7 +1031,7 @@ impl OptimizedQueryEngine {
     /// 组合查询（使用索引和缓存）
     pub fn query(
         &mut self,
-        conditions: Vec<Box<dyn Fn(&Node) -> bool + Send + Sync>>,
+        conditions: Vec<NodeCondition>,
     ) -> Vec<Arc<Node>> {
         // 生成更安全的缓存键
         let cache_key = self.generate_query_cache_key(&conditions);
@@ -1091,7 +1091,7 @@ impl OptimizedQueryEngine {
     /// 生成查询缓存键
     fn generate_query_cache_key(
         &self,
-        conditions: &[Box<dyn Fn(&Node) -> bool + Send + Sync>],
+        conditions: &[NodeCondition],
     ) -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
@@ -1115,7 +1115,7 @@ impl OptimizedQueryEngine {
     /// 从索引中获取节点
     fn get_indexed_nodes(
         &self,
-        condition: &Box<dyn Fn(&Node) -> bool + Send + Sync>,
+        condition: &(dyn Fn(&Node) -> bool + Send + Sync),
     ) -> Option<Vec<Arc<Node>>> {
         // 尝试从类型索引获取
         if let Some(type_nodes) = self.type_index.get("document") {
@@ -1132,7 +1132,7 @@ impl OptimizedQueryEngine {
         }
 
         // 尝试从标记索引获取
-        for (_, mark_nodes) in &self.mark_index {
+        for mark_nodes in self.mark_index.values() {
             if !mark_nodes.is_empty() && condition(&mark_nodes[0]) {
                 return Some(mark_nodes.clone());
             }
@@ -1652,7 +1652,7 @@ impl QueryCondition {
                 node.marks.iter().any(|mark| mark.r#type == *mark_type)
             },
             QueryCondition::ByAttr { key, value } => {
-                node.attrs.get(key).map_or(false, |v| v == value)
+                node.attrs.get(key) == Some(value)
             },
             QueryCondition::IsLeaf => node.content.is_empty(),
             QueryCondition::HasChildren => !node.content.is_empty(),
@@ -1661,9 +1661,9 @@ impl QueryCondition {
 
     pub fn cache_key(&self) -> String {
         match self {
-            QueryCondition::ByType(t) => format!("type_{}", t),
-            QueryCondition::ByDepth(d) => format!("depth_{}", d),
-            QueryCondition::ByMark(m) => format!("mark_{}", m),
+            QueryCondition::ByType(t) => format!("type_{t}"),
+            QueryCondition::ByDepth(d) => format!("depth_{d}"),
+            QueryCondition::ByMark(m) => format!("mark_{m}"),
             QueryCondition::ByAttr { key, value } => {
                 format!(
                     "attr_{}_{}",

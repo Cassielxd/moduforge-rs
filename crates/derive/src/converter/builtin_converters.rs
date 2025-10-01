@@ -4,7 +4,6 @@
 //! 遵循开闭原则，每个转换器都是独立的实现，可以单独使用或组合使用。
 
 use proc_macro2::TokenStream as TokenStream2;
-use quote::quote;
 use syn::{Field, Type};
 use crate::common::{MacroError, MacroResult, utils};
 use super::type_converter::TypeConverter;
@@ -735,16 +734,16 @@ mod tests {
     /// 测试转换器默认构造器
     #[test]
     fn test_converter_defaults() {
-        let string_converter = StringConverter::default();
+        let string_converter = StringConverter;
         assert_eq!(string_converter.name(), "StringConverter");
 
-        let numeric_converter = NumericConverter::default();
+        let numeric_converter = NumericConverter;
         assert_eq!(numeric_converter.name(), "NumericConverter");
 
-        let boolean_converter = BooleanConverter::default();
+        let boolean_converter = BooleanConverter;
         assert_eq!(boolean_converter.name(), "BooleanConverter");
 
-        let special_converter = SpecialTypeConverter::default();
+        let special_converter = SpecialTypeConverter;
         assert_eq!(special_converter.name(), "SpecialTypeConverter");
     }
 
@@ -770,8 +769,7 @@ mod tests {
             let supported = converters.iter().any(|c| c.supports_type(&ty));
             assert_eq!(
                 supported, should_be_supported,
-                "类型 {:?} 的支持状态不正确",
-                ty
+                "类型 {ty:?} 的支持状态不正确"
             );
         }
     }

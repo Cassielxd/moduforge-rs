@@ -326,9 +326,9 @@ macro_rules! mf_plugin {
                 mf_state::plugin::PluginSpec {
                     state_field: {
                         #[allow(unused_mut)]
-                        let mut field: Option<std::sync::Arc<dyn mf_state::plugin::StateField>> = None;
+                        let mut field: Option<std::sync::Arc<dyn mf_state::plugin::ErasedStateField>> = None;
                         $(
-                            field = Some(std::sync::Arc::new($state_field) as std::sync::Arc<dyn mf_state::plugin::StateField>);
+                            field = Some(std::sync::Arc::new($state_field) as std::sync::Arc<dyn mf_state::plugin::ErasedStateField>);
                         )?
                         field
                     },

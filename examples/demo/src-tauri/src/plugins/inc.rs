@@ -127,20 +127,22 @@ impl IncStateField {
 
 #[async_trait]
 impl StateField for IncStateField {
+    type Value = IncState;
+
     async fn init(
         &self,
         _config: &StateConfig,
         _instance: &State,
-    ) -> Arc<dyn Resource> {
+    ) -> Arc<Self::Value> {
         Arc::new(IncState)
     }
     async fn apply(
         &self,
         tr: &Transaction,
-        value: Arc<dyn Resource>,
+        value: Arc<Self::Value>,
         _old_state: &State,
         new_state: &State,
-    ) -> Arc<dyn Resource> {
+    ) -> Arc<Self::Value> {
         IncStateField::collect_tr(tr, new_state);
         value
     }

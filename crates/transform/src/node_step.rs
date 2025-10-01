@@ -264,7 +264,7 @@ mod tests {
         if let Some(inverted_step) = inverted {
             let result = inverted_step.apply(&mut tree, schema);
             if result.is_err() {
-                eprintln!("Invert step failed: {:?}", result);
+                eprintln!("Invert step failed: {result:?}");
             }
             assert!(result.is_ok());
             // Verify node was removed

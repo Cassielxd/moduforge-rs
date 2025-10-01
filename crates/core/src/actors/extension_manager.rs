@@ -6,11 +6,7 @@ use ractor::{Actor, ActorRef, ActorProcessingErr};
 use std::sync::Arc;
 use tokio::sync::oneshot;
 
-use crate::{
-    debug::debug,
-    error::ForgeResult,
-    extension_manager::ExtensionManager,
-};
+use crate::{debug::debug, error::ForgeResult, extension_manager::ExtensionManager};
 
 use mf_model::schema::Schema;
 use mf_state::{ops::GlobalResourceManager, plugin::Plugin};
@@ -20,31 +16,42 @@ use super::ActorSystemResult;
 /// 扩展管理消息类型
 pub enum ExtensionMessage {
     /// 获取Schema
-    GetSchema {
-        reply: oneshot::Sender<Arc<Schema>>,
-    },
+    GetSchema { reply: oneshot::Sender<Arc<Schema>> },
     /// 获取插件列表
-    GetPlugins {
-        reply: oneshot::Sender<Vec<Arc<Plugin>>>,
-    },
+    GetPlugins { reply: oneshot::Sender<Vec<Arc<Plugin>>> },
     /// 获取操作函数列表
     GetOpFns {
-        reply: oneshot::Sender<Vec<Arc<dyn Fn(&GlobalResourceManager) -> ForgeResult<()> + Send + Sync>>>,
+        reply: oneshot::Sender<
+            Vec<
+                Arc<
+                    dyn Fn(&GlobalResourceManager) -> ForgeResult<()>
+                        + Send
+                        + Sync,
+                >,
+            >,
+        >,
     },
     /// 重新加载扩展
-    ReloadExtensions {
-        reply: oneshot::Sender<ForgeResult<()>>,
-    },
+    ReloadExtensions { reply: oneshot::Sender<ForgeResult<()>> },
 }
 
 // Manual Debug implementation since function pointers don't implement Debug
 impl std::fmt::Debug for ExtensionMessage {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
         match self {
-            ExtensionMessage::GetSchema { .. } => write!(f, "GetSchema {{ .. }}"),
-            ExtensionMessage::GetPlugins { .. } => write!(f, "GetPlugins {{ .. }}"),
+            ExtensionMessage::GetSchema { .. } => {
+                write!(f, "GetSchema {{ .. }}")
+            },
+            ExtensionMessage::GetPlugins { .. } => {
+                write!(f, "GetPlugins {{ .. }}")
+            },
             ExtensionMessage::GetOpFns { .. } => write!(f, "GetOpFns {{ .. }}"),
-            ExtensionMessage::ReloadExtensions { .. } => write!(f, "ReloadExtensions {{ .. }}"),
+            ExtensionMessage::ReloadExtensions { .. } => {
+                write!(f, "ReloadExtensions {{ .. }}")
+            },
         }
     }
 }
@@ -73,9 +80,7 @@ impl Actor for ExtensionManagerActor {
     ) -> Result<Self::State, ActorProcessingErr> {
         debug!("启动扩展管理Actor");
 
-        Ok(ExtensionManagerActorState {
-            extension_manager,
-        })
+        Ok(ExtensionManagerActorState { extension_manager })
     }
 
     async fn handle(
@@ -88,23 +93,23 @@ impl Actor for ExtensionManagerActor {
             ExtensionMessage::GetSchema { reply } => {
                 let schema = state.extension_manager.get_schema();
                 let _ = reply.send(schema);
-            }
+            },
 
             ExtensionMessage::GetPlugins { reply } => {
                 let plugins = state.extension_manager.get_plugins().clone();
                 let _ = reply.send(plugins);
-            }
+            },
 
             ExtensionMessage::GetOpFns { reply } => {
                 let op_fns = state.extension_manager.get_op_fns().clone();
                 let _ = reply.send(op_fns);
-            }
+            },
 
             ExtensionMessage::ReloadExtensions { reply } => {
                 // 这里可以实现扩展重新加载逻辑
                 // 目前先返回成功
                 let _ = reply.send(Ok(()));
-            }
+            },
         }
 
         Ok(())
@@ -126,7 +131,7 @@ pub struct ExtensionManagerActorManager;
 impl ExtensionManagerActorManager {
     /// 启动扩展管理Actor
     pub async fn start(
-        extension_manager: ExtensionManager,
+        extension_manager: ExtensionManager
     ) -> ActorSystemResult<ActorRef<ExtensionMessage>> {
         let (actor_ref, _handle) = Actor::spawn(
             Some("ExtensionManagerActor".to_string()),

@@ -51,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
         })
         .await?;
 
-    println!("命中节点: {:?}", ids);
+    println!("命中节点: {ids:?}");
 
     // 也可以按属性/标记过滤
     let ids2 = backend
@@ -61,7 +61,7 @@ async fn main() -> anyhow::Result<()> {
             ..Default::default()
         })
         .await?;
-    println!("按属性过滤命中: {:?}", ids2);
+    println!("按属性过滤命中: {ids2:?}");
 
     // 5) 按 fast field 排序（created_at_i64 降序），获取第一页
     let first_page = backend
@@ -72,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
             ..Default::default()
         })
         .await?;
-    println!("按 created_at_i64 降序第一页: {:?}", first_page);
+    println!("按 created_at_i64 降序第一页: {first_page:?}");
 
     // 6) 使用 search-after（上一页最后一条的 created_at_i64=2000）获取下一页
     let second_page = backend
@@ -84,7 +84,7 @@ async fn main() -> anyhow::Result<()> {
             ..Default::default()
         })
         .await?;
-    println!("按 created_at_i64 降序第二页: {:?}", second_page);
+    println!("按 created_at_i64 降序第二页: {second_page:?}");
 
     // 7) 范围过滤：created_at_i64 在 [1000, 1500]
     let ranged = backend
@@ -96,7 +96,7 @@ async fn main() -> anyhow::Result<()> {
             ..Default::default()
         })
         .await?;
-    println!("范围过滤命中: {:?}", ranged);
+    println!("范围过滤命中: {ranged:?}");
 
     // 打印索引目录（仅调试查看）
     println!("索引目录: {}", backend.index_dir().display());

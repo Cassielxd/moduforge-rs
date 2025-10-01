@@ -103,8 +103,7 @@ mod tests {
         for error_type in error_types {
             assert!(
                 error_type.contains(" - "),
-                "错误类型应包含描述: {}",
-                error_type
+                "错误类型应包含描述: {error_type}"
             );
             assert!(error_type.len() > 10, "错误描述应该足够详细");
         }
@@ -128,8 +127,7 @@ mod tests {
             // 验证错误消息包含中文字符
             assert!(
                 message.chars().any(|c| c as u32 > 127),
-                "错误消息应该包含中文字符: {}",
-                message
+                "错误消息应该包含中文字符: {message}"
             );
         }
 
@@ -173,7 +171,7 @@ mod tests {
         for element in good_error_elements {
             // 验证我们的错误系统设计包含这些元素
             assert!(!element.is_empty());
-            println!("✓ 错误消息包含: {}", element);
+            println!("✓ 错误消息包含: {element}");
         }
 
         println!("错误消息实用性测试通过");
@@ -193,8 +191,7 @@ mod tests {
             // 验证错误消息格式的一致性
             assert!(
                 pattern.contains("ModuForge") || pattern.contains("帮助"),
-                "错误消息应遵循统一格式: {}",
-                pattern
+                "错误消息应遵循统一格式: {pattern}"
             );
         }
 

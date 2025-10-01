@@ -65,17 +65,17 @@ impl Display for ProcessorError {
         match self {
             ProcessorError::QueueFull => write!(f, "任务队列已满"),
             ProcessorError::TaskFailed(msg) => {
-                write!(f, "任务执行失败: {}", msg)
+                write!(f, "任务执行失败: {msg}")
             },
             ProcessorError::InternalError(msg) => {
-                write!(f, "内部错误: {}", msg)
+                write!(f, "内部错误: {msg}")
             },
             ProcessorError::TaskTimeout => {
                 write!(f, "任务执行超时")
             },
             ProcessorError::TaskCancelled => write!(f, "任务被取消"),
             ProcessorError::RetryExhausted(msg) => {
-                write!(f, "重试次数耗尽: {}", msg)
+                write!(f, "重试次数耗尽: {msg}")
             },
         }
     }
@@ -554,8 +554,7 @@ where
         if let Some(handle) = self.handle.take() {
             if let Err(e) = handle.await {
                 return Err(ProcessorError::InternalError(format!(
-                    "等待后台任务完成时出错: {}",
-                    e
+                    "等待后台任务完成时出错: {e}"
                 )));
             }
         }

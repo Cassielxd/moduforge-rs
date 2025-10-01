@@ -33,15 +33,14 @@ impl dyn Resource {
     #[inline(always)]
     #[allow(clippy::needless_lifetimes)]
     pub fn downcast<'a, T: Resource>(
-        self: &'a Box<Self>
-    ) -> Option<&'a Box<T>> {
+        &'a self
+    ) -> Option<&'a T> {
         if self.is::<T>() {
-            let ptr = self as *const Box<_> as *const Box<T>;
+            let ptr = self as *const dyn Resource as *const T;
             // SAFETY: 这个转换是安全的，因为：
             // 1. 我们通过 `self.is::<T>()` 验证了运行时类型匹配（TypeId 相等）
             // 2. T 实现了 Resource trait，确保 T: Any + Send + Sync + 'static
-            // 3. Box<dyn Resource> 和 Box<T> 具有相同的内存布局和大小
-            //    （Box 是指针包装器，存储堆上的数据指针）
+            // 3. dyn Resource 和 T 的内存布局兼容
             // 4. 我们只改变了指针的类型标注，不改变底层数据
             // 5. 生命周期 'a 保持不变，确保借用检查器的安全性
             // 6. 返回的是不可变引用，不会破坏内存安全

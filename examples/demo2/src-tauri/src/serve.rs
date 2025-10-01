@@ -89,6 +89,12 @@ pub struct AppBuilder {
     addr: String,
 }
 
+impl Default for AppBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AppBuilder {
     pub fn new() -> Self {
         Self { root: Router::new(), addr: "127.0.0.1:20008".to_string() }

@@ -7,9 +7,7 @@ use std::sync::Arc;
 use tokio::sync::oneshot;
 
 use crate::{
-    debug::debug,
-    error::ForgeResult,
-    history_manager::HistoryManager,
+    debug::debug, error::ForgeResult, history_manager::HistoryManager,
     types::HistoryEntryWithMeta,
 };
 
@@ -21,9 +19,7 @@ use super::ActorSystemResult;
 #[derive(Debug)]
 pub enum StateMessage {
     /// 获取当前状态
-    GetState {
-        reply: oneshot::Sender<Arc<State>>,
-    },
+    GetState { reply: oneshot::Sender<Arc<State>> },
     /// 更新状态（包含元信息）
     UpdateStateWithMeta {
         state: Arc<State>,
@@ -32,26 +28,15 @@ pub enum StateMessage {
         reply: oneshot::Sender<ForgeResult<()>>,
     },
     /// 撤销操作
-    Undo {
-        reply: oneshot::Sender<ForgeResult<Arc<State>>>,
-    },
+    Undo { reply: oneshot::Sender<ForgeResult<Arc<State>>> },
     /// 重做操作
-    Redo {
-        reply: oneshot::Sender<ForgeResult<Arc<State>>>,
-    },
+    Redo { reply: oneshot::Sender<ForgeResult<Arc<State>>> },
     /// 跳转到指定历史位置
-    Jump {
-        steps: isize,
-        reply: oneshot::Sender<ForgeResult<Arc<State>>>,
-    },
+    Jump { steps: isize, reply: oneshot::Sender<ForgeResult<Arc<State>>> },
     /// 获取历史记录信息
-    GetHistoryInfo {
-        reply: oneshot::Sender<HistoryInfo>,
-    },
+    GetHistoryInfo { reply: oneshot::Sender<HistoryInfo> },
     /// 创建状态快照
-    CreateSnapshot {
-        reply: oneshot::Sender<StateSnapshot>,
-    },
+    CreateSnapshot { reply: oneshot::Sender<StateSnapshot> },
 }
 
 // StateMessage 自动实现 ractor::Message (Debug + Send + 'static)
@@ -115,7 +100,7 @@ impl Actor for StateActor {
         match message {
             StateMessage::GetState { reply } => {
                 let _ = reply.send(state.current_state.clone());
-            }
+            },
 
             StateMessage::UpdateStateWithMeta {
                 state: new_state,
@@ -124,35 +109,37 @@ impl Actor for StateActor {
                 reply,
             } => {
                 // 🎯 与原始update_state_with_meta完全相同的逻辑
-                let result = self.update_state_with_meta_logic(
-                    state,
-                    new_state,
-                    description,
-                    meta,
-                ).await;
+                let result = self
+                    .update_state_with_meta_logic(
+                        state,
+                        new_state,
+                        description,
+                        meta,
+                    )
+                    .await;
 
                 let _ = reply.send(result);
-            }
+            },
 
             StateMessage::Undo { reply } => {
                 let result = self.undo_logic(state).await;
                 let _ = reply.send(result);
-            }
+            },
 
             StateMessage::Redo { reply } => {
                 let result = self.redo_logic(state).await;
                 let _ = reply.send(result);
-            }
+            },
 
             StateMessage::Jump { steps, reply } => {
                 let result = self.jump_logic(state, steps).await;
                 let _ = reply.send(result);
-            }
+            },
 
             StateMessage::GetHistoryInfo { reply } => {
                 let info = self.get_history_info_logic(state);
                 let _ = reply.send(info);
-            }
+            },
 
             StateMessage::CreateSnapshot { reply } => {
                 let snapshot = StateSnapshot {
@@ -161,7 +148,7 @@ impl Actor for StateActor {
                     version: state.version_counter,
                 };
                 let _ = reply.send(snapshot);
-            }
+            },
         }
 
         Ok(())
@@ -210,7 +197,8 @@ impl StateActor {
         actor_state: &mut StateActorState,
     ) -> ForgeResult<Arc<State>> {
         actor_state.history_manager.jump(-1);
-        actor_state.current_state = actor_state.history_manager.get_present().state;
+        actor_state.current_state =
+            actor_state.history_manager.get_present().state;
 
         // 记录指标
         crate::metrics::history_operation("undo");
@@ -224,7 +212,8 @@ impl StateActor {
         actor_state: &mut StateActorState,
     ) -> ForgeResult<Arc<State>> {
         actor_state.history_manager.jump(1);
-        actor_state.current_state = actor_state.history_manager.get_present().state;
+        actor_state.current_state =
+            actor_state.history_manager.get_present().state;
 
         // 记录指标
         crate::metrics::history_operation("redo");
@@ -239,7 +228,8 @@ impl StateActor {
         steps: isize,
     ) -> ForgeResult<Arc<State>> {
         actor_state.history_manager.jump(steps);
-        actor_state.current_state = actor_state.history_manager.get_present().state;
+        actor_state.current_state =
+            actor_state.history_manager.get_present().state;
 
         // 记录指标
         crate::metrics::history_operation("jump");
@@ -253,7 +243,8 @@ impl StateActor {
         actor_state: &StateActorState,
     ) -> HistoryInfo {
         // 假设HistoryManager有这些方法，如果没有需要添加
-        let current_index = actor_state.history_manager.get_history().past.len();
+        let current_index =
+            actor_state.history_manager.get_history().past.len();
         let total_entries = actor_state.history_manager.get_history_length();
 
         HistoryInfo {

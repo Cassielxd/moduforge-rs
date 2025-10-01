@@ -85,8 +85,7 @@ fn schema_runtime_integration() -> XmlSchemaResult<()> {
     // 编译为Schema
     let schema = Schema::compile(schema_spec).map_err(|e| {
         mf_core::XmlSchemaError::InvalidNodeDefinition(format!(
-            "Schema编译失败: {}",
-            e
+            "Schema编译失败: {e}"
         ))
     })?;
     println!("   ✅ Schema编译成功");
@@ -181,8 +180,8 @@ fn extensions_runtime_integration() -> XmlSchemaResult<()> {
         }
     }
 
-    println!("   - 节点类型: {:?}", node_names);
-    println!("   - 标记类型: {:?}", mark_names);
+    println!("   - 节点类型: {node_names:?}");
+    println!("   - 标记类型: {mark_names:?}");
 
     Ok(())
 }
@@ -256,8 +255,7 @@ fn multi_file_schema_composition() -> XmlSchemaResult<()> {
     // 编译合并后的Schema
     let _schema = Schema::compile(base_spec).map_err(|e| {
         mf_core::XmlSchemaError::InvalidNodeDefinition(format!(
-            "合并Schema编译失败: {}",
-            e
+            "合并Schema编译失败: {e}"
         ))
     })?;
     println!("   ✅ 合并Schema编译成功");

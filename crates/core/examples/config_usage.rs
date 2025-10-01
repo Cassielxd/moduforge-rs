@@ -2,10 +2,9 @@
 //!
 //! 展示如何在 ForgeRuntime 和 ForgeAsyncRuntime 中使用统一配置
 
-use std::time::Duration;
 use mf_core::{
     config::{ForgeConfig, Environment, PerformanceConfig},
-    types::{RuntimeOptions, EditorOptionsBuilder, Content},
+    types::{EditorOptionsBuilder, Content},
     ForgeResult,
 };
 
@@ -121,7 +120,7 @@ async fn main() -> ForgeResult<()> {
         println!("  - 当前配置已优化");
     } else {
         for suggestion in suggestions {
-            println!("  - {}", suggestion);
+            println!("  - {suggestion}");
         }
     }
 

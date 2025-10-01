@@ -220,7 +220,7 @@ impl DefaultValueParser {
                 },
                 Err(json_err) => {
                     return Err(MacroError::default_value_parse_error(
-                        &format!("JSON 解析失败: {}", json_err),
+                        &format!("JSON 解析失败: {json_err}"),
                         raw_value,
                         span.unwrap_or_else(Span::call_site),
                     ));
@@ -605,8 +605,7 @@ impl MacroError {
     ) -> Self {
         MacroError::ParseError {
             message: format!(
-                "默认值解析失败: {} (问题值: '{}')",
-                reason, value
+                "默认值解析失败: {reason} (问题值: '{value}')"
             ),
             span: Some(span),
         }
@@ -616,7 +615,7 @@ impl MacroError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proc_macro2::Span;
+    
 
     /// 测试字符串默认值解析
     #[test]

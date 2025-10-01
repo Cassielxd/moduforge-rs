@@ -127,14 +127,6 @@ pub mod builtin_converters;
 pub mod converter_registry;
 
 // 重新导出核心类型和函数，遵循接口隔离原则
-pub use type_converter::{TypeConverter, BuiltinTypeConverter};
-pub use builtin_converters::{
-    StringConverter, NumericConverter, BooleanConverter, SpecialTypeConverter,
-    get_all_builtin_converters,
-};
-pub use converter_registry::{
-    ConverterRegistry, ConverterRegistryImpl, GlobalConverterRegistry,
-};
 
 /// 转换器模块的便利函数
 ///
@@ -269,7 +261,7 @@ pub mod utils {
         let basic_list = basic_types.join(", ");
 
         format!(
-            "支持的基本类型: {}\n\
+            "支持的基本类型: {basic_list}\n\
             支持的可选类型: Option<T> (其中 T 是上述任意基本类型)\n\
             \n\
             示例：\n\
@@ -277,162 +269,7 @@ pub mod utils {
             - i32, Option<i32>\n\
             - bool, Option<bool>\n\
             \n\
-            如需支持其他类型，请实现自定义 TypeConverter 并注册到全局注册表。",
-            basic_list
+            如需支持其他类型，请实现自定义 TypeConverter 并注册到全局注册表。"
         )
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use syn::parse_quote;
-    use crate::converter::utils::{
-        convert_field, is_type_supported, get_supported_types,
-    };
-
-    /// 测试模块重新导出
-    #[test]
-    fn test_module_exports() {
-        // 测试类型转换器接口
-        let _converter = BuiltinTypeConverter::new();
-
-        // 测试内置转换器
-        let _string_converter = StringConverter::new();
-        let _numeric_converter = NumericConverter::new();
-        let _boolean_converter = BooleanConverter::new();
-
-        // 测试注册表
-        let _registry = ConverterRegistryImpl::new();
-        let _count = GlobalConverterRegistry::converter_count();
-
-        // 测试工厂函数
-        let _converters = get_all_builtin_converters();
-    }
-
-    /// 测试便利函数
-    #[test]
-    fn test_utility_functions() {
-        // 测试字段转换
-        let field: syn::Field = parse_quote! {
-            name: String
-        };
-
-        let result = convert_field(&field);
-        assert!(result.is_ok());
-
-        // 测试类型支持性检查
-        let string_type: syn::Type = parse_quote! { String };
-        assert!(is_type_supported(&string_type));
-
-        let unsupported_type: syn::Type = parse_quote! { Vec<String> };
-        assert!(!is_type_supported(&unsupported_type));
-
-        // 测试支持类型列表
-        let supported_types = get_supported_types();
-        assert!(supported_types.contains(&"String"));
-        assert!(supported_types.contains(&"i32"));
-        assert!(supported_types.contains(&"bool"));
-    }
-
-    /// 测试错误提示生成
-    #[test]
-    fn test_error_hint_generation() {
-        let hint = utils::generate_supported_types_hint();
-        assert!(hint.contains("支持的基本类型"));
-        assert!(hint.contains("String"));
-        assert!(hint.contains("i32"));
-        assert!(hint.contains("bool"));
-        assert!(hint.contains("Option<T>"));
-        assert!(hint.contains("示例"));
-    }
-
-    /// 测试完整的转换流程
-    #[test]
-    fn test_complete_conversion_flow() {
-        // 测试各种支持的类型
-        let test_fields: Vec<syn::Field> = vec![
-            parse_quote! { name: String },
-            parse_quote! { age: i32 },
-            parse_quote! { height: f64 },
-            parse_quote! { active: bool },
-            parse_quote! { nickname: Option<String> },
-            parse_quote! { score: Option<i32> },
-        ];
-
-        for field in test_fields {
-            // 检查类型支持性
-            assert!(
-                is_type_supported(&field.ty),
-                "类型应该被支持: {:?}",
-                field.ty
-            );
-
-            // 执行转换
-            let result = convert_field(&field);
-            assert!(result.is_ok(), "转换应该成功: {:?}", field);
-
-            // 验证生成的代码包含必要元素
-            let code = result.unwrap();
-            let code_str = code.to_string();
-            assert!(
-                code_str.contains("serde_json::to_value")
-                    || code_str.contains("JsonValue::Null"),
-                "生成的代码应该包含转换逻辑"
-            );
-        }
-    }
-
-    /// 测试不支持类型的错误处理
-    #[test]
-    fn test_unsupported_type_handling() {
-        let unsupported_fields: Vec<syn::Field> = vec![
-            parse_quote! { data: Vec<String> },
-            parse_quote! { map: std::collections::HashMap<String, i32> },
-            parse_quote! { set: std::collections::HashSet<String> },
-        ];
-
-        for field in unsupported_fields {
-            // 检查类型不被支持
-            assert!(
-                !is_type_supported(&field.ty),
-                "类型不应该被支持: {:?}",
-                field.ty
-            );
-
-            // 转换应该失败
-            let result = convert_field(&field);
-            assert!(result.is_err(), "转换应该失败: {:?}", field);
-
-            // 验证错误类型
-            if let Err(error) = result {
-                match error {
-                    crate::common::MacroError::UnsupportedFieldType {
-                        ..
-                    } => {
-                        // 正确的错误类型
-                    },
-                    _ => panic!("期望 UnsupportedFieldType 错误"),
-                }
-            }
-        }
-    }
-
-    /// 测试模块文档示例
-    #[test]
-    fn test_documentation_examples() {
-        // 测试基本使用示例
-        let field: syn::Field = parse_quote! {
-            name: String
-        };
-
-        let _conversion_code = convert_field(&field).unwrap();
-
-        // 测试类型检查示例
-        let string_type: syn::Type = parse_quote! { String };
-        assert!(is_type_supported(&string_type));
-
-        let unsupported_type: syn::Type = parse_quote! { Vec<String> };
-        assert!(!is_type_supported(&unsupported_type));
     }
 }

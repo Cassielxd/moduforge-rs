@@ -90,7 +90,9 @@ struct BenchmarkResult {
 #[derive(Debug, Clone)]
 struct CrateInfo {
     name: String,
+    #[allow(dead_code)]
     path: String,
+    #[allow(dead_code)]
     dependencies: Vec<String>,
     tier: ExecutionTier,
 }
@@ -112,7 +114,7 @@ impl std::str::FromStr for ExecutionTier {
             "core-logic" => Ok(ExecutionTier::CoreLogic),
             "service" => Ok(ExecutionTier::Service),
             "integration" => Ok(ExecutionTier::Integration),
-            _ => Err(format!("未知的执行层级: {}", s)),
+            _ => Err(format!("未知的执行层级: {s}")),
         }
     }
 }
@@ -252,7 +254,7 @@ impl BenchmarkCoordinator {
         let mut all_results = Vec::new();
 
         for tier in &tiers {
-            println!("📦 执行 {:?} 层级基准测试", tier);
+            println!("📦 执行 {tier:?} 层级基准测试");
             let tier_crates: Vec<_> =
                 self.crates.iter().filter(|c| &c.tier == tier).collect();
 
@@ -263,11 +265,11 @@ impl BenchmarkCoordinator {
         }
 
         // 保存综合结果
-        let summary_file = format!("{}/summary.json", output_dir);
+        let summary_file = format!("{output_dir}/summary.json");
         let summary_json = serde_json::to_string_pretty(&all_results)?;
         std::fs::write(&summary_file, summary_json)?;
 
-        println!("✅ 全部基准测试完成，结果保存在: {}", output_dir);
+        println!("✅ 全部基准测试完成，结果保存在: {output_dir}");
         Ok(())
     }
 
@@ -317,7 +319,7 @@ async fn execute_crate_benchmark(
 
     // 执行 cargo bench 命令
     let output = Command::new("cargo")
-        .args(&["bench", "--package", &crate_info.name])
+        .args(["bench", "--package", &crate_info.name])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
@@ -391,7 +393,7 @@ fn parse_benchmark_output(
 }
 
 fn get_git_commit() -> Result<String> {
-    let output = Command::new("git").args(&["rev-parse", "HEAD"]).output()?;
+    let output = Command::new("git").args(["rev-parse", "HEAD"]).output()?;
 
     if output.status.success() {
         Ok(String::from_utf8(output.stdout)?.trim().to_string())
@@ -422,7 +424,7 @@ async fn main() -> Result<()> {
             coordinator
                 .execute_tier_parallel(&tier_crates, 1, &output_dir)
                 .await?;
-            println!("✅ {:?} 层级基准测试完成", tier_enum);
+            println!("✅ {tier_enum:?} 层级基准测试完成");
         },
         Commands::RunCrate { crate_name, output_dir } => {
             if let Some(crate_info) =
@@ -437,16 +439,16 @@ async fn main() -> Result<()> {
                     results.len()
                 );
             } else {
-                eprintln!("❌ 未找到crate: {}", crate_name);
+                eprintln!("❌ 未找到crate: {crate_name}");
             }
         },
-        Commands::Report { results_dir, format } => {
-            println!("📊 生成基准测试报告 (格式: {})", format);
+        Commands::Report { results_dir: _, format } => {
+            println!("📊 生成基准测试报告 (格式: {format})");
             // 这里会实现报告生成逻辑
             println!("✅ 报告生成完成");
         },
-        Commands::Detect { baseline, current, threshold } => {
-            println!("🔍 检测性能回归 (阈值: {}%)", threshold);
+        Commands::Detect { baseline: _, current: _, threshold } => {
+            println!("🔍 检测性能回归 (阈值: {threshold}%)");
             // 这里会实现回归检测逻辑
             println!("✅ 回归检测完成");
         },

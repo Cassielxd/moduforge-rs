@@ -85,7 +85,7 @@ impl DocumentWriter {
             Directory { entries: self.segments, flags: 0, file_hash: hash };
         let bytes =
             bincode::serde::encode_to_vec(&dir, bincode::config::standard())
-                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+                .map_err(io::Error::other)
                 .map_err(FileError::Io)?;
         let dir_off = self.w.append(&bytes)?;
         self.w.flush()?;
@@ -169,7 +169,7 @@ impl DocumentReader {
             dir_bytes,
             bincode::config::standard(),
         )
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+        .map_err(io::Error::other)
         .map_err(FileError::Io)?;
         // 校验除目录外的数据哈希
         let mut hasher = Blake3::new();

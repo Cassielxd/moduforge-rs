@@ -9,14 +9,9 @@
 //! - ForgeActorRuntime (actor_runtime.rs)
 //! - ForgeAsyncRuntime (async_runtime.rs)
 
-use std::sync::Arc;
-
 use crate::{
-    config::ForgeConfig,
-    debug::debug,
-    extension_manager::ExtensionManager,
-    types::RuntimeOptions,
-    ForgeResult,
+    config::ForgeConfig, debug::debug, extension_manager::ExtensionManager,
+    types::RuntimeOptions, ForgeResult,
 };
 
 /// 扩展管理器辅助函数
@@ -59,8 +54,10 @@ impl ExtensionManagerHelper {
             let extension_manager = ExtensionManager::from_xml_files(&paths)?;
 
             // 合并现有的扩展
-            let merged_extensions =
-                Self::merge_extensions_with_xml(runtime_options, extension_manager)?;
+            let merged_extensions = Self::merge_extensions_with_xml(
+                runtime_options,
+                extension_manager,
+            )?;
             return Ok(merged_extensions);
         }
 
@@ -70,8 +67,10 @@ impl ExtensionManagerHelper {
             debug!("使用默认的 schema 文件: {}", default_schema_path);
             let extension_manager =
                 ExtensionManager::from_xml_file(default_schema_path)?;
-            let merged_extensions =
-                Self::merge_extensions_with_xml(runtime_options, extension_manager)?;
+            let merged_extensions = Self::merge_extensions_with_xml(
+                runtime_options,
+                extension_manager,
+            )?;
             return Ok(merged_extensions);
         }
 
@@ -154,7 +153,8 @@ mod tests {
         let config = ForgeConfig::default();
 
         // 没有XML文件时应该使用代码扩展
-        let result = ExtensionManagerHelper::create_extension_manager(&options, &config);
+        let result =
+            ExtensionManagerHelper::create_extension_manager(&options, &config);
         assert!(result.is_ok());
     }
 }

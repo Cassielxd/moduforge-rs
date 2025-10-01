@@ -102,7 +102,10 @@ impl Tree {
     /// 分离到独立函数，避免内联膨胀影响快速路径
     #[cold]
     #[inline(never)]
-    fn compute_and_cache_shard_index(&self, id: &NodeId) -> usize {
+    fn compute_and_cache_shard_index(
+        &self,
+        id: &NodeId,
+    ) -> usize {
         // 使用 AHash 计算哈希值 (比 DefaultHasher 快 3x)
         let mut hasher = AHasher::default();
         id.hash(&mut hasher);
@@ -143,9 +146,7 @@ impl Tree {
         &self,
         ids: &'a [&'a NodeId],
     ) -> Vec<(usize, &'a NodeId)> {
-        ids.iter()
-            .map(|&id| (self.get_shard_index(id), id))
-            .collect()
+        ids.iter().map(|&id| (self.get_shard_index(id), id)).collect()
     }
 
     /// 清理分片缓存 (用于内存管理)
@@ -304,7 +305,7 @@ impl Tree {
         nodes: Vec<NodeEnum>,
     ) -> PoolResult<()> {
         // 检查父节点是否存在
-        let parent_shard_index = self.get_shard_index(&parent_id);
+        let parent_shard_index = self.get_shard_index(parent_id);
         let parent_node = self.nodes[parent_shard_index]
             .get(parent_id)
             .ok_or(error_helpers::parent_not_found(parent_id.clone()))?;
@@ -530,7 +531,7 @@ impl Tree {
     pub fn add_mark(
         &mut self,
         id: &NodeId,
-        marks: &Vec<Mark>,
+        marks: &[Mark],
     ) -> PoolResult<()> {
         let shard_index = self.get_shard_index(id);
         let node = self.nodes[shard_index]
@@ -873,7 +874,7 @@ mod tests {
         let mut tree = Tree::new(root.clone());
 
         let mark = Mark { r#type: "test".to_string(), attrs: Attrs::default() };
-        tree.add_mark(&root.id, &vec![mark.clone()]).unwrap();
+        tree.add_mark(&root.id, &[mark.clone()]).unwrap();
         #[cfg(feature = "debug-logs")]
         dbg!(&tree);
         let node = tree.get_node(&root.id).unwrap();
@@ -886,7 +887,7 @@ mod tests {
         let mut tree = Tree::new(root.clone());
 
         let mark = Mark { r#type: "test".to_string(), attrs: Attrs::default() };
-        tree.add_mark(&root.id, &vec![mark.clone()]).unwrap();
+        tree.add_mark(&root.id, &[mark.clone()]).unwrap();
         #[cfg(feature = "debug-logs")]
         dbg!(&tree);
         tree.remove_mark(&root.id, &[mark.r#type.clone()]).unwrap();

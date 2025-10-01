@@ -129,7 +129,7 @@ pub fn main() -> ForgeResult<()> {
     println!("   全局属性:");
     for attr in full_ext.get_global_attributes() {
         for key in attr.keys() {
-            println!("     - {}: 已配置", key);
+            println!("     - {key}: 已配置");
         }
     }
 

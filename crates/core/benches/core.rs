@@ -162,7 +162,7 @@ fn bench_basic_types(c: &mut Criterion) {
     group.bench_function("Environment枚举操作", |b| {
         b.iter(|| {
             let env = Environment::Production;
-            let debug_str = format!("{:?}", env);
+            let debug_str = format!("{env:?}");
             criterion::black_box((env, debug_str))
         })
     });

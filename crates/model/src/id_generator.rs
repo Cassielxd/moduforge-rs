@@ -18,7 +18,7 @@ mod tests {
     #[test]
     fn test_id_generation() {
         let _id = IdGenerator::get_id();
-        println!("生成新ID: {:?}", _id);
+        println!("生成新ID: {_id:?}");
     }
     #[test]
     fn test_id_generation_performance() {
@@ -31,7 +31,7 @@ mod tests {
         }
         let new_duration = start.elapsed();
 
-        println!("生成 {} 个新ID耗时: {:?}", ITERATIONS, new_duration);
+        println!("生成 {ITERATIONS} 个新ID耗时: {new_duration:?}");
         println!("平均每个ID生成时间: {:?}", new_duration / ITERATIONS as u32);
     }
 
@@ -46,7 +46,7 @@ mod tests {
             assert!(ids.insert(id), "发现重复ID！");
         }
 
-        println!("成功生成 {} 个唯一ID", ITERATIONS);
+        println!("成功生成 {ITERATIONS} 个唯一ID");
 
         // 计算碰撞概率
         let total_possible = 32u64.pow(12);

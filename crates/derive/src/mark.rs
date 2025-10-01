@@ -5,5 +5,3 @@
 
 pub mod derive_impl;
 
-/// 重新导出主要的实现函数
-pub use derive_impl::process_derive_mark;

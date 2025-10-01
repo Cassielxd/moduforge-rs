@@ -40,10 +40,10 @@ impl Display for ProcessorError {
     ) -> std::fmt::Result {
         match self {
             ProcessorError::TaskFailed(msg) => {
-                write!(f, "任务执行失败: {}", msg)
+                write!(f, "任务执行失败: {msg}")
             },
             ProcessorError::InternalError(msg) => {
-                write!(f, "内部错误: {}", msg)
+                write!(f, "内部错误: {msg}")
             },
         }
     }

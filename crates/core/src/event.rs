@@ -218,7 +218,7 @@ impl<T: Send + Sync + Clone + 'static> EventBus<T> {
     /// 异步销毁事件总线
     pub async fn destroy(&self) -> ForgeResult<()> {
         self.shutdown.0.send(()).await.map_err(|e| {
-            error_utils::event_error(format!("发送关闭信号失败: {}", e))
+            error_utils::event_error(format!("发送关闭信号失败: {e}"))
         })
     }
 
@@ -378,7 +378,7 @@ impl<T: Send + Sync + Clone + 'static> EventBus<T> {
         event: T,
     ) -> ForgeResult<()> {
         self.tx.send(event).await.map_err(|e| {
-            error_utils::event_error(format!("广播事件失败: {}", e))
+            error_utils::event_error(format!("广播事件失败: {e}"))
         })
     }
     /// 同步广播事件（仅在非异步上下文中使用）
@@ -403,7 +403,7 @@ impl<T: Send + Sync + Clone + 'static> EventBus<T> {
         event: T,
     ) -> ForgeResult<()> {
         self.tx.send_blocking(event).map_err(|e| {
-            error_utils::event_error(format!("广播事件失败: {}", e))
+            error_utils::event_error(format!("广播事件失败: {e}"))
         })
     }
 

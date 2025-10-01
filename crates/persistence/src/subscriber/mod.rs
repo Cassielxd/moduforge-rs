@@ -9,6 +9,7 @@ use mf_core::{
 };
 use mf_state::transaction::Transaction;
 use serde_json::json;
+use uuid::Uuid;
 
 use crate::api::{CommitMode, EventStore, PersistOptions, PersistedEvent, Snapshot};
 use crate::ser::{
@@ -29,7 +30,7 @@ pub struct SnapshotSubscriber<E: EventStore + 'static> {
     commit_mode: CommitMode,
     default_doc_id: String,
     // 进程内已持久化的事务ID集合，避免重复写入（进程重启后靠数据库幂等键）
-    persisted: DashMap<u64, ()>,
+    persisted: DashMap<Uuid, ()>, // ✅ 改用 UUID 作为 key
     // 每个文档的快照计数器
     snap_counters: DashMap<String, SnapshotCounters>,
     // 待写快照的 upto_lsn
@@ -78,7 +79,7 @@ impl<E: EventStore + 'static> SnapshotSubscriber<E> {
 
     async fn persist_one(
         &self,
-        tr_id: u64,
+        tr_id: Uuid, // ✅ 改用 UUID
         doc_id: &str,
         transaction: &Transaction,
     ) -> ForgeResult<Option<(i64, usize)>> {
@@ -86,8 +87,7 @@ impl<E: EventStore + 'static> SnapshotSubscriber<E> {
         let frames: Vec<TypeWrapper> = frame_steps(transaction);
         let framed = serde_json::to_vec(&frames).map_err(|e| {
             mf_core::error::error_utils::middleware_error(format!(
-                "步骤编码失败: {}",
-                e
+                "步骤编码失败: {e}"
             ))
         })?;
         let payload = compress_if_needed(&framed, self.options.compression)
@@ -102,7 +102,7 @@ impl<E: EventStore + 'static> SnapshotSubscriber<E> {
             doc_id: doc_id.to_string(),
             ts: chrono::Utc::now().timestamp_millis(),
             actor: None,
-            idempotency_key: format!("tr:{}", tr_id),
+            idempotency_key: format!("tr:{tr_id}"),
             payload,
             meta: json!({}),
             checksum,
@@ -153,8 +153,7 @@ impl<E: EventStore + 'static> SnapshotSubscriber<E> {
     ) -> ForgeResult<()> {
         let mut ser = state.serialize().await.map_err(|e| {
             mf_core::error::error_utils::middleware_error(format!(
-                "状态序列化失败: {}",
-                e
+                "状态序列化失败: {e}"
             ))
         })?;
         let snap = SnapshotData {
@@ -163,15 +162,13 @@ impl<E: EventStore + 'static> SnapshotSubscriber<E> {
         };
         let blob = serde_json::to_vec(&snap).map_err(|e| {
             mf_core::error::error_utils::middleware_error(format!(
-                "快照编码失败: {}",
-                e
+                "快照编码失败: {e}"
             ))
         })?;
         let blob = compress_if_needed(&blob, self.options.compression)
             .map_err(|e| {
                 mf_core::error::error_utils::middleware_error(format!(
-                    "快照压缩失败: {}",
-                    e
+                    "快照压缩失败: {e}"
                 ))
             })?;
 
@@ -191,7 +188,7 @@ impl<E: EventStore + 'static> SnapshotSubscriber<E> {
         let mut entry = self
             .snap_counters
             .entry(doc_id.to_string())
-            .or_insert_with(SnapshotCounters::default);
+            .or_default();
         entry.last_snapshot_ms = chrono::Utc::now().timestamp_millis();
         entry.last_snapshot_upto_lsn = upto_lsn;
         entry.events_since = 0;
@@ -244,7 +241,7 @@ impl<E: EventStore + 'static> EventHandler<Event> for SnapshotSubscriber<E> {
                         let mut entry = self
                             .snap_counters
                             .entry(doc_id.clone())
-                            .or_insert_with(SnapshotCounters::default);
+                            .or_default();
                         entry.events_since += 1;
                         entry.bytes_since += bytes as u64;
                         // 更新 up-to LSN
@@ -270,7 +267,7 @@ impl<E: EventStore + 'static> EventHandler<Event> for SnapshotSubscriber<E> {
                     Err(e) => {
                         return Err(
                             mf_core::error::error_utils::middleware_error(
-                                format!("持久化失败: {}", e),
+                                format!("持久化失败: {e}"),
                             ),
                         );
                     },

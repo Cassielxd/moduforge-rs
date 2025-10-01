@@ -27,20 +27,22 @@ impl CollabStateField {
 
 #[async_trait]
 impl StateField for CollabStateField {
+    type Value = CollabState;
+
     async fn init(
         &self,
         _config: &StateConfig,
         _instance: &State,
-    ) -> Arc<dyn Resource> {
+    ) -> Arc<Self::Value> {
         Arc::new(CollabState)
     }
     async fn apply(
         &self,
         tr: &Transaction,
-        value: Arc<dyn Resource>,
+        value: Arc<Self::Value>,
         _old_state: &State,
         _: &State,
-    ) -> Arc<dyn Resource> {
+    ) -> Arc<Self::Value> {
         let _ =
             Utils::apply_transaction_to_yrs(self.awareness.clone(), tr).await;
         value

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::AppError,
-    plugins::inc::{Operation, Operations},
+    plugins::inc::Operations,
     res,
     response::Res,
     ContextHelper, ResponseResult,
@@ -110,12 +110,12 @@ fn render_history_entry(item: &HistoryEntryWithMeta) -> HistoryEntry {
     let timestamp = DateTime::<Local>::from(item.timestamp)
         .format("%Y-%m-%d %H:%M:%S")
         .to_string();
-    return HistoryEntry {
+    HistoryEntry {
         current: false,
         state_version: item.state.version,
         description: description.to_string(),
-        timestamp: timestamp,
-    };
+        timestamp,
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

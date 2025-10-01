@@ -2,8 +2,6 @@ use std::sync::Arc;
 use tokio::time::{self, Duration};
 use yrs::{sync::Awareness, DeepObservable, Doc, Map, Observable, Transact};
 use mf_collab_client::AwarenessRef;
-use tracing_subscriber;
-use serde_json;
 
 use mf_collab_client::{provider::WebsocketProvider, types::SyncEvent};
 
@@ -48,27 +46,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     } => {
                         if has_data {
                             println!(
-                                "🎉 同步完成，房间有数据！耗时: {}ms",
-                                elapsed_ms
+                                "🎉 同步完成，房间有数据！耗时: {elapsed_ms}ms"
                             );
                         } else {
                             println!(
-                                "📭 同步完成，空房间！耗时: {}ms",
-                                elapsed_ms
+                                "📭 同步完成，空房间！耗时: {elapsed_ms}ms"
                             );
                         }
                     },
                     SyncEvent::ProtocolStateChanged(state) => {
-                        println!("📡 协议状态: {:?}", state);
+                        println!("📡 协议状态: {state:?}");
                     },
                     SyncEvent::DataReceived => {
                         println!("📥 收到数据更新");
                     },
                     SyncEvent::ConnectionFailed(error) => {
-                        println!("🔌 监听: {:?}", error);
+                        println!("🔌 监听: {error:?}");
                     },
                     SyncEvent::ConnectionChanged(status) => {
-                        println!("🔌 连接状态: {:?}", status);
+                        println!("🔌 连接状态: {status:?}");
                     },
                     _ => {},
                 }
@@ -85,18 +81,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             for (key, change) in event.keys(txn) {
                 match change {
                     yrs::types::EntryChange::Inserted(value) => {
-                        println!("新增 key: {}, value: {:?}", key, value);
+                        println!("新增 key: {key}, value: {value:?}");
                     },
                     yrs::types::EntryChange::Removed(old_value) => {
                         println!(
-                            "删除 key: {}, old value: {:?}",
-                            key, old_value
+                            "删除 key: {key}, old value: {old_value:?}"
                         );
                     },
                     yrs::types::EntryChange::Updated(old_value, new_value) => {
                         println!(
-                            "更新 key: {}, old: {:?}, new: {:?}",
-                            key, old_value, new_value
+                            "更新 key: {key}, old: {old_value:?}, new: {new_value:?}"
                         );
                     },
                 }
@@ -193,7 +187,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let node_id = uuid::Uuid::new_v4().to_string();
 
             // 简单地插入一个文本值作为节点内容
-            let node_content = format!("{{\"type\": \"DXGC\", \"id\": \"{}\", \"client\": \"rust_client\"}}", node_id);
+            let node_content = format!("{{\"type\": \"DXGC\", \"id\": \"{node_id}\", \"client\": \"rust_client\"}}");
             nodes_map.insert(&mut txn, node_id.as_str(), node_content.as_str());
 
             // 事务会在 drop 时自动提交

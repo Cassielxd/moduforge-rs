@@ -222,7 +222,7 @@ impl fmt::Display for ContentMatch {
             .collect::<Vec<_>>()
             .join("\n");
 
-        write!(f, "{}", str)
+        write!(f, "{str}")
     }
 }
 
@@ -301,7 +301,7 @@ enum Expr {
     Star { expr: Box<Expr> },
     Opt { expr: Box<Expr> },
     Range { min: usize, max: isize, expr: Box<Expr> },
-    Name { value: NodeType },
+    Name { value: Box<NodeType> },
 }
 fn parse_expr(stream: &mut TokenStream) -> Expr {
     let mut exprs = Vec::new();
@@ -347,7 +347,7 @@ fn parse_expr_subscript(stream: &mut TokenStream) -> Expr {
 fn parse_num(stream: &mut TokenStream) -> usize {
     let next = stream.next().unwrap();
     if !next.chars().all(|c| c.is_ascii_digit()) {
-        stream.err(&format!("Expected number, got '{}'", next));
+        stream.err(&format!("Expected number, got '{next}'"));
     }
     let result = next.parse().unwrap();
     stream.pos += 1;
@@ -385,7 +385,7 @@ fn resolve_name(
         }
     }
     if result.is_empty() {
-        stream.err(&format!("没找到类型 '{}'", name));
+        stream.err(&format!("没找到类型 '{name}'"));
     }
     result
 }
@@ -401,7 +401,7 @@ fn parse_expr_atom(stream: &mut TokenStream) -> Expr {
         if next.chars().all(|c| c.is_alphanumeric() || c == '_') {
             let exprs: Vec<Expr> = resolve_name(stream, next)
                 .into_iter()
-                .map(|type_| Expr::Name { value: type_ })
+                .map(|type_| Expr::Name { value: Box::new(type_) })
                 .collect();
             stream.pos += 1;
             if exprs.len() == 1 {
@@ -410,7 +410,7 @@ fn parse_expr_atom(stream: &mut TokenStream) -> Expr {
                 Expr::Choice { exprs }
             }
         } else {
-            stream.err(&format!("Unexpected token '{}'", next));
+            stream.err(&format!("Unexpected token '{next}'"));
         }
     } else {
         stream.err("Unexpected end of input");
@@ -620,7 +620,7 @@ fn compile(
             vec![edge(cur, None, None, nfa)]
         },
         Expr::Name { value } => {
-            vec![edge(from, None, Some(value), nfa)]
+            vec![edge(from, None, Some((*value).clone()), nfa)]
         },
     }
 }
@@ -628,10 +628,10 @@ fn compile(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schema::{AttributeSpec, Schema, SchemaSpec};
+    use crate::schema::{Schema, SchemaSpec};
     use crate::node_type::NodeSpec;
     use std::collections::HashMap;
-    use serde_json::Value;
+    
 
     #[test]
     fn test_tablerow_plus_fill() {
@@ -697,13 +697,13 @@ mod tests {
 
         // 测试：当 table 的内容为空时，fill 应该返回至少一个 tablerow
         if let Some(content_match) = &table_type.content_match {
-            println!("Table content match: {}", content_match);
+            println!("Table content match: {content_match}");
 
             // 测试空内容的情况
             let empty_content: Vec<Node> = vec![];
             let result = content_match.fill(&empty_content, true, &schema);
 
-            println!("Fill result for empty content: {:?}", result);
+            println!("Fill result for empty content: {result:?}");
 
             if let Some(needed_types) = result {
                 println!("成功！需要的节点类型数量: {}", needed_types.len());
@@ -718,7 +718,7 @@ mod tests {
 
     #[test]
     fn test_table_create_and_fill() {
-        use crate::node_type::NodeType;
+        
 
         // 创建一个简单的 schema
         let mut nodes = HashMap::new();
@@ -792,7 +792,7 @@ mod tests {
         );
 
         let (main_node, child_nodes) = result.into_parts();
-        println!("Main node: {:?}", main_node);
+        println!("Main node: {main_node:?}");
         println!("Child nodes count: {}", child_nodes.len());
 
         for (i, child) in child_nodes.iter().enumerate() {
@@ -817,9 +817,9 @@ mod tests {
 
     #[test]
     fn test_edge_cases() {
-        use crate::node_type::NodeType;
+        
         use crate::node::Node;
-        use crate::attrs::Attrs;
+        
 
         // 创建schema（与上面相同）
         let mut nodes = HashMap::new();
@@ -896,7 +896,7 @@ mod tests {
             if let Some(needed_types) = fill_result {
                 println!("需要的类型数量: {}", needed_types.len());
                 for type_name in &needed_types {
-                    println!("  需要的类型: {}", type_name);
+                    println!("  需要的类型: {type_name}");
                 }
             }
         }
@@ -914,7 +914,7 @@ mod tests {
 
     #[test]
     fn test_block_choice_problem() {
-        use crate::node_type::NodeType;
+        
 
         // 模拟 simple_demo.rs 中的问题场景
         let mut nodes = HashMap::new();
@@ -1025,7 +1025,7 @@ mod tests {
         println!("=== 测试 Block 选择问题 ===");
 
         if let Some(content_match) = &block_type.content_match {
-            println!("Block content match: {}", content_match);
+            println!("Block content match: {content_match}");
 
             // 检查默认类型
             let default_type = content_match.default_type();
@@ -1083,7 +1083,7 @@ mod tests {
 
     #[test]
     fn test_sequence_with_existing_nodes() {
-        use crate::node_type::NodeType;
+        
         use crate::node::Node;
         use crate::attrs::Attrs;
 
@@ -1232,7 +1232,7 @@ mod tests {
 
     #[test]
     fn test_table_creation_step_by_step() {
-        use crate::node_type::NodeType;
+        
 
         // 创建一个简单的 schema，只有 table 和 tablerow
         let mut nodes = HashMap::new();
@@ -1292,7 +1292,7 @@ mod tests {
         println!("第1步：检查 table 的 content_match");
         if let Some(content_match) = &table_type.content_match {
             println!("  ✅ content_match 存在");
-            println!("  content_match: {}", content_match);
+            println!("  content_match: {content_match}");
         } else {
             println!("  ❌ content_match 不存在");
             return;
@@ -1413,7 +1413,7 @@ mod tests {
 
     #[test]
     fn test_sequence_table_problem() {
-        use crate::node_type::NodeType;
+        
 
         // 重现 "table paragraph list heading" 序列表达式的问题
         let mut nodes = HashMap::new();
@@ -1605,8 +1605,7 @@ mod tests {
                                     &tablerow_type.content_match
                                 {
                                     println!(
-                                        "            tablerow content_match: {}",
-                                        tr_content_match
+                                        "            tablerow content_match: {tr_content_match}"
                                     );
 
                                     let empty_content: Vec<Node> = vec![];

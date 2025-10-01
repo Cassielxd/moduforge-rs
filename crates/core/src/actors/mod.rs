@@ -17,11 +17,11 @@
 //! 3. **故障隔离**: Actor失败不影响其他Actor
 //! 4. **性能优化**: 利用Actor模式的并发优势
 
-pub mod transaction_processor;
-pub mod state_actor;
 pub mod event_bus;
 pub mod extension_manager;
+pub mod state_actor;
 pub mod system;
+pub mod transaction_processor;
 
 // 重新导出核心类型
 pub use transaction_processor::{TransactionProcessorActor, TransactionMessage};
@@ -30,7 +30,7 @@ pub use event_bus::{EventBusActor, EventBusMessage};
 pub use extension_manager::{ExtensionManagerActor, ExtensionMessage};
 pub use system::{ForgeActorSystem, ActorSystemConfig};
 
-use ractor::{Actor, ActorRef, ActorErr, Message, SpawnErr};
+use ractor::{SpawnErr};
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::oneshot;
@@ -39,10 +39,7 @@ use tokio::sync::oneshot;
 #[derive(Debug, Error)]
 pub enum ActorSystemError {
     #[error("Actor启动失败: {actor_name} - {source}")]
-    ActorStartupFailed {
-        actor_name: String,
-        source: SpawnErr,
-    },
+    ActorStartupFailed { actor_name: String, source: SpawnErr },
 
     #[error("Actor通信失败: {message}")]
     CommunicationFailed { message: String },
@@ -74,20 +71,20 @@ pub struct MessageWrapper<T> {
 
 impl<T> MessageWrapper<T> {
     pub fn new(inner: T) -> Self {
-        Self {
-            inner,
-            reply_to: None,
-        }
+        Self { inner, reply_to: None }
     }
 
-    pub fn with_reply(inner: T, reply_to: oneshot::Sender<crate::ForgeResult<()>>) -> Self {
-        Self {
-            inner,
-            reply_to: Some(reply_to),
-        }
+    pub fn with_reply(
+        inner: T,
+        reply_to: oneshot::Sender<crate::ForgeResult<()>>,
+    ) -> Self {
+        Self { inner, reply_to: Some(reply_to) }
     }
 
-    pub fn reply(self, result: crate::ForgeResult<()>) {
+    pub fn reply(
+        self,
+        result: crate::ForgeResult<()>,
+    ) {
         if let Some(sender) = self.reply_to {
             let _ = sender.send(result);
         }
@@ -137,14 +134,19 @@ impl Default for ActorMetrics {
 
 impl ActorMetrics {
     pub fn increment_messages(&self) {
-        self.messages_processed.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.messages_processed
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     }
 
     pub fn increment_errors(&self) {
         self.errors_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     }
 
-    pub fn update_processing_time(&self, duration_ms: u64) {
-        self.avg_processing_time.store(duration_ms, std::sync::atomic::Ordering::Relaxed);
+    pub fn update_processing_time(
+        &self,
+        duration_ms: u64,
+    ) {
+        self.avg_processing_time
+            .store(duration_ms, std::sync::atomic::Ordering::Relaxed);
     }
 }

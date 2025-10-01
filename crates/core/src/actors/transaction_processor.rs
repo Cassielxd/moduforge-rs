@@ -12,16 +12,13 @@ use crate::{
     debug::debug,
     error::{error_utils, ForgeResult},
     event::Event,
-    middleware::{Middleware, MiddlewareStack},
+    middleware::MiddlewareStack,
     runtime::sync_flow::FlowEngine,
-    types::{HistoryEntryWithMeta, ProcessorResult},
+    types::ProcessorResult,
     metrics,
 };
 
-use mf_state::{
-    state::State,
-    transaction::Transaction,
-};
+use mf_state::{state::State, transaction::Transaction};
 
 use super::{ActorMetrics, ActorSystemResult};
 
@@ -36,9 +33,7 @@ pub enum TransactionMessage {
         reply: oneshot::Sender<ForgeResult<()>>,
     },
     /// 获取处理统计信息
-    GetStats {
-        reply: oneshot::Sender<TransactionStats>,
-    },
+    GetStats { reply: oneshot::Sender<TransactionStats> },
     /// 更新配置
     UpdateConfig {
         config: ForgeConfig,
@@ -95,7 +90,8 @@ impl Actor for TransactionProcessorActor {
         _myself: ActorRef<Self::Msg>,
         args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        let (state_actor, event_bus, middleware_stack, flow_engine, config) = args;
+        let (state_actor, event_bus, middleware_stack, flow_engine, config) =
+            args;
 
         debug!("启动事务处理Actor");
 
@@ -122,16 +118,23 @@ impl Actor for TransactionProcessorActor {
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match message {
-            TransactionMessage::ProcessTransaction { transaction, description, meta, reply } => {
+            TransactionMessage::ProcessTransaction {
+                transaction,
+                description,
+                meta,
+                reply,
+            } => {
                 let start_time = Instant::now();
 
                 // 🎯 完全保持原始dispatch_with_meta的逻辑
-                let result = self.dispatch_with_meta_exact_logic(
-                    state,
-                    transaction,
-                    description,
-                    meta,
-                ).await;
+                let result = self
+                    .dispatch_with_meta_exact_logic(
+                        state,
+                        transaction,
+                        description,
+                        meta,
+                    )
+                    .await;
 
                 let processing_time = start_time.elapsed();
 
@@ -141,20 +144,23 @@ impl Actor for TransactionProcessorActor {
                     state.stats.transaction_failures += 1;
                     state.metrics.increment_errors();
                 }
-                state.stats.avg_processing_time_ms = processing_time.as_millis() as u64;
-                state.metrics.update_processing_time(processing_time.as_millis() as u64);
+                state.stats.avg_processing_time_ms =
+                    processing_time.as_millis() as u64;
+                state
+                    .metrics
+                    .update_processing_time(processing_time.as_millis() as u64);
                 state.metrics.increment_messages();
 
                 // 发送回复
                 let _ = reply.send(result);
-            }
+            },
             TransactionMessage::GetStats { reply } => {
                 let _ = reply.send(state.stats.clone());
-            }
+            },
             TransactionMessage::UpdateConfig { config, reply } => {
                 state.config = config;
                 let _ = reply.send(Ok(()));
-            }
+            },
         }
 
         Ok(())
@@ -198,8 +204,12 @@ impl TransactionProcessorActor {
             .submit((current_state, current_transaction.clone()))
             .await;
 
-        let Some(ProcessorResult { result: Some(result), .. }) = task_result.output else {
-            return Err(error_utils::state_error("任务处理结果无效".to_string()));
+        let Some(ProcessorResult { result: Some(result), .. }) =
+            task_result.output
+        else {
+            return Err(error_utils::state_error(
+                "任务处理结果无效".to_string(),
+            ));
         };
 
         // 5. 状态更新逻辑 - 完全相同
@@ -212,7 +222,8 @@ impl TransactionProcessorActor {
         }
 
         // 6. 后置中间件 - 完全相同的逻辑
-        self.run_after_middleware(state, &mut state_update, &mut transactions).await?;
+        self.run_after_middleware(state, &mut state_update, &mut transactions)
+            .await?;
 
         // 7. 状态更新和事件广播 - 通过消息传递，但逻辑相同
         if let Some(new_state) = state_update {
@@ -221,12 +232,14 @@ impl TransactionProcessorActor {
                 new_state.clone(),
                 description,
                 meta,
-            ).await?;
+            )
+            .await?;
 
             self.emit_event(
                 &state.event_bus,
                 Event::TrApply(old_id, transactions, new_state),
-            ).await?;
+            )
+            .await?;
         }
 
         Ok(())
@@ -241,10 +254,13 @@ impl TransactionProcessorActor {
 
         state_actor
             .send_message(super::StateMessage::GetState { reply: tx })
-            .map_err(|e| error_utils::state_error(format!("发送获取状态消息失败: {}", e)))?;
+            .map_err(|e| {
+            error_utils::state_error(format!("发送获取状态消息失败: {e}"))
+        })?;
 
-        rx.await
-            .map_err(|e| error_utils::state_error(format!("接收状态响应失败: {}", e)))
+        rx.await.map_err(|e| {
+            error_utils::state_error(format!("接收状态响应失败: {e}"))
+        })
     }
 
     /// 🔄 前置中间件逻辑 - 与原代码完全相同（529-568行）
@@ -261,7 +277,12 @@ impl TransactionProcessorActor {
                 actor_state.config.performance.middleware_timeout_ms,
             );
 
-            match tokio::time::timeout(timeout, middleware.before_dispatch(transaction)).await {
+            match tokio::time::timeout(
+                timeout,
+                middleware.before_dispatch(transaction),
+            )
+            .await
+            {
                 Ok(Ok(())) => {
                     metrics::middleware_execution_duration(
                         start_time.elapsed(),
@@ -269,20 +290,19 @@ impl TransactionProcessorActor {
                         middleware.name().as_str(),
                     );
                     continue;
-                }
+                },
                 Ok(Err(e)) => {
                     return Err(error_utils::middleware_error(format!(
-                        "前置中间件执行失败: {}",
-                        e
+                        "前置中间件执行失败: {e}"
                     )));
-                }
+                },
                 Err(_) => {
                     actor_state.stats.middleware_timeouts += 1;
                     return Err(error_utils::middleware_error(format!(
                         "前置中间件执行超时（{}ms）",
                         actor_state.config.performance.middleware_timeout_ms
                     )));
-                }
+                },
             }
         }
         Ok(())
@@ -306,7 +326,9 @@ impl TransactionProcessorActor {
             let middleware_result = match tokio::time::timeout(
                 timeout,
                 middleware.after_dispatch(state_update.clone(), transactions),
-            ).await {
+            )
+            .await
+            {
                 Ok(Ok(result)) => {
                     metrics::middleware_execution_duration(
                         start_time.elapsed(),
@@ -314,20 +336,19 @@ impl TransactionProcessorActor {
                         middleware.name().as_str(),
                     );
                     result
-                }
+                },
                 Ok(Err(e)) => {
                     return Err(error_utils::middleware_error(format!(
-                        "后置中间件执行失败: {}",
-                        e
+                        "后置中间件执行失败: {e}"
                     )));
-                }
+                },
                 Err(_) => {
                     actor_state.stats.middleware_timeouts += 1;
                     return Err(error_utils::middleware_error(format!(
                         "后置中间件执行超时（{}ms）",
                         actor_state.config.performance.middleware_timeout_ms
                     )));
-                }
+                },
             };
 
             // 处理中间件返回的附加事务
@@ -342,7 +363,9 @@ impl TransactionProcessorActor {
                     ))
                     .await;
 
-                let Some(ProcessorResult { result: Some(result), .. }) = task_result.output else {
+                let Some(ProcessorResult { result: Some(result), .. }) =
+                    task_result.output
+                else {
                     return Err(error_utils::state_error(
                         "附加事务处理结果无效".to_string(),
                     ));
@@ -372,10 +395,13 @@ impl TransactionProcessorActor {
                 meta,
                 reply: tx,
             })
-            .map_err(|e| error_utils::state_error(format!("发送状态更新消息失败: {}", e)))?;
+            .map_err(|e| {
+                error_utils::state_error(format!("发送状态更新消息失败: {e}"))
+            })?;
 
-        rx.await
-            .map_err(|e| error_utils::state_error(format!("接收状态更新响应失败: {}", e)))?
+        rx.await.map_err(|e| {
+            error_utils::state_error(format!("接收状态更新响应失败: {e}"))
+        })?
     }
 
     /// 事件广播 - 通过消息传递
@@ -386,7 +412,9 @@ impl TransactionProcessorActor {
     ) -> ForgeResult<()> {
         event_bus
             .send_message(super::EventBusMessage::PublishEvent { event })
-            .map_err(|e| error_utils::event_error(format!("发送事件消息失败: {}", e)))?;
+            .map_err(|e| {
+                error_utils::event_error(format!("发送事件消息失败: {e}"))
+            })?;
 
         Ok(())
     }

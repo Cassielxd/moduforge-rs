@@ -56,6 +56,7 @@ pub struct TantivyBackend {
     reader: IndexReader,
     fields: TantivyFields,
     /// 若使用临时目录创建，保存 TempDir 以便生命周期结束后自动清理
+    #[allow(dead_code)]
     temp_guard: Option<tempfile::TempDir>,
     /// 索引目录绝对路径（便于多实例时区分）
     index_dir: PathBuf,
@@ -210,7 +211,7 @@ fn add_index_doc(
         doc.add_text(fields.marks, m);
     }
     for (k, v) in &nd.attrs_flat {
-        doc.add_text(fields.attrs_flat, &format!("{}={}", k, v));
+        doc.add_text(fields.attrs_flat, format!("{k}={v}"));
     }
     if let Some(t) = &nd.text {
         doc.add_text(fields.text, t);
@@ -333,7 +334,7 @@ impl TantivyBackend {
         }
         for (k, v) in &query.attrs {
             // match on flattened k=v string
-            let kv = format!("{}={}", k, v);
+            let kv = format!("{k}={v}");
             let term = Term::from_field_text(self.fields.attrs_flat, &kv);
             subqueries.push((
                 Occur::Must,
@@ -502,12 +503,9 @@ impl TantivyBackend {
         for addr in addrs.into_iter().skip(query.offset) {
             let doc: tantivy::schema::TantivyDocument = searcher.doc(addr)?;
             if let Some(val) = doc.get_first(self.fields.node_id) {
-                match val.as_value() {
-                    tantivy::schema::document::ReferenceValue::Leaf(
+                if let tantivy::schema::document::ReferenceValue::Leaf(
                         tantivy::schema::document::ReferenceValueLeaf::Str(s),
-                    ) => ids.push(s.to_string()),
-                    _ => {},
-                }
+                    ) = val.as_value() { ids.push(s.to_string()) }
             }
         }
         Ok(ids)

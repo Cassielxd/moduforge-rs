@@ -207,7 +207,7 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
         &mut self,
         plugin_name: &str,
     ) -> io::Result<Option<Vec<u8>>> {
-        let plugin_file_path = format!("plugins/{}", plugin_name);
+        let plugin_file_path = format!("plugins/{plugin_name}");
         match self.read_all(&plugin_file_path) {
             Ok(data) => Ok(Some(data)),
             Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
@@ -266,7 +266,7 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
         &mut self,
         plugin_name: &str,
     ) -> bool {
-        let plugin_file_path = format!("plugins/{}", plugin_name);
+        let plugin_file_path = format!("plugins/{plugin_name}");
         self.zip.by_name(&plugin_file_path).is_ok()
     }
 
@@ -829,7 +829,7 @@ mod tests {
             // 添加3个大文件
             for i in 1..=3 {
                 let content = vec![i as u8; 2048]; // 2KB each
-                writer.add_stored(&format!("file{}.bin", i), &content)?;
+                writer.add_stored(&format!("file{i}.bin"), &content)?;
             }
 
             writer.finalize()?;
@@ -903,7 +903,7 @@ mod tests {
 
             for i in 1..=3 {
                 let content = vec![i as u8; 2 * 1024 * 1024]; // 2MB each
-                writer.add_stored(&format!("data{}.bin", i), &content)?;
+                writer.add_stored(&format!("data{i}.bin"), &content)?;
             }
 
             writer.finalize()?;
@@ -939,7 +939,7 @@ mod tests {
             threshold_bytes: 1024 * 1024, // 1MB
         };
 
-        let display = format!("{}", stats);
+        let display = format!("{stats}");
         assert!(display.contains("3/8 条目"));
         assert!(display.contains("5.00 MB"));
         assert!(display.contains("1.00 MB"));

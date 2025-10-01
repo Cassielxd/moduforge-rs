@@ -57,8 +57,7 @@ fn basic_schema_parsing() -> XmlSchemaResult<()> {
     // 编译为Schema
     let schema = Schema::compile(schema_spec).map_err(|e| {
         mf_core::XmlSchemaError::InvalidNodeDefinition(format!(
-            "Schema编译失败: {}",
-            e
+            "Schema编译失败: {e}"
         ))
     })?;
     println!("   ✅ Schema编译成功");
@@ -185,9 +184,9 @@ fn extensions_parsing() -> XmlSchemaResult<()> {
         }
     }
 
-    println!("   - 节点扩展: {}", node_count);
-    println!("   - 标记扩展: {}", mark_count);
-    println!("   - 其他扩展: {}", extension_count);
+    println!("   - 节点扩展: {node_count}");
+    println!("   - 标记扩展: {mark_count}");
+    println!("   - 其他扩展: {extension_count}");
 
     Ok(())
 }
@@ -197,11 +196,11 @@ fn file_parsing_example() -> XmlSchemaResult<()> {
     println!("\n4. 多文件解析示例:");
 
     let current_dir = std::env::current_dir().unwrap();
-    println!("   当前工作目录: {:?}", current_dir);
+    println!("   当前工作目录: {current_dir:?}");
 
     let file_path = "test-data/xml-schemas/multi-file/main-schema.xml";
     if std::path::Path::new(file_path).exists() {
-        println!("   ✅ 找到多文件schema: {}", file_path);
+        println!("   ✅ 找到多文件schema: {file_path}");
 
         // 检查引用的文件是否存在
         let base_dir = std::path::Path::new(file_path).parent().unwrap();
@@ -214,9 +213,9 @@ fn file_parsing_example() -> XmlSchemaResult<()> {
         for ref_file in &ref_files {
             let ref_path = base_dir.join(ref_file);
             if ref_path.exists() {
-                println!("   ✅ 引用文件存在: {}", ref_file);
+                println!("   ✅ 引用文件存在: {ref_file}");
             } else {
-                println!("   ❌ 引用文件缺失: {}", ref_file);
+                println!("   ❌ 引用文件缺失: {ref_file}");
             }
         }
 
@@ -267,10 +266,9 @@ fn file_parsing_example() -> XmlSchemaResult<()> {
         }
 
         println!(
-            "   - 节点扩展: {}, 标记扩展: {}, 其他扩展: {}",
-            node_count, mark_count, extension_count
+            "   - 节点扩展: {node_count}, 标记扩展: {mark_count}, 其他扩展: {extension_count}"
         );
-        println!("   - 包含全局属性: {}", has_global_attrs);
+        println!("   - 包含全局属性: {has_global_attrs}");
 
         // 测试不同类型的默认值解析
         test_attribute_types(&schema_spec);
@@ -278,7 +276,7 @@ fn file_parsing_example() -> XmlSchemaResult<()> {
         return Ok(());
     }
 
-    println!("   ⚠️  多文件schema不存在: {}", file_path);
+    println!("   ⚠️  多文件schema不存在: {file_path}");
     println!("   提示: 请确保多文件测试数据存在");
     Ok(())
 }
@@ -293,20 +291,20 @@ fn test_attribute_types(schema_spec: &SchemaSpec) {
             for (attr_name, attr_spec) in attrs {
                 if let Some(default_value) = &attr_spec.default {
                     let type_name = match default_value {
-                        serde_json::Value::Bool(b) => format!("Bool({})", b),
+                        serde_json::Value::Bool(b) => format!("Bool({b})"),
                         serde_json::Value::Number(n) => {
-                            format!("Number({})", n)
+                            format!("Number({n})")
                         },
                         serde_json::Value::String(s) => {
-                            format!("String(\"{}\")", s)
+                            format!("String(\"{s}\")")
                         },
                         serde_json::Value::Null => "Null".to_string(),
                         serde_json::Value::Array(_) => "Array".to_string(),
                         serde_json::Value::Object(_) => "Object".to_string(),
                     };
-                    println!("   ✅ codeblock.{}: {}", attr_name, type_name);
+                    println!("   ✅ codeblock.{attr_name}: {type_name}");
                 } else {
-                    println!("   ⚪ codeblock.{}: None", attr_name);
+                    println!("   ⚪ codeblock.{attr_name}: None");
                 }
             }
         }
@@ -318,20 +316,20 @@ fn test_attribute_types(schema_spec: &SchemaSpec) {
             for (attr_name, attr_spec) in attrs {
                 if let Some(default_value) = &attr_spec.default {
                     let type_name = match default_value {
-                        serde_json::Value::Bool(b) => format!("Bool({})", b),
+                        serde_json::Value::Bool(b) => format!("Bool({b})"),
                         serde_json::Value::Number(n) => {
-                            format!("Number({})", n)
+                            format!("Number({n})")
                         },
                         serde_json::Value::String(s) => {
-                            format!("String(\"{}\")", s)
+                            format!("String(\"{s}\")")
                         },
                         serde_json::Value::Null => "Null".to_string(),
                         serde_json::Value::Array(_) => "Array".to_string(),
                         serde_json::Value::Object(_) => "Object".to_string(),
                     };
-                    println!("   ✅ list.{}: {}", attr_name, type_name);
+                    println!("   ✅ list.{attr_name}: {type_name}");
                 } else {
-                    println!("   ⚪ list.{}: None", attr_name);
+                    println!("   ⚪ list.{attr_name}: None");
                 }
             }
         }
@@ -343,20 +341,20 @@ fn test_attribute_types(schema_spec: &SchemaSpec) {
             for (attr_name, attr_spec) in attrs {
                 if let Some(default_value) = &attr_spec.default {
                     let type_name = match default_value {
-                        serde_json::Value::Bool(b) => format!("Bool({})", b),
+                        serde_json::Value::Bool(b) => format!("Bool({b})"),
                         serde_json::Value::Number(n) => {
-                            format!("Number({})", n)
+                            format!("Number({n})")
                         },
                         serde_json::Value::String(s) => {
-                            format!("String(\"{}\")", s)
+                            format!("String(\"{s}\")")
                         },
                         serde_json::Value::Null => "Null".to_string(),
                         serde_json::Value::Array(_) => "Array".to_string(),
                         serde_json::Value::Object(_) => "Object".to_string(),
                     };
-                    println!("   ✅ highlight.{}: {}", attr_name, type_name);
+                    println!("   ✅ highlight.{attr_name}: {type_name}");
                 } else {
-                    println!("   ⚪ highlight.{}: None", attr_name);
+                    println!("   ⚪ highlight.{attr_name}: None");
                 }
             }
         }

@@ -1,4 +1,4 @@
-use mf_macro::{mf_plugin, mf_plugin_metadata};
+use mf_macro::mf_plugin;
 
 /// 最简单的插件示例 - 所有功能都是可选的
 /// 只需要提供插件名称，其他都可以省略

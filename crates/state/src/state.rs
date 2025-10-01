@@ -34,7 +34,7 @@ pub fn get_state_version() -> u64 {
 #[derive(Clone)]
 pub struct State {
     pub config: Arc<Configuration>,
-    pub fields_instances: ImHashMap<String, Arc<dyn Resource>>,
+    pub fields_instances: Arc<ImHashMap<String, Arc<dyn Resource>>>,
     pub node_pool: Arc<NodePool>,
     pub version: u64,
 }
@@ -69,17 +69,19 @@ impl State {
         .await?;
         let mut instance = State::new(Arc::new(config))?;
         let mut field_values = Vec::new();
+        let mut fields_instances = ImHashMap::new();
         for plugin in instance.config.plugin_manager.get_sorted_plugins().await
         {
             if let Some(field) = &plugin.spec.state_field {
                 tracing::debug!("正在初始化插件状态: {}", plugin.key);
-                let value = field.init(&state_config, &instance).await;
+                let value = field.init_erased(&state_config, &instance).await;
                 field_values.push((plugin.key.clone(), value));
             }
         }
         for (name, value) in field_values {
-            instance.set_field(&name, value)?;
+            fields_instances.insert(name, value);
         }
+        instance.fields_instances = Arc::new(fields_instances);
         tracing::info!("state创建成功");
         Ok(instance)
     }
@@ -110,7 +112,7 @@ impl State {
         };
 
         Ok(State {
-            fields_instances: ImHashMap::new(),
+            fields_instances: Arc::new(ImHashMap::new()),
             config,
             node_pool: doc,
             version: get_state_version(),
@@ -141,7 +143,7 @@ impl State {
 
     /// 异步应用事务到当前状态
     pub async fn apply(
-        self:&Arc<Self>,
+        self: &Arc<Self>,
         transaction: Transaction,
     ) -> StateResult<TransactionResult> {
         let start_time = Instant::now();
@@ -156,7 +158,7 @@ impl State {
     }
 
     pub async fn filter_transaction(
-        self:&Arc<Self>,
+        self: &Arc<Self>,
         tr: &Transaction,
         ignore: Option<usize>,
     ) -> StateResult<bool> {
@@ -176,7 +178,7 @@ impl State {
     /// 异步应用事务到当前状态
     /// 返回新的状态实例和应用事务的步骤
     pub async fn apply_transaction(
-        self:&Arc<Self>,
+        self: &Arc<Self>,
         root_tr: Arc<Transaction>,
     ) -> StateResult<TransactionResult> {
         tracing::info!("开始应用事务");
@@ -255,13 +257,13 @@ impl State {
 
     /// 异步应用内部事务
     pub async fn apply_inner(
-        self:&Arc<Self>,
+        self: &Arc<Self>,
         tr: &Transaction,
     ) -> StateResult<Arc<State>> {
         let mut config = self.config.as_ref().clone();
         config.doc = Some(tr.doc());
         let mut new_instance = State::new(Arc::new(config))?;
-
+        let mut fields_instances = ImHashMap::new();
         // 获取已排序的插件列表
         let sorted_plugins = self.sorted_plugins().await;
 
@@ -269,12 +271,13 @@ impl State {
             if let Some(field) = &plugin.spec.state_field {
                 if let Some(old_plugin_state) = self.get_field(&plugin.key) {
                     let value = field
-                        .apply(tr, old_plugin_state, self, &new_instance)
+                        .apply_erased(tr, old_plugin_state, self, &new_instance)
                         .await;
-                    new_instance.set_field(&plugin.key, value)?;
+                    fields_instances.insert(plugin.key.clone(), value);
                 }
             }
         }
+        new_instance.fields_instances = Arc::new(fields_instances);
         Ok(Arc::new(new_instance))
     }
 
@@ -297,6 +300,7 @@ impl State {
         .await?;
         let mut instance = State::new(Arc::new(config))?;
         let mut field_values = Vec::new();
+        let mut fields_instances = ImHashMap::new();
         for plugin in &instance.config.plugin_manager.get_sorted_plugins().await
         {
             if let Some(field) = &plugin.spec.state_field {
@@ -306,17 +310,18 @@ impl State {
                     if let Some(old_plugin_state) = self.get_field(&key) {
                         old_plugin_state
                     } else {
-                        field.init(&state_config, &instance).await
+                        field.init_erased(&state_config, &instance).await
                     }
                 } else {
-                    field.init(&state_config, &instance).await
+                    field.init_erased(&state_config, &instance).await
                 };
                 field_values.push((key, value));
             }
         }
         for (name, value) in field_values {
-            instance.set_field(&name, value)?;
+            fields_instances.insert(name, value);
         }
+        instance.fields_instances = Arc::new(fields_instances);
         tracing::info!("状态重新配置完成");
         Ok(instance)
     }
@@ -337,15 +342,6 @@ impl State {
             .and_then(|state| state.downcast_arc::<T>().cloned())
     }
 
-    fn set_field(
-        &mut self,
-        name: &str,
-        value: Arc<dyn Resource>,
-    ) -> StateResult<()> {
-        self.fields_instances.insert(name.to_owned(), value);
-        Ok(())
-    }
-
     pub fn has_field(
         &self,
         name: &str,
@@ -358,7 +354,7 @@ impl State {
         for plugin in self.plugins().await {
             if let Some(state_field) = &plugin.spec.state_field {
                 if let Some(value) = self.get_field(&plugin.key) {
-                    if let Some(json) = state_field.serialize(value) {
+                    if let Some(json) = state_field.serialize_erased(value) {
                         state_fields.insert(plugin.key.clone(), json);
                     }
                 };
@@ -366,11 +362,11 @@ impl State {
         }
         let node_pool_str =
             serde_json::to_string(&self.doc()).map_err(|e| {
-                error::serialize_error(format!("node pool 序列化失败: {}", e))
+                error::serialize_error(format!("node pool 序列化失败: {e}"))
             })?;
         let state_fields_str =
             serde_json::to_string(&state_fields).map_err(|e| {
-                error::serialize_error(format!("fields 序列化失败: {}", e))
+                error::serialize_error(format!("fields 序列化失败: {e}"))
             })?;
         Ok(StateSerialize {
             state_fields: state_fields_str.as_bytes().to_vec(),
@@ -385,15 +381,13 @@ impl State {
         let state_fields: HashMap<String, Vec<u8>> =
             serde_json::from_slice(&s.state_fields).map_err(|e| {
                 error::deserialize_error(format!(
-                    "state fields 反序列化失败{}",
-                    e
+                    "state fields 反序列化失败{e}"
                 ))
             })?;
         let node_pool: Arc<NodePool> = serde_json::from_slice(&s.node_pool)
             .map_err(|e| {
                 error::deserialize_error(format!(
-                    "node pool 反序列化失败: {}",
-                    e
+                    "node pool 反序列化失败: {e}"
                 ))
             })?;
         let mut config = configuration.clone();
@@ -404,14 +398,15 @@ impl State {
         for plugin in &configuration.plugin_manager.get_sorted_plugins().await {
             if let Some(state_field) = &plugin.spec.state_field {
                 if let Some(value) = state_fields.get(&plugin.key) {
-                    if let Some(p_state) = state_field.deserialize(value) {
+                    if let Some(p_state) = state_field.deserialize_erased(value)
+                    {
                         let key = plugin.key.clone();
                         map_instances.insert(key, p_state);
                     }
                 }
             }
         }
-        state.fields_instances = map_instances;
+        state.fields_instances = Arc::new(map_instances);
         Ok(state)
     }
 }

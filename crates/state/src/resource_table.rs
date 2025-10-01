@@ -74,12 +74,12 @@ impl ResourceTable {
         &self,
         rid: ResourceId,
     ) -> Option<Arc<T>> {
-        let data = self
+        
+        self
             .index
             .get(&rid)
             .map(|rc| rc.value().clone())
-            .and_then(|rc| rc.downcast_arc::<T>().cloned());
-        data
+            .and_then(|rc| rc.downcast_arc::<T>().cloned())
     }
 
     // 获取指定ID的任意类型资源
@@ -96,10 +96,7 @@ impl ResourceTable {
         rid: ResourceId,
     ) -> Option<Arc<T>> {
         let (_, resource) = self.index.remove(&rid)?;
-        match resource.downcast_arc::<T>() {
-            Some(resource) => Some(resource.clone()),
-            None => None,
-        }
+        resource.downcast_arc::<T>().cloned()
     }
 
     // 从资源表中移除并返回指定ID的任意类型资源

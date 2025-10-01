@@ -17,7 +17,6 @@ use std::sync::Arc;
 use std::collections::HashMap;
 
 /// 获取当前时间戳（毫秒）
-
 pub struct Utils;
 impl Utils {
     pub fn get_unix_time() -> u64 {
@@ -369,7 +368,7 @@ impl Utils {
         let nodes_map = txn
             .get_map("nodes")
             .ok_or(anyhow::anyhow!("Yrs 文档中没有找到 nodes 映射"))?;
-        for (key, _) in nodes_map.iter(&txn) {
+        if let Some((key, _)) = nodes_map.iter(&txn).next() {
             return Ok(key.to_string());
         }
         Err(anyhow::anyhow!("Yrs 文档中没有找到根节点"))

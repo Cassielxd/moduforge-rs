@@ -47,8 +47,7 @@ impl FlowEngine {
         let mut processor = AsyncProcessor::new(config, TransactionProcessor);
         processor.start().await.map_err(|e| {
             crate::error::error_utils::engine_error(format!(
-                "启动异步处理器失败: {}",
-                e
+                "启动异步处理器失败: {e}"
             ))
         })?;
 

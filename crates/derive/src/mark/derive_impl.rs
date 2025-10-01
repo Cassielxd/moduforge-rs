@@ -69,7 +69,7 @@ pub fn process_derive_mark(input: DeriveInput) -> MacroResult<TokenStream2> {
         AttributeParser::parse_mark_attributes(&input).map_err(|e| {
             // 为属性解析错误添加上下文信息
             MacroError::parse_error(
-                &format!("Mark 属性解析失败: {}", e),
+                &format!("Mark 属性解析失败: {e}"),
                 &input,
             )
         })?;
@@ -79,7 +79,7 @@ pub fn process_derive_mark(input: DeriveInput) -> MacroResult<TokenStream2> {
     Validator::validate_mark_config(&config).map_err(|e| {
         // 为验证错误添加上下文信息
         MacroError::validation_error(
-            &format!("Mark 配置验证失败: {}", e),
+            &format!("Mark 配置验证失败: {e}"),
             &input,
         )
     })?;
@@ -90,7 +90,7 @@ pub fn process_derive_mark(input: DeriveInput) -> MacroResult<TokenStream2> {
     let generated_code = generator.generate().map_err(|e| {
         // 为代码生成错误添加上下文信息
         MacroError::generation_error(
-            &format!("Mark 代码生成失败: {}", e),
+            &format!("Mark 代码生成失败: {e}"),
             &input,
         )
     })?;
@@ -156,46 +156,39 @@ fn create_friendly_error_message(error: &MacroError) -> String {
     match error {
         MacroError::ParseError { message, .. } => {
             format!(
-                "ModuForge Mark 派生宏解析错误:\n\n{}\n\n帮助信息:\n• 检查宏属性的语法是否正确\n• 确保所有必需的属性都已设置\n• 参考文档中的示例用法",
-                message
+                "ModuForge Mark 派生宏解析错误:\n\n{message}\n\n帮助信息:\n• 检查宏属性的语法是否正确\n• 确保所有必需的属性都已设置\n• 参考文档中的示例用法"
             )
         },
         MacroError::ValidationError { message, .. } => {
             format!(
-                "ModuForge Mark 派生宏验证错误:\n\n{}\n\n帮助信息:\n• 检查字段类型是否受支持\n• 确保属性值符合要求\n• 验证配置的一致性",
-                message
+                "ModuForge Mark 派生宏验证错误:\n\n{message}\n\n帮助信息:\n• 检查字段类型是否受支持\n• 确保属性值符合要求\n• 验证配置的一致性"
             )
         },
         MacroError::UnsupportedFieldType { field_name, field_type, .. } => {
             format!(
-                "ModuForge Mark 派生宏类型错误:\n\n字段 '{}' 的类型 '{}' 不受支持\n\n支持的类型包括:\n• 基本类型: String, i32, f64, bool 等\n• 可选类型: Option<T> (T 为任意支持的基本类型)\n\n如需支持其他类型，请参考自定义转换器文档",
-                field_name, field_type
+                "ModuForge Mark 派生宏类型错误:\n\n字段 '{field_name}' 的类型 '{field_type}' 不受支持\n\n支持的类型包括:\n• 基本类型: String, i32, f64, bool 等\n• 可选类型: Option<T> (T 为任意支持的基本类型)\n\n如需支持其他类型，请参考自定义转换器文档"
             )
         },
         MacroError::GenerationError { message, .. } => {
             format!(
-                "ModuForge Mark 派生宏代码生成错误:\n\n{}\n\n这通常是内部错误，请报告此问题:\n• 包含完整的错误信息\n• 提供导致错误的代码示例\n• 说明您的使用场景",
-                message
+                "ModuForge Mark 派生宏代码生成错误:\n\n{message}\n\n这通常是内部错误，请报告此问题:\n• 包含完整的错误信息\n• 提供导致错误的代码示例\n• 说明您的使用场景"
             )
         },
         MacroError::MissingAttribute { attribute, .. } => {
             format!(
-                "ModuForge Mark 派生宏缺少属性错误:\n\n缺少必需的属性: {}\n\n帮助信息:\n• 确保在结构体上添加了所有必需的宏属性\n• 检查属性名称的拼写是否正确\n• 参考文档中的完整示例",
-                attribute
+                "ModuForge Mark 派生宏缺少属性错误:\n\n缺少必需的属性: {attribute}\n\n帮助信息:\n• 确保在结构体上添加了所有必需的宏属性\n• 检查属性名称的拼写是否正确\n• 参考文档中的完整示例"
             )
         },
         MacroError::InvalidAttributeValue {
             attribute, value, reason, ..
         } => {
             format!(
-                "ModuForge Mark 派生宏无效属性值错误:\n\n属性 '{}' 的值 '{}' 无效: {}\n\n帮助信息:\n• 检查属性值的格式是否符合要求\n• 确认属性值不为空且符合语法规则\n• 参考文档中的有效属性值示例",
-                attribute, value, reason
+                "ModuForge Mark 派生宏无效属性值错误:\n\n属性 '{attribute}' 的值 '{value}' 无效: {reason}\n\n帮助信息:\n• 检查属性值的格式是否符合要求\n• 确认属性值不为空且符合语法规则\n• 参考文档中的有效属性值示例"
             )
         },
         MacroError::SyntaxError(syn_error) => {
             format!(
-                "ModuForge Mark 派生宏语法错误:\n\n{}\n\n帮助信息:\n• 检查代码的语法是否正确\n• 确认所有括号和引号都已正确闭合\n• 验证结构体定义的完整性",
-                syn_error
+                "ModuForge Mark 派生宏语法错误:\n\n{syn_error}\n\n帮助信息:\n• 检查代码的语法是否正确\n• 确认所有括号和引号都已正确闭合\n• 验证结构体定义的完整性"
             )
         },
     }

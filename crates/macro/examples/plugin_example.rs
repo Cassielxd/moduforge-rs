@@ -315,7 +315,7 @@ fn main() {
     println!("   - 优先级: {}", config.priority);
     println!("   - 配置项:");
     for (key, value) in &config.settings {
-        println!("     * {}: {}", key, value);
+        println!("     * {key}: {value}");
     }
     println!();
 

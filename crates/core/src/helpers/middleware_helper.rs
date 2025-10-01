@@ -13,7 +13,6 @@ use crate::{
     error::{error_utils, ForgeResult},
     metrics,
     middleware::MiddlewareStack,
-    types::RuntimeOptions,
 };
 use mf_state::{state::State, transaction::Transaction};
 use std::sync::Arc;
@@ -63,8 +62,7 @@ impl MiddlewareHelper {
                 },
                 Ok(Err(e)) => {
                     return Err(error_utils::middleware_error(format!(
-                        "前置中间件执行失败: {}",
-                        e
+                        "前置中间件执行失败: {e}"
                     )));
                 },
                 Err(_) => {
@@ -120,8 +118,7 @@ impl MiddlewareHelper {
                 },
                 Ok(Err(e)) => {
                     return Err(error_utils::middleware_error(format!(
-                        "后置中间件执行失败: {}",
-                        e
+                        "后置中间件执行失败: {e}"
                     )));
                 },
                 Err(_) => {

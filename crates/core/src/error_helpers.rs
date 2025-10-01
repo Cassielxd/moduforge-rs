@@ -2,7 +2,6 @@
 ///
 /// 提供便捷的方法来替换 unwrap() 调用，提供更好的错误信息和上下文
 use crate::error::{ForgeError, ForgeResult};
-use anyhow;
 
 /// 扩展 Option 和 Result 类型以提供更好的错误处理
 pub trait UnwrapHelpers<T> {
@@ -26,7 +25,7 @@ impl<T> UnwrapHelpers<T> for Option<T> {
         context: &str,
     ) -> ForgeResult<T> {
         self.ok_or_else(|| ForgeError::Internal {
-            message: format!("意外的 None 值: {}", context),
+            message: format!("意外的 None 值: {context}"),
             location: None,
         })
     }
@@ -37,7 +36,7 @@ impl<T> UnwrapHelpers<T> for Option<T> {
         location: &str,
     ) -> ForgeResult<T> {
         self.ok_or_else(|| ForgeError::Internal {
-            message: format!("意外的 None 值: {}", context),
+            message: format!("意外的 None 值: {context}"),
             location: Some(location.to_string()),
         })
     }
@@ -52,8 +51,8 @@ where
         context: &str,
     ) -> ForgeResult<T> {
         self.map_err(|e| ForgeError::Internal {
-            message: format!("操作失败: {}", context),
-            location: Some(Box::new(e).to_string()),
+            message: format!("操作失败: {context}"),
+            location: Some(e.to_string()),
         })
     }
 
@@ -63,8 +62,8 @@ where
         location: &str,
     ) -> ForgeResult<T> {
         self.map_err(|e| ForgeError::Internal {
-            message: format!("操作失败: {}", context),
-            location: Some(format!("{}: {}", location, e)),
+            message: format!("操作失败: {context}"),
+            location: Some(format!("{location}: {e}")),
         })
     }
 }
@@ -72,7 +71,7 @@ where
 /// 锁操作的辅助函数
 pub mod lock_helpers {
     use super::*;
-    use std::sync::{RwLock, Mutex, LockResult, PoisonError};
+    use std::sync::{RwLock, Mutex};
 
     /// 安全地获取读锁，提供错误上下文
     pub fn read_lock<'a, T>(
@@ -80,7 +79,7 @@ pub mod lock_helpers {
         context: &str,
     ) -> ForgeResult<std::sync::RwLockReadGuard<'a, T>> {
         lock.read().map_err(|_| ForgeError::Concurrency {
-            message: format!("无法获取读锁: {}", context),
+            message: format!("无法获取读锁: {context}"),
             source: None,
         })
     }
@@ -91,7 +90,7 @@ pub mod lock_helpers {
         context: &str,
     ) -> ForgeResult<std::sync::RwLockWriteGuard<'a, T>> {
         lock.write().map_err(|_| ForgeError::Concurrency {
-            message: format!("无法获取写锁: {}", context),
+            message: format!("无法获取写锁: {context}"),
             source: None,
         })
     }
@@ -102,7 +101,7 @@ pub mod lock_helpers {
         context: &str,
     ) -> ForgeResult<std::sync::MutexGuard<'a, T>> {
         lock.lock().map_err(|_| ForgeError::Concurrency {
-            message: format!("无法获取互斥锁: {}", context),
+            message: format!("无法获取互斥锁: {context}"),
             source: None,
         })
     }
@@ -123,7 +122,7 @@ pub mod collection_helpers {
         K: std::hash::Hash + Eq + std::fmt::Debug,
     {
         map.get(key).ok_or_else(|| ForgeError::Internal {
-            message: format!("必需的键不存在: {:?} ({})", key, context),
+            message: format!("必需的键不存在: {key:?} ({context})"),
             location: None,
         })
     }
@@ -159,7 +158,7 @@ pub mod schema_helpers {
     ) -> ForgeResult<Arc<Schema>> {
         Schema::compile(spec).map(Arc::new).map_err(|e| {
             ForgeError::Validation {
-                message: format!("Schema 编译失败: {} ({})", e, context),
+                message: format!("Schema 编译失败: {e} ({context})"),
                 field: None,
             }
         })
@@ -176,7 +175,7 @@ pub mod state_helpers {
         context: &str,
     ) -> ForgeResult<&'a mut T> {
         option.as_mut().ok_or_else(|| ForgeError::State {
-            message: format!("状态未初始化: {}", context),
+            message: format!("状态未初始化: {context}"),
             source: None,
         })
     }
@@ -187,7 +186,7 @@ pub mod state_helpers {
         context: &str,
     ) -> ForgeResult<&'a T> {
         option.as_ref().ok_or_else(|| ForgeError::State {
-            message: format!("状态未初始化: {}", context),
+            message: format!("状态未初始化: {context}"),
             source: None,
         })
     }

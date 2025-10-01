@@ -69,9 +69,9 @@ fn bench_batch_macro_usage(c: &mut Criterion) {
                     let nodes: Vec<_> = (0..count)
                         .map(|i| {
                             node!(
-                                &format!("node_{}", i),
-                                &format!("节点 {}", i),
-                                &format!("内容 {}", i)
+                                &format!("node_{i}"),
+                                &format!("节点 {i}"),
+                                &format!("内容 {i}")
                             )
                         })
                         .collect();
@@ -91,8 +91,8 @@ fn bench_batch_macro_usage(c: &mut Criterion) {
                     let marks: Vec<_> = (0..count)
                         .map(|i| {
                             mark!(
-                                &format!("mark_{}", i),
-                                &format!("标记 {}", i)
+                                &format!("mark_{i}"),
+                                &format!("标记 {i}")
                             )
                         })
                         .collect();
@@ -143,7 +143,7 @@ fn bench_complex_macro_combinations(c: &mut Criterion) {
             // 创建嵌套的node结构
             for i in 0..5 {
                 let section = node!(
-                    &format!("section_{}", i),
+                    &format!("section_{i}"),
                     &format!("章节 {}", i + 1),
                     &format!("章节 {} 的内容", i + 1)
                 );
@@ -152,7 +152,7 @@ fn bench_complex_macro_combinations(c: &mut Criterion) {
                 // 为每个section创建对应的mark
                 for j in 0..3 {
                     let mark = mark!(
-                        &format!("mark_{}_{}", i, j),
+                        &format!("mark_{i}_{j}"),
                         &format!("标记 {}.{}", i + 1, j + 1)
                     );
                     marks.push(mark);
@@ -209,9 +209,9 @@ fn bench_macro_memory_usage(c: &mut Criterion) {
             let nodes: Vec<_> = (0..1000)
                 .map(|i| {
                     node!(
-                        &format!("mass_node_{}", i),
-                        &format!("批量节点 {}", i),
-                        &format!("节点内容 {}", i)
+                        &format!("mass_node_{i}"),
+                        &format!("批量节点 {i}"),
+                        &format!("节点内容 {i}")
                     )
                 })
                 .collect();
@@ -225,9 +225,9 @@ fn bench_macro_memory_usage(c: &mut Criterion) {
             let complex_nodes: Vec<_> = (0..100)
                 .map(|i| {
                     node!(
-                        &format!("complex_node_{}", i),
-                        &format!("复杂节点 {} 包含大量信息和元数据", i),
-                        &format!("这是节点 {} 的详细内容，包含多种类型的数据和属性信息", i)
+                        &format!("complex_node_{i}"),
+                        &format!("复杂节点 {i} 包含大量信息和元数据"),
+                        &format!("这是节点 {i} 的详细内容，包含多种类型的数据和属性信息")
                     )
                 })
                 .collect();

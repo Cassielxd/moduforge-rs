@@ -9,7 +9,6 @@ use quote::quote;
 use syn::DeriveInput;
 use crate::common::{MacroResult, MacroError, utils};
 use crate::parser::{NodeConfig, FieldConfig};
-use crate::converter::converter_registry::GlobalConverterRegistry;
 use super::CodeGenerator;
 
 /// 字段信息结构体
@@ -365,7 +364,7 @@ impl<'a> NodeGenerator<'a> {
                                     .attr_fields
                                     .iter()
                                     .find(|config| {
-                                        &config.name == &field_name.to_string()
+                                        *field_name == config.name
                                     });
 
                                 // 检查是否是有 #[id] 标记的字段
@@ -374,7 +373,7 @@ impl<'a> NodeGenerator<'a> {
                                     .id_field
                                     .as_ref()
                                     .filter(|config| {
-                                        &config.name == &field_name.to_string()
+                                        *field_name == config.name
                                     });
 
                                 // 优先使用 id_config，然后是 attr_config
@@ -662,7 +661,7 @@ impl<'a> NodeGenerator<'a> {
                 let expr_tokens =
                     syn::parse_str::<syn::Expr>(expr).map_err(|_| {
                         MacroError::parse_error(
-                            &format!("无效的自定义类型表达式: {}", expr),
+                            &format!("无效的自定义类型表达式: {expr}"),
                             self.input,
                         )
                     })?;
@@ -852,7 +851,7 @@ impl<'a> NodeGenerator<'a> {
                     .config
                     .id_field
                     .as_ref()
-                    .map(|id_config| &id_config.name == &config.name)
+                    .map(|id_config| id_config.name == config.name)
                     .unwrap_or(false);
 
                 if is_id_field {
@@ -972,7 +971,7 @@ impl<'a> NodeGenerator<'a> {
                 let expr_tokens =
                     syn::parse_str::<syn::Expr>(expr).map_err(|_| {
                         MacroError::parse_error(
-                            &format!("无效的自定义类型表达式: {}", expr),
+                            &format!("无效的自定义类型表达式: {expr}"),
                             self.input,
                         )
                     })?;
@@ -1005,7 +1004,7 @@ impl<'a> NodeGenerator<'a> {
                 let type_ident = syn::parse_str::<syn::Type>(type_name)
                     .map_err(|_| {
                         MacroError::parse_error(
-                            &format!("无效的类型名称: {}", type_name),
+                            &format!("无效的类型名称: {type_name}"),
                             self.input,
                         )
                     })?;
@@ -1298,7 +1297,7 @@ impl<'a> NodeGenerator<'a> {
         let field_ident =
             syn::parse_str::<syn::Ident>(field_name).map_err(|_| {
                 MacroError::parse_error(
-                    &format!("无效的字段名称: {}", field_name),
+                    &format!("无效的字段名称: {field_name}"),
                     self.input,
                 )
             })?;
@@ -1367,7 +1366,7 @@ impl<'a> NodeGenerator<'a> {
         let field_ident =
             syn::parse_str::<syn::Ident>(field_name).map_err(|_| {
                 MacroError::parse_error(
-                    &format!("无效的字段名称: {}", field_name),
+                    &format!("无效的字段名称: {field_name}"),
                     self.input,
                 )
             })?;
@@ -1376,7 +1375,7 @@ impl<'a> NodeGenerator<'a> {
         let extraction_code = if let Some(config) = &field_info.config {
             // 检查是否是 ID 字段
             if let Some(id_config) = &self.config.id_field {
-                if &config.name == &id_config.name {
+                if config.name == id_config.name {
                     // 这是 ID 字段，从 Node 的 id 字段提取
                     self.generate_id_field_extraction_code(config)?
                 } else {
@@ -1416,7 +1415,7 @@ impl<'a> NodeGenerator<'a> {
         let field_ident =
             syn::parse_str::<Ident>(field_name).map_err(|_| {
                 MacroError::parse_error(
-                    &format!("无效的字段名称: {}", field_name),
+                    &format!("无效的字段名称: {field_name}"),
                     &field_config.field,
                 )
             })?;
@@ -1532,7 +1531,7 @@ impl<'a> NodeGenerator<'a> {
             },
             _ => {
                 return Err(MacroError::validation_error(
-                    &format!("不支持的字段类型: {}", type_name),
+                    &format!("不支持的字段类型: {type_name}"),
                     self.input,
                 ));
             },

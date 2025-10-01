@@ -82,7 +82,7 @@ impl<'a> Shr<Mark> for MarkRef<'a> {
         mark: Mark,
     ) -> Self::Output {
         // 添加到末尾（等同于标准的add操作）
-        self.tree.add_mark(&self.key.clone(), &vec![mark])?;
+        self.tree.add_mark(&self.key.clone(), &[mark])?;
         Ok(MarkRef::new(self.tree, self.key.clone()))
     }
 }

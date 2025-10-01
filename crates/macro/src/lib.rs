@@ -46,8 +46,3 @@ pub mod node;
 pub mod plugin;
 
 // 重新导出所有宏
-pub use command::*;
-pub use extension::*;
-pub use mark::*;
-pub use node::*;
-pub use plugin::*;

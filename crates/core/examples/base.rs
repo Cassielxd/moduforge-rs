@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use mf_core::{
-    middleware::Middleware, EditorOptionsBuilder, Extension, Extensions, ForgeActorRuntime, ForgeAsyncRuntime, ForgeResult, RuntimeOptions
+    middleware::Middleware, EditorOptionsBuilder, Extension, Extensions,
+    ForgeActorRuntime, ForgeResult, RuntimeOptions,
 };
 use mf_model::{imbl::HashMap, NodeId};
 use mf_state::{
@@ -126,10 +127,10 @@ impl PluginTrait for BPlugin {
         let mut new_tr = new_state.tr();
         for tr in trs {
             for step in &tr.steps {
-                if step.name() == "add_node_step".to_string() {
+                if step.name() == "add_node_step" {
                     let node_step = step.downcast_ref::<AddNodeStep>().unwrap();
                     let add_node = &node_step.nodes[0].0;
-                    if add_node.r#type == "dwgc".to_string() {
+                    if add_node.r#type == "dwgc" {
                         let id = add_node.id.clone();
                         let mut map = HashMap::new();
                         map.insert("price".to_string(), 100.into());
@@ -223,22 +224,22 @@ async fn main() -> ForgeResult<()> {
     println!("开始创建编辑器...");
     let mut editor = ForgeActorRuntime::create(get_ops()).await?;
     println!("编辑器创建成功");
-    
+
     let doc = editor.get_state().await?.doc();
     println!("获取初始文档状态:");
     dbg!(doc.clone());
-    
+
     let state = editor.get_state().await?;
     let mut tr: Transaction = Transaction::new(&state);
     let schema = &tr.schema;
     let dw_node =
         schema.nodes["dwgc"].create_and_fill(None, None, vec![], None, schema);
     tr.add_node(doc.root_id().clone(), vec![dw_node])?;
-    
+
     println!("准备分发事务...");
     editor.dispatch(tr).await?;
     println!("事务分发完成");
-    
+
     // 运行编辑器
     println!("获取最终文档状态:");
     dbg!(editor.get_state().await?.doc());

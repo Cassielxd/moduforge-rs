@@ -217,14 +217,14 @@ mod tests {
         let struct_via_into: FullNodeTest = node.clone().into();
         assert_eq!(struct_via_into.title, "测试标题");
         assert_eq!(struct_via_into.priority, 1);
-        assert_eq!(struct_via_into.is_published, true);
+        assert!(struct_via_into.is_published);
 
         // 使用 From::from() 方法转换
         let struct_via_from = FullNodeTest::from(&node);
         let struct_via_from = struct_via_from.unwrap();
         assert_eq!(struct_via_from.title, "测试标题");
         assert_eq!(struct_via_from.priority, 1);
-        assert_eq!(struct_via_from.is_published, true);
+        assert!(struct_via_from.is_published);
 
         println!("反向 From trait 实现测试通过");
     }
@@ -253,7 +253,7 @@ mod tests {
         // 验证从 attrs 中提取的字段
         assert_eq!(struct_instance.title, "测试标题");
         assert_eq!(struct_instance.priority, 5);
-        assert_eq!(struct_instance.is_published, false);
+        assert!(!struct_instance.is_published);
 
         // 验证没有在 attrs 中设置的字段使用了默认值
         assert_eq!(struct_instance.subtitle, None);

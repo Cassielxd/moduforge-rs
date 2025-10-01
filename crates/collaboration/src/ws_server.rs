@@ -461,7 +461,7 @@ impl CollaborationServer {
             },
             Err(e) => {
                 // 根据错误类型提供更详细的错误信息
-                let error_msg = format!("{}", e);
+                let error_msg = format!("{e}");
 
                 if error_msg.contains("failed to deserialize message") {
                     tracing::warn!(

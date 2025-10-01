@@ -34,14 +34,14 @@ impl SqliteEventStore {
             }
         }
         let conn = Connection::open(&db_path)?;
-        conn.pragma_update(None, "journal_mode", &"WAL")?;
-        conn.pragma_update(None, "synchronous", &"NORMAL")?;
-        conn.pragma_update(None, "busy_timeout", &5000i64)?;
+        conn.pragma_update(None, "journal_mode", "WAL")?;
+        conn.pragma_update(None, "synchronous", "NORMAL")?;
+        conn.pragma_update(None, "busy_timeout", 5000i64)?;
         conn.execute_batch(
             r#"
             CREATE TABLE IF NOT EXISTS events (
               lsn INTEGER PRIMARY KEY AUTOINCREMENT,
-              tr_id INTEGER NOT NULL,
+              tr_id TEXT NOT NULL,
               doc_id TEXT NOT NULL,
               ts INTEGER NOT NULL,
               actor TEXT,
@@ -85,9 +85,9 @@ impl EventStore for SqliteEventStore {
         tx.execute(
             "INSERT INTO events (tr_id, doc_id, ts, actor, idempotency_key, meta, payload, checksum) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
-                ev.tr_id as i64,
+                ev.tr_id.to_string(), // ✅ UUID 转字符串存储
                 ev.doc_id,
-                ev.ts as i64,
+                { ev.ts },
                 ev.actor,
                 ev.idempotency_key,
                 ev.meta.to_string(),
@@ -97,11 +97,8 @@ impl EventStore for SqliteEventStore {
         )?;
         tx.commit()?;
         let lsn = conn.last_insert_rowid();
-        match self.commit_mode {
-            CommitMode::SyncDurable => {
-                conn.pragma_update(None, "wal_checkpoint", &"TRUNCATE").ok();
-            },
-            _ => {},
+        if let CommitMode::SyncDurable = self.commit_mode {
+            conn.pragma_update(None, "wal_checkpoint", "TRUNCATE").ok();
         }
         Ok(lsn)
     }
@@ -121,9 +118,9 @@ impl EventStore for SqliteEventStore {
             let mut stmt = tx.prepare("INSERT INTO events (tr_id, doc_id, ts, actor, idempotency_key, meta, payload, checksum) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)")?;
             for ev in evs.into_iter() {
                 stmt.execute(params![
-                    ev.tr_id as i64,
+                    ev.tr_id.to_string(), // ✅ UUID 转字符串存储
                     ev.doc_id,
-                    ev.ts as i64,
+                    { ev.ts },
                     ev.actor,
                     ev.idempotency_key,
                     ev.meta.to_string(),
@@ -151,9 +148,17 @@ impl EventStore for SqliteEventStore {
                 let meta_str: String = row.get(6)?;
                 let meta: serde_json::Value = serde_json::from_str(&meta_str)
                     .unwrap_or(serde_json::json!({}));
+                let tr_id_str: String = row.get(1)?;
+                let tr_id = uuid::Uuid::parse_str(&tr_id_str).map_err(|e| {
+                    rusqlite::Error::FromSqlConversionFailure(
+                        1,
+                        rusqlite::types::Type::Text,
+                        Box::new(e),
+                    )
+                })?;
                 Ok(PersistedEvent {
                     lsn: row.get(0)?,
-                    tr_id: row.get::<_, i64>(1)? as u64,
+                    tr_id, // ✅ 从字符串解析 UUID
                     doc_id: row.get(2)?,
                     ts: row.get(3)?,
                     actor: row.get(4).ok(),

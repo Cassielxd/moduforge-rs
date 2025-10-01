@@ -1,5 +1,5 @@
 use std::{
-    any::{type_name, Any, TypeId},
+    any::{type_name, Any},
     sync::Arc,
 };
 

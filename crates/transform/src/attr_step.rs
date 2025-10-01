@@ -63,7 +63,7 @@ impl Step for AttrStep {
                 }
             },
             None => {
-                return Err(transform_error("节点不存在".to_string()));
+                Err(transform_error("节点不存在".to_string()))
             },
         }
     }
@@ -149,9 +149,9 @@ mod tests {
         values.insert("name".to_string(), json!("test"));
         values.insert("age".to_string(), json!(25));
 
-        let step = AttrStep::new("node1".into(), values.clone().into());
+        let step = AttrStep::new("node1".into(), values.clone());
         assert_eq!(step.id, "node1".into());
-        assert_eq!(step.values, values.into());
+        assert_eq!(step.values, values);
     }
 
     #[test]

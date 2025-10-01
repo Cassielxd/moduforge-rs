@@ -11,7 +11,7 @@ fn bench_basic_node_operations(c: &mut Criterion) {
         let mut counter = 0;
         b.iter(|| {
             let node = Node::new(
-                &format!("node_{}", counter),
+                &format!("node_{counter}"),
                 "paragraph".to_string(),
                 Attrs::default(),
                 vec![],
@@ -58,7 +58,7 @@ fn bench_attrs_operations(c: &mut Criterion) {
     group.bench_function("属性查找", |b| {
         let mut map = imbl::HashMap::new();
         for i in 0..50 {
-            map.insert(format!("attr_{}", i), json!(format!("value_{}", i)));
+            map.insert(format!("attr_{i}"), json!(format!("value_{}", i)));
         }
         let attrs = Attrs::from(map);
 

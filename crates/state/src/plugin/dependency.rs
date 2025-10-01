@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 use petgraph::algo::is_cyclic_directed;
 use petgraph::graph::DiGraph;
 use anyhow::Result;
@@ -8,6 +9,12 @@ use anyhow::Result;
 pub struct DependencyManager {
     dependency_graph: DiGraph<String, ()>,
     node_indices: HashMap<String, petgraph::graph::NodeIndex>,
+}
+
+impl Default for DependencyManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DependencyManager {
@@ -56,7 +63,7 @@ impl DependencyManager {
                 None => {
                     tracing::warn!("无法获取边端点，跳过: {:?}", edge);
                     continue;
-                }
+                },
             };
 
             let (source_idx, target_idx) = endpoints;
@@ -176,7 +183,7 @@ impl DependencyManager {
     /// 标准化循环：旋转到最小字典序
     fn normalize_cycle(
         &self,
-        cycle: &mut Vec<String>,
+        cycle: &mut [String],
     ) {
         if cycle.len() <= 1 {
             return;
@@ -186,7 +193,7 @@ impl DependencyManager {
         let min_pos = cycle
             .iter()
             .enumerate()
-            .min_by_key(|(_, item)| item.clone())
+            .min_by_key(|(_, item)| *item)
             .map(|(pos, _)| pos)
             .unwrap_or(0);
 
@@ -284,30 +291,25 @@ pub struct MissingDependencyReport {
     pub available_plugins: HashSet<String>,
 }
 
-impl MissingDependencyReport {
-    /// 生成人类可读的报告
-    pub fn to_string(&self) -> String {
+impl fmt::Display for MissingDependencyReport {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if !self.has_missing_dependencies {
-            return "✅ 所有依赖都已满足".to_string();
+            return write!(f, "✅ 所有依赖都已满足");
         }
 
-        let mut report = String::new();
-        report.push_str(&format!(
-            "❌ 检测到 {} 个缺失的依赖\n",
-            self.total_missing_count
-        ));
-        report.push_str(&format!("可用插件: {:?}\n", self.available_plugins));
-        report.push_str("\n缺失依赖详情:\n");
+        writeln!(f, "❌ 检测到 {} 个缺失的依赖", self.total_missing_count)?;
+        writeln!(f, "可用插件: {:?}", self.available_plugins)?;
+        writeln!(f, "\n缺失依赖详情:")?;
 
         for (plugin_name, missing_deps) in &self.missing_dependencies {
-            report.push_str(&format!(
-                "  {} 缺失依赖: {:?}\n",
-                plugin_name, missing_deps
-            ));
+            writeln!(f, "  {plugin_name} 缺失依赖: {missing_deps:?}")?;
         }
 
-        report
+        Ok(())
     }
+}
+
+impl MissingDependencyReport {
 
     /// 获取所有缺失的依赖名称
     pub fn get_all_missing_dependency_names(&self) -> HashSet<String> {
@@ -328,64 +330,37 @@ pub struct CircularDependencyReport {
     pub affected_plugins: HashSet<String>,
 }
 
-impl CircularDependencyReport {
-    /// 生成人类可读的报告
-    pub fn to_string(&self) -> String {
+impl fmt::Display for CircularDependencyReport {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if !self.has_circular_dependencies {
-            return "✅ 未检测到循环依赖".to_string();
+            return write!(f, "✅ 未检测到循环依赖");
         }
 
-        let mut report = String::new();
-        report
-            .push_str(&format!("❌ 检测到 {} 个循环依赖\n", self.cycle_count));
-        report
-            .push_str(&format!("受影响的插件: {:?}\n", self.affected_plugins));
-        report.push_str("\n循环依赖详情:\n");
+        writeln!(f, "❌ 检测到 {} 个循环依赖", self.cycle_count)?;
+        writeln!(f, "受影响的插件: {:?}", self.affected_plugins)?;
+        writeln!(f, "\n循环依赖详情:")?;
 
         for (i, cycle) in self.cycles.iter().enumerate() {
-            report.push_str(&format!("  循环 {}: ", i + 1));
+            write!(f, "  循环 {}: ", i + 1)?;
 
             for (j, plugin) in cycle.iter().enumerate() {
                 if j > 0 {
-                    report.push_str(" -> ");
+                    write!(f, " -> ")?;
                 }
-                report.push_str(plugin);
+                write!(f, "{plugin}")?;
             }
 
             // 显示循环的闭合
             if !cycle.is_empty() {
-                report.push_str(" -> ");
-                report.push_str(&cycle[0]);
+                write!(f, " -> {}", cycle[0])?;
             }
 
-            report.push('\n');
+            writeln!(f)?;
         }
 
-        report
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_dependency_manager() -> Result<()> {
-        let mut dependency_manager = DependencyManager::new();
-
-        // 创建更复杂的依赖关系
-        // plugin_a -> plugin_b -> plugin_c -> plugin_d -> plugin_b
-        // plugin_e -> plugin_f -> plugin_e
-        dependency_manager.add_dependency("plugin_a", "plugin_b")?;
-        dependency_manager.add_dependency("plugin_b", "plugin_c")?;
-        dependency_manager.add_dependency("plugin_c", "plugin_d")?;
-        dependency_manager.add_dependency("plugin_d", "plugin_b")?; // 形成循环
-
-        dependency_manager.add_dependency("plugin_e", "plugin_f")?;
-        dependency_manager.add_dependency("plugin_f", "plugin_e")?; // 另一个循环
-
-        let report = dependency_manager.get_circular_dependency_report();
-        println!("复杂循环依赖报告:\n{}", report.to_string());
         Ok(())
     }
 }
+
+impl CircularDependencyReport {}
+

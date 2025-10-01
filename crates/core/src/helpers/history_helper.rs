@@ -21,7 +21,9 @@ impl HistoryHelper {
     ///
     /// # 返回值
     /// * `Arc<State>` - 撤销后的状态
-    pub fn undo(history_manager: &mut HistoryManager<HistoryEntryWithMeta>) -> Arc<State> {
+    pub fn undo(
+        history_manager: &mut HistoryManager<HistoryEntryWithMeta>
+    ) -> Arc<State> {
         history_manager.jump(-1);
         let state = history_manager.get_present().state.clone();
         metrics::history_operation("undo");
@@ -35,7 +37,9 @@ impl HistoryHelper {
     ///
     /// # 返回值
     /// * `Arc<State>` - 重做后的状态
-    pub fn redo(history_manager: &mut HistoryManager<HistoryEntryWithMeta>) -> Arc<State> {
+    pub fn redo(
+        history_manager: &mut HistoryManager<HistoryEntryWithMeta>
+    ) -> Arc<State> {
         history_manager.jump(1);
         let state = history_manager.get_present().state.clone();
         metrics::history_operation("redo");
@@ -73,7 +77,11 @@ impl HistoryHelper {
         description: String,
         meta: serde_json::Value,
     ) {
-        history_manager.insert(HistoryEntryWithMeta::new(state, description, meta));
+        history_manager.insert(HistoryEntryWithMeta::new(
+            state,
+            description,
+            meta,
+        ));
     }
 
     /// 获取当前状态
@@ -84,7 +92,7 @@ impl HistoryHelper {
     /// # 返回值
     /// * `Arc<State>` - 当前状态
     pub fn get_current_state(
-        history_manager: &HistoryManager<HistoryEntryWithMeta>,
+        history_manager: &HistoryManager<HistoryEntryWithMeta>
     ) -> Arc<State> {
         history_manager.get_present().state.clone()
     }

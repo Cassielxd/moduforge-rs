@@ -25,7 +25,7 @@ impl Middleware for CollectFbfxCsxmMiddleware {
     ) -> ForgeResult<Option<Transaction>> {
         println!("分部分项 措施项目 汇总");
         for tr in transactions {
-            if let Some(_) = tr.get_meta::<Vec<String>>("de_ids") {
+            if tr.get_meta::<Vec<String>>("de_ids").is_some() {
                 //汇总对应的定额 价格 向上汇总
             }
         }

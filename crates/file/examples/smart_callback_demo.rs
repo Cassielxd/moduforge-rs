@@ -124,19 +124,18 @@ fn demonstrate_smart_callback(
             };
 
             let stats = if callback_count == 1 {
-                format!("1次回调 {}字节", total_bytes)
+                format!("1次回调 {total_bytes}字节")
             } else {
-                format!("{}次回调 {}字节", callback_count, total_bytes)
+                format!("{callback_count}次回调 {total_bytes}字节")
             };
 
             (method, stats)
         },
-        Err(e) => ("错误", format!("❌ {}", e)),
+        Err(e) => ("错误", format!("❌ {e}")),
     };
 
     println!(
-        "{:<12} {:<10} {:<12} {:<15} {:<20}",
-        filename, size_str, strategy_str, method_str, callback_stats
+        "{filename:<12} {size_str:<10} {strategy_str:<12} {method_str:<15} {callback_stats:<20}"
     );
 
     // 显示详细统计
@@ -249,7 +248,7 @@ fn perform_batch_processing(
             // 大型对象处理
             println!(
                 "       └─ 大型对象处理: 分块数 = {}",
-                (data.len() + 4095) / 4096
+                data.len().div_ceil(4096)
             );
         },
         _ => {
@@ -279,7 +278,7 @@ fn format_bytes(bytes: u64) -> String {
     } else if bytes >= 1024 {
         format!("{:.1}KB", bytes as f64 / 1024.0)
     } else {
-        format!("{}B", bytes)
+        format!("{bytes}B")
     }
 }
 

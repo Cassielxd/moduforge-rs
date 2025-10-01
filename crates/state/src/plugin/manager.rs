@@ -116,7 +116,8 @@ impl PluginManagerBuilder {
     pub fn build(self) -> Result<PluginManager> {
         // 1. 检查循环依赖
         if self.dependency_manager.has_circular_dependencies() {
-            let report = self.dependency_manager.get_circular_dependency_report();
+            let report =
+                self.dependency_manager.get_circular_dependency_report();
             return Err(anyhow::anyhow!(
                 "检测到循环依赖: {}",
                 report.to_string()
@@ -124,7 +125,8 @@ impl PluginManagerBuilder {
         }
 
         // 2. 检查缺失的依赖
-        let missing_report = self.dependency_manager.check_missing_dependencies();
+        let missing_report =
+            self.dependency_manager.check_missing_dependencies();
         if missing_report.has_missing_dependencies {
             return Err(anyhow::anyhow!(
                 "检测到缺失依赖: {}",
@@ -133,7 +135,8 @@ impl PluginManagerBuilder {
         }
 
         // 3. 检查插件冲突
-        let available_plugins: HashSet<String> = self.plugins.keys().cloned().collect();
+        let available_plugins: HashSet<String> =
+            self.plugins.keys().cloned().collect();
         for (name, plugin) in &self.plugins {
             let metadata = plugin.spec.tr.metadata();
             for conflict in &metadata.conflicts {
@@ -244,13 +247,19 @@ impl PluginManager {
     ///
     /// HashMap 查找: O(1)，约 10-20ns
     #[inline]
-    pub fn get_plugin(&self, name: &str) -> Option<&Arc<Plugin>> {
+    pub fn get_plugin(
+        &self,
+        name: &str,
+    ) -> Option<&Arc<Plugin>> {
         self.plugins.get(name)
     }
 
     /// 检查插件是否存在
     #[inline]
-    pub fn has_plugin(&self, name: &str) -> bool {
+    pub fn has_plugin(
+        &self,
+        name: &str,
+    ) -> bool {
         self.plugins.contains_key(name)
     }
 }

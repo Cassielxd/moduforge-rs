@@ -290,25 +290,19 @@ impl MacroError {
         match self {
             Self::MissingAttribute { attribute, .. } => {
                 match attribute.as_str() {
-                    "node_type" => format!(
-                        "请在结构体上添加 #[node_type = \"类型名\"] 属性，例如: #[node_type = \"paragraph\"]"
-                    ),
-                    "mark_type" => format!(
-                        "请在结构体上添加 #[mark_type = \"类型名\"] 属性，例如: #[mark_type = \"bold\"]"
-                    ),
+                    "node_type" => "请在结构体上添加 #[node_type = \"类型名\"] 属性，例如: #[node_type = \"paragraph\"]".to_string(),
+                    "mark_type" => "请在结构体上添加 #[mark_type = \"类型名\"] 属性，例如: #[mark_type = \"bold\"]".to_string(),
                     _ => format!(
-                        "请在结构体上添加 #[{} = \"值\"] 属性",
-                        attribute
+                        "请在结构体上添加 #[{attribute} = \"值\"] 属性"
                     ),
                 }
             },
             Self::InvalidAttributeValue { attribute, .. } => {
-                format!("请检查 #{} 属性的值格式是否正确", attribute)
+                format!("请检查 #{attribute} 属性的值格式是否正确")
             },
             Self::UnsupportedFieldType { field_name, field_type, .. } => {
                 format!(
-                    "字段 '{}' 的类型 '{}' 不受支持，请使用支持的基本类型：String, i32, i64, f32, f64, bool 或其 Option 包装版本",
-                    field_name, field_type
+                    "字段 '{field_name}' 的类型 '{field_type}' 不受支持，请使用支持的基本类型：String, i32, i64, f32, f64, bool 或其 Option 包装版本"
                 )
             },
             _ => "请检查宏的使用方式是否符合文档要求".to_string(),
@@ -357,7 +351,7 @@ pub fn create_compile_error_with_suggestion(
     error_msg: &str,
     suggestion: &str,
 ) -> TokenStream2 {
-    let combined_message = format!("{}\n\n修复建议: {}", error_msg, suggestion);
+    let combined_message = format!("{error_msg}\n\n修复建议: {suggestion}");
     quote! {
         compile_error!(#combined_message);
     }

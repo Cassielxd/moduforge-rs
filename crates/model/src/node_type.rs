@@ -234,8 +234,7 @@ impl NodeType {
                             match schema.nodes.get(&type_name) {
                                 Some(nt) => nt,
                                 None => panic!(
-                                    "无法在 schema 中找到节点类型: {}",
-                                    type_name
+                                    "无法在 schema 中找到节点类型: {type_name}"
                                 ),
                             };
 
@@ -268,7 +267,6 @@ impl NodeType {
                                         node.marks
                                             .clone()
                                             .into_iter()
-                                            .map(|m| m.clone())
                                             .collect(),
                                     ),
                                     schema,
@@ -343,8 +341,7 @@ impl NodeType {
                 .filter_map(|mark_type| {
                     marks
                         .iter()
-                        .find(|m| m.r#type == mark_type.name)
-                        .map(|m| m.clone())
+                        .find(|m| m.r#type == mark_type.name).cloned()
                 })
                 .collect(),
             (None, Some(marks)) => marks,

@@ -43,11 +43,13 @@ pub fn convert_steps_batch(
             tracing::error!("无法获取全局注册表读锁进行批量转换: {}", e);
             steps
                 .iter()
-                .map(|_| Err(ConversionError::Custom {
-                    message: format!("全局注册表锁获取失败: {}", e),
-                }))
+                .map(|_| {
+                    Err(ConversionError::Custom {
+                        message: format!("全局注册表锁获取失败: {e}"),
+                    })
+                })
                 .collect()
-        }
+        },
     }
 }
 
@@ -89,7 +91,7 @@ impl Mapper {
     pub fn is_yrs_doc_empty(doc: &yrs::Doc) -> bool {
         let txn = doc.transact();
         let nodes_map = txn.get_map("nodes");
-        nodes_map.map_or(true, |map| map.len(&txn) == 0)
+        nodes_map.is_none_or(|map| map.len(&txn) == 0)
     }
 
     /// 获取性能统计信息
@@ -106,11 +108,11 @@ impl Mapper {
                     stats.get_success_rate() * 100.0,
                     stats.get_uptime()
                 )
-            }
+            },
             Err(e) => {
                 tracing::error!("无法获取全局注册表读锁以获取性能统计: {}", e);
-                format!("性能统计: 无法获取（锁错误: {}）", e)
-            }
+                format!("性能统计: 无法获取（锁错误: {e}）")
+            },
         }
     }
 
@@ -119,9 +121,12 @@ impl Mapper {
         match global_registry().read() {
             Ok(registry) => registry.converter_count(),
             Err(e) => {
-                tracing::error!("无法获取全局注册表读锁以获取转换器数量: {}", e);
+                tracing::error!(
+                    "无法获取全局注册表读锁以获取转换器数量: {}",
+                    e
+                );
                 0 // 返回 0 作为失败时的默认值
-            }
+            },
         }
     }
 }
@@ -165,7 +170,7 @@ mod tests {
         let result = convert_step(&step, &mut txn, &context);
         let duration = start.elapsed();
 
-        println!("静态分发转换耗时: {:?}", duration);
+        println!("静态分发转换耗时: {duration:?}");
 
         // 验证结果格式
         match result {
@@ -174,7 +179,7 @@ mod tests {
                 assert!(!step_result.step_id.is_empty());
             },
             Err(e) => {
-                println!("转换失败（测试环境预期）: {}", e);
+                println!("转换失败（测试环境预期）: {e}");
             },
         }
     }
@@ -184,6 +189,6 @@ mod tests {
         let stats_str = Mapper::get_performance_stats();
         assert!(!stats_str.is_empty());
         assert!(stats_str.contains("性能统计"));
-        println!("{}", stats_str);
+        println!("{stats_str}");
     }
 }

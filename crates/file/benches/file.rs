@@ -63,7 +63,7 @@ fn bench_zip_mmap_performance(c: &mut Criterion) {
 
         // 标准读取基准
         group.bench_with_input(
-            BenchmarkId::new("标准读取", format!("{}MB", size_mb)),
+            BenchmarkId::new("标准读取", format!("{size_mb}MB")),
             &zip_data,
             |b, data| {
                 b.iter(|| {
@@ -87,7 +87,7 @@ fn bench_zip_mmap_performance(c: &mut Criterion) {
 
         // memmap2 读取基准
         group.bench_with_input(
-            BenchmarkId::new("memmap2读取", format!("{}MB", size_mb)),
+            BenchmarkId::new("memmap2读取", format!("{size_mb}MB")),
             &zip_data,
             |b, data| {
                 b.iter(|| {
@@ -111,7 +111,7 @@ fn bench_zip_mmap_performance(c: &mut Criterion) {
 
         // 自动选择读取基准
         group.bench_with_input(
-            BenchmarkId::new("自动选择读取", format!("{}MB", size_mb)),
+            BenchmarkId::new("自动选择读取", format!("{size_mb}MB")),
             &zip_data,
             |b, data| {
                 b.iter(|| {
@@ -139,7 +139,7 @@ fn bench_zip_cache_performance(c: &mut Criterion) {
 
         for i in 1..=5 {
             let data = vec![(i * 10) as u8; 2 * 1024 * 1024]; // 2MB each
-            writer.add_stored(&format!("file{}.bin", i), &data).unwrap();
+            writer.add_stored(&format!("file{i}.bin"), &data).unwrap();
         }
 
         writer.finalize().unwrap();
@@ -163,7 +163,7 @@ fn bench_zip_cache_performance(c: &mut Criterion) {
 
             for i in 1..=5 {
                 let result =
-                    reader.read_standard(&format!("file{}.bin", i)).unwrap();
+                    reader.read_standard(&format!("file{i}.bin")).unwrap();
                 criterion::black_box(result);
             }
         })
@@ -189,13 +189,13 @@ fn bench_zip_cache_performance(c: &mut Criterion) {
             // 第一次读取建立缓存
             for i in 1..=5 {
                 let _result =
-                    reader.read_all(&format!("file{}.bin", i)).unwrap();
+                    reader.read_all(&format!("file{i}.bin")).unwrap();
             }
 
             // 第二次读取命中缓存
             for i in 1..=5 {
                 let result =
-                    reader.read_all(&format!("file{}.bin", i)).unwrap();
+                    reader.read_all(&format!("file{i}.bin")).unwrap();
                 criterion::black_box(result);
             }
         })

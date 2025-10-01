@@ -4,6 +4,7 @@ use anyhow::Result;
 pub type StateResult<T> = Result<T>;
 
 /// Helper functions for creating common error types
+#[allow(clippy::module_inception)]
 pub mod error {
     use anyhow::anyhow;
 

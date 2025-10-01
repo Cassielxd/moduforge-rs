@@ -132,12 +132,11 @@ fn demonstrate_smart_reading(
             };
             (method, format!("✅ {}字节", data.len()))
         },
-        Err(e) => ("错误", format!("❌ {}", e)),
+        Err(e) => ("错误", format!("❌ {e}")),
     };
 
     println!(
-        "{:<12} {:<10} {:<8} {:<12} {:<15} {:<10}",
-        filename, size_str, category_str, strategy_str, method_str, result_str
+        "{filename:<12} {size_str:<10} {category_str:<8} {strategy_str:<12} {method_str:<15} {result_str:<10}"
     );
 
     // 显示读取耗时（如果有意义）
@@ -159,7 +158,7 @@ fn format_bytes(bytes: u64) -> String {
     } else if bytes >= 1024 {
         format!("{:.1}KB", bytes as f64 / 1024.0)
     } else {
-        format!("{}B", bytes)
+        format!("{bytes}B")
     }
 }
 

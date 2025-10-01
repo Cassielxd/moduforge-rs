@@ -46,7 +46,7 @@ impl AsyncBridge {
         } else {
             // 不在运行时中，创建临时运行时
             let rt = tokio::runtime::Runtime::new().map_err(|e| {
-                error_utils::runtime_error(format!("创建临时运行时失败: {}", e))
+                error_utils::runtime_error(format!("创建临时运行时失败: {e}"))
             })?;
 
             rt.block_on(future)
@@ -83,7 +83,7 @@ impl AsyncBridge {
         T: Send + 'static,
     {
         tokio::task::spawn_blocking(blocking_op).await.map_err(|e| {
-            error_utils::runtime_error(format!("阻塞任务执行失败: {}", e))
+            error_utils::runtime_error(format!("阻塞任务执行失败: {e}"))
         })?
     }
 }
@@ -150,7 +150,7 @@ where
         {
             // 在 Drop 中只能使用同步清理
             if let Err(e) = cleanup_fn(resource) {
-                eprintln!("异步资源清理失败: {}", e);
+                eprintln!("异步资源清理失败: {e}");
             }
         }
     }
@@ -193,7 +193,7 @@ impl<T: Send + Sync + Clone + 'static> SyncWrapper<crate::event::EventBus<T>> {
             let bus = self.inner.clone();
             tokio::spawn(async move {
                 if let Err(e) = bus.broadcast(event).await {
-                    eprintln!("异步事件广播失败: {}", e);
+                    eprintln!("异步事件广播失败: {e}");
                 }
             });
             Ok(())

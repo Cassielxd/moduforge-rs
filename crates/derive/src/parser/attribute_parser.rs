@@ -397,7 +397,7 @@ impl AttributeParser {
         field: &Field
     ) -> MacroResult<(bool, Option<DefaultValue>)> {
         use syn::{Meta};
-        use crate::parser::default_value::DefaultValueParser;
+        
 
         let mut is_attr = false;
         let mut default_value = None;
@@ -498,7 +498,7 @@ impl AttributeParser {
         // 解析参数列表
         let args: MetaArgs = meta_list.parse_args().map_err(|e| {
             MacroError::parse_error(
-                &format!("无法解析 attr 属性参数: {}", e),
+                &format!("无法解析 attr 属性参数: {e}"),
                 field,
             )
         })?;
@@ -529,7 +529,7 @@ impl AttributeParser {
                             )?);
                         } else {
                             return Err(MacroError::parse_error(
-                                &format!("不支持的 attr 参数: {}", ident),
+                                &format!("不支持的 attr 参数: {ident}"),
                                 field,
                             ));
                         }
@@ -607,7 +607,7 @@ impl AttributeParser {
                 if matches!(expr_unary.op, syn::UnOp::Neg(_)) {
                     let inner =
                         Self::extract_value_from_expr(&expr_unary.expr)?;
-                    Ok(format!("-{}", inner))
+                    Ok(format!("-{inner}"))
                 } else {
                     Ok(quote::quote! { #expr_unary }.to_string())
                 }
@@ -953,7 +953,7 @@ impl NodeConfig {
             for mark in marks.split_whitespace() {
                 if !crate::common::utils::is_valid_identifier(mark) {
                     return Err(MacroError::ValidationError {
-                        message: format!("无效的标记名称: '{}'", mark),
+                        message: format!("无效的标记名称: '{mark}'"),
                         span: None,
                     });
                 }
@@ -1003,7 +1003,7 @@ impl MarkConfig {
         if let Some(mark_type) = &self.mark_type {
             if !crate::common::utils::is_valid_identifier(mark_type) {
                 return Err(MacroError::ValidationError {
-                    message: format!("无效的标记类型名称: '{}'", mark_type),
+                    message: format!("无效的标记类型名称: '{mark_type}'"),
                     span: None,
                 });
             }
@@ -1444,7 +1444,7 @@ mod tests {
     fn test_field_config_default_value_methods() {
         use syn::parse_quote;
         use crate::parser::default_value::{
-            DefaultValue, DefaultValueType, DefaultValueParser,
+            DefaultValueType, DefaultValueParser,
         };
 
         // 创建一个测试字段
@@ -1699,7 +1699,7 @@ mod tests {
         assert!(result.is_err());
 
         if let Err(error) = result {
-            let error_msg = format!("{:?}", error);
+            let error_msg = format!("{error:?}");
             assert!(error_msg.contains("一个结构体只能有一个"));
         }
     }
@@ -1726,7 +1726,7 @@ mod tests {
         assert!(result.is_err());
 
         if let Err(error) = result {
-            let error_msg = format!("{:?}", error);
+            let error_msg = format!("{error:?}");
             assert!(error_msg.contains("多个 #[id] 属性"));
         }
     }
@@ -1752,7 +1752,7 @@ mod tests {
         assert!(result.is_err());
 
         if let Err(error) = result {
-            let error_msg = format!("{:?}", error);
+            let error_msg = format!("{error:?}");
             assert!(error_msg.contains("不支持参数"));
         }
     }
@@ -1778,7 +1778,7 @@ mod tests {
         assert!(result.is_err());
 
         if let Err(error) = result {
-            let error_msg = format!("{:?}", error);
+            let error_msg = format!("{error:?}");
             assert!(error_msg.contains("不支持赋值"));
         }
     }

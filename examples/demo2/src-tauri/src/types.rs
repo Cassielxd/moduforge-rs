@@ -7,7 +7,6 @@ use mf_core::{
 use mf_model::node_pool::NodePool;
 use mf_state::{transaction::Command, State, Transaction};
 
-use crate::core::{collab_editor::CollabEditor, demo_editor::DemoEditor};
 
 #[async_trait]
 pub trait EditorTrait: Send + Sync {

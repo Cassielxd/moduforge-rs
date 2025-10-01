@@ -1,7 +1,7 @@
 use crc32fast::Hasher as Crc32;
 use memmap2::{Mmap, MmapOptions};
 use std::fs::{File, OpenOptions};
-use std::io::{self, BufWriter, Read, Seek, SeekFrom, Write};
+use std::io::{BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::Path;
 
 use crate::error::{FileError, Result};
@@ -65,6 +65,7 @@ impl Writer {
     ) -> Result<Self> {
         let mut file = OpenOptions::new()
             .create(true)
+            .truncate(false)
             .read(true)
             .write(true)
             .open(&path)?;
@@ -84,14 +85,12 @@ impl Writer {
         };
 
         let mut prealloc_until = file_len.max(logical_end);
-        let prealloc_chunk = prealloc_chunk;
-        if prealloc_chunk > 0 {
-            if prealloc_until < logical_end + prealloc_chunk {
+        if prealloc_chunk > 0
+            && prealloc_until < logical_end + prealloc_chunk {
                 prealloc_until =
                     (logical_end + prealloc_chunk).max(HEADER_LEN as u64);
                 file.set_len(prealloc_until)?;
             }
-        }
 
         file.seek(SeekFrom::Start(logical_end))?;
         let buf = BufWriter::with_capacity(8 * 1024 * 1024, file.try_clone()?);
@@ -131,6 +130,11 @@ impl Writer {
         self.logical_end
     }
 
+    // 检查是否为空
+    pub fn is_empty(&self) -> bool {
+        self.logical_end == HEADER_LEN as u64
+    }
+
     // 确保物理空间足够; 按块扩容
     fn ensure_capacity(
         &mut self,
@@ -156,7 +160,7 @@ impl Writer {
 
 #[derive(Debug)]
 pub struct Reader {
-    pub(crate) file: File,
+    pub(crate) _file: File,  // 保持文件句柄存活以维持 mmap 有效性
     pub(crate) mmap: Mmap,
     pub(crate) logical_end: u64,
 }
@@ -168,7 +172,7 @@ impl Reader {
         check_header(&mut file)?;
         let mmap = unsafe { MmapOptions::new().map(&file)? };
         let logical_end = scan_logical_end(&mmap)?;
-        Ok(Self { file, mmap, logical_end })
+        Ok(Self { _file: file, mmap, logical_end })
     }
     // 逻辑结尾
     pub fn logical_len(&self) -> u64 {

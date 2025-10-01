@@ -15,7 +15,7 @@ use crate::{
         event_bus::EventBusMessage,
     },
     config::ForgeConfig,
-    debug::{debug, error},
+    debug::debug,
     error::{error_utils, ForgeResult},
     event::Event,
     runtime::runtime_trait::RuntimeTrait,
@@ -35,7 +35,7 @@ use mf_state::{
 /// 这确保了现有代码无需修改即可使用新的架构。
 pub struct ForgeActorRuntime {
     /// Actor系统句柄
-    actor_system: ForgeActorSystemHandle,
+    actor_system: Option<ForgeActorSystemHandle>,
     /// 配置
     config: ForgeConfig,
     /// 是否已启动
@@ -43,6 +43,11 @@ pub struct ForgeActorRuntime {
 }
 
 impl ForgeActorRuntime {
+    /// 获取Actor系统句柄引用
+    fn actor_system(&self) -> &ForgeActorSystemHandle {
+        self.actor_system.as_ref().expect("Actor系统未初始化")
+    }
+
     /// 创建新的Actor运行时实例
     ///
     /// # 参数
@@ -76,18 +81,15 @@ impl ForgeActorRuntime {
             ActorSystemConfig::default(),
         )
         .await
-        .map_err(|e| error_utils::engine_error(format!("启动Actor系统失败: {}", e)))?;
+        .map_err(|e| {
+            error_utils::engine_error(format!("启动Actor系统失败: {e}"))
+        })?;
 
         debug!("Actor运行时实例创建成功");
         metrics::editor_creation_duration(start_time.elapsed());
 
-        Ok(ForgeActorRuntime {
-            actor_system,
-            config,
-            started: true,
-        })
+        Ok(ForgeActorRuntime { actor_system: Some(actor_system), config, started: true })
     }
-
 
     /// 🎯 处理事务 - 与原始dispatch完全相同的API
     ///
@@ -120,7 +122,7 @@ impl ForgeActorRuntime {
         // 通过Actor系统处理事务，但保持完全相同的语义
         let (tx, rx) = oneshot::channel();
 
-        self.actor_system
+        self.actor_system()
             .transaction_processor
             .send_message(TransactionMessage::ProcessTransaction {
                 transaction,
@@ -128,10 +130,13 @@ impl ForgeActorRuntime {
                 meta,
                 reply: tx,
             })
-            .map_err(|e| error_utils::engine_error(format!("发送事务消息失败: {}", e)))?;
+            .map_err(|e| {
+                error_utils::engine_error(format!("发送事务消息失败: {e}"))
+            })?;
 
-        rx.await
-            .map_err(|e| error_utils::engine_error(format!("等待事务处理结果失败: {}", e)))?
+        rx.await.map_err(|e| {
+            error_utils::engine_error(format!("等待事务处理结果失败: {e}"))
+        })?
     }
 
     /// 🎯 执行命令 - 与原始command完全相同的API
@@ -174,13 +179,16 @@ impl ForgeActorRuntime {
     pub async fn get_state(&self) -> ForgeResult<Arc<State>> {
         let (tx, rx) = oneshot::channel();
 
-        self.actor_system
+        self.actor_system()
             .state_actor
             .send_message(StateMessage::GetState { reply: tx })
-            .map_err(|e| error_utils::state_error(format!("发送获取状态消息失败: {}", e)))?;
+            .map_err(|e| {
+                error_utils::state_error(format!("发送获取状态消息失败: {e}"))
+            })?;
 
-        rx.await
-            .map_err(|e| error_utils::state_error(format!("接收状态响应失败: {}", e)))
+        rx.await.map_err(|e| {
+            error_utils::state_error(format!("接收状态响应失败: {e}"))
+        })
     }
 
     /// 🎯 获取事务对象 - 与原始get_tr完全相同的API
@@ -197,13 +205,17 @@ impl ForgeActorRuntime {
     pub async fn undo(&mut self) -> ForgeResult<()> {
         let (tx, rx) = oneshot::channel();
 
-        self.actor_system
+        self.actor_system()
             .state_actor
             .send_message(StateMessage::Undo { reply: tx })
-            .map_err(|e| error_utils::state_error(format!("发送撤销消息失败: {}", e)))?;
+            .map_err(|e| {
+                error_utils::state_error(format!("发送撤销消息失败: {e}"))
+            })?;
 
         rx.await
-            .map_err(|e| error_utils::state_error(format!("接收撤销响应失败: {}", e)))?
+            .map_err(|e| {
+                error_utils::state_error(format!("接收撤销响应失败: {e}"))
+            })?
             .map(|_| ())
     }
 
@@ -213,45 +225,58 @@ impl ForgeActorRuntime {
     pub async fn redo(&mut self) -> ForgeResult<()> {
         let (tx, rx) = oneshot::channel();
 
-        self.actor_system
+        self.actor_system()
             .state_actor
             .send_message(StateMessage::Redo { reply: tx })
-            .map_err(|e| error_utils::state_error(format!("发送重做消息失败: {}", e)))?;
+            .map_err(|e| {
+                error_utils::state_error(format!("发送重做消息失败: {e}"))
+            })?;
 
         rx.await
-            .map_err(|e| error_utils::state_error(format!("接收重做响应失败: {}", e)))?
+            .map_err(|e| {
+                error_utils::state_error(format!("接收重做响应失败: {e}"))
+            })?
             .map(|_| ())
     }
 
     /// 🎯 跳转到指定历史位置 - 与原始jump完全相同的API
     ///
     /// 保持与runtime.rs:850-856行完全相同的接口
-    pub async fn jump(&mut self, steps: isize) -> ForgeResult<()> {
+    pub async fn jump(
+        &mut self,
+        steps: isize,
+    ) -> ForgeResult<()> {
         let (tx, rx) = oneshot::channel();
 
-        self.actor_system
+        self.actor_system()
             .state_actor
-            .send_message(StateMessage::Jump {
-                steps,
-                reply: tx,
-            })
-            .map_err(|e| error_utils::state_error(format!("发送跳转消息失败: {}", e)))?;
+            .send_message(StateMessage::Jump { steps, reply: tx })
+            .map_err(|e| {
+                error_utils::state_error(format!("发送跳转消息失败: {e}"))
+            })?;
 
         rx.await
-            .map_err(|e| error_utils::state_error(format!("接收跳转响应失败: {}", e)))?
+            .map_err(|e| {
+                error_utils::state_error(format!("接收跳转响应失败: {e}"))
+            })?
             .map(|_| ())
     }
 
     /// 🎯 发送事件 - 与原始emit_event完全相同的API
     ///
     /// 保持与runtime.rs:521-528行完全相同的接口
-    pub async fn emit_event(&mut self, event: Event) -> ForgeResult<()> {
+    pub async fn emit_event(
+        &mut self,
+        event: Event,
+    ) -> ForgeResult<()> {
         metrics::event_emitted(event.name());
 
-        self.actor_system
+        self.actor_system()
             .event_bus
             .send_message(EventBusMessage::PublishEvent { event })
-            .map_err(|e| error_utils::event_error(format!("发送事件消息失败: {}", e)))?;
+            .map_err(|e| {
+                error_utils::event_error(format!("发送事件消息失败: {e}"))
+            })?;
 
         Ok(())
     }
@@ -266,7 +291,10 @@ impl ForgeActorRuntime {
     /// 🎯 更新配置 - 与原始update_config完全相同的API
     ///
     /// 保持与runtime.rs:814-819行完全相同的接口
-    pub fn update_config(&mut self, config: ForgeConfig) {
+    pub fn update_config(
+        &mut self,
+        config: ForgeConfig,
+    ) {
         self.config = config;
         // 这里可以向各个Actor发送配置更新消息
     }
@@ -282,14 +310,13 @@ impl ForgeActorRuntime {
             let _ = self.emit_event(Event::Destroy).await;
 
             // 关闭Actor系统
-            ForgeActorSystem::shutdown(std::mem::replace(
-                &mut self.actor_system,
-                // 这里需要一个默认值，但我们永远不会使用它
-                // 因为started会被设置为false
-                unsafe { std::mem::zeroed() },
-            ))
-            .await
-            .map_err(|e| error_utils::engine_error(format!("关闭Actor系统失败: {}", e)))?;
+            if let Some(actor_system) = self.actor_system.take() {
+                ForgeActorSystem::shutdown(actor_system)
+                    .await
+                    .map_err(|e| {
+                        error_utils::engine_error(format!("关闭Actor系统失败: {e}"))
+                    })?;
+            }
 
             self.started = false;
         }
@@ -330,7 +357,10 @@ impl Drop for ForgeActorRuntime {
 
 #[async_trait]
 impl RuntimeTrait for ForgeActorRuntime {
-    async fn dispatch(&mut self, transaction: Transaction) -> ForgeResult<()> {
+    async fn dispatch(
+        &mut self,
+        transaction: Transaction,
+    ) -> ForgeResult<()> {
         self.dispatch(transaction).await
     }
 
@@ -343,7 +373,10 @@ impl RuntimeTrait for ForgeActorRuntime {
         self.dispatch_with_meta(transaction, description, meta).await
     }
 
-    async fn command(&mut self, command: Arc<dyn Command>) -> ForgeResult<()> {
+    async fn command(
+        &mut self,
+        command: Arc<dyn Command>,
+    ) -> ForgeResult<()> {
         self.command(command).await
     }
 
@@ -376,7 +409,10 @@ impl RuntimeTrait for ForgeActorRuntime {
         self.redo().await
     }
 
-    async fn jump(&mut self, steps: isize) -> ForgeResult<()> {
+    async fn jump(
+        &mut self,
+        steps: isize,
+    ) -> ForgeResult<()> {
         self.jump(steps).await
     }
 
@@ -384,7 +420,10 @@ impl RuntimeTrait for ForgeActorRuntime {
         self.get_config()
     }
 
-    fn update_config(&mut self, config: ForgeConfig) {
+    fn update_config(
+        &mut self,
+        config: ForgeConfig,
+    ) {
         self.update_config(config);
     }
 
@@ -396,7 +435,9 @@ impl RuntimeTrait for ForgeActorRuntime {
         }
         DEFAULT_OPTIONS.with(|opts| unsafe {
             // SAFETY: 这是一个只读的thread_local变量,生命周期与线程绑定
-            std::mem::transmute::<&RuntimeOptions, &'static RuntimeOptions>(opts)
+            std::mem::transmute::<&RuntimeOptions, &'static RuntimeOptions>(
+                opts,
+            )
         })
     }
 

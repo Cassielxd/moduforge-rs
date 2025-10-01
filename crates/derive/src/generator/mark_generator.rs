@@ -3,12 +3,11 @@
 //! 专门负责为 #[derive(Mark)] 宏生成 to_mark() 方法的代码。
 //! 严格遵循单一职责原则，只负责 Mark 相关的代码生成逻辑。
 
-use proc_macro2::{TokenStream as TokenStream2, Ident};
+use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::DeriveInput;
 use crate::common::{MacroResult, MacroError};
 use crate::parser::{MarkConfig, FieldConfig};
-use crate::converter::converter_registry::GlobalConverterRegistry;
 use super::CodeGenerator;
 
 /// Mark 代码生成器
@@ -465,7 +464,7 @@ impl<'a> MarkGenerator<'a> {
                 let expr_tokens =
                     syn::parse_str::<syn::Expr>(expr).map_err(|_| {
                         MacroError::parse_error(
-                            &format!("无效的自定义类型表达式: {}", expr),
+                            &format!("无效的自定义类型表达式: {expr}"),
                             self.input,
                         )
                     })?;
@@ -572,7 +571,7 @@ impl<'a> MarkGenerator<'a> {
                                     .attr_fields
                                     .iter()
                                     .find(|config| {
-                                        &config.name == &field_name.to_string()
+                                        *field_name == config.name
                                     });
 
                                 let field_info = FieldInfo {
@@ -798,7 +797,7 @@ impl<'a> MarkGenerator<'a> {
         let field_ident =
             syn::parse_str::<syn::Ident>(field_name).map_err(|_| {
                 MacroError::parse_error(
-                    &format!("无效的字段名称: {}", field_name),
+                    &format!("无效的字段名称: {field_name}"),
                     self.input,
                 )
             })?;
@@ -1262,7 +1261,7 @@ impl<'a> MarkGenerator<'a> {
                 let expr_tokens =
                     syn::parse_str::<syn::Expr>(expr).map_err(|_| {
                         MacroError::parse_error(
-                            &format!("无效的自定义类型表达式: {}", expr),
+                            &format!("无效的自定义类型表达式: {expr}"),
                             self.input,
                         )
                     })?;
@@ -1300,7 +1299,7 @@ impl<'a> MarkGenerator<'a> {
                 let type_ident = syn::parse_str::<syn::Type>(type_name)
                     .map_err(|_| {
                         MacroError::parse_error(
-                            &format!("无效的类型名称: {}", type_name),
+                            &format!("无效的类型名称: {type_name}"),
                             self.input,
                         )
                     })?;

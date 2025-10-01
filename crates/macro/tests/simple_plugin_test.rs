@@ -1,4 +1,4 @@
-use mf_macro::{mf_plugin, mf_plugin_metadata, mf_plugin_config};
+use mf_macro::{mf_plugin, mf_plugin_metadata};
 
 // 测试基础插件宏
 mf_plugin!(test_basic_plugin, docs = "基础测试插件");

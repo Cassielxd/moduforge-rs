@@ -188,7 +188,7 @@ impl Node {
     ///
     pub fn add_marks(
         &self,
-        marks: &Vec<Mark>,
+        marks: &[Mark],
     ) -> Self {
         let mark_types =
             marks.iter().map(|m| m.r#type.clone()).collect::<Vec<String>>();
@@ -200,7 +200,7 @@ impl Node {
             .filter(|m| !mark_types.contains(&m.r#type))
             .cloned()
             .collect();
-        new_node.marks.extend(marks.iter().map(|m| m.clone()));
+        new_node.marks.extend(marks.iter().cloned());
         new_node
     }
 }

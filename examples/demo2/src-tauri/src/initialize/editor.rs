@@ -29,8 +29,8 @@ pub async fn init_collab_editor(options: CollabEditorOptions) -> CollabEditor {
     match CollabEditor::create(options).await {
         Ok(editor) => editor,
         Err(e) => {
-            println!("创建编辑器失败: {}", e);
-            panic!("创建编辑器失败: {}", e);
+            println!("创建编辑器失败: {e}");
+            panic!("创建编辑器失败: {e}");
         },
     }
 }
@@ -55,7 +55,7 @@ pub async fn init_collab_options(
     CollabEditorOptions {
         editor_options: options,
         server_url: "ws://127.0.0.1:8080/collaboration".to_string(),
-        room_name: room_name,
+        room_name,
     }
 }
 
@@ -87,14 +87,14 @@ pub fn init_extension() -> Vec<Extensions> {
     let nodes = init_project_structure();
     for mut node in nodes {
         if node.get_name() == DWGC_STR {
-            node.set_content(&format!("{}|{}+", FBFX_STR, CSXM_STR));
+            node.set_content(&format!("{FBFX_STR}|{CSXM_STR}+"));
         }
         extensions.push(Extensions::N(node));
     }
     let fbfx_csxm_nodes = init_fbfx_csxm_fields();
     for mut node in fbfx_csxm_nodes {
         if node.get_name() == DE_STR {
-            node.set_content(&format!("{}*", RCJ_STR));
+            node.set_content(&format!("{RCJ_STR}*"));
         }
         extensions.push(Extensions::N(node));
     }

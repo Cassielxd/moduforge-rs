@@ -19,9 +19,7 @@ use super::{ActorSystemResult, ActorMetrics};
 #[derive(Debug)]
 pub enum EventBusMessage {
     /// 发布事件
-    PublishEvent {
-        event: Event,
-    },
+    PublishEvent { event: Event },
     /// 添加事件处理器
     AddHandler {
         handler: Arc<dyn EventHandler<Event> + Send + Sync>,
@@ -33,9 +31,7 @@ pub enum EventBusMessage {
         reply: oneshot::Sender<ForgeResult<()>>,
     },
     /// 获取事件总线统计信息
-    GetStats {
-        reply: oneshot::Sender<EventBusStats>,
-    },
+    GetStats { reply: oneshot::Sender<EventBusStats> },
     /// 更新配置
     UpdateConfig {
         config: EventConfig,
@@ -121,15 +117,18 @@ impl Actor for EventBusActor {
                     state.metrics.increment_errors();
                 }
 
-                state.stats.avg_processing_time_ms = processing_time.as_millis() as u64;
-                state.metrics.update_processing_time(processing_time.as_millis() as u64);
+                state.stats.avg_processing_time_ms =
+                    processing_time.as_millis() as u64;
+                state
+                    .metrics
+                    .update_processing_time(processing_time.as_millis() as u64);
                 state.metrics.increment_messages();
 
                 // 注意：PublishEvent通常不需要回复，因为它是"fire and forget"模式
                 if let Err(e) = result {
                     debug!("事件发布失败: {}", e);
                 }
-            }
+            },
 
             EventBusMessage::AddHandler { handler, reply } => {
                 let handler_id = state.next_handler_id;
@@ -139,7 +138,7 @@ impl Actor for EventBusActor {
                 state.stats.active_handlers = state.handlers.len();
 
                 let _ = reply.send(handler_id);
-            }
+            },
 
             EventBusMessage::RemoveHandler { handler_id, reply } => {
                 let initial_len = state.handlers.len();
@@ -150,22 +149,21 @@ impl Actor for EventBusActor {
                     Ok(())
                 } else {
                     Err(error_utils::event_error(format!(
-                        "事件处理器 {} 不存在",
-                        handler_id
+                        "事件处理器 {handler_id} 不存在"
                     )))
                 };
 
                 let _ = reply.send(result);
-            }
+            },
 
             EventBusMessage::GetStats { reply } => {
                 let _ = reply.send(state.stats.clone());
-            }
+            },
 
             EventBusMessage::UpdateConfig { config, reply } => {
                 state.config = config;
                 let _ = reply.send(Ok(()));
-            }
+            },
         }
 
         Ok(())
@@ -217,22 +215,22 @@ impl EventBusActor {
             match task.await {
                 Ok((handler_id, Ok(()))) => {
                     actor_state.stats.events_processed += 1;
-                    debug!("事件处理器 {} 成功处理事件 {}", handler_id, event_name);
-                }
+                    debug!(
+                        "事件处理器 {} 成功处理事件 {}",
+                        handler_id, event_name
+                    );
+                },
                 Ok((handler_id, Err(e))) => {
                     processing_errors.push(format!(
-                        "处理器 {} 处理事件 {} 失败: {}",
-                        handler_id, event_name, e
+                        "处理器 {handler_id} 处理事件 {event_name} 失败: {e}"
                     ));
                     actor_state.stats.event_failures += 1;
-                }
+                },
                 Err(e) => {
-                    processing_errors.push(format!(
-                        "事件处理任务执行失败: {}",
-                        e
-                    ));
+                    processing_errors
+                        .push(format!("事件处理任务执行失败: {e}"));
                     actor_state.stats.event_failures += 1;
-                }
+                },
             }
         }
 
@@ -243,10 +241,10 @@ impl EventBusActor {
 
             // 根据配置决定是否抛出错误
             // 如果处理失败，记录错误但继续处理其他handlers
-            if false { // TODO: 可以考虑添加fail_on_handler_error配置
+            if false {
+                // TODO: 可以考虑添加fail_on_handler_error配置
                 return Err(error_utils::event_error(format!(
-                    "事件 {} 处理失败: {}",
-                    event_name, error_summary
+                    "事件 {event_name} 处理失败: {error_summary}"
                 )));
             }
         }
@@ -261,7 +259,7 @@ pub struct EventBusActorManager;
 impl EventBusActorManager {
     /// 启动事件总线Actor
     pub async fn start(
-        config: EventConfig,
+        config: EventConfig
     ) -> ActorSystemResult<ActorRef<EventBusMessage>> {
         let (actor_ref, _handle) = Actor::spawn(
             Some("EventBusActor".to_string()),
@@ -293,14 +291,15 @@ impl EventBusActorManager {
                     handler,
                     reply: tx,
                 })
-                .map_err(|e| error_utils::event_error(format!(
-                    "发送添加处理器消息失败: {}", e
-                )))?;
+                .map_err(|e| {
+                    error_utils::event_error(format!(
+                        "发送添加处理器消息失败: {e}"
+                    ))
+                })?;
 
-            let handler_id = rx.await
-                .map_err(|e| error_utils::event_error(format!(
-                    "接收处理器ID失败: {}", e
-                )))?;
+            let handler_id = rx.await.map_err(|e| {
+                error_utils::event_error(format!("接收处理器ID失败: {e}"))
+            })?;
 
             handler_ids.push(handler_id);
         }

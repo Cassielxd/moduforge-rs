@@ -1,5 +1,4 @@
 use std::{
-    ops::{Deref, DerefMut},
     sync::Arc,
     time::Duration,
 };
@@ -12,7 +11,7 @@ use mf_collab_client::{
     types::SyncEvent,
     utils::Utils,
     yrs::{
-        sync::{awareness::Event, Awareness},
+        sync::Awareness,
         types::{Change, EntryChange},
         Doc,
     },
@@ -20,7 +19,6 @@ use mf_collab_client::{
 };
 use mf_core::{
     runtime::async_runtime::ForgeAsyncRuntime,
-    error_utils,
     extension::Extension,
     history_manager::HistoryManager,
     types::{Content, Extensions, HistoryEntryWithMeta, RuntimeOptions},
@@ -229,7 +227,7 @@ impl CollabEditor {
             .start_with_editor(editor_arc)
             .await
         {
-            eprintln!("启动同步管理器失败: {}", e);
+            eprintln!("启动同步管理器失败: {e}");
         }
 
         Ok(collab_editor)
@@ -299,7 +297,7 @@ impl CollabEditor {
     }
 }
 
-use mf_collab_client::yrs::{DeepObservable, Subscription};
+use mf_collab_client::yrs::DeepObservable;
 use tokio::sync::mpsc;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -393,7 +391,7 @@ impl CollabSyncManager {
                 )
                 .await
                 {
-                    eprintln!("处理同步事件时出错: {}", e);
+                    eprintln!("处理同步事件时出错: {e}");
                 }
             }
         });
@@ -481,12 +479,12 @@ impl CollabSyncManager {
                     }
                 }
             }
-            if event_vec.len() > 0 {
-                println!("检测到 nodes 深度变化: {} 个事件", event_count);
+            if !event_vec.is_empty() {
+                println!("检测到 nodes 深度变化: {event_count} 个事件");
 
                 // 简化事件处理，只发送事件计数
                 if let Err(e) = sender.send(event_vec) {
-                    eprintln!("发送 nodes 深度变化事件失败: {}", e);
+                    eprintln!("发送 nodes 深度变化事件失败: {e}");
                 }
             }
         }));
@@ -508,14 +506,14 @@ impl CollabSyncManager {
                     for change in changes {
                         match change {
                             ChangeType::Added(values) => {
-                                println!("处理 Added 事件: {:?}", values);
+                                println!("处理 Added 事件: {values:?}");
                                 // 转换成mark
                             },
                             ChangeType::Removed(index) => {
-                                println!("处理 Removed 事件: {:?}", index);
+                                println!("处理 Removed 事件: {index:?}");
                             },
                             ChangeType::Retain(index) => {
-                                println!("处理 Retain 事件: {:?}", index);
+                                println!("处理 Retain 事件: {index:?}");
                             },
                         }
                     }
@@ -524,13 +522,13 @@ impl CollabSyncManager {
                     for change in changes {
                         match change {
                             EntryChangeType::Inserted(value) => {
-                                println!("处理 Inserted 事件: {:?}", value);
+                                println!("处理 Inserted 事件: {value:?}");
                             },
                             EntryChangeType::Updated(value, value1) => {
-                                println!("处理 Updated 事件: {:?}", value);
+                                println!("处理 Updated 事件: {value:?}");
                             },
                             EntryChangeType::Removed(value) => {
-                                println!("处理 Removed 事件: {:?}", value);
+                                println!("处理 Removed 事件: {value:?}");
                             },
                         }
                     }

@@ -84,7 +84,7 @@ fn bench_batch_data_processing(c: &mut Criterion) {
                 b.iter(|| {
                     let nodes: Vec<NodeData> = (0..count)
                         .map(|i| NodeData {
-                            id: format!("node_{}", i),
+                            id: format!("node_{i}"),
                             node_type: "paragraph".to_string(),
                             attrs: {
                                 let mut attrs = HashMap::new();
@@ -109,9 +109,9 @@ fn bench_batch_data_processing(c: &mut Criterion) {
                     let mut nodes = HashMap::new();
                     for j in 0..5 {
                         nodes.insert(
-                            format!("node_{}_{}", i, j),
+                            format!("node_{i}_{j}"),
                             NodeData {
-                                id: format!("node_{}_{}", i, j),
+                                id: format!("node_{i}_{j}"),
                                 node_type: "paragraph".to_string(),
                                 attrs: HashMap::new(),
                                 content: vec![format!("Content {} {}", i, j)],
@@ -121,7 +121,7 @@ fn bench_batch_data_processing(c: &mut Criterion) {
                     }
 
                     RoomSnapshot {
-                        room_id: format!("room_{}", i),
+                        room_id: format!("room_{i}"),
                         root_id: "root".to_string(),
                         nodes,
                         version: 1,
@@ -219,17 +219,15 @@ fn bench_room_management(c: &mut Criterion) {
 
     // RoomStatus 状态转换
     group.bench_function("RoomStatus状态处理", |b| {
-        let statuses = vec![
-            RoomStatus::NotExists,
+        let statuses = [RoomStatus::NotExists,
             RoomStatus::Created,
             RoomStatus::Initialized,
             RoomStatus::Shutting,
-            RoomStatus::Offline,
-        ];
+            RoomStatus::Offline];
 
         b.iter(|| {
             let processed_statuses: Vec<String> =
-                statuses.iter().map(|status| format!("{:?}", status)).collect();
+                statuses.iter().map(|status| format!("{status:?}")).collect();
             criterion::black_box(processed_statuses)
         })
     });
@@ -243,7 +241,7 @@ fn bench_room_management(c: &mut Criterion) {
                 b.iter(|| {
                     let rooms: Vec<RoomInfo> = (0..count)
                         .map(|i| RoomInfo {
-                            room_id: format!("room_{}", i),
+                            room_id: format!("room_{i}"),
                             status: if i % 2 == 0 {
                                 RoomStatus::Initialized
                             } else {
@@ -277,18 +275,18 @@ fn bench_complex_operations(c: &mut Criterion) {
                     let mut attrs = HashMap::new();
                     for i in 0..10 {
                         attrs.insert(
-                            format!("attr_{}", i),
+                            format!("attr_{i}"),
                             json!(format!("value_{}", i)),
                         );
                     }
                     attrs
                 },
                 content: (0..20)
-                    .map(|i| format!("Content line {}", i))
+                    .map(|i| format!("Content line {i}"))
                     .collect(),
                 marks: (0..5)
                     .map(|i| MarkData {
-                        mark_type: format!("mark_{}", i),
+                        mark_type: format!("mark_{i}"),
                         attrs: {
                             let mut mark_attrs = HashMap::new();
                             mark_attrs.insert(
@@ -312,9 +310,9 @@ fn bench_complex_operations(c: &mut Criterion) {
             // 创建大量节点
             for i in 0..100 {
                 nodes.insert(
-                    format!("node_{}", i),
+                    format!("node_{i}"),
                     NodeData {
-                        id: format!("node_{}", i),
+                        id: format!("node_{i}"),
                         node_type: if i % 3 == 0 {
                             "heading"
                         } else {
@@ -328,7 +326,7 @@ fn bench_complex_operations(c: &mut Criterion) {
                             attrs
                         },
                         content: vec![
-                            format!("Large content for node {}", i).repeat(5),
+                            format!("Large content for node {i}").repeat(5),
                         ],
                         marks: if i % 5 == 0 {
                             vec![MarkData {
@@ -366,7 +364,7 @@ fn bench_memory_performance(c: &mut Criterion) {
             // 创建大量小对象来测试内存分配性能
             let nodes: Vec<NodeData> = (0..1000)
                 .map(|i| NodeData {
-                    id: format!("mem_node_{}", i),
+                    id: format!("mem_node_{i}"),
                     node_type: "text".to_string(),
                     attrs: HashMap::new(),
                     content: vec![i.to_string()],
@@ -391,13 +389,13 @@ fn bench_memory_performance(c: &mut Criterion) {
                 let mut attrs = HashMap::new();
                 for i in 0..20 {
                     attrs.insert(
-                        format!("key_{}", i),
+                        format!("key_{i}"),
                         json!(format!("value_{}", i)),
                     );
                 }
                 attrs
             },
-            content: (0..50).map(|i| format!("Line {}", i)).collect(),
+            content: (0..50).map(|i| format!("Line {i}")).collect(),
             marks: vec![
                 MarkData {
                     mark_type: "bold".to_string(),

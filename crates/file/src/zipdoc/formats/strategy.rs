@@ -140,6 +140,7 @@ impl SnapshotFormat {
             SnapshotFormat::MsgPack => "msgpack",
         }
     }
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_ascii_lowercase().as_str() {
             "json" => Some(SnapshotFormat::Json),
@@ -168,6 +169,7 @@ impl SnapshotFormat {
 }
 
 // 高层封装：根据策略导出 ZIP（meta.json + schema.xml + 分片 + 可选 parent_map + 插件状态）
+#[allow(clippy::too_many_arguments)]
 pub fn export_zip_with_format<P, F, T, PM>(
     path: P,
     meta_json: &serde_json::Value,
@@ -201,6 +203,7 @@ where
 }
 
 // 高层封装：根据策略导入 ZIP（返回 meta.json, schema.xml, 分片, 可选 parent_map, 插件状态）
+#[allow(clippy::type_complexity)]
 pub fn import_zip_with_format<P, T, PM>(
     path: P,
     format: SnapshotFormat,
@@ -223,7 +226,7 @@ where
     let mut zr = ZipDocumentReader::new(file)?;
     let meta_json = zr.read_all("meta.json")?;
     let meta_val: serde_json::Value = serde_json::from_slice(&meta_json)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        .map_err(io::Error::other)?;
     let schema_xml = zr.read_all("schema.xml")?;
     let (shard_meta, decoded) = format.read_shards::<_, T>(&mut zr)?;
     let parent_map = if read_parent_map {
@@ -298,7 +301,7 @@ where
 
     let meta_json = zr.read_all("meta.json")?;
     let meta_val: serde_json::Value = serde_json::from_slice(&meta_json)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        .map_err(io::Error::other)?;
 
     let plugin_states = zr.read_all_plugin_states()?;
     Ok((meta_val, plugin_states))

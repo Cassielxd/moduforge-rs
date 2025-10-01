@@ -381,7 +381,7 @@ mod tests {
     /// 测试默认构造器
     #[test]
     fn test_builtin_converter_default() {
-        let converter = BuiltinTypeConverter::default();
+        let converter = BuiltinTypeConverter;
         assert_eq!(converter.name(), "BuiltinTypeConverter");
     }
 
@@ -524,14 +524,12 @@ mod tests {
             if supports {
                 assert!(
                     conversion_result.is_ok(),
-                    "类型 {:?} 声称支持但转换失败",
-                    ty
+                    "类型 {ty:?} 声称支持但转换失败"
                 );
             } else {
                 assert!(
                     conversion_result.is_err(),
-                    "类型 {:?} 声称不支持但转换成功",
-                    ty
+                    "类型 {ty:?} 声称不支持但转换成功"
                 );
             }
         }

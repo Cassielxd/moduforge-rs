@@ -1,6 +1,5 @@
 use std::any::Any;
 use std::ops::{Deref, DerefMut};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -9,6 +8,7 @@ use mf_model::node_type::NodeEnum;
 use mf_model::types::NodeId;
 use mf_transform::TransformResult;
 use serde_json::Value;
+use uuid::Uuid;
 
 use super::state::State;
 use mf_model::node_pool::NodePool;
@@ -17,12 +17,6 @@ use mf_transform::node_step::{AddNodeStep, RemoveNodeStep};
 use mf_transform::mark_step::{AddMarkStep, RemoveMarkStep};
 use mf_transform::transform::{Transform};
 use std::fmt::Debug;
-
-static IDS: AtomicU64 = AtomicU64::new(1);
-pub fn get_transaction_id() -> u64 {
-    //生成 全局自增的版本号，用于兼容性
-    IDS.fetch_add(1, Ordering::SeqCst)
-}
 
 /// 定义可执行的命令接口
 /// 要求实现 Send + Sync 以支持并发操作，并实现 Debug 以支持调试
@@ -39,8 +33,8 @@ pub trait Command: Send + Sync + Debug {
 pub struct Transaction {
     /// 存储元数据的哈希表，支持任意类型数据
     pub meta: imbl::HashMap<String, Arc<dyn Any + Send + Sync>>,
-    /// 事务的时间戳
-    pub id: u64,
+    /// 事务的唯一标识符（UUID v4）
+    pub id: Uuid,
     transform: Transform,
 }
 impl Debug for Transaction {
@@ -75,7 +69,7 @@ impl Transaction {
         let schema = state.schema();
         Transaction {
             meta: imbl::HashMap::new(),
-            id: get_transaction_id(),
+            id: Uuid::new_v4(), // ✅ 使用 UUID v4 生成唯一标识
             transform: Transform::new(node, schema),
         }
     }
@@ -86,7 +80,7 @@ impl Transaction {
         // 使用批量应用来优化性能
         let steps_to_apply: Vec<_> = other.steps.iter().cloned().collect();
         if let Err(e) = self.apply_steps_batch(steps_to_apply) {
-            eprintln!("批量应用步骤失败: {}", e);
+            eprintln!("批量应用步骤失败: {e}");
         }
     }
     /// 获取当前文档状态
@@ -171,7 +165,7 @@ impl Transaction {
         key: &str,
     ) -> Option<T> {
         let value = self.meta.get(key)?;
-        let value_any = value.downcast_ref::<T>().cloned();
-        value_any
+        
+        value.downcast_ref::<T>().cloned()
     }
 }

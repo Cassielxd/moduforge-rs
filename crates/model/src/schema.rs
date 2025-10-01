@@ -94,8 +94,7 @@ impl Schema {
         for (prop, type_) in &nodes {
             if marks.contains_key(prop) {
                 return Err(schema_error(&format!(
-                    "{} 不能既是节点又是标记",
-                    prop
+                    "{prop} 不能既是节点又是标记"
                 )));
             }
 
@@ -203,7 +202,7 @@ fn gather_marks<'a>(
                 }
             }
             if !matched {
-                return Err(format!("未知的标记类型: '{}'", name));
+                return Err(format!("未知的标记类型: '{name}'"));
             }
         }
     }
@@ -225,7 +224,7 @@ pub fn compute_attrs(
             None => {
                 if attr.has_default {
                     attr.default.clone().unwrap_or_else(|| {
-                        panic!("没有为属性提供默认值 {}", name)
+                        panic!("没有为属性提供默认值 {name}")
                     })
                 } else {
                     Value::Null
@@ -233,7 +232,7 @@ pub fn compute_attrs(
             },
         };
 
-        built[&name] = given;
+        built[name] = given;
     }
 
     built

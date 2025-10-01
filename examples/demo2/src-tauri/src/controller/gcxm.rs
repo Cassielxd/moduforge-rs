@@ -174,7 +174,7 @@ pub async fn get_gcxm_tree(
 pub async fn delete_gcxm(
     Json(param): Json<DeleteNodeRequest>
 ) -> ResponseResult<String> {
-    if param.id.to_string() == param.editor_name {
+    if *param.id == param.editor_name {
         return Err(AppError(anyhow::anyhow!("不能删除工程项目".to_string())));
     }
     let editor = ContextHelper::get_editor(&param.editor_name);

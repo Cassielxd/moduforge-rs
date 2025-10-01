@@ -168,7 +168,7 @@ where
             awareness,
             inbox,
             sync_tracker,
-            _stream: PhantomData::default(),
+            _stream: PhantomData,
         }
     }
     /// 带同步检测的消息处理
@@ -188,7 +188,7 @@ where
             // 🔥 在处理消息前检测同步状态
             Self::track_sync_message(&msg, sync_tracker).await;
 
-            if let Some(reply) = handle_msg(protocol, &awareness, msg).await? {
+            if let Some(reply) = handle_msg(protocol, awareness, msg).await? {
                 let mut sender = sink.lock().await;
                 if let Err(e) = sender.send(reply.encode_v1()).await {
                     tracing::error!("连接发送回复失败");
@@ -204,23 +204,20 @@ where
         msg: &Message,
         sync_tracker: &Arc<RwLock<SyncTracker>>,
     ) {
-        match msg {
-            Message::Sync(sync_msg) => {
-                match sync_msg {
-                    SyncMessage::SyncStep2(_) => {
-                        // 🎉 收到 Step2，首次同步完成！
-                        let mut tracker = sync_tracker.write().await;
-                        tracker.on_step2_received();
-                    },
-                    SyncMessage::Update(_) => {
-                        // 收到数据更新
-                        let tracker = sync_tracker.read().await;
-                        tracker.on_update_received();
-                    },
-                    _ => {},
-                }
-            },
-            _ => {},
+        if let Message::Sync(sync_msg) = msg {
+            match sync_msg {
+                SyncMessage::SyncStep2(_) => {
+                    // 🎉 收到 Step2，首次同步完成！
+                    let mut tracker = sync_tracker.write().await;
+                    tracker.on_step2_received();
+                },
+                SyncMessage::Update(_) => {
+                    // 收到数据更新
+                    let tracker = sync_tracker.read().await;
+                    tracker.on_update_received();
+                },
+                _ => {},
+            }
         }
     }
 

@@ -272,8 +272,7 @@ impl Validator {
         if !utils::is_valid_identifier(node_type) {
             return Err(MacroError::ValidationError {
                 message: format!(
-                    "node_type '{}' 不是有效的标识符格式",
-                    node_type
+                    "node_type '{node_type}' 不是有效的标识符格式"
                 ),
                 span: None,
             });
@@ -331,8 +330,7 @@ impl Validator {
         if !utils::is_valid_identifier(mark_type) {
             return Err(MacroError::ValidationError {
                 message: format!(
-                    "mark_type '{}' 不是有效的标识符格式",
-                    mark_type
+                    "mark_type '{mark_type}' 不是有效的标识符格式"
                 ),
                 span: None,
             });
@@ -420,8 +418,7 @@ impl Validator {
                 if !unique_marks.insert(mark) {
                     return Err(MacroError::ValidationError {
                         message: format!(
-                            "marks 列表中存在重复的标记: '{}'",
-                            mark
+                            "marks 列表中存在重复的标记: '{mark}'"
                         ),
                         span: None,
                     });
@@ -503,7 +500,7 @@ impl Validator {
         for ch in invalid_chars.iter() {
             if expression.contains(*ch) {
                 return Err(MacroError::ValidationError {
-                    message: format!("content 表达式包含不允许的字符 '{}'", ch),
+                    message: format!("content 表达式包含不允许的字符 '{ch}'"),
                     span: None,
                 });
             }
@@ -699,8 +696,7 @@ impl Validator {
         if !utils::is_valid_identifier(field_name) {
             return Err(MacroError::ValidationError {
                 message: format!(
-                    "字段名称 '{}' 不是有效的标识符格式",
-                    field_name
+                    "字段名称 '{field_name}' 不是有效的标识符格式"
                 ),
                 span: None,
             });
@@ -1274,8 +1270,7 @@ impl Validator {
             if !utils::is_valid_identifier(mark) {
                 return Err(MacroError::ValidationError {
                     message: format!(
-                        "标记名称 '{}' 不是有效的标识符格式",
-                        mark
+                        "标记名称 '{mark}' 不是有效的标识符格式"
                     ),
                     span: None,
                 });
@@ -1565,7 +1560,7 @@ mod tests {
         // 整数默认值应该可以用于字符串类型字段
         let result = Validator::validate_default_value_type_compatibility(
             &field_config,
-            &field_config.default_value.as_ref().unwrap(),
+            field_config.default_value.as_ref().unwrap(),
         );
         assert!(result.is_ok());
 
@@ -1586,7 +1581,7 @@ mod tests {
 
         let result = Validator::validate_default_value_type_compatibility(
             &float_config,
-            &float_config.default_value.as_ref().unwrap(),
+            float_config.default_value.as_ref().unwrap(),
         );
         assert!(result.is_ok());
 
@@ -1607,7 +1602,7 @@ mod tests {
 
         let result = Validator::validate_default_value_type_compatibility(
             &bool_config,
-            &bool_config.default_value.as_ref().unwrap(),
+            bool_config.default_value.as_ref().unwrap(),
         );
         assert!(result.is_ok());
     }

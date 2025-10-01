@@ -561,19 +561,17 @@ impl std::fmt::Display for ConfigValidationError {
             ConfigValidationError::InvalidValue { field, value, reason } => {
                 write!(
                     f,
-                    "配置字段 '{}' 的值 '{}' 无效: {}",
-                    field, value, reason
+                    "配置字段 '{field}' 的值 '{value}' 无效: {reason}"
                 )
             },
             ConfigValidationError::Conflict { field1, field2, reason } => {
                 write!(
                     f,
-                    "配置字段 '{}' 和 '{}' 冲突: {}",
-                    field1, field2, reason
+                    "配置字段 '{field1}' 和 '{field2}' 冲突: {reason}"
                 )
             },
             ConfigValidationError::MissingRequired { field } => {
-                write!(f, "缺少必需的配置字段: {}", field)
+                write!(f, "缺少必需的配置字段: {field}")
             },
         }
     }

@@ -238,15 +238,14 @@ impl WebsocketProvider {
                 .replace("wss://", "https://");
 
             // 尝试 HTTP 连接检查
-            match tokio::time::timeout(
-                Duration::from_secs(3),
-                reqwest::get(&http_url),
+            matches!(
+                tokio::time::timeout(
+                    Duration::from_secs(3),
+                    reqwest::get(&http_url),
+                )
+                .await,
+                Ok(Ok(_))
             )
-            .await
-            {
-                Ok(Ok(_)) => true,
-                _ => false,
-            }
         } else {
             false
         }
@@ -279,13 +278,13 @@ impl WebsocketProvider {
             None => {
                 tracing::error!("尝试设置监听器时客户端连接不存在");
                 return;
-            }
+            },
         };
 
         // 1. 监听文档变更
         let doc_subscription = {
             let sink = conn.sink();
-            let client_id = self.client_id.clone();
+            let client_id = self.client_id;
             let awareness_lock = self.awareness.read().await;
             let doc = awareness_lock.doc();
             doc.observe_update_v1(move |txn, event| {
@@ -334,9 +333,11 @@ impl WebsocketProvider {
             let conn = match self.client_conn.as_ref() {
                 Some(conn) => conn,
                 None => {
-                    tracing::error!("尝试设置 awareness 监听器时客户端连接不存在");
+                    tracing::error!(
+                        "尝试设置 awareness 监听器时客户端连接不存在"
+                    );
                     return;
-                }
+                },
             };
             let sink = conn.sink();
 

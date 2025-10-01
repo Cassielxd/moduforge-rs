@@ -64,12 +64,12 @@ impl IncStateField {
                         nodes.push(node);
                     }
                 }
-                if nodes.len() > 0 {
+                if !nodes.is_empty() {
                     operations.push(Operation::UpdateNode(nodes));
                 }
             }
             // 删除节点
-            if let Some(_) = step.downcast_ref::<RemoveNodeStep>() {
+            if step.downcast_ref::<RemoveNodeStep>().is_some() {
                 let mut node_ids = Vec::new();
                 // 获取反向操作的节点 id 由于删除 有可能删除多个节点 并包含子节点 只拿RemoveNodeStep 中的 id是不够的
                 if let Some(add_step) =
@@ -80,7 +80,7 @@ impl IncStateField {
                             .extend(AddNodeStep::collect_node_ids(node_enum));
                     }
                 }
-                if node_ids.len() > 0 {
+                if !node_ids.is_empty() {
                     operations.push(Operation::RemoveNode(node_ids));
                 }
             }
@@ -127,20 +127,22 @@ impl IncStateField {
 
 #[async_trait]
 impl StateField for IncStateField {
+    type Value = IncState;
+
     async fn init(
         &self,
         _config: &StateConfig,
         _instance: &State,
-    ) -> Arc<dyn Resource> {
+    ) -> Arc<Self::Value> {
         Arc::new(IncState)
     }
     async fn apply(
         &self,
         tr: &Transaction,
-        value: Arc<dyn Resource>,
+        value: Arc<Self::Value>,
         _old_state: &State,
         new_state: &State,
-    ) -> Arc<dyn Resource> {
+    ) -> Arc<Self::Value> {
         IncStateField::collect_tr(tr, new_state);
         value
     }

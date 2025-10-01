@@ -45,7 +45,7 @@ impl TypedStepConverter<AddNodeStep> for SimpleNodeAddConverter {
 
         // 如果不是根节点，需要更新父节点的content数组
         if let Some(root_id) = root_id {
-            if root_id.to_string(txn) != step.parent_id.to_string() {
+            if root_id.to_string(txn) != *step.parent_id {
                 let parent_node_data = Utils::get_or_create_node_data_map(
                     &nodes_map,
                     txn,
@@ -141,7 +141,7 @@ impl TypedStepConverter<RemoveNodeStep> for SimpleNodeRemoveConverter {
         Ok(StepResult {
             step_id: uuid::Uuid::new_v4().to_string(),
             step_name: step.name().to_string(),
-            description: format!("成功删除 {} 个节点", removed_count),
+            description: format!("成功删除 {removed_count} 个节点"),
             timestamp: context.timestamp,
             client_id: context.client_id.clone(),
         })

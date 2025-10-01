@@ -163,8 +163,7 @@ impl ExtensionManagerBuilder {
                 XmlSchemaParser::parse_multi_file_to_extensions(xml_file)
                     .map_err(|e| {
                         crate::error::error_utils::config_error(format!(
-                            "解析XML文件 {} 失败: {}",
-                            xml_file, e
+                            "解析XML文件 {xml_file} 失败: {e}"
                         ))
                     })?;
             all_extensions.extend(extensions);
@@ -175,8 +174,7 @@ impl ExtensionManagerBuilder {
             let extensions = XmlSchemaParser::parse_to_extensions(xml_content)
                 .map_err(|e| {
                     crate::error::error_utils::config_error(format!(
-                        "解析XML内容失败: {}",
-                        e
+                        "解析XML内容失败: {e}"
                     ))
                 })?;
             all_extensions.extend(extensions);
@@ -347,9 +345,6 @@ impl ExtensionManager {
         &self.plugins
     }
 
-
-   
-
     /// 添加从快照恢复的插件
     pub fn add_restored_plugins(
         &mut self,
@@ -358,7 +353,6 @@ impl ExtensionManager {
         self.plugins.extend(plugins);
         Ok(())
     }
-
 }
 
 #[cfg(test)]
@@ -528,6 +522,4 @@ mod tests {
         assert!(schema.marks.contains_key("code_mark"));
         assert!(schema.marks.contains_key("xml_mark"));
     }
-
-
 }

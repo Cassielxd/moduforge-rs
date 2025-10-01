@@ -381,11 +381,7 @@ impl ForgeAsyncRuntime {
 
             let event_start = std::time::Instant::now();
             self.base
-                .emit_event(Event::TrApply(
-                    old_id,
-                    transactions,
-                    state,
-                ))
+                .emit_event(Event::TrApply(old_id, transactions, state))
                 .await?;
             self.log_performance("事件广播", event_start.elapsed());
         }
@@ -440,16 +436,14 @@ impl ForgeAsyncRuntime {
                         // 记录更详细的错误信息
                         debug!("中间件执行失败: {}", e);
                         return Err(error_utils::middleware_error(format!(
-                            "中间件执行失败: {}",
-                            e
+                            "中间件执行失败: {e}"
                         )));
                     },
                 },
                 Err(e) => {
                     debug!("中间件执行超时: {}", e);
                     return Err(error_utils::middleware_error(format!(
-                        "中间件执行超时: {}",
-                        e
+                        "中间件执行超时: {e}"
                     )));
                 },
             };
@@ -477,8 +471,7 @@ impl ForgeAsyncRuntime {
                     Err(e) => {
                         debug!("附加事务提交失败: {}", e);
                         return Err(error_utils::state_error(format!(
-                            "附加事务提交失败: {}",
-                            e
+                            "附加事务提交失败: {e}"
                         )));
                     },
                 };
@@ -562,7 +555,10 @@ impl ForgeAsyncRuntime {
 
 #[async_trait]
 impl RuntimeTrait for ForgeAsyncRuntime {
-    async fn dispatch(&mut self, transaction: Transaction) -> ForgeResult<()> {
+    async fn dispatch(
+        &mut self,
+        transaction: Transaction,
+    ) -> ForgeResult<()> {
         // 使用高性能的 dispatch_flow 而不是基类的 dispatch
         self.dispatch_flow(transaction).await
     }
@@ -577,7 +573,10 @@ impl RuntimeTrait for ForgeAsyncRuntime {
         self.dispatch_flow_with_meta(transaction, description, meta).await
     }
 
-    async fn command(&mut self, command: Arc<dyn Command>) -> ForgeResult<()> {
+    async fn command(
+        &mut self,
+        command: Arc<dyn Command>,
+    ) -> ForgeResult<()> {
         self.command(command).await
     }
 
@@ -612,7 +611,10 @@ impl RuntimeTrait for ForgeAsyncRuntime {
         Ok(())
     }
 
-    async fn jump(&mut self, steps: isize) -> ForgeResult<()> {
+    async fn jump(
+        &mut self,
+        steps: isize,
+    ) -> ForgeResult<()> {
         self.base.jump(steps);
         Ok(())
     }
@@ -621,7 +623,10 @@ impl RuntimeTrait for ForgeAsyncRuntime {
         self.base.get_config()
     }
 
-    fn update_config(&mut self, config: ForgeConfig) {
+    fn update_config(
+        &mut self,
+        config: ForgeConfig,
+    ) {
         self.base.update_config(config);
     }
 

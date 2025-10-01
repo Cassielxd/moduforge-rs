@@ -18,15 +18,15 @@ where
     T: Serialize,
 {
     let meta_val = serde_json::to_value(meta)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        .map_err(io::Error::other)?;
     zw.add_json("snapshot/meta.json", &meta_val)?;
     for i in 0..meta.num_shards {
         let v = get_shard_value(i)?;
         let bytes = serde_cbor::to_vec(&v)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(io::Error::other)?;
         let zst = zstd::stream::encode_all(&bytes[..], zstd_level)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-        let name = format!("snapshot/shard-{:03}.bin.zst", i);
+            .map_err(io::Error::other)?;
+        let name = format!("snapshot/shard-{i:03}.bin.zst");
         zw.add_stored(&name, &zst)?;
     }
     Ok(())
@@ -42,7 +42,7 @@ pub fn read_and_decode_snapshot_shards_cbor<
     let mut out: Vec<T> = Vec::with_capacity(shards_raw.len());
     for raw in shards_raw.iter() {
         let val: T = serde_cbor::from_slice(raw)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(io::Error::other)?;
         out.push(val);
     }
     Ok((meta, out))
@@ -58,7 +58,7 @@ where
 {
     for_each_snapshot_shard_raw(zr, |i, raw| {
         let val: T = serde_cbor::from_slice(&raw)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(io::Error::other)?;
         on_shard(i, val)
     })
 }
@@ -73,9 +73,9 @@ where
     T: Serialize,
 {
     let bytes = serde_cbor::to_vec(parent_map)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        .map_err(io::Error::other)?;
     let zst = zstd::stream::encode_all(&bytes[..], zstd_level)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        .map_err(io::Error::other)?;
     zw.add_stored("snapshot/parent_map.cbor.zst", &zst)
 }
 
@@ -88,8 +88,8 @@ where
 {
     let zst = zr.read_all("snapshot/parent_map.cbor.zst")?;
     let raw = zstd::stream::decode_all(&zst[..])
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        .map_err(io::Error::other)?;
     let val: T = serde_cbor::from_slice(&raw)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        .map_err(io::Error::other)?;
     Ok(val)
 }

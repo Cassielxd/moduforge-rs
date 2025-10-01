@@ -14,7 +14,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use mf_model::{node_pool::NodePool, schema::Schema};
-use mf_state::{state::State, transaction::{Command, Transaction}};
+use mf_state::{
+    state::State,
+    transaction::{Command, Transaction},
+};
 
 use crate::{config::ForgeConfig, types::RuntimeOptions, ForgeResult};
 
@@ -64,7 +67,10 @@ pub trait RuntimeTrait: Send {
     ///
     /// # 返回值
     /// * `ForgeResult<()>` - 处理结果
-    async fn dispatch(&mut self, transaction: Transaction) -> ForgeResult<()>;
+    async fn dispatch(
+        &mut self,
+        transaction: Transaction,
+    ) -> ForgeResult<()>;
 
     /// 分发事务(包含元信息)
     ///
@@ -93,7 +99,10 @@ pub trait RuntimeTrait: Send {
     ///
     /// # 参数
     /// * `command` - 要执行的命令
-    async fn command(&mut self, command: Arc<dyn Command>) -> ForgeResult<()>;
+    async fn command(
+        &mut self,
+        command: Arc<dyn Command>,
+    ) -> ForgeResult<()>;
 
     /// 执行命令(包含元信息)
     async fn command_with_meta(
@@ -144,7 +153,10 @@ pub trait RuntimeTrait: Send {
     ///
     /// # 参数
     /// * `steps` - 跳转步数(正数前进,负数后退)
-    async fn jump(&mut self, steps: isize) -> ForgeResult<()>;
+    async fn jump(
+        &mut self,
+        steps: isize,
+    ) -> ForgeResult<()>;
 
     // ==================== 配置管理 ====================
 
@@ -152,7 +164,10 @@ pub trait RuntimeTrait: Send {
     fn get_config(&self) -> &ForgeConfig;
 
     /// 更新运行时配置
-    fn update_config(&mut self, config: ForgeConfig);
+    fn update_config(
+        &mut self,
+        config: ForgeConfig,
+    );
 
     /// 获取运行时选项
     fn get_options(&self) -> &RuntimeOptions;
