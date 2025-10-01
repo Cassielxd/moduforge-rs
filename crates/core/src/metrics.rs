@@ -42,12 +42,6 @@ pub const PLUGINS_LOADED_TOTAL: &str = "core.plugins.loaded.total";
 /// XML解析耗时（秒）
 pub const XML_PARSING_DURATION_SECONDS: &str =
     "core.xml.parsing.duration.seconds";
-/// 快照恢复耗时（秒）
-pub const SNAPSHOT_RESTORE_DURATION_SECONDS: &str =
-    "core.snapshot.restore.duration.seconds";
-/// 快照运行时创建耗时（秒）
-pub const SNAPSHOT_RUNTIME_CREATION_DURATION_SECONDS: &str =
-    "core.snapshot.runtime.creation.duration.seconds";
 
 pub fn register_metrics() {
     //
@@ -133,14 +127,4 @@ pub fn plugins_loaded(count: u64) {
 
 pub fn xml_parsing_duration(duration: std::time::Duration) {
     histogram!(XML_PARSING_DURATION_SECONDS).record(duration.as_secs_f64());
-}
-
-pub fn snapshot_restore_duration(duration: std::time::Duration) {
-    histogram!(SNAPSHOT_RESTORE_DURATION_SECONDS)
-        .record(duration.as_secs_f64());
-}
-
-pub fn snapshot_runtime_creation_duration(duration: std::time::Duration) {
-    histogram!(SNAPSHOT_RUNTIME_CREATION_DURATION_SECONDS)
-        .record(duration.as_secs_f64());
 }

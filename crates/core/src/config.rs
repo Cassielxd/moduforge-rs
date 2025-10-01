@@ -151,8 +151,6 @@ pub struct HistoryConfig {
     pub enable_compression: bool,
     /// 历史记录持久化间隔
     pub persistence_interval: Duration,
-    /// 是否启用增量快照
-    pub enable_incremental_snapshots: bool,
 }
 
 impl Default for HistoryConfig {
@@ -161,7 +159,6 @@ impl Default for HistoryConfig {
             max_entries: 100,
             enable_compression: false,
             persistence_interval: Duration::from_secs(60),
-            enable_incremental_snapshots: false,
         }
     }
 }
@@ -298,7 +295,6 @@ impl ForgeConfig {
                 max_entries: 200,
                 enable_compression: false,
                 persistence_interval: Duration::from_secs(30),
-                enable_incremental_snapshots: false,
             },
             extension: ExtensionConfig {
                 load_timeout: Duration::from_secs(30),
@@ -349,7 +345,6 @@ impl ForgeConfig {
                 max_entries: 50,
                 enable_compression: false,
                 persistence_interval: Duration::from_secs(10),
-                enable_incremental_snapshots: false,
             },
             extension: ExtensionConfig {
                 load_timeout: Duration::from_secs(5),
@@ -400,7 +395,6 @@ impl ForgeConfig {
                 max_entries: 1000,
                 enable_compression: true,
                 persistence_interval: Duration::from_secs(300), // 5分钟
-                enable_incremental_snapshots: true,
             },
             extension: ExtensionConfig {
                 load_timeout: Duration::from_secs(10),

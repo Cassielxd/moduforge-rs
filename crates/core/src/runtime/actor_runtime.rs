@@ -88,23 +88,6 @@ impl ForgeActorRuntime {
         })
     }
 
-    /// 从快照创建Actor运行时实例
-    ///
-    /// # 参数
-    /// * `snapshot_path` - 快照文件路径
-    /// * `options` - 可选的运行时选项
-    ///
-    /// # 返回值
-    /// * `ForgeResult<Self>` - Actor运行时实例或错误
-    pub async fn from_snapshot(
-        snapshot_path: &str,
-        options: Option<RuntimeOptions>,
-    ) -> ForgeResult<Self> {
-        // 这里可以实现快照恢复逻辑
-        // 目前先使用常规创建方式
-        debug!("从快照创建Actor运行时: {}", snapshot_path);
-        Self::create(options.unwrap_or_default()).await
-    }
 
     /// 🎯 处理事务 - 与原始dispatch完全相同的API
     ///

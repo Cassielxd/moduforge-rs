@@ -41,15 +41,10 @@ pub mod middleware;
 pub mod node;
 pub mod runtime;
 pub mod schema_parser;
-pub mod snapshot;
 pub mod types;
 
 // 新的Actor系统模块
 pub mod actors;
-
-// 构建工具模块（仅在构建时可用）
-#[cfg(feature = "build-tools")]
-pub mod build_tools;
 pub use error::{ForgeResult, error_utils};
 pub use error_helpers::{
     UnwrapHelpers, lock_helpers, collection_helpers, schema_helpers,
