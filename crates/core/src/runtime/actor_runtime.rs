@@ -44,8 +44,9 @@ pub struct ForgeActorRuntime {
 
 impl ForgeActorRuntime {
     /// 获取Actor系统句柄引用
-    fn actor_system(&self) -> &ForgeActorSystemHandle {
-        self.actor_system.as_ref().expect("Actor系统未初始化")
+    fn actor_system(&self) -> ForgeResult<&ForgeActorSystemHandle> {
+        self.actor_system.as_ref()
+            .ok_or_else(|| error_utils::engine_error("Actor系统未初始化".to_string()))
     }
 
     /// 创建新的Actor运行时实例
@@ -122,7 +123,7 @@ impl ForgeActorRuntime {
         // 通过Actor系统处理事务，但保持完全相同的语义
         let (tx, rx) = oneshot::channel();
 
-        self.actor_system()
+        self.actor_system()?
             .transaction_processor
             .send_message(TransactionMessage::ProcessTransaction {
                 transaction,
@@ -179,7 +180,7 @@ impl ForgeActorRuntime {
     pub async fn get_state(&self) -> ForgeResult<Arc<State>> {
         let (tx, rx) = oneshot::channel();
 
-        self.actor_system()
+        self.actor_system()?
             .state_actor
             .send_message(StateMessage::GetState { reply: tx })
             .map_err(|e| {
@@ -205,7 +206,7 @@ impl ForgeActorRuntime {
     pub async fn undo(&mut self) -> ForgeResult<()> {
         let (tx, rx) = oneshot::channel();
 
-        self.actor_system()
+        self.actor_system()?
             .state_actor
             .send_message(StateMessage::Undo { reply: tx })
             .map_err(|e| {
@@ -225,7 +226,7 @@ impl ForgeActorRuntime {
     pub async fn redo(&mut self) -> ForgeResult<()> {
         let (tx, rx) = oneshot::channel();
 
-        self.actor_system()
+        self.actor_system()?
             .state_actor
             .send_message(StateMessage::Redo { reply: tx })
             .map_err(|e| {
@@ -248,7 +249,7 @@ impl ForgeActorRuntime {
     ) -> ForgeResult<()> {
         let (tx, rx) = oneshot::channel();
 
-        self.actor_system()
+        self.actor_system()?
             .state_actor
             .send_message(StateMessage::Jump { steps, reply: tx })
             .map_err(|e| {
@@ -271,7 +272,7 @@ impl ForgeActorRuntime {
     ) -> ForgeResult<()> {
         metrics::event_emitted(event.name());
 
-        self.actor_system()
+        self.actor_system()?
             .event_bus
             .send_message(EventBusMessage::PublishEvent { event })
             .map_err(|e| {
