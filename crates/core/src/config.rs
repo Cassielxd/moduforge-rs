@@ -215,12 +215,42 @@ impl Default for CacheConfig {
     }
 }
 
+/// 运行时类型选择
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RuntimeType {
+    /// 自动选择（根据系统资源检测）
+    Auto,
+    /// 同步运行时
+    Sync,
+    /// 异步运行时
+    Async,
+    /// Actor运行时
+    Actor,
+}
+
+impl Default for RuntimeType {
+    fn default() -> Self {
+        RuntimeType::Auto
+    }
+}
+
+/// 运行时配置
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct RuntimeConfig {
+    /// 运行时类型
+    #[serde(default)]
+    pub runtime_type: RuntimeType,
+}
+
 /// 统一的 Forge 配置结构
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ForgeConfig {
     /// 运行环境
     #[serde(default)]
     pub environment: Environment,
+    /// 运行时配置
+    #[serde(default)]
+    pub runtime: RuntimeConfig,
     /// 任务处理器配置
     #[serde(default)]
     pub processor: ProcessorConfig,
@@ -256,6 +286,7 @@ impl ForgeConfig {
     pub fn development() -> Self {
         Self {
             environment: Environment::Development,
+            runtime: RuntimeConfig::default(),
             processor: ProcessorConfig {
                 max_queue_size: 500,
                 max_concurrent_tasks: 5,
@@ -306,6 +337,7 @@ impl ForgeConfig {
     pub fn testing() -> Self {
         Self {
             environment: Environment::Testing,
+            runtime: RuntimeConfig::default(),
             processor: ProcessorConfig {
                 max_queue_size: 100,
                 max_concurrent_tasks: 3,
@@ -356,6 +388,7 @@ impl ForgeConfig {
     pub fn production() -> Self {
         Self {
             environment: Environment::Production,
+            runtime: RuntimeConfig::default(),
             processor: ProcessorConfig {
                 max_queue_size: 10000,
                 max_concurrent_tasks: 50,

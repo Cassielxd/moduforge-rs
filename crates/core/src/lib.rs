@@ -60,10 +60,14 @@ pub use runtime::async_runtime::ForgeAsyncRuntime;
 pub use runtime::actor_runtime::ForgeActorRuntime;
 // 运行时统一接口
 pub use runtime::runtime_trait::{RuntimeTrait, RuntimeFactory};
+// 运行时构建器和自适应配置
+pub use runtime::builder::ForgeRuntimeBuilder;
+pub use runtime::system_detector::{SystemResources, ResourceTier};
+pub use runtime::adaptive::AdaptiveRuntimeSelector;
 pub use config::{
     ForgeConfig, ForgeConfigBuilder, Environment, ProcessorConfig,
     PerformanceConfig, EventConfig, HistoryConfig, ExtensionConfig,
-    CacheConfig, ConfigValidationError,
+    CacheConfig, ConfigValidationError, RuntimeType, RuntimeConfig,
 };
 pub use error::ForgeError;
 pub use event::{Event, EventBus, EventHandler};

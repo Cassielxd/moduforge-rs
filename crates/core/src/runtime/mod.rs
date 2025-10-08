@@ -10,3 +10,8 @@ pub mod sync_processor;
 
 // 新的Actor运行时
 pub mod actor_runtime;
+
+// 系统资源检测和自适应配置
+pub mod system_detector;
+pub mod adaptive;
+pub mod builder;

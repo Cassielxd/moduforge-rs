@@ -33,6 +33,8 @@ bincode = "1.3"
 tempfile ={ workspace = true }
 once_cell = { workspace = true }
 ractor = { version = "0.15.8", features = ["async-trait"] }
+sysinfo = "0.30"
+num_cpus = "1.16"
 
 [features]
 build-tools = []
