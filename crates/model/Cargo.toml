@@ -36,6 +36,10 @@ criterion = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true }
 
+[[bench]]
+name = "node_pool_bench"
+harness = false
+
 [features]
 debug-logs = []
 default = ["debug-logs"]

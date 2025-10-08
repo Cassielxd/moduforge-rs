@@ -4,7 +4,10 @@
       "mcp__sequential-thinking__sequentialthinking",
       "Bash(cargo build:*)",
       "Bash(cargo clippy:*)",
-      "Bash(cargo check:*)"
+      "Bash(cargo check:*)",
+      "Bash(find:*)",
+      "Bash(cargo bench:*)",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []

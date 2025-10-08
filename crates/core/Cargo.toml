@@ -46,4 +46,8 @@ tempfile = { workspace = true }
 tokio-test = "0.4"
 rand = "0.8"
 
+[[bench]]
+name = "core_perf"
+harness = false
+
 

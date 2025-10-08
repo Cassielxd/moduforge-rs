@@ -23,3 +23,7 @@ anyhow = { workspace = true }
 moduforge-model = { workspace = true }
 criterion = { workspace = true }
 
+[[bench]]
+name = "transform_perf"
+harness = false
+
