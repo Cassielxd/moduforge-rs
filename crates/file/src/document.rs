@@ -190,20 +190,23 @@ impl DocumentReader {
     }
 
     // 读取所有指定类型的段
-    pub fn read_segments(
+    pub fn read_segments<F>(
         &self,
         kind: SegmentType,
-    ) -> Result<Vec<&[u8]>> {
-        let mut segments = Vec::new();
-        for entry in self.dir.entries.iter().rev() {
+        mut callback: F,
+    ) -> Result<()>
+    where
+        F: FnMut(usize, &[u8]) -> Result<()>,
+    {
+        for (index, entry) in self.dir.entries.iter().enumerate() {
             if entry.kind == kind {
                 let bytes = self.r.get_at(entry.offset)?;
                 if crc32(bytes) != entry.crc32 {
                     return Err(FileError::CrcMismatch(entry.offset));
                 }
-                segments.push(bytes);
+                callback(index, bytes)?;
             }
         }
-        Ok(segments)
+        Ok(())
     }
 }

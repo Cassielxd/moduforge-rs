@@ -187,7 +187,7 @@ impl Reader {
         if p + REC_HDR > end {
             return Err(FileError::BadHeader);
         }
-        let len = read_u32_le(&self.mmap[p..p + 4]) as usize;
+        let len: usize = read_u32_le(&self.mmap[p..p + 4]) as usize;
         let stored_crc = read_u32_le(&self.mmap[p + 4..p + 8]);
         if len == 0 {
             return Err(FileError::BadHeader);
