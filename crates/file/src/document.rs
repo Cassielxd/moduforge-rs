@@ -12,18 +12,8 @@ use crate::record::{crc32, read_u32_le, Reader, Writer, HEADER_LEN, REC_HDR};
 const TAIL_MAGIC: &[u8; 8] = b"MFFTAIL1"; // 8B 魔数 + 8B 目录偏移 (LE)
 
 // 段类型：用于描述容器中存储的数据类别
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-pub enum SegmentType {
-    Meta,
-    Schema,
-    Snapshot,
-    Assets,
-    History,
-    Index,
-    Directory,
-    PluginState, // 新增：插件状态段
-}
-
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SegmentType(String);
 // 段目录项：记录段的类型、偏移、长度与 CRC
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SegmentEntry {
@@ -198,20 +188,22 @@ impl DocumentReader {
         }
         Ok(Self { r, dir })
     }
-    // 按类型读取段负载
-    pub fn read_segment(
+
+    // 读取所有指定类型的段
+    pub fn read_segments(
         &self,
         kind: SegmentType,
-    ) -> Result<Option<&[u8]>> {
-        if let Some(entry) =
-            self.dir.entries.iter().rev().find(|e| e.kind == kind)
-        {
-            let bytes = self.r.get_at(entry.offset)?;
-            if crc32(bytes) != entry.crc32 {
-                return Err(FileError::CrcMismatch(entry.offset));
+    ) -> Result<Vec<&[u8]>> {
+        let mut segments = Vec::new();
+        for entry in self.dir.entries.iter().rev() {
+            if entry.kind == kind {
+                let bytes = self.r.get_at(entry.offset)?;
+                if crc32(bytes) != entry.crc32 {
+                    return Err(FileError::CrcMismatch(entry.offset));
+                }
+                segments.push(bytes);
             }
-            return Ok(Some(bytes));
         }
-        Ok(None)
+        Ok(segments)
     }
 }

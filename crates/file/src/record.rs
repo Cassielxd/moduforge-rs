@@ -85,12 +85,11 @@ impl Writer {
         };
 
         let mut prealloc_until = file_len.max(logical_end);
-        if prealloc_chunk > 0
-            && prealloc_until < logical_end + prealloc_chunk {
-                prealloc_until =
-                    (logical_end + prealloc_chunk).max(HEADER_LEN as u64);
-                file.set_len(prealloc_until)?;
-            }
+        if prealloc_chunk > 0 && prealloc_until < logical_end + prealloc_chunk {
+            prealloc_until =
+                (logical_end + prealloc_chunk).max(HEADER_LEN as u64);
+            file.set_len(prealloc_until)?;
+        }
 
         file.seek(SeekFrom::Start(logical_end))?;
         let buf = BufWriter::with_capacity(8 * 1024 * 1024, file.try_clone()?);
@@ -160,7 +159,7 @@ impl Writer {
 
 #[derive(Debug)]
 pub struct Reader {
-    pub(crate) _file: File,  // 保持文件句柄存活以维持 mmap 有效性
+    pub(crate) _file: File, // 保持文件句柄存活以维持 mmap 有效性
     pub(crate) mmap: Mmap,
     pub(crate) logical_end: u64,
 }

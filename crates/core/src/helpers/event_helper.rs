@@ -35,7 +35,7 @@ impl EventHelper {
         runtime_options: &RuntimeOptions,
         state: Arc<State>,
     ) -> ForgeResult<EventBus<Event>> {
-        let  event_bus = EventBus::with_config(config.event.clone());
+        let event_bus = EventBus::with_config(config.event.clone());
         debug!("已创建事件总线");
 
         // 注册事件处理器

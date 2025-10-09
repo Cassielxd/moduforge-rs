@@ -37,7 +37,9 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 
 /// 运行环境类型
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default,
+)]
 pub enum Environment {
     /// 开发环境 - 较长超时时间，详细日志
     #[default]
@@ -580,16 +582,10 @@ impl std::fmt::Display for ConfigValidationError {
     ) -> std::fmt::Result {
         match self {
             ConfigValidationError::InvalidValue { field, value, reason } => {
-                write!(
-                    f,
-                    "配置字段 '{field}' 的值 '{value}' 无效: {reason}"
-                )
+                write!(f, "配置字段 '{field}' 的值 '{value}' 无效: {reason}")
             },
             ConfigValidationError::Conflict { field1, field2, reason } => {
-                write!(
-                    f,
-                    "配置字段 '{field1}' 和 '{field2}' 冲突: {reason}"
-                )
+                write!(f, "配置字段 '{field1}' 和 '{field2}' 冲突: {reason}")
             },
             ConfigValidationError::MissingRequired { field } => {
                 write!(f, "缺少必需的配置字段: {field}")

@@ -359,22 +359,16 @@ impl<'a> NodeGenerator<'a> {
                         for field in &fields_named.named {
                             if let Some(field_name) = &field.ident {
                                 // 检查是否是有 #[attr] 标记的字段
-                                let attr_config = self
-                                    .config
-                                    .attr_fields
-                                    .iter()
-                                    .find(|config| {
-                                        *field_name == config.name
-                                    });
+                                let attr_config =
+                                    self.config.attr_fields.iter().find(
+                                        |config| *field_name == config.name,
+                                    );
 
                                 // 检查是否是有 #[id] 标记的字段
-                                let id_config = self
-                                    .config
-                                    .id_field
-                                    .as_ref()
-                                    .filter(|config| {
-                                        *field_name == config.name
-                                    });
+                                let id_config =
+                                    self.config.id_field.as_ref().filter(
+                                        |config| *field_name == config.name,
+                                    );
 
                                 // 优先使用 id_config，然后是 attr_config
                                 let field_config = id_config.or(attr_config);

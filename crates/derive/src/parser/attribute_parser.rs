@@ -397,7 +397,6 @@ impl AttributeParser {
         field: &Field
     ) -> MacroResult<(bool, Option<DefaultValue>)> {
         use syn::{Meta};
-        
 
         let mut is_attr = false;
         let mut default_value = None;
@@ -1445,9 +1444,7 @@ mod tests {
     #[test]
     fn test_field_config_default_value_methods() {
         use syn::parse_quote;
-        use crate::parser::default_value::{
-            DefaultValueType, DefaultValueParser,
-        };
+        use crate::parser::default_value::{DefaultValueType, DefaultValueParser};
 
         // 创建一个测试字段
         let field: Field = parse_quote! { content: String };

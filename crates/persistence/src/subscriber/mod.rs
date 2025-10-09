@@ -185,10 +185,8 @@ impl<E: EventStore + 'static> SnapshotSubscriber<E> {
         })?;
 
         // 重置计数器
-        let mut entry = self
-            .snap_counters
-            .entry(doc_id.to_string())
-            .or_default();
+        let mut entry =
+            self.snap_counters.entry(doc_id.to_string()).or_default();
         entry.last_snapshot_ms = chrono::Utc::now().timestamp_millis();
         entry.last_snapshot_upto_lsn = upto_lsn;
         entry.events_since = 0;

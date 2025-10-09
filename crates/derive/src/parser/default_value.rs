@@ -604,9 +604,7 @@ impl MacroError {
         span: Span,
     ) -> Self {
         MacroError::ParseError {
-            message: format!(
-                "默认值解析失败: {reason} (问题值: '{value}')"
-            ),
+            message: format!("默认值解析失败: {reason} (问题值: '{value}')"),
             span: Some(span),
         }
     }
@@ -615,7 +613,6 @@ impl MacroError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
 
     /// 测试字符串默认值解析
     #[test]

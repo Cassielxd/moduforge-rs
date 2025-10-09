@@ -32,9 +32,7 @@ impl dyn Resource {
     }
     #[inline(always)]
     #[allow(clippy::needless_lifetimes)]
-    pub fn downcast<'a, T: Resource>(
-        &'a self
-    ) -> Option<&'a T> {
+    pub fn downcast<'a, T: Resource>(&'a self) -> Option<&'a T> {
         if self.is::<T>() {
             let ptr = self as *const dyn Resource as *const T;
             // SAFETY: 这个转换是安全的，因为：

@@ -7,8 +7,8 @@
 //! 4. 手动指定运行时类型
 
 use mf_core::{
-    AdaptiveRuntimeSelector, ForgeRuntimeBuilder, RuntimeType,
-    SystemResources, ForgeResult, RuntimeTrait,
+    AdaptiveRuntimeSelector, ForgeRuntimeBuilder, RuntimeType, SystemResources,
+    ForgeResult, RuntimeTrait,
 };
 
 #[tokio::main]
@@ -72,54 +72,26 @@ fn example_show_adaptive_config() {
     let config = AdaptiveRuntimeSelector::generate_config(&resources);
 
     println!("基于系统资源的优化配置:");
-    println!(
-        "  运行时类型: {:?}",
-        config.runtime.runtime_type
-    );
-    println!(
-        "  最大并发任务数: {}",
-        config.processor.max_concurrent_tasks
-    );
-    println!(
-        "  任务队列大小: {}",
-        config.processor.max_queue_size
-    );
-    println!(
-        "  任务超时: {:?}",
-        config.processor.task_timeout
-    );
-    println!(
-        "  中间件超时: {} ms",
-        config.performance.middleware_timeout_ms
-    );
+    println!("  运行时类型: {:?}", config.runtime.runtime_type);
+    println!("  最大并发任务数: {}", config.processor.max_concurrent_tasks);
+    println!("  任务队列大小: {}", config.processor.max_queue_size);
+    println!("  任务超时: {:?}", config.processor.task_timeout);
+    println!("  中间件超时: {} ms", config.performance.middleware_timeout_ms);
     println!(
         "  任务接收超时: {} ms",
         config.performance.task_receive_timeout_ms
     );
     println!(
         "  性能监控: {}",
-        if config.performance.enable_monitoring {
-            "启用"
-        } else {
-            "禁用"
-        }
+        if config.performance.enable_monitoring { "启用" } else { "禁用" }
     );
     println!(
         "  指标采样率: {}%",
         (config.performance.metrics_sampling_rate * 100.0) as u32
     );
-    println!(
-        "  事件队列大小: {}",
-        config.event.max_queue_size
-    );
-    println!(
-        "  历史记录条数: {}",
-        config.history.max_entries
-    );
-    println!(
-        "  缓存条目数: {}",
-        config.cache.max_entries
-    );
+    println!("  事件队列大小: {}", config.event.max_queue_size);
+    println!("  历史记录条数: {}", config.history.max_entries);
+    println!("  缓存条目数: {}", config.cache.max_entries);
 
     println!();
 }

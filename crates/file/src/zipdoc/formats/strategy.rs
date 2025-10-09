@@ -225,8 +225,8 @@ where
     let file = std::fs::File::open(path)?;
     let mut zr = ZipDocumentReader::new(file)?;
     let meta_json = zr.read_all("meta.json")?;
-    let meta_val: serde_json::Value = serde_json::from_slice(&meta_json)
-        .map_err(io::Error::other)?;
+    let meta_val: serde_json::Value =
+        serde_json::from_slice(&meta_json).map_err(io::Error::other)?;
     let schema_xml = zr.read_all("schema.xml")?;
     let (shard_meta, decoded) = format.read_shards::<_, T>(&mut zr)?;
     let parent_map = if read_parent_map {
@@ -300,8 +300,8 @@ where
     let mut zr = ZipDocumentReader::new(file)?;
 
     let meta_json = zr.read_all("meta.json")?;
-    let meta_val: serde_json::Value = serde_json::from_slice(&meta_json)
-        .map_err(io::Error::other)?;
+    let meta_val: serde_json::Value =
+        serde_json::from_slice(&meta_json).map_err(io::Error::other)?;
 
     let plugin_states = zr.read_all_plugin_states()?;
     Ok((meta_val, plugin_states))

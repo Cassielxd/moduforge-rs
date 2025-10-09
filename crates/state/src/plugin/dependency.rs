@@ -292,7 +292,10 @@ pub struct MissingDependencyReport {
 }
 
 impl fmt::Display for MissingDependencyReport {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
         if !self.has_missing_dependencies {
             return write!(f, "✅ 所有依赖都已满足");
         }
@@ -310,7 +313,6 @@ impl fmt::Display for MissingDependencyReport {
 }
 
 impl MissingDependencyReport {
-
     /// 获取所有缺失的依赖名称
     pub fn get_all_missing_dependency_names(&self) -> HashSet<String> {
         let mut all_missing = HashSet::new();
@@ -331,7 +333,10 @@ pub struct CircularDependencyReport {
 }
 
 impl fmt::Display for CircularDependencyReport {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
         if !self.has_circular_dependencies {
             return write!(f, "✅ 未检测到循环依赖");
         }
@@ -363,4 +368,3 @@ impl fmt::Display for CircularDependencyReport {
 }
 
 impl CircularDependencyReport {}
-

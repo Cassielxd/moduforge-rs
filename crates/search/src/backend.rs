@@ -504,8 +504,11 @@ impl TantivyBackend {
             let doc: tantivy::schema::TantivyDocument = searcher.doc(addr)?;
             if let Some(val) = doc.get_first(self.fields.node_id) {
                 if let tantivy::schema::document::ReferenceValue::Leaf(
-                        tantivy::schema::document::ReferenceValueLeaf::Str(s),
-                    ) = val.as_value() { ids.push(s.to_string()) }
+                    tantivy::schema::document::ReferenceValueLeaf::Str(s),
+                ) = val.as_value()
+                {
+                    ids.push(s.to_string())
+                }
             }
         }
         Ok(ids)

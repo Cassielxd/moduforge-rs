@@ -376,9 +376,10 @@ impl<T: Send + Sync + Clone + 'static> EventBus<T> {
         &self,
         event: T,
     ) -> ForgeResult<()> {
-        self.tx.send(event).await.map_err(|e| {
-            error_utils::event_error(format!("广播事件失败: {e}"))
-        })
+        self.tx
+            .send(event)
+            .await
+            .map_err(|e| error_utils::event_error(format!("广播事件失败: {e}")))
     }
     /// 同步广播事件（仅在非异步上下文中使用）
     ///
@@ -401,9 +402,9 @@ impl<T: Send + Sync + Clone + 'static> EventBus<T> {
         &self,
         event: T,
     ) -> ForgeResult<()> {
-        self.tx.send_blocking(event).map_err(|e| {
-            error_utils::event_error(format!("广播事件失败: {e}"))
-        })
+        self.tx
+            .send_blocking(event)
+            .map_err(|e| error_utils::event_error(format!("广播事件失败: {e}")))
     }
 
     /// 获取事件配置

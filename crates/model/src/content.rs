@@ -631,7 +631,6 @@ mod tests {
     use crate::schema::{Schema, SchemaSpec};
     use crate::node_type::NodeSpec;
     use std::collections::HashMap;
-    
 
     #[test]
     fn test_tablerow_plus_fill() {
@@ -718,8 +717,6 @@ mod tests {
 
     #[test]
     fn test_table_create_and_fill() {
-        
-
         // 创建一个简单的 schema
         let mut nodes = HashMap::new();
 
@@ -817,9 +814,7 @@ mod tests {
 
     #[test]
     fn test_edge_cases() {
-        
         use crate::node::Node;
-        
 
         // 创建schema（与上面相同）
         let mut nodes = HashMap::new();
@@ -914,8 +909,6 @@ mod tests {
 
     #[test]
     fn test_block_choice_problem() {
-        
-
         // 模拟 simple_demo.rs 中的问题场景
         let mut nodes = HashMap::new();
 
@@ -1083,7 +1076,6 @@ mod tests {
 
     #[test]
     fn test_sequence_with_existing_nodes() {
-        
         use crate::node::Node;
         use crate::attrs::Attrs;
 
@@ -1232,8 +1224,6 @@ mod tests {
 
     #[test]
     fn test_table_creation_step_by_step() {
-        
-
         // 创建一个简单的 schema，只有 table 和 tablerow
         let mut nodes = HashMap::new();
 
@@ -1413,8 +1403,6 @@ mod tests {
 
     #[test]
     fn test_sequence_table_problem() {
-        
-
         // 重现 "table paragraph list heading" 序列表达式的问题
         let mut nodes = HashMap::new();
 

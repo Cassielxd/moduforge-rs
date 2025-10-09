@@ -29,8 +29,7 @@ where
     F: FnMut(usize) -> io::Result<Vec<u8>>,
 {
     // 写 meta
-    let meta_val = serde_json::to_value(meta)
-        .map_err(io::Error::other)?;
+    let meta_val = serde_json::to_value(meta).map_err(io::Error::other)?;
     zw.add_json("snapshot/meta.json", &meta_val)?;
     // 写每个分片
     for i in 0..meta.num_shards {
@@ -48,8 +47,8 @@ pub fn read_snapshot_shards<R: Read + Seek>(
     zr: &mut ZipDocumentReader<R>
 ) -> io::Result<(SnapshotShardMeta, Vec<Vec<u8>>)> {
     let meta_bytes = zr.read_all("snapshot/meta.json")?;
-    let meta: SnapshotShardMeta = serde_json::from_slice(&meta_bytes)
-        .map_err(io::Error::other)?;
+    let meta: SnapshotShardMeta =
+        serde_json::from_slice(&meta_bytes).map_err(io::Error::other)?;
     // 顺序读取 ZIP 条目（ZIP 读取器不支持并发），但解压并行
     let mut compressed: Vec<Vec<u8>> = Vec::with_capacity(meta.num_shards);
     for i in 0..meta.num_shards {
@@ -59,10 +58,7 @@ pub fn read_snapshot_shards<R: Read + Seek>(
     }
     let shards: Vec<Vec<u8>> = compressed
         .into_par_iter()
-        .map(|zst| {
-            zstd::stream::decode_all(&zst[..])
-                .map_err(io::Error::other)
-        })
+        .map(|zst| zstd::stream::decode_all(&zst[..]).map_err(io::Error::other))
         .collect::<Result<Vec<_>, _>>()?;
     Ok((meta, shards))
 }
@@ -92,13 +88,13 @@ where
     F: FnMut(usize, Vec<u8>) -> io::Result<()>,
 {
     let meta_bytes = zr.read_all("snapshot/meta.json")?;
-    let meta: SnapshotShardMeta = serde_json::from_slice(&meta_bytes)
-        .map_err(io::Error::other)?;
+    let meta: SnapshotShardMeta =
+        serde_json::from_slice(&meta_bytes).map_err(io::Error::other)?;
     for i in 0..meta.num_shards {
         let name = format!("snapshot/shard-{i:03}.bin.zst");
         let zst = zr.read_all(&name)?;
-        let raw = zstd::stream::decode_all(&zst[..])
-            .map_err(io::Error::other)?;
+        let raw =
+            zstd::stream::decode_all(&zst[..]).map_err(io::Error::other)?;
         on_shard(i, raw)?;
     }
     Ok(meta)
@@ -137,8 +133,8 @@ where
     let file = std::fs::File::open(path)?;
     let mut zr = ZipDocumentReader::new(file)?;
     let meta_json = zr.read_all("meta.json")?;
-    let meta_val: serde_json::Value = serde_json::from_slice(&meta_json)
-        .map_err(io::Error::other)?;
+    let meta_val: serde_json::Value =
+        serde_json::from_slice(&meta_json).map_err(io::Error::other)?;
     let schema_xml = zr.read_all("schema.xml")?;
     let (shard_meta, decoded) =
         read_and_decode_snapshot_shards::<_, T>(&mut zr)?;

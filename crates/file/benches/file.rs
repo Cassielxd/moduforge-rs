@@ -188,14 +188,12 @@ fn bench_zip_cache_performance(c: &mut Criterion) {
 
             // 第一次读取建立缓存
             for i in 1..=5 {
-                let _result =
-                    reader.read_all(&format!("file{i}.bin")).unwrap();
+                let _result = reader.read_all(&format!("file{i}.bin")).unwrap();
             }
 
             // 第二次读取命中缓存
             for i in 1..=5 {
-                let result =
-                    reader.read_all(&format!("file{i}.bin")).unwrap();
+                let result = reader.read_all(&format!("file{i}.bin")).unwrap();
                 criterion::black_box(result);
             }
         })

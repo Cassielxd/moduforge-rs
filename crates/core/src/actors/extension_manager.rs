@@ -6,7 +6,10 @@ use ractor::{Actor, ActorRef, ActorProcessingErr};
 use std::sync::Arc;
 use tokio::sync::oneshot;
 
-use crate::{debug::debug, error::ForgeResult, extension_manager::ExtensionManager, extension::OpFn};
+use crate::{
+    debug::debug, error::ForgeResult, extension_manager::ExtensionManager,
+    extension::OpFn,
+};
 
 use mf_model::schema::Schema;
 use mf_state::plugin::Plugin;
@@ -20,9 +23,7 @@ pub enum ExtensionMessage {
     /// 获取插件列表
     GetPlugins { reply: oneshot::Sender<Vec<Arc<Plugin>>> },
     /// 获取操作函数列表
-    GetOpFns {
-        reply: oneshot::Sender<OpFn>,
-    },
+    GetOpFns { reply: oneshot::Sender<OpFn> },
     /// 重新加载扩展
     ReloadExtensions { reply: oneshot::Sender<ForgeResult<()>> },
 }

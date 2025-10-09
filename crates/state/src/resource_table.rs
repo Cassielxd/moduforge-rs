@@ -74,9 +74,7 @@ impl ResourceTable {
         &self,
         rid: ResourceId,
     ) -> Option<Arc<T>> {
-        
-        self
-            .index
+        self.index
             .get(&rid)
             .map(|rc| rc.value().clone())
             .and_then(|rc| rc.downcast_arc::<T>().cloned())

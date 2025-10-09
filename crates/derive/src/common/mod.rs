@@ -38,6 +38,4 @@ pub mod utils;
 pub mod constants;
 
 // 重新导出核心类型和函数，遵循接口隔离原则
-pub use error::{
-    MacroError, MacroResult,
-};
+pub use error::{MacroError, MacroResult};

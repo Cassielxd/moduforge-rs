@@ -90,10 +90,7 @@ fn bench_batch_macro_usage(c: &mut Criterion) {
                 b.iter(|| {
                     let marks: Vec<_> = (0..count)
                         .map(|i| {
-                            mark!(
-                                &format!("mark_{i}"),
-                                &format!("标记 {i}")
-                            )
+                            mark!(&format!("mark_{i}"), &format!("标记 {i}"))
                         })
                         .collect();
                     criterion::black_box(marks)

@@ -11,7 +11,8 @@ use tokio::select;
 use crate::{metrics, ForgeResult};
 
 /// Type alias for complex receiver type
-type QueueReceiver<T, O> = Arc<tokio::sync::Mutex<Option<mpsc::Receiver<QueuedTask<T, O>>>>>;
+type QueueReceiver<T, O> =
+    Arc<tokio::sync::Mutex<Option<mpsc::Receiver<QueuedTask<T, O>>>>>;
 
 /// 任务处理的结果状态
 /// - Pending: 任务等待处理

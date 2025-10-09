@@ -681,9 +681,8 @@ impl<'a> QueryEngine<'a> {
     ) -> Self {
         let key = key.to_string();
         let value = value.clone();
-        self.conditions.push(Box::new(move |node| {
-            node.attrs.get(&key) == Some(&value)
-        }));
+        self.conditions
+            .push(Box::new(move |node| node.attrs.get(&key) == Some(&value)));
         self
     }
 
@@ -984,7 +983,7 @@ impl OptimizedQueryEngine {
                             .or_insert_with(|| Vec::with_capacity(v.len()))
                             .extend(v);
                     }
-                } 
+                }
             }
         });
 

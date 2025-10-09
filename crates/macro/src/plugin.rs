@@ -84,7 +84,6 @@ macro_rules! impl_plugin {
     };
 }
 
-
 /// 创建插件元数据的宏，不需要名称参数（名称将由mf_plugin!宏自动提供）  
 #[macro_export]
 macro_rules! mf_meta {

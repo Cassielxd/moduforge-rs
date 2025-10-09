@@ -59,18 +59,23 @@ pub struct ConcurrentCache<T: Clone + Send + Sync> {
 impl<T: Clone + Send + Sync> ConcurrentCache<T> {
     /// 创建新的并发缓存
     pub fn new() -> Self {
-        Self {
-            inner: Arc::new(DashMap::new()),
-        }
+        Self { inner: Arc::new(DashMap::new()) }
     }
 
     /// 插入或更新缓存值
-    pub fn insert(&self, key: NodeId, value: T) {
+    pub fn insert(
+        &self,
+        key: NodeId,
+        value: T,
+    ) {
         self.inner.insert(key, value);
     }
 
     /// 获取缓存值
-    pub fn get(&self, key: &NodeId) -> Option<T> {
+    pub fn get(
+        &self,
+        key: &NodeId,
+    ) -> Option<T> {
         self.inner.get(key).map(|v| v.clone())
     }
 
@@ -88,7 +93,10 @@ impl<T: Clone + Send + Sync> ConcurrentCache<T> {
     }
 
     /// 检查是否包含指定 key
-    pub fn contains(&self, key: &NodeId) -> bool {
+    pub fn contains(
+        &self,
+        key: &NodeId,
+    ) -> bool {
         self.inner.contains_key(key)
     }
 }
@@ -112,9 +120,7 @@ pub struct ConcurrentCounter {
 impl ConcurrentCounter {
     /// 创建新的计数器
     pub fn new() -> Self {
-        Self {
-            count: Arc::new(AtomicUsize::new(0)),
-        }
+        Self { count: Arc::new(AtomicUsize::new(0)) }
     }
 
     /// 增加计数
@@ -155,7 +161,11 @@ pub trait LevelStrategy: Send + Sync {
     ///
     /// # 返回值
     /// 节点层级，根节点为 0
-    fn get_level(&self, node_id: &NodeId, state: &Arc<State>) -> usize;
+    fn get_level(
+        &self,
+        node_id: &NodeId,
+        state: &Arc<State>,
+    ) -> usize;
 }
 
 // ============================================================================
@@ -168,7 +178,11 @@ pub trait LevelStrategy: Send + Sync {
 pub struct DefaultLevelStrategy;
 
 impl LevelStrategy for DefaultLevelStrategy {
-    fn get_level(&self, node_id: &NodeId, state: &Arc<State>) -> usize {
+    fn get_level(
+        &self,
+        node_id: &NodeId,
+        state: &Arc<State>,
+    ) -> usize {
         let node_pool = &state.node_pool;
         let mut level = 0;
         let mut current = node_id.clone();
@@ -196,9 +210,7 @@ pub struct CachedLevelStrategy {
 impl CachedLevelStrategy {
     /// 创建新的缓存层级策略
     pub fn new() -> Self {
-        Self {
-            cache: Arc::new(DashMap::new()),
-        }
+        Self { cache: Arc::new(DashMap::new()) }
     }
 
     /// 清空缓存
@@ -214,7 +226,11 @@ impl Default for CachedLevelStrategy {
 }
 
 impl LevelStrategy for CachedLevelStrategy {
-    fn get_level(&self, node_id: &NodeId, state: &Arc<State>) -> usize {
+    fn get_level(
+        &self,
+        node_id: &NodeId,
+        state: &Arc<State>,
+    ) -> usize {
         // 先检查缓存
         if let Some(level) = self.cache.get(node_id) {
             return *level;
@@ -252,7 +268,11 @@ impl LevelStrategy for CachedLevelStrategy {
 ///
 /// 使用 Arc 包装以支持在多个异步任务间共享
 pub type NodeProcessor<T> = Arc<
-    dyn Fn(NodeId, Arc<State>, Arc<ConcurrentCache<T>>) -> Pin<Box<dyn Future<Output = ForgeResult<T>> + Send>>
+    dyn Fn(
+            NodeId,
+            Arc<State>,
+            Arc<ConcurrentCache<T>>,
+        ) -> Pin<Box<dyn Future<Output = ForgeResult<T>> + Send>>
         + Send
         + Sync,
 >;
@@ -315,18 +335,25 @@ impl<T: Clone + Send + Sync + 'static> NodeAggregator<T> {
     ///     CachedLevelStrategy::new(),
     /// );
     /// ```
-    pub fn new<F, Fut>(processor: F, level_strategy: impl LevelStrategy + 'static) -> Self
+    pub fn new<F, Fut>(
+        processor: F,
+        level_strategy: impl LevelStrategy + 'static,
+    ) -> Self
     where
-        F: Fn(NodeId, Arc<State>, Arc<ConcurrentCache<T>>) -> Fut + Send + Sync + 'static,
+        F: Fn(NodeId, Arc<State>, Arc<ConcurrentCache<T>>) -> Fut
+            + Send
+            + Sync
+            + 'static,
         Fut: Future<Output = ForgeResult<T>> + Send + 'static,
     {
         // 创建共享缓存实例（修复 P0 问题：确保只有一个缓存实例）
         let cache = Arc::new(ConcurrentCache::new());
 
         // 创建处理器闭包（使用 Arc 包装以支持多任务共享）
-        let processor_arc: NodeProcessor<T> = Arc::new(move |id, state, cache| {
-            Box::pin(processor(id, state, cache))
-        });
+        let processor_arc: NodeProcessor<T> =
+            Arc::new(move |id, state, cache| {
+                Box::pin(processor(id, state, cache))
+            });
 
         Self {
             cache,
@@ -338,7 +365,10 @@ impl<T: Clone + Send + Sync + 'static> NodeAggregator<T> {
     /// 使用默认层级策略创建聚合器
     pub fn with_default_strategy<F, Fut>(processor: F) -> Self
     where
-        F: Fn(NodeId, Arc<State>, Arc<ConcurrentCache<T>>) -> Fut + Send + Sync + 'static,
+        F: Fn(NodeId, Arc<State>, Arc<ConcurrentCache<T>>) -> Fut
+            + Send
+            + Sync
+            + 'static,
         Fut: Future<Output = ForgeResult<T>> + Send + 'static,
     {
         Self::new(processor, DefaultLevelStrategy)
@@ -347,7 +377,10 @@ impl<T: Clone + Send + Sync + 'static> NodeAggregator<T> {
     /// 使用缓存层级策略创建聚合器（推荐）
     pub fn with_cached_strategy<F, Fut>(processor: F) -> Self
     where
-        F: Fn(NodeId, Arc<State>, Arc<ConcurrentCache<T>>) -> Fut + Send + Sync + 'static,
+        F: Fn(NodeId, Arc<State>, Arc<ConcurrentCache<T>>) -> Fut
+            + Send
+            + Sync
+            + 'static,
         Fut: Future<Output = ForgeResult<T>> + Send + 'static,
     {
         Self::new(processor, CachedLevelStrategy::new())
@@ -408,7 +441,9 @@ impl<T: Clone + Send + Sync + 'static> NodeAggregator<T> {
 
                 // 使用 tokio::spawn 并发执行
                 tokio::spawn(async move {
-                    let result = processor(node_id.clone(), state, cache.clone()).await?;
+                    let result =
+                        processor(node_id.clone(), state, cache.clone())
+                            .await?;
                     cache.insert(node_id.clone(), result);
                     Ok::<_, crate::error::ForgeError>(())
                 })
@@ -417,18 +452,21 @@ impl<T: Clone + Send + Sync + 'static> NodeAggregator<T> {
 
         // 等待所有任务完成
         for handle in handles {
-            handle
-                .await
-                .map_err(|e| crate::error::error_utils::engine_error(
-                    format!("任务执行失败: {}", e)
-                ))??;
+            handle.await.map_err(|e| {
+                crate::error::error_utils::engine_error(format!(
+                    "任务执行失败: {}",
+                    e
+                ))
+            })??;
         }
 
         Ok(())
     }
 }
 
-impl<T: Clone + Send + Sync + 'static> NodeAggregatorTrait<T> for NodeAggregator<T> {
+impl<T: Clone + Send + Sync + 'static> NodeAggregatorTrait<T>
+    for NodeAggregator<T>
+{
     /// 执行自下而上的层级聚合
     ///
     /// # 算法流程

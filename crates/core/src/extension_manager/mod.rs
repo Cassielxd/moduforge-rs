@@ -6,8 +6,7 @@ use mf_state::plugin::Plugin;
 
 use crate::{
     helpers::get_schema_by_resolved_extensions::get_schema_by_resolved_extensions,
-    metrics, types::Extensions, ForgeResult, XmlSchemaParser,
-    extension::OpFn,
+    metrics, types::Extensions, ForgeResult, XmlSchemaParser, extension::OpFn,
 };
 /// 扩展管理器
 pub struct ExtensionManager {

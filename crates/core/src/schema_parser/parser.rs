@@ -16,9 +16,8 @@ use crate::{
 
 use super::error::{XmlSchemaError, XmlSchemaResult};
 use super::types::{
-    XmlAttr, XmlAttrs,
-    XmlGlobalAttribute, XmlMark, XmlMarks, XmlNode, XmlNodes, XmlSchema,
-    XmlSchemaWithReferences,
+    XmlAttr, XmlAttrs, XmlGlobalAttribute, XmlMark, XmlMarks, XmlNode,
+    XmlNodes, XmlSchema, XmlSchemaWithReferences,
 };
 
 /// XML Schema 解析器

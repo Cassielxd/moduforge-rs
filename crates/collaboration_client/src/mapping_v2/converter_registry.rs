@@ -143,10 +143,7 @@ impl StaticConverterRegistry {
         // 按类型对步骤进行分组以提高缓存效率
         let mut grouped_steps: HashMap<TypeId, Vec<&dyn Step>> = HashMap::new();
         for step in steps {
-            grouped_steps
-                .entry(step.type_id())
-                .or_default()
-                .push(*step);
+            grouped_steps.entry(step.type_id()).or_default().push(*step);
         }
 
         // 按组处理步骤

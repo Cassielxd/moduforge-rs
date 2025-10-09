@@ -45,8 +45,9 @@ pub struct ForgeActorRuntime {
 impl ForgeActorRuntime {
     /// 获取Actor系统句柄引用
     fn actor_system(&self) -> ForgeResult<&ForgeActorSystemHandle> {
-        self.actor_system.as_ref()
-            .ok_or_else(|| error_utils::engine_error("Actor系统未初始化".to_string()))
+        self.actor_system.as_ref().ok_or_else(|| {
+            error_utils::engine_error("Actor系统未初始化".to_string())
+        })
     }
 
     /// 创建新的Actor运行时实例
@@ -89,7 +90,11 @@ impl ForgeActorRuntime {
         debug!("Actor运行时实例创建成功");
         metrics::editor_creation_duration(start_time.elapsed());
 
-        Ok(ForgeActorRuntime { actor_system: Some(actor_system), config, started: true })
+        Ok(ForgeActorRuntime {
+            actor_system: Some(actor_system),
+            config,
+            started: true,
+        })
     }
 
     /// 🎯 处理事务 - 与原始dispatch完全相同的API
@@ -312,11 +317,13 @@ impl ForgeActorRuntime {
 
             // 关闭Actor系统
             if let Some(actor_system) = self.actor_system.take() {
-                ForgeActorSystem::shutdown(actor_system)
-                    .await
-                    .map_err(|e| {
-                        error_utils::engine_error(format!("关闭Actor系统失败: {e}"))
-                    })?;
+                ForgeActorSystem::shutdown(actor_system).await.map_err(
+                    |e| {
+                        error_utils::engine_error(format!(
+                            "关闭Actor系统失败: {e}"
+                        ))
+                    },
+                )?;
             }
 
             self.started = false;

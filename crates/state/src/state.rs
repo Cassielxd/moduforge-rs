@@ -386,9 +386,7 @@ impl State {
             })?;
         let node_pool: Arc<NodePool> = serde_json::from_slice(&s.node_pool)
             .map_err(|e| {
-                error::deserialize_error(format!(
-                    "node pool 反序列化失败: {e}"
-                ))
+                error::deserialize_error(format!("node pool 反序列化失败: {e}"))
             })?;
         let mut config = configuration.clone();
         config.doc = Some(node_pool);

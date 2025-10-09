@@ -1,5 +1,10 @@
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use mf_model::node_pool::{NodePool, QueryCacheConfig, LazyQueryConfig, QueryCondition};
+use criterion::{
+    black_box, criterion_group, criterion_main, BenchmarkId, Criterion,
+    Throughput,
+};
+use mf_model::node_pool::{
+    NodePool, QueryCacheConfig, LazyQueryConfig, QueryCondition,
+};
 use mf_model::{Node, Attrs, node_type::NodeEnum};
 use std::sync::Arc;
 
@@ -75,11 +80,9 @@ fn bench_query_strategies(c: &mut Criterion) {
         );
 
         // 3. 优化查询引擎（带索引）
-        let config = QueryCacheConfig {
-            capacity: 1000,
-            enabled: true,
-        };
-        let opt_engine = pool.optimized_query(config).expect("创建优化查询引擎失败");
+        let config = QueryCacheConfig { capacity: 1000, enabled: true };
+        let opt_engine =
+            pool.optimized_query(config).expect("创建优化查询引擎失败");
 
         group.bench_with_input(
             BenchmarkId::new("optimized_indexed", size),
@@ -130,8 +133,8 @@ fn bench_complex_queries(c: &mut Criterion) {
             let results = pool.filter_nodes(|node| {
                 black_box(
                     node.r#type == "paragraph"
-                    && node.content.len() > 0
-                    && !node.marks.is_empty()
+                        && node.content.len() > 0
+                        && !node.marks.is_empty(),
                 )
             });
             black_box(results)

@@ -199,8 +199,7 @@ impl AdaptiveRuntimeSelector {
     ) -> EventConfig {
         EventConfig {
             // 事件队列：队列大小的一半
-            max_queue_size: Self::calc_queue_size(res.available_memory_mb)
-                / 2,
+            max_queue_size: Self::calc_queue_size(res.available_memory_mb) / 2,
 
             // 处理器超时：与中间件超时一致
             handler_timeout: Duration::from_millis(match tier {
@@ -268,9 +267,9 @@ impl AdaptiveRuntimeSelector {
 
             // TTL：高配缓存时间更短（数据更新及时）
             entry_ttl: Duration::from_secs(match tier {
-                ResourceTier::High => 180,  // 3分钟
+                ResourceTier::High => 180,   // 3分钟
                 ResourceTier::Medium => 300, // 5分钟
-                ResourceTier::Low => 600,   // 10分钟
+                ResourceTier::Low => 600,    // 10分钟
             }),
 
             enable_lru: true,
@@ -351,16 +350,10 @@ mod tests {
         assert_eq!(AdaptiveRuntimeSelector::calc_queue_size(8192), 800);
 
         // 16GB -> 1600
-        assert_eq!(
-            AdaptiveRuntimeSelector::calc_queue_size(16384),
-            1600
-        );
+        assert_eq!(AdaptiveRuntimeSelector::calc_queue_size(16384), 1600);
 
         // 128GB -> 12800 (但限制最大10000)
-        assert_eq!(
-            AdaptiveRuntimeSelector::calc_queue_size(128 * 1024),
-            10000
-        );
+        assert_eq!(AdaptiveRuntimeSelector::calc_queue_size(128 * 1024), 10000);
     }
 
     #[test]
@@ -410,9 +403,6 @@ mod tests {
             available_memory_mb: 4096,
         };
         let config = AdaptiveRuntimeSelector::generate_config(&medium);
-        assert_eq!(
-            config.processor.max_concurrent_tasks, 6,
-            "8 * 0.75 = 6"
-        );
+        assert_eq!(config.processor.max_concurrent_tasks, 6, "8 * 0.75 = 6");
     }
 }

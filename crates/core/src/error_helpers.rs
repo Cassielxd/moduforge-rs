@@ -192,7 +192,6 @@ pub mod state_helpers {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

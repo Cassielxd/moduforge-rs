@@ -38,17 +38,13 @@
 //! let runtime = ForgeRuntimeBuilder::from_config(config, None).await?;
 //! ```
 
-
 use crate::{
     config::{ForgeConfig, RuntimeType},
     debug::info,
     runtime::{
-        adaptive::AdaptiveRuntimeSelector,
-        actor_runtime::ForgeActorRuntime,
-        async_runtime::ForgeAsyncRuntime,
-        runtime::ForgeRuntime,
-        runtime_trait::RuntimeTrait,
-        system_detector::SystemResources,
+        adaptive::AdaptiveRuntimeSelector, actor_runtime::ForgeActorRuntime,
+        async_runtime::ForgeAsyncRuntime, runtime::ForgeRuntime,
+        runtime_trait::RuntimeTrait, system_detector::SystemResources,
     },
     types::RuntimeOptions,
     ForgeResult,
@@ -93,7 +89,7 @@ impl ForgeRuntimeBuilder {
     /// // 💾 队列大小: 1600
     /// ```
     pub async fn auto(
-        options: Option<RuntimeOptions>,
+        options: Option<RuntimeOptions>
     ) -> ForgeResult<Box<dyn RuntimeTrait>> {
         // 1. 检测系统资源
         let resources = SystemResources::detect();
@@ -110,10 +106,7 @@ impl ForgeRuntimeBuilder {
             resources.tier_description()
         );
         info!("⚡ 运行时类型: {:?}", config.runtime.runtime_type);
-        info!(
-            "📊 并发任务数: {}",
-            config.processor.max_concurrent_tasks
-        );
+        info!("📊 并发任务数: {}", config.processor.max_concurrent_tasks);
         info!("💾 队列大小: {}", config.processor.max_queue_size);
 
         // 4. 创建运行时
@@ -142,8 +135,7 @@ impl ForgeRuntimeBuilder {
         options: Option<RuntimeOptions>,
     ) -> ForgeResult<Box<dyn RuntimeTrait>> {
         let resources = SystemResources::detect();
-        let mut config =
-            AdaptiveRuntimeSelector::generate_config(&resources);
+        let mut config = AdaptiveRuntimeSelector::generate_config(&resources);
         config.runtime.runtime_type = runtime_type;
 
         info!("⚡ 使用指定运行时: {:?}", runtime_type);
@@ -200,8 +192,7 @@ impl ForgeRuntimeBuilder {
                 ForgeRuntime::create_with_config(options, config).await?,
             )),
             RuntimeType::Async => Ok(Box::new(
-                ForgeAsyncRuntime::create_with_config(options, config)
-                    .await?,
+                ForgeAsyncRuntime::create_with_config(options, config).await?,
             )),
             RuntimeType::Actor => Ok(Box::new(
                 ForgeActorRuntime::create_with_config(options, config).await?,

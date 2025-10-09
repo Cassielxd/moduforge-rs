@@ -355,10 +355,13 @@ impl TransactionProcessorActor {
             if let Some(mut additional_transaction) = middleware_result {
                 additional_transaction.commit()?;
 
-                let current_state = state_update.as_ref()
-                    .ok_or_else(|| error_utils::state_error(
-                        "处理附加事务时状态为空".to_string()
-                    ))?
+                let current_state = state_update
+                    .as_ref()
+                    .ok_or_else(|| {
+                        error_utils::state_error(
+                            "处理附加事务时状态为空".to_string(),
+                        )
+                    })?
                     .clone();
 
                 let task_result = actor_state

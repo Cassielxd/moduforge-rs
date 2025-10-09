@@ -403,7 +403,9 @@ impl Utils {
 
             // 提取属性
             let mut attrs = Attrs::default();
-            if let Some(yrs::types::Value::YMap(attrs_yrs_map)) = node_map.get(txn, "attrs") {
+            if let Some(yrs::types::Value::YMap(attrs_yrs_map)) =
+                node_map.get(txn, "attrs")
+            {
                 for (key, value) in attrs_yrs_map.iter(txn) {
                     if let yrs::types::Value::Any(any_value) = value {
                         if let Some(json_value) =
@@ -417,7 +419,9 @@ impl Utils {
 
             // 提取内容（子节点ID列表）
             let mut content = imbl::Vector::new();
-            if let Some(yrs::types::Value::YArray(content_yrs_array)) = node_map.get(txn, "content") {
+            if let Some(yrs::types::Value::YArray(content_yrs_array)) =
+                node_map.get(txn, "content")
+            {
                 for item in content_yrs_array.iter(txn) {
                     if let yrs::types::Value::Any(any) = item {
                         content.push_back(NodeId::from(any.to_string()));
@@ -427,7 +431,9 @@ impl Utils {
 
             // 提取标记
             let mut marks = imbl::Vector::new();
-            if let Some(yrs::types::Value::YArray(marks_yrs_array)) = node_map.get(txn, "marks") {
+            if let Some(yrs::types::Value::YArray(marks_yrs_array)) =
+                node_map.get(txn, "marks")
+            {
                 for item in marks_yrs_array.iter(txn) {
                     if let yrs::types::Value::YMap(mark_map) = item {
                         let mark_type = mark_map
@@ -444,16 +450,11 @@ impl Utils {
                         if let Some(yrs::types::Value::YMap(attrs_yrs_map)) =
                             mark_map.get(txn, "attrs")
                         {
-                            for (key, value) in attrs_yrs_map.iter(txn)
-                            {
-                                if let yrs::types::Value::Any(
-                                    any_value,
-                                ) = value
+                            for (key, value) in attrs_yrs_map.iter(txn) {
+                                if let yrs::types::Value::Any(any_value) = value
                                 {
                                     if let Some(json_value) =
-                                        Utils::yrs_any_to_json_value(
-                                            &any_value,
-                                        )
+                                        Utils::yrs_any_to_json_value(&any_value)
                                     {
                                         mark_attrs.insert(
                                             key.to_string(),

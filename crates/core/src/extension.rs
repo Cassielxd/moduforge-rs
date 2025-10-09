@@ -5,7 +5,8 @@ use mf_state::{ops::GlobalResourceManager, plugin::Plugin};
 use crate::{types::GlobalAttributeItem, ForgeResult};
 use crate::node::Node;
 
-pub type OpFnItem = Arc<dyn Fn(&GlobalResourceManager) -> ForgeResult<()> + Send + Sync>;
+pub type OpFnItem =
+    Arc<dyn Fn(&GlobalResourceManager) -> ForgeResult<()> + Send + Sync>;
 pub type OpFn = Vec<OpFnItem>;
 pub type NodeTransformFn =
     Arc<dyn Fn(&mut Node) -> ForgeResult<()> + Send + Sync>;

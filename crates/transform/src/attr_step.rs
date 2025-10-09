@@ -62,9 +62,7 @@ impl Step for AttrStep {
                     Err(e) => Err(transform_error(e.to_string())),
                 }
             },
-            None => {
-                Err(transform_error("节点不存在".to_string()))
-            },
+            None => Err(transform_error("节点不存在".to_string())),
         }
     }
 

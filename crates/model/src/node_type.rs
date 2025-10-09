@@ -339,9 +339,7 @@ impl NodeType {
             (Some(def), Some(marks)) => def
                 .iter()
                 .filter_map(|mark_type| {
-                    marks
-                        .iter()
-                        .find(|m| m.r#type == mark_type.name).cloned()
+                    marks.iter().find(|m| m.r#type == mark_type.name).cloned()
                 })
                 .collect(),
             (None, Some(marks)) => marks,

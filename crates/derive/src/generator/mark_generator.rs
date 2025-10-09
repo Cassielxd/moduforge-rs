@@ -566,13 +566,10 @@ impl<'a> MarkGenerator<'a> {
                         for field in &fields_named.named {
                             if let Some(field_name) = &field.ident {
                                 // 检查是否是有 #[attr] 标记的字段
-                                let field_config = self
-                                    .config
-                                    .attr_fields
-                                    .iter()
-                                    .find(|config| {
-                                        *field_name == config.name
-                                    });
+                                let field_config =
+                                    self.config.attr_fields.iter().find(
+                                        |config| *field_name == config.name,
+                                    );
 
                                 let field_info = FieldInfo {
                                     name: field_name.to_string(),

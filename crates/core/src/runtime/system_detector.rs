@@ -134,18 +134,9 @@ mod tests {
         let resources = SystemResources::detect();
 
         // 基本验证：任何系统都应该有CPU和内存
-        assert!(
-            resources.cpu_cores > 0,
-            "CPU核心数应该大于0"
-        );
-        assert!(
-            resources.cpu_threads > 0,
-            "CPU线程数应该大于0"
-        );
-        assert!(
-            resources.total_memory_mb > 0,
-            "总内存应该大于0"
-        );
+        assert!(resources.cpu_cores > 0, "CPU核心数应该大于0");
+        assert!(resources.cpu_threads > 0, "CPU线程数应该大于0");
+        assert!(resources.total_memory_mb > 0, "总内存应该大于0");
 
         // CPU线程数应该大于等于核心数
         assert!(
@@ -172,10 +163,7 @@ mod tests {
             total_memory_mb: 8192,
             available_memory_mb: 4096,
         };
-        assert_eq!(
-            medium_resources.resource_tier(),
-            ResourceTier::Medium
-        );
+        assert_eq!(medium_resources.resource_tier(), ResourceTier::Medium);
 
         // 测试高配
         let high_resources = SystemResources {
@@ -191,9 +179,6 @@ mod tests {
     fn test_tier_description() {
         let resources = SystemResources::detect();
         let description = resources.tier_description();
-        assert!(
-            ["高性能", "标准配置", "基础配置"]
-                .contains(&description)
-        );
+        assert!(["高性能", "标准配置", "基础配置"].contains(&description));
     }
 }

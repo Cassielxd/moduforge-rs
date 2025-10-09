@@ -17,8 +17,7 @@ pub fn encode_history_frames(
         bincode::serde::encode_to_vec(frames, bincode::config::standard())
             .map_err(io::Error::other)?;
     if compress {
-        Ok(zstd::stream::encode_all(&bytes[..], 1)
-            .map_err(io::Error::other)?)
+        Ok(zstd::stream::encode_all(&bytes[..], 1).map_err(io::Error::other)?)
     } else {
         Ok(bytes)
     }
@@ -30,8 +29,7 @@ pub fn decode_history_frames(
     compressed: bool,
 ) -> io::Result<Vec<TypeWrapper>> {
     let raw = if compressed {
-        zstd::stream::decode_all(bytes)
-            .map_err(io::Error::other)?
+        zstd::stream::decode_all(bytes).map_err(io::Error::other)?
     } else {
         bytes.to_vec()
     };

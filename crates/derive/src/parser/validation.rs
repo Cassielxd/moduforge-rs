@@ -1269,9 +1269,7 @@ impl Validator {
         for mark in mark_list {
             if !utils::is_valid_identifier(mark) {
                 return Err(MacroError::ValidationError {
-                    message: format!(
-                        "标记名称 '{mark}' 不是有效的标识符格式"
-                    ),
+                    message: format!("标记名称 '{mark}' 不是有效的标识符格式"),
                     span: None,
                 });
             }

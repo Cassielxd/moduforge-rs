@@ -4,4 +4,3 @@
 //! 严格遵循单一职责原则，专门处理 Mark 相关的派生宏逻辑。
 
 pub mod derive_impl;
-

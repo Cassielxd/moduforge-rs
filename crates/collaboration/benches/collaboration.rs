@@ -219,11 +219,13 @@ fn bench_room_management(c: &mut Criterion) {
 
     // RoomStatus 状态转换
     group.bench_function("RoomStatus状态处理", |b| {
-        let statuses = [RoomStatus::NotExists,
+        let statuses = [
+            RoomStatus::NotExists,
             RoomStatus::Created,
             RoomStatus::Initialized,
             RoomStatus::Shutting,
-            RoomStatus::Offline];
+            RoomStatus::Offline,
+        ];
 
         b.iter(|| {
             let processed_statuses: Vec<String> =
@@ -281,9 +283,7 @@ fn bench_complex_operations(c: &mut Criterion) {
                     }
                     attrs
                 },
-                content: (0..20)
-                    .map(|i| format!("Content line {i}"))
-                    .collect(),
+                content: (0..20).map(|i| format!("Content line {i}")).collect(),
                 marks: (0..5)
                     .map(|i| MarkData {
                         mark_type: format!("mark_{i}"),

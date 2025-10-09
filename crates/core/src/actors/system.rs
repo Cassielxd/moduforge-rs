@@ -19,14 +19,9 @@ use mf_state::state::State;
 
 use super::{
     event_bus::{EventBusActorManager, EventBusMessage},
-    extension_manager::{
-        ExtensionManagerActorManager, ExtensionMessage,
-    },
+    extension_manager::{ExtensionManagerActorManager, ExtensionMessage},
     state_actor::{StateActorManager, StateMessage},
-    transaction_processor::{
-        TransactionProcessorManager,
-        TransactionMessage,
-    },
+    transaction_processor::{TransactionProcessorManager, TransactionMessage},
     ActorSystemError, ActorSystemResult,
 };
 

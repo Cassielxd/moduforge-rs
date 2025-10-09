@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use mf_collab::{Result, SyncService, YrsManager, CollaborationServer};
 
-
 #[tokio::test]
 async fn test_collaboration() -> Result<()> {
     // 初始化日志

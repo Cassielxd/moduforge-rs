@@ -68,20 +68,14 @@ pub fn process_derive_mark(input: DeriveInput) -> MacroResult<TokenStream2> {
     let config =
         AttributeParser::parse_mark_attributes(&input).map_err(|e| {
             // 为属性解析错误添加上下文信息
-            MacroError::parse_error(
-                &format!("Mark 属性解析失败: {e}"),
-                &input,
-            )
+            MacroError::parse_error(&format!("Mark 属性解析失败: {e}"), &input)
         })?;
 
     // 第二阶段：配置验证
     // 验证解析后的配置是否完整、有效和一致
     Validator::validate_mark_config(&config).map_err(|e| {
         // 为验证错误添加上下文信息
-        MacroError::validation_error(
-            &format!("Mark 配置验证失败: {e}"),
-            &input,
-        )
+        MacroError::validation_error(&format!("Mark 配置验证失败: {e}"), &input)
     })?;
 
     // 第三阶段：代码生成
@@ -89,10 +83,7 @@ pub fn process_derive_mark(input: DeriveInput) -> MacroResult<TokenStream2> {
     let generator = GeneratorFactory::create_mark_generator(&input, &config);
     let generated_code = generator.generate().map_err(|e| {
         // 为代码生成错误添加上下文信息
-        MacroError::generation_error(
-            &format!("Mark 代码生成失败: {e}"),
-            &input,
-        )
+        MacroError::generation_error(&format!("Mark 代码生成失败: {e}"), &input)
     })?;
 
     Ok(generated_code)

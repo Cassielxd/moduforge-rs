@@ -39,8 +39,7 @@ impl<W: Write + Seek> ZipDocumentWriter<W> {
         let opts = SimpleFileOptions::default()
             .compression_method(CompressionMethod::Deflated);
         self.zip.start_file(name, opts)?;
-        let data = serde_json::to_vec(value)
-            .map_err(io::Error::other)?;
+        let data = serde_json::to_vec(value).map_err(io::Error::other)?;
         // 记录到 manifest.entries（若存在且为数组）
         if let Some(entries) =
             self.manifest.get_mut("entries").and_then(|v| v.as_array_mut())
@@ -140,8 +139,8 @@ impl<W: Write + Seek> ZipDocumentWriter<W> {
         let opts = SimpleFileOptions::default()
             .compression_method(CompressionMethod::Deflated);
         self.zip.start_file("manifest.json", opts)?;
-        let data = serde_json::to_vec(&self.manifest)
-            .map_err(io::Error::other)?;
+        let data =
+            serde_json::to_vec(&self.manifest).map_err(io::Error::other)?;
         self.zip.write_all(&data)?;
         self.zip.finish().map_err(io::Error::other)
     }

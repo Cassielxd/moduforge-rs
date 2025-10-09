@@ -165,7 +165,7 @@ impl Transaction {
         key: &str,
     ) -> Option<T> {
         let value = self.meta.get(key)?;
-        
+
         value.downcast_ref::<T>().cloned()
     }
 }
