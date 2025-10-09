@@ -84,37 +84,6 @@ macro_rules! impl_plugin {
     };
 }
 
-#[macro_export]
-macro_rules! impl_state_field {
-    ($name:ident, $init_fn:expr, $apply_fn:expr) => {
-        #[derive(Debug)]
-        pub struct $name;
-
-        #[async_trait]
-        impl StateField for $name
-        where
-            Self: Send + Sync,
-        {
-            async fn init(
-                &self,
-                config: &StateConfig,
-                instance: &State,
-            ) -> Arc<dyn Resource> {
-                $init_fn(config, instance).await
-            }
-
-            async fn apply(
-                &self,
-                tr: &Transaction,
-                value: Arc<dyn Resource>,
-                old_state: &State,
-                new_state: &State,
-            ) -> Arc<dyn Resource> {
-                $apply_fn(tr, value, old_state, new_state).await
-            }
-        }
-    };
-}
 
 /// 创建插件元数据的宏，不需要名称参数（名称将由mf_plugin!宏自动提供）  
 #[macro_export]
