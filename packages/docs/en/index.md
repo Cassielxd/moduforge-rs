@@ -3,118 +3,71 @@ layout: home
 
 hero:
   name: "ModuForge-RS"
-  text: "Modular Application Framework"
-  tagline: "High-performance Rust-based modular framework with state management, rules engine, real-time collaboration and plugin extensibility"
+  text: "Modular Runtime Framework"
+  tagline: "Rust-powered runtime covering immutable data, transactions, collaboration, search, and persistence"
   image:
     src: /logo.svg
     alt: ModuForge-RS
   actions:
     - theme: brand
-      text: Get Started
-      link: /en/setup-external-project
+      text: Quick Start
+      link: /en/quick-start
     - theme: alt
-      text: Plugin Development Guide
+      text: Plugin Guide
       link: /en/plugin-development-guide
     - theme: alt
-      text: View on GitHub
+      text: GitHub
       link: https://github.com/Cassielxd/moduforge-rs
 
 features:
   - icon: 🏗️
-    title: Modular Architecture
-    details: Highly modular architecture with 14 independent crates for flexible composition and on-demand integration.
-  
+    title: Layered Modules
+    details: 11 core crates cover model, state, transform, runtime, persistence, search, and collaboration.
   - icon: 🚀
-    title: High-Performance Runtime
-    details: Tokio-based async runtime with immutable data structures and concurrent transaction processing.
-  
+    title: Adaptive Runtimes
+    details: Sync, async, and actor runtimes with built-in scheduling and resource detection.
   - icon: 🔧
     title: Plugin Ecosystem
-    details: Complete plugin development framework with dependency management, lifecycle control, and hot-swapping.
-  
-  - icon: 📊
-    title: Rules Engine
-    details: Built-in GoRules JDM-compatible rules engine with high-performance expression language.
-  
+    details: Unified extension and resource system with middleware, history, and metrics.
+  - icon: 💾
+    title: Persistence Ready
+    details: SQLite event store with snapshots, compression, and tunable durability.
+  - icon: 🔍
+    title: Search Integration
+    details: Tantivy + jieba incremental indexing driven directly from transactions.
   - icon: 🤝
     title: Real-time Collaboration
-    details: Conflict-free collaborative system based on Yrs CRDT with WebSocket real-time synchronization.
-  
-  - icon: ⚡
-    title: Powerful Macro System
-    details: Provides Node and Mark derive macros with support for custom type expressions, JSON defaults, and type-safe conversions.
-  
-  - icon: 🎯
-    title: Business Neutral
-    details: Zero business logic coupling, adaptable to editors, pricing, workflow, and other scenarios through extensions.
+    details: Yrs (CRDT) plus Warp WebSocket for multi-client document rooms.
 ---
 
 ## What is ModuForge-RS?
 
-ModuForge-RS is a high-performance modular application framework built in Rust, specifically designed for constructing complex business applications. The framework consists of 14 independent crates, providing complete solutions from data modeling, state management, rules engine to real-time collaboration.
+ModuForge-RS is a Rust-based modular runtime for applications that manipulate large tree structures, require transactional consistency, and benefit from collaboration or search capabilities. The workspace is composed of `core`, `model`, `state`, `transform`, `file`, `persistence`, `search`, `collaboration`, `collaboration-client`, `macro`, and `derive` crates that can be composed as needed.
 
-### Core Capabilities
+### Core capabilities
 
-🏗️ **Modular Design** - 14 specialized crates for flexible composition and extension  
-⚡ **High-Performance Runtime** - Tokio-based async architecture with high concurrency support  
-🔧 **Plugin Ecosystem** - Complete plugin development framework with hot-swapping and dependency management  
-📊 **Rules Engine** - Built-in business rules engine with dynamic decision-making and expression computing  
-🤝 **Real-time Collaboration** - CRDT-based conflict-free collaboration with multi-user real-time editing  
-🎯 **Business Neutral** - Zero business logic coupling, adaptable to any domain application scenarios
+- 🏗️ **Modular architecture** – separated layers that can be developed and tested independently.
+- 🚀 **Flexible runtimes** – choose between sync, async, and actor execution depending on workload.
+- 🔧 **Plugin system** – extensions, middleware, and resource tables encapsulate business logic.
+- 💾 **Event persistence** – WAL + snapshot pipeline with configurable durability settings.
+- 🔍 **Full-text search** – stream transactions to Tantivy for near real-time indexing.
+- 🤝 **Collaboration tooling** – CRDT document sync, room lifecycle, metrics, and health probes.
+- 🧰 **Macros & derives** – declarative helpers to create nodes, marks, and plugins without boilerplate.
 
-### How ModuForge Works
+### How the pieces fit together
 
-- **model**: Defines basic data including Nodes, Marks, Schemas, etc.
-- **state**: Manages state, primarily responsible for state updates and plugin scheduling.
-- **transform**: Implements transactions similar to database transactions, ensuring atomicity and data consistency.
-- **core**: Combines model, state, and transform to implement core runtime functionality.
-- **rules**: Rule engine system including expression parsing, backend execution, and template system.
+- **model**: immutable node tree, marks, attributes, schema, and content constraints.
+- **state**: plugin lifecycle, transaction scheduling, resource management, and logging.
+- **transform**: step/transaction pipeline ensuring atomic updates and replay semantics.
+- **core**: runtime orchestration, event bus, extension manager, history, and metrics.
+- **file / persistence / search / collaboration**: supporting crates for storage, indexing, and collaboration.
+- **macro / derive**: declarative macros for authoring runtime integrations.
 
-### Core Features
+### When to use ModuForge
 
-#### 🏗️ **Architecture Components**
+- Building desktop or web editors backed by immutable trees.
+- Implementing systems that need undo/redo, snapshots, and reproducible history.
+- Synchronising offline edits with event replay or CRDT merges.
+- Adding collaboration or search to domain-specific runtimes.
 
-- **Async Processor**: High-performance async task processing
-- **Event System**: Type-safe event dispatch and handling
-- **Extension Mechanism**: Flexible plugin and extension loading
-- **Middleware Support**: Configurable request/response pipeline
-- **Flow Control**: Sync and async flow management
-
-#### 📊 **Data Model**
-
-- **Node System**: Hierarchical document node structure
-- **Mark System**: Document formatting and attribute marking
-- **Attribute System**: Type-safe property management
-- **Schema Definition**: Document structure validation
-- **Content Matching**: Smart content validation and matching
-
-#### 🔄 **State Management**
-
-- **Immutable State**: Persistent data structures based on im-rs
-- **Transaction Processing**: ACID-compatible transaction system
-- **Resource Management**: Global resource table and lifecycle management
-- **Plugin System**: Dynamic plugin loading with state isolation
-- **Logging System**: Structured logging and performance monitoring
-
-### Getting Started
-
-1. **[Setup External Project](/en/setup-external-project)** - Learn how to integrate ModuForge-RS into your project
-2. **[Plugin Development Guide](/en/plugin-development-guide)** - Build custom plugins for your use case
-3. **[Architecture Use Cases](/en/architecture_use_cases)** - Explore different application scenarios
-4. **[Feature Showcase](/en/demo-showcase)** - See ModuForge-RS in action
-
-### Use Cases
-
-ModuForge-RS is designed for scenarios requiring:
-
-- **Collaborative Editors** - Real-time document collaboration with conflict resolution
-- **Workflow Engines** - Complex business process orchestration
-- **Rule Engines** - Dynamic business rule evaluation and execution
-- **Data Processing Pipelines** - ETL and data transformation workflows
-- **Content Management** - Version-controlled content with audit trails
-
-### Community
-
-- **GitHub**: [moduforge-rs](https://github.com/Cassielxd/moduforge-rs)
-- **Documentation**: Comprehensive guides and API reference
-- **Examples**: Real-world integration examples and demos 
+Start with the [Quick Start](./quick-start.md) or dive into the [Architecture Overview](./architecture-overview.md) for deeper details.

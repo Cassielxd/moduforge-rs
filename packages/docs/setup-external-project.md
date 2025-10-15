@@ -1,326 +1,117 @@
-# ModuForge-RS 外部项目快速设置指南
+# ModuForge-RS 外部项目接入指南
 
-## 快速开始
+本指南说明如何把当前工作区嵌入到现有项目。从 `.cursorrules`、依赖配置，到运行时、插件、持久化、协作都给出示例。
 
-### 1. 选择合适的规则文件
-
-根据项目复杂度选择合适的规则文件：
-
-- **完整版本** (`.cursorrules-for-external-projects`): 适用于大型项目，包含详细的架构指南和最佳实践
-- **简化版本** (`.cursorrules-external-simple`): 适用于小型项目，包含核心集成要点
-
-### 2. 复制规则文件
+## 1. 准备 `.cursorrules`
+根据需要复制仓库根目录下的规则模板：
+- `.cursorrules-for-external-projects`：提供完整的提交与目录约束说明。
+- `.cursorrules-external-simple`：仅保留常用命令和依赖提示。
 
 ```bash
-# 方式1：复制完整版本
-cp path/to/moduforge-rs/.cursorrules-for-external-projects ./.cursorrules
-
-# 方式2：复制简化版本  
-cp path/to/moduforge-rs/.cursorrules-external-simple ./.cursorrules
+cp path/to/moduforge-rs/.cursorrules-for-external-projects ./your-project/.cursorrules
+# 或
+cp path/to/moduforge-rs/.cursorrules-external-simple ./your-project/.cursorrules
 ```
 
-### 3. 配置项目依赖
-
-在你的 `Cargo.toml` 中添加：
+## 2. 配置依赖
 
 ```toml
 [dependencies]
-# 核心依赖
-moduforge-core = "0.4.12"
-moduforge-model = "0.4.12" 
-moduforge-state = "0.4.12"
-moduforge-transform = "0.4.12"
-moduforge-rules-engine = "0.4.12"
-moduforge-rules-expression = "0.4.12"
-moduforge-collaboration = "0.4.12"
-moduforge-template = "0.4.12"
+moduforge-core = { path = "../moduforge-rs/crates/core" }
+moduforge-model = { path = "../moduforge-rs/crates/model" }
+moduforge-state = { path = "../moduforge-rs/crates/state" }
+moduforge-transform = { path = "../moduforge-rs/crates/transform" }
 
-# 必需的支持库
-tokio = { version = "1.0", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
-im = { version = "15.1", features = ["serde"] }
+# 可选配套能力
+moduforge-file = { path = "../moduforge-rs/crates/file" }
+moduforge-persistence = { path = "../moduforge-rs/crates/persistence" }
+moduforge-search = { path = "../moduforge-rs/crates/search" }
+moduforge-collaboration = { path = "../moduforge-rs/crates/collaboration" }
+
+# 通用依赖
+tokio = { version = "1", features = ["full"] }
 anyhow = "1"
-async-trait = "0.1"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+imbl = { version = "6", features = ["serde"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
 ```
 
-### 4. 基础代码模板
-
-创建基本的集成代码：
-
+## 3. 初始化运行时
+与快速入门示例类似，可以在项目入口处封装一个 `runtime` 模块集中构建和托管运行时：
 ```rust
-// main.rs 或 lib.rs
-use mf_core::{ForgeResult, async_runtime::ForgeAsyncRuntime, types::RuntimeOptions};
-use mf_state::init_logging;
-
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    // 初始化日志
-    init_logging("info", None)?;
-    
-    // 创建运行时
-    let options = RuntimeOptions::default();
-    let runtime = ForgeAsyncRuntime::create(options).await?;
-    
-    println!("ModuForge-RS 集成成功!");
-    Ok(())
+let mut options = RuntimeOptions::default()
+    .set_content(Content::NodePoolFn(Arc::new(DefaultPool)));
+for ext in extensions() {
+    options = options.add_extension(ext);
 }
+let runtime = ForgeAsyncRuntime::create_with_config(options, ForgeConfig::default()).await?;
 ```
 
-## 常见使用场景
-
-### 场景1：文本编辑器项目
-
+## 4. 插件与扩展示例
 ```rust
-use mf_core::{ForgeResult, async_runtime::ForgeAsyncRuntime, types::RuntimeOptions};
-use mf_state::transaction::Transaction;
-use mf_transform::attr_step::AttrStep;
-use serde_json::json;
+use mf_core::{Extension, ForgeResult};
+use mf_core::types::{Content, Extensions, NodePoolFnTrait, RuntimeOptions};
+use mf_model::{node_pool::NodePool, Attrs, Node, NodeType};
+use mf_state::{plugin::Plugin, State, init_logging};
 use std::sync::Arc;
 
-pub struct TextRuntime {
-    runtime: ForgeAsyncRuntime,
-}
+#[derive(Debug)]
+struct DefaultPool;
 
-impl TextRuntime {
-    pub async fn new() -> ForgeResult<Self> {
-        let options = RuntimeOptions::default();
-        let runtime = ForgeAsyncRuntime::create(options).await?;
-        Ok(Self { runtime })
-    }
-    
-    pub async fn insert_text(&mut self, node_id: &str, text: &str) -> ForgeResult<()> {
-        let state = self.runtime.state();
-        let mut transaction = Transaction::new(&state);
-        
-        let mut attrs = im::HashMap::new();
-        attrs.insert("content".to_string(), json!(text));
-        
-        let step = AttrStep::new(node_id.to_string(), attrs);
-        transaction.step(Arc::new(step))?;
-        
-        self.runtime.apply_transaction(transaction).await
+#[async_trait::async_trait]
+impl NodePoolFnTrait for DefaultPool {
+    async fn create(
+        &self,
+        _config: &mf_state::StateConfig,
+    ) -> mf_core::ForgeResult<NodePool> {
+        Ok(NodePool::default())
     }
 }
-```
 
-### 场景2：文档管理系统
+#[derive(Default)]
+struct AuditPlugin;
 
-```rust
-use mf_state::{State, StateConfig, Transaction};
-use std::sync::Arc;
-
-pub struct DocumentManager {
-    state: State,
-}
-
-impl DocumentManager {
-    pub async fn new() -> anyhow::Result<Self> {
-        let config = StateConfig {
-            schema: None,
-            doc: None,
-            stored_marks: None,
-            plugins: None,
-            resource_manager: None,
-        };
-        let state = State::create(config).await?;
-        Ok(Self { state })
-    }
-    
-    pub async fn create_document(&mut self, title: &str) -> anyhow::Result<()> {
-        let mut transaction = Transaction::new(&self.state);
-        transaction.set_meta("action", "create_document");
-        transaction.set_meta("title", title);
-        
-        // 应用事务到状态
-        let result = self.state.apply(transaction).await?;
-        self.state = result.state;
+#[async_trait::async_trait]
+impl Plugin for AuditPlugin {
+    async fn on_transaction_applied(
+        &self,
+        state: &State,
+        description: &str,
+    ) -> ForgeResult<()> {
+        tracing::info!(target: "audit", %description, node_count = state.doc().size());
         Ok(())
     }
 }
-```
 
-### 场景3：协作编辑平台
-
-```rust
-use mf_core::{ForgeResult, async_runtime::ForgeAsyncRuntime, types::RuntimeOptions};
-use mf_state::transaction::Transaction;
-use mf_collaboration::sync_service::SyncService;
-
-pub struct CollaborativeRuntime {
-    runtime: ForgeAsyncRuntime,
-    sync_service: SyncService,
-}
-
-impl CollaborativeRuntime {
-    pub async fn new() -> ForgeResult<Self> {
-        let options = RuntimeOptions::default();
-        let runtime = ForgeAsyncRuntime::create(options).await?;
-        let sync_service = SyncService::new();
-        
-        Ok(Self { runtime, sync_service })
-    }
-    
-    pub async fn handle_remote_change(&mut self, change_data: Vec<u8>) -> ForgeResult<()> {
-        // 处理远程协作变更
-        let transaction = self.sync_service.decode_change(change_data)?;
-        self.runtime.apply_transaction(transaction).await
-    }
+fn extensions() -> Vec<Extensions> {
+    vec![Extensions::E(Extension::new_plugin(
+        "audit-plugin",
+        Box::new(AuditPlugin::default()),
+    ))]
 }
 ```
 
-## 验证设置
+## 5. 持久化 / 检索 / 协作
+- 事件存储：`SqliteEventStore::open(path, CommitMode)` 配合 `PersistOptions` 设置快照与压缩策略。
+- 全文检索：`create_tantivy_service` 创建服务端，结合 `IndexEvent::{StepApplied, TransactionCommitted, Rebuild}` 同步索引。
+- 实时协作：`CollaborationServer::new(Arc::new(YrsManager::new()), port).start().await` 即可启动 WebSocket 和健康检查接口。
 
-创建一个简单的测试来验证集成：
-
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use mf_state::{State, StateConfig};
-
-    #[tokio::test]
-    async fn test_integration() {
-        let config = StateConfig {
-            schema: None,
-            doc: None,
-            stored_marks: None,
-            plugins: None,
-            resource_manager: None,
-        };
-        let state = State::create(config).await.unwrap();
-        
-        // 验证状态创建成功
-        assert!(state.version > 0);
-        println!("✅ ModuForge-RS 集成测试通过");
-    }
-}
-```
-
-运行测试：
+## 6. 推荐命令
 ```bash
-cargo test test_integration
+cargo fmt
+cargo clippy --workspace --all-targets
+cargo test --workspace
 ```
 
-## 常见问题解决
+## 7. 常见问题
+- 依赖冲突：执行 `cargo update` 并检查 `cargo tree -d`。
+- 运行时异常：确认 `init_logging` 已初始化日志，并根据需要调整 `ForgeConfig`。
+- 协作/检索异常：检查端口和目录是否可用，确保已加入所需 crate。
 
-### 问题1：依赖版本冲突
-
-```bash
-# 清理依赖
-cargo clean
-
-# 更新依赖
-cargo update
-
-# 检查依赖树
-cargo tree
-```
-
-### 问题2：编译错误
-
-确保所有必需的特性已启用：
-
-```toml
-[dependencies]
-tokio = { version = "1.0", features = ["full"] }
-serde = { version = "1.0", features = ["derive", "rc"] }
-im = { version = "15.1", features = ["serde"] }
-```
-
-### 问题3：运行时错误
-
-检查日志配置和异步运行时设置：
-
-```rust
-// 确保正确初始化日志
-init_logging("debug", Some("logs/debug.log"))?;
-
-// 检查运行时配置
-let mut options = RuntimeOptions::default();
-options.set_debug_mode(true);
-```
-
-## 性能优化建议
-
-### 1. 使用不可变数据结构
-```rust
-use im::{HashMap, Vector};
-
-// 优先使用 im 集合
-let mut data: HashMap<String, String> = HashMap::new();
-data.insert("key".to_string(), "value".to_string());
-```
-
-### 2. 批量操作
-```rust
-// 批量处理事务
-let mut transaction = Transaction::new();
-for change in changes {
-    transaction.add_step(Box::new(change));
-}
-runtime.apply_transaction(transaction).await?;
-```
-
-### 3. 异步并发
-```rust
-// 并发处理多个任务
-let tasks: Vec<_> = documents.into_iter()
-    .map(|doc| tokio::spawn(process_document(doc)))
-    .collect();
-
-for task in tasks {
-    task.await??;
-}
-```
-
-## 调试技巧
-
-### 1. 启用详细日志
-```rust
-init_logging("trace", Some("logs/trace.log"))?;
-```
-
-### 2. 使用调试宏
-```rust
-#[cfg(debug_assertions)]
-{
-    println!("调试信息: {:?}", state);
-}
-```
-
-### 3. 事务追踪
-```rust
-transaction.set_meta("debug_info", "user_action_123");
-transaction.set_meta("timestamp", chrono::Utc::now().to_rfc3339());
-```
-
-## 项目结构建议
-
-```
-your-project/
-├── .cursorrules          # 从 ModuForge-RS 复制的规则
-├── Cargo.toml           # 项目配置
-├── src/
-│   ├── main.rs          # 应用入口
-│   ├── lib.rs           # 库入口
-│   ├── plugins/         # 自定义插件
-│   ├── handlers/        # 业务处理器
-│   └── config/          # 配置管理
-├── tests/              # 集成测试
-└── examples/           # 使用示例
-```
-
-## 下一步
-
-1. 阅读 ModuForge-RS 文档了解更多 API
-2. 查看示例项目学习最佳实践
-3. 根据业务需求开发自定义插件
-4. 集成到现有项目中
-
-## 获取帮助
-
-- 查看 ModuForge-RS 项目文档
-- 参考 `example-integration-project.md` 示例
-- 在项目中使用 Cursor AI 助手，它会根据规则文件提供准确的建议
-
-通过以上步骤，你的项目将能够充分利用 ModuForge-RS 的强大功能，同时 Cursor AI 助手也能为你提供准确的代码建议和架构指导。 
+## 8. 后续步骤
+1. 阅读 `architecture-overview.md` 了解整体架构。
+2. 参考 `plugin-development-guide.md` 编写业务插件。
+3. 查看 `example-integration-project.md` 获取完整骨架示例。
+4. 如需团队知识库，可直接复用 `packages/docs`（VitePress）。

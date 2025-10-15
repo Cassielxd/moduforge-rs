@@ -1,315 +1,226 @@
-# ModuForge-RS 外部项目快速设置指南
+# ModuForge-RS External Project Setup Guide
 
-## 快速开始
+This guide explains how to consume the workspace from another repository. All snippets reference crates and APIs that exist today; historical references to `moduforge-rules-*` have been removed.
 
-### 1. 选择合适的规则文件
+## 1. Copy .cursorrules templates
 
-根据项目复杂度选择合适的规则文件：
+Pick the Cursor automation template that fits your team:
 
-- **完整版本** (`.cursorrules-for-external-projects`): 适用于大型项目，包含详细的架构指南和最佳实践
-- **简化版本** (`.cursorrules-external-simple`): 适用于小型项目，包含核心集成要点
-
-### 2. 复制规则文件
+- **Full**: `.cursorrules-for-external-projects` — includes workflow guidance and architecture notes.
+- **Lightweight**: `.cursorrules-external-simple` — keeps only dependency hints and essential commands.
 
 ```bash
-# 方式1：复制完整版本
-cp path/to/moduforge-rs/.cursorrules-for-external-projects ./.cursorrules
-
-# 方式2：复制简化版本  
-cp path/to/moduforge-rs/.cursorrules-external-simple ./.cursorrules
+cp path/to/moduforge-rs/.cursorrules-for-external-projects ./your-project/.cursorrules
+# or
+cp path/to/moduforge-rs/.cursorrules-external-simple ./your-project/.cursorrules
 ```
 
-### 3. 配置项目依赖
+## 2. Configure Cargo.toml
 
-在你的 `Cargo.toml` 中添加：
+Prefer path dependencies while developing against the workspace:
 
 ```toml
 [dependencies]
-# 核心依赖
-moduforge-core = "0.4.12"
-moduforge-model = "0.4.12" 
-moduforge-state = "0.4.12"
-moduforge-transform = "0.4.12"
-moduforge-rules-engine = "0.4.12"
-moduforge-rules-expression = "0.4.12"
-moduforge-collaboration = "0.4.12"
-moduforge-template = "0.4.12"
+moduforge-core = { path = "../moduforge-rs/crates/core" }
+moduforge-model = { path = "../moduforge-rs/crates/model" }
+moduforge-state = { path = "../moduforge-rs/crates/state" }
+moduforge-transform = { path = "../moduforge-rs/crates/transform" }
 
-# 必需的支持库
-tokio = { version = "1.0", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
-im = { version = "15.1", features = ["serde"] }
+# Optional capabilities
+moduforge-file = { path = "../moduforge-rs/crates/file" }
+moduforge-persistence = { path = "../moduforge-rs/crates/persistence" }
+moduforge-search = { path = "../moduforge-rs/crates/search" }
+moduforge-collaboration = { path = "../moduforge-rs/crates/collaboration" }
+
+# Shared dependencies
+tokio = { version = "1", features = ["full"] }
 anyhow = "1"
-async-trait = "0.1"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+imbl = { version = "6", features = ["serde"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
 ```
 
-### 4. 基础代码模板
-
-创建基本的集成代码：
+## 3. Runtime scaffold
 
 ```rust
-// main.rs 或 lib.rs
-use mf_core::{ForgeResult, async_runtime::AsyncRuntime, types::RuntimeOptions};
-use mf_state::{init_logging, StateConfig};
+use anyhow::Result;
+use mf_core::{ForgeAsyncRuntime, ForgeConfig, Environment};
+use mf_core::types::{Content, NodePoolFnTrait, RuntimeOptions};
+use mf_model::{node_pool::NodePool, Attrs, Node, NodeType};
+use mf_state::init_logging;
+use mf_transform::node_step::AddNodeStep;
+use std::sync::Arc;
+
+#[derive(Debug)]
+struct DefaultPool;
+
+#[async_trait::async_trait]
+impl NodePoolFnTrait for DefaultPool {
+    async fn create(
+        &self,
+        _config: &mf_state::StateConfig,
+    ) -> mf_core::ForgeResult<NodePool> {
+        Ok(NodePool::default())
+    }
+}
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    // 初始化日志
+async fn main() -> Result<()> {
     init_logging("info", None)?;
-    
-    // 创建运行时
-    let options = RuntimeOptions::default();
-    let state_config = StateConfig::default();
-    let runtime = AsyncRuntime::new(options, state_config).await?;
-    
-    println!("ModuForge-RS 集成成功!");
+
+    let config = ForgeConfig::builder()
+        .environment(Environment::Development)
+        .build()?;
+
+    let options = RuntimeOptions::default()
+        .set_content(Content::NodePoolFn(Arc::new(DefaultPool)));
+
+    let mut runtime = ForgeAsyncRuntime::create_with_config(options, config).await?;
+
+    let doc = Node::new("doc".into(), NodeType::block("document"), Attrs::new(), None);
+    let paragraph = Node::new(
+        "p1".into(),
+        NodeType::block("paragraph"),
+        Attrs::new(),
+        Some("Hello ModuForge".into()),
+    );
+
+    let mut tr = runtime.get_state().tr();
+    tr.add_step(Box::new(AddNodeStep::new_single(doc, None)));
+    tr.add_step(Box::new(AddNodeStep::new_single(paragraph, Some("doc".into()))));
+    runtime.dispatch_flow(tr).await?;
+
+    println!("runtime ready");
     Ok(())
 }
 ```
 
-## 常见使用场景
-
-### 场景1：文本编辑器项目
+## 4. Plugins and resources
 
 ```rust
-use mf_core::{ForgeResult, async_runtime::AsyncRuntime, types::RuntimeOptions};
-use mf_state::{StateConfig, transaction::Transaction};
-use mf_transform::attr_step::AttrStep;
-use serde_json::json;
-use std::sync::Arc;
+use mf_core::{Extension, ForgeResult};
+use mf_core::types::Extensions;
+use mf_state::{plugin::Plugin, State};
 
-pub struct TextRuntime {
-    runtime: AsyncRuntime,
-}
+#[derive(Default)]
+struct AuditPlugin;
 
-impl TextRuntime {
-    pub async fn new() -> ForgeResult<Self> {
-        let options = RuntimeOptions::default();
-        let state_config = StateConfig::default();
-        let runtime = AsyncRuntime::new(options, state_config).await?;
-        Ok(Self { runtime })
-    }
-    
-    pub async fn insert_text(&mut self, node_id: &str, text: &str) -> ForgeResult<()> {
-        let mut transaction = Transaction::new();
-        
-        let mut attrs = im::HashMap::new();
-        attrs.insert("content".to_string(), json!(text));
-        
-        let step = AttrStep::new(node_id.to_string(), attrs);
-        transaction.add_step(Box::new(step));
-        
-        self.runtime.apply_transaction(transaction).await
-    }
-}
-```
-
-### 场景2：文档管理系统
-
-```rust
-use mf_state::{State, StateConfig, resource::Resource};
-use std::sync::Arc;
-
-pub struct DocumentManager {
-    state: State,
-}
-
-impl DocumentManager {
-    pub async fn new() -> anyhow::Result<Self> {
-        let config = StateConfig::default();
-        let state = State::new(config).await?;
-        Ok(Self { state })
-    }
-    
-    pub async fn create_document(&mut self, title: &str) -> anyhow::Result<()> {
-        let mut transaction = Transaction::new();
-        transaction.set_meta("action", "create_document");
-        transaction.set_meta("title", title);
-        
-        // 应用事务到状态
-        self.state.apply(transaction).await?;
+#[async_trait::async_trait]
+impl Plugin for AuditPlugin {
+    async fn on_transaction_applied(
+        &self,
+        state: &State,
+        description: &str,
+    ) -> ForgeResult<()> {
+        tracing::info!(target: "audit", %description, node_count = state.doc().size());
         Ok(())
     }
 }
-```
 
-### 场景3：协作编辑平台
-
-```rust
-use mf_core::{async_runtime::AsyncRuntime, types::RuntimeOptions};
-use mf_state::{StateConfig, transaction::Transaction};
-use mf_collaboration::{sync_service::SyncService, ws_server::WebSocketServer};
-
-pub struct CollaborativeRuntime {
-    runtime: AsyncRuntime,
-    sync_service: SyncService,
-}
-
-impl CollaborativeRuntime {
-    pub async fn new() -> ForgeResult<Self> {
-        let options = RuntimeOptions::default();
-        let state_config = StateConfig::default();
-        let runtime = AsyncRuntime::new(options, state_config).await?;
-        let sync_service = SyncService::new();
-        
-        Ok(Self { runtime, sync_service })
-    }
-    
-    pub async fn handle_remote_change(&mut self, change_data: Vec<u8>) -> ForgeResult<()> {
-        // 处理远程协作变更
-        let transaction = self.sync_service.decode_change(change_data)?;
-        self.runtime.apply_transaction(transaction).await
-    }
+pub fn audit_extension() -> Extensions {
+    Extensions::E(Extension::new_plugin("audit", Box::new(AuditPlugin::default())))
 }
 ```
 
-## 验证设置
-
-创建一个简单的测试来验证集成：
+Register extensions when building `RuntimeOptions`:
 
 ```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use mf_state::{State, StateConfig};
+let options = RuntimeOptions::default()
+    .set_content(Content::NodePoolFn(Arc::new(DefaultPool)))
+    .add_extension(audit_extension());
+```
 
-    #[tokio::test]
-    async fn test_integration() {
-        let config = StateConfig::default();
-        let state = State::new(config).await.unwrap();
-        
-        // 验证状态创建成功
-        assert!(state.version() > 0);
-        println!("✅ ModuForge-RS 集成测试通过");
-    }
+## 5. Persistence and search
+
+```rust
+use mf_persistence::{
+    api::{CommitMode, PersistOptions},
+    sqlite::SqliteEventStore,
+};
+
+let store = SqliteEventStore::open(
+    "./data/app.db",
+    CommitMode::AsyncDurable { group_window_ms: 8 },
+)?;
+let persist_options = PersistOptions {
+    commit_mode: CommitMode::AsyncDurable { group_window_ms: 8 },
+    snapshot_every_n_events: 200,
+    snapshot_every_bytes: 4 * 1024 * 1024,
+    snapshot_every_ms: 60_000,
+    compression: true,
+};
+// Convert transactions into PersistedEvent values, then call store.append_batch(events).await?
+```
+
+```rust
+use mf_search::{create_tantivy_service, IndexEvent, RebuildScope};
+use std::{path::PathBuf, sync::Arc};
+
+async fn rebuild_index(pool: Arc<mf_model::node_pool::NodePool>) -> anyhow::Result<()> {
+    let dir = PathBuf::from("./data/index");
+    let service = create_tantivy_service(&dir)?;
+    service
+        .handle(IndexEvent::Rebuild { pool, scope: RebuildScope::Full })
+        .await
 }
 ```
 
-运行测试：
-```bash
-cargo test test_integration
-```
-
-## 常见问题解决
-
-### 问题1：依赖版本冲突
-
-```bash
-# 清理依赖
-cargo clean
-
-# 更新依赖
-cargo update
-
-# 检查依赖树
-cargo tree
-```
-
-### 问题2：编译错误
-
-确保所有必需的特性已启用：
-
-```toml
-[dependencies]
-tokio = { version = "1.0", features = ["full"] }
-serde = { version = "1.0", features = ["derive", "rc"] }
-im = { version = "15.1", features = ["serde"] }
-```
-
-### 问题3：运行时错误
-
-检查日志配置和异步运行时设置：
+## 6. Collaboration server
 
 ```rust
-// 确保正确初始化日志
-init_logging("debug", Some("logs/debug.log"))?;
+use mf_collab::{CollaborationServer, YrsManager};
+use std::sync::Arc;
 
-// 检查运行时配置
-let mut options = RuntimeOptions::default();
-options.set_debug_mode(true);
-```
-
-## 性能优化建议
-
-### 1. 使用不可变数据结构
-```rust
-use im::{HashMap, Vector};
-
-// 优先使用 im 集合
-let mut data: HashMap<String, String> = HashMap::new();
-data.insert("key".to_string(), "value".to_string());
-```
-
-### 2. 批量操作
-```rust
-// 批量处理事务
-let mut transaction = Transaction::new();
-for change in changes {
-    transaction.add_step(Box::new(change));
-}
-runtime.apply_transaction(transaction).await?;
-```
-
-### 3. 异步并发
-```rust
-// 并发处理多个任务
-let tasks: Vec<_> = documents.into_iter()
-    .map(|doc| tokio::spawn(process_document(doc)))
-    .collect();
-
-for task in tasks {
-    task.await??;
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt::init();
+    CollaborationServer::new(Arc::new(YrsManager::new()), 3030)
+        .start()
+        .await;
+    Ok(())
 }
 ```
 
-## 调试技巧
-
-### 1. 启用详细日志
-```rust
-init_logging("trace", Some("logs/trace.log"))?;
-```
-
-### 2. 使用调试宏
-```rust
-#[cfg(debug_assertions)]
-{
-    println!("调试信息: {:?}", state);
-}
-```
-
-### 3. 事务追踪
-```rust
-transaction.set_meta("debug_info", "user_action_123");
-transaction.set_meta("timestamp", chrono::Utc::now().to_rfc3339());
-```
-
-## 项目结构建议
+## 7. Suggested project layout
 
 ```
 your-project/
-├── .cursorrules          # 从 ModuForge-RS 复制的规则
-├── Cargo.toml           # 项目配置
+├── .cursorrules
+├── Cargo.toml
 ├── src/
-│   ├── main.rs          # 应用入口
-│   ├── lib.rs           # 库入口
-│   ├── plugins/         # 自定义插件
-│   ├── handlers/        # 业务处理器
-│   └── config/          # 配置管理
-├── tests/              # 集成测试
-└── examples/           # 使用示例
+│   ├── main.rs
+│   ├── runtime/
+│   ├── plugins/
+│   └── services/
+├── tests/
+└── README.md
 ```
 
-## 下一步
+## 8. Common commands
 
-1. 阅读 ModuForge-RS 文档了解更多 API
-2. 查看示例项目学习最佳实践
-3. 根据业务需求开发自定义插件
-4. 集成到现有项目中
+```bash
+cargo fmt
+cargo clippy --workspace --all-targets
+cargo test --workspace
+```
 
-## 获取帮助
+Workspace tooling:
 
-- 查看 ModuForge-RS 项目文档
-- 参考 `example-integration-project.md` 示例
-- 在项目中使用 Cursor AI 助手，它会根据规则文件提供准确的建议
+```bash
+# Tauri + Vue demo
+cargo run --manifest-path ../moduforge-rs/examples/demo/Cargo.toml
 
-通过以上步骤，你的项目将能够充分利用 ModuForge-RS 的强大功能，同时 Cursor AI 助手也能为你提供准确的代码建议和架构指导。 
+# Documentation site
+cd ../moduforge-rs/packages/docs && pnpm install && pnpm dev
+```
+
+## 9. Further reading
+
+1. [architecture-overview.md](../architecture-overview.md) — layered architecture summary.
+2. [plugin-development-guide.md](../plugin-development-guide.md) — advanced plugin patterns.
+3. [example-integration-project.md](../example-integration-project.md) — complete skeleton with persistence/search/collaboration.
+4. `packages/docs` — VitePress site that can be reused as a project knowledge base.
+
+Following these steps you can confidently integrate ModuForge-RS into your own project.
