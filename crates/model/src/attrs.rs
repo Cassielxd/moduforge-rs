@@ -4,7 +4,7 @@ use imbl::HashMap;
 use serde::{Deserialize, Serialize, Deserializer, Serializer};
 use serde_json::Value;
 //pub type Attrs = HashMap<String, Value>;
-
+/// 节点属性
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Attrs {
     pub attrs: HashMap<String, Value>,

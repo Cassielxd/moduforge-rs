@@ -9,7 +9,7 @@ use imbl::HashMap as ImHashMap;
 use mf_model::{schema::Schema, tree::Tree, types::NodeId};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value};
-
+/// 节点属性变更步骤
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AttrStep {
     pub id: NodeId,
