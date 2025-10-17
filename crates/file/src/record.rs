@@ -102,6 +102,9 @@ impl Writer {
         &mut self,
         payload: &[u8],
     ) -> Result<u64> {
+        if payload.is_empty() {
+            return Err(FileError::EmptyRecord);
+        }
         if payload.len() > (u32::MAX as usize) {
             return Err(FileError::RecordTooLarge(payload.len()));
         }
@@ -182,8 +185,9 @@ impl Reader {
         &self,
         offset: u64,
     ) -> Result<&[u8]> {
-        let end = self.logical_end as usize;
-        let p = offset as usize;
+        let end = usize::try_from(self.logical_end)
+            .map_err(|_| FileError::BadHeader)?;
+        let p = usize::try_from(offset).map_err(|_| FileError::BadHeader)?;
         if p + REC_HDR > end {
             return Err(FileError::BadHeader);
         }
@@ -266,4 +270,25 @@ pub fn scan_logical_end(mmap: &Mmap) -> Result<u64> {
         p = e;
     }
     Ok(p as u64)
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn reject_zero_length_records() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("zero.mff");
+
+        let mut writer = Writer::create(&path, 0).unwrap();
+        let err = writer.append(&[]).unwrap_err();
+        assert!(matches!(err, FileError::EmptyRecord));
+        writer.flush().unwrap();
+        drop(writer);
+
+        let reader = Reader::open(&path).unwrap();
+        assert_eq!(reader.logical_len(), HEADER_LEN as u64);
+        assert_eq!(reader.iter().count(), 0);
+    }
 }

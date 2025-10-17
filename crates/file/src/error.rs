@@ -8,6 +8,8 @@ pub enum FileError {
     BadHeader,
     #[error("记录过大: {0}")]
     RecordTooLarge(usize),
+    #[error("记录为空")]
+    EmptyRecord,
     #[error("CRC 校验失败，偏移量 {0}")]
     CrcMismatch(u64),
 }
