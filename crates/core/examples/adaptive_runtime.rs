@@ -8,7 +8,7 @@
 
 use mf_core::{
     AdaptiveRuntimeSelector, ForgeRuntimeBuilder, RuntimeType, SystemResources,
-    ForgeResult, RuntimeTrait,
+    ForgeResult,
 };
 
 #[tokio::main]
