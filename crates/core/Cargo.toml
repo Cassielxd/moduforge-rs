@@ -1,13 +1,13 @@
 [package]
 name = "moduforge-core"
-version = {workspace=true}
-edition = {workspace=true}
+version = { workspace = true }
+edition = { workspace = true }
 description = "moduforge 核心模块"
-authors = {workspace=true}
-license = {workspace=true}
-documentation = {workspace=true}
-homepage = {workspace=true}
-repository = {workspace=true}
+authors = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 [lib]
 name = "mf_core"
 path = "src/lib.rs"
@@ -15,13 +15,13 @@ path = "src/lib.rs"
 
 
 [dependencies]
-tokio = { workspace=true }
-async-channel= {workspace=true}
-anyhow= {workspace=true}
-thiserror = { workspace=true }
-serde = { workspace=true }
-serde_json = {workspace=true}
-async-trait= {workspace=true}
+tokio = { workspace = true }
+async-channel = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
 moduforge-model = { workspace = true }
 moduforge-state = { workspace = true }
 moduforge-transform = { workspace = true }
@@ -29,11 +29,9 @@ metrics = "0.22.0"
 arc-swap = "1.6"
 dashmap = { workspace = true }
 quick-xml = { workspace = true }
-bincode = "1.3"
-tempfile ={ workspace = true }
-once_cell = { workspace = true }
+
 ractor = { version = "0.15.8", features = ["async-trait"] }
-sysinfo = "0.30"
+sysinfo = { workspace = true }
 num_cpus = "1.16"
 
 [features]
@@ -43,9 +41,6 @@ default = ["debug-logs"]
 
 [dev-dependencies]
 criterion = { workspace = true }
-futures = { workspace = true }
-tempfile = { workspace = true }
-tokio-test = "0.4"
 rand = "0.8"
 
 
