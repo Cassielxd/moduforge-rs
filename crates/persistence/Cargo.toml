@@ -1,13 +1,13 @@
 [package]
 name = "moduforge-persistence"
-version = {workspace=true}
-edition = {workspace=true}
+version = { workspace = true }
+edition = { workspace = true }
 description = "moduforge 持久化"
-authors = {workspace=true}
-license = {workspace=true}
-documentation = {workspace=true}
-homepage = {workspace=true}
-repository = {workspace=true}
+authors = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 [lib]
 name = "mf_persistence"
 path = "src/lib.rs"
@@ -24,7 +24,9 @@ uuid = { workspace = true, features = ["v4", "serde"] }
 zstd = "0.13"
 crc32fast = "1.4"
 time = { version = "0.3", features = ["formatting"] }
-rusqlite = { version = "0.34.0", features = ["bundled", "chrono", "serde_json"] }
+rusqlite = { version = "0.37.0", features = ["bundled", "chrono", "serde_json"] }
+r2d2 = "0.8"
+r2d2_sqlite = "0.31.0"
 tokio-util = { version = "0.7", features = ["rt"] }
 chrono = { workspace = true }
 

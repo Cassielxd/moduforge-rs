@@ -8,15 +8,15 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use parking_lot::Mutex;
-use rusqlite::{params, Connection, TransactionBehavior};
-
+use rusqlite::{params, TransactionBehavior};
+use r2d2::Pool;
+use r2d2_sqlite::SqliteConnectionManager;
 use crate::api::{CommitMode, EventStore, PersistedEvent, Snapshot};
 
 /// `EventStore` 的 SQLite 具体实现。
 pub struct SqliteEventStore {
     _db_path: PathBuf,
-    conn: Mutex<Connection>,
+    pool: Pool<SqliteConnectionManager>,
     commit_mode: CommitMode,
 }
 
@@ -33,11 +33,9 @@ impl SqliteEventStore {
                 std::fs::create_dir_all(parent)?;
             }
         }
-        let conn = Connection::open(&db_path)?;
-        conn.pragma_update(None, "journal_mode", "WAL")?;
-        conn.pragma_update(None, "synchronous", "NORMAL")?;
-        conn.pragma_update(None, "busy_timeout", 5000i64)?;
-        conn.execute_batch(
+        let manager = SqliteConnectionManager::file(&db_path);
+        let pool = Pool::new(manager)?;
+        pool.get()?.execute_batch(
             r#"
             CREATE TABLE IF NOT EXISTS events (
               lsn INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,11 +62,7 @@ impl SqliteEventStore {
             "#,
         )?;
 
-        Ok(Arc::new(Self {
-            _db_path: db_path,
-            conn: Mutex::new(conn),
-            commit_mode,
-        }))
+        Ok(Arc::new(Self { _db_path: db_path, pool, commit_mode }))
     }
 }
 
@@ -79,7 +73,7 @@ impl EventStore for SqliteEventStore {
         &self,
         ev: PersistedEvent,
     ) -> anyhow::Result<i64> {
-        let mut conn = self.conn.lock();
+        let mut conn = self.pool.get()?;
         let tx =
             conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
         tx.execute(
@@ -111,7 +105,7 @@ impl EventStore for SqliteEventStore {
         if evs.is_empty() {
             return Ok(0);
         }
-        let mut conn = self.conn.lock();
+        let mut conn = self.pool.get()?;
         let tx =
             conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
         {
@@ -141,7 +135,7 @@ impl EventStore for SqliteEventStore {
         from_lsn: i64,
         limit: u32,
     ) -> anyhow::Result<Vec<PersistedEvent>> {
-        let conn = self.conn.lock();
+        let conn = self.pool.get()?;
         let mut stmt = conn.prepare("SELECT lsn, tr_id, doc_id, ts, actor, idempotency_key, meta, payload, checksum FROM events WHERE doc_id = ?1 AND lsn > ?2 ORDER BY lsn ASC LIMIT ?3")?;
         let rows =
             stmt.query_map(params![doc_id, from_lsn, limit as i64], |row| {
@@ -176,7 +170,7 @@ impl EventStore for SqliteEventStore {
         &self,
         doc_id: &str,
     ) -> anyhow::Result<Option<Snapshot>> {
-        let conn = self.conn.lock();
+        let conn = self.pool.get()?;
         let mut stmt = conn.prepare("SELECT doc_id, upto_lsn, created_at, state_blob, version FROM snapshots WHERE doc_id = ?1 ORDER BY created_at DESC LIMIT 1")?;
         let mut rows = stmt.query(params![doc_id])?;
         if let Some(row) = rows.next()? {
@@ -197,7 +191,7 @@ impl EventStore for SqliteEventStore {
         &self,
         snap: Snapshot,
     ) -> anyhow::Result<()> {
-        let mut conn = self.conn.lock();
+        let mut conn = self.pool.get()?;
         let tx =
             conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
         tx.execute(
@@ -213,7 +207,7 @@ impl EventStore for SqliteEventStore {
         &self,
         doc_id: &str,
     ) -> anyhow::Result<()> {
-        let conn = self.conn.lock();
+        let conn = self.pool.get()?;
         // 删除最老的事件到最近快照
         let upto: Option<i64> = conn.query_row(
             "SELECT upto_lsn FROM snapshots WHERE doc_id = ?1 ORDER BY upto_lsn DESC LIMIT 1",
