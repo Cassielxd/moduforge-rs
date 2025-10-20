@@ -809,7 +809,7 @@ impl<'a> QueryEngine<'a> {
 
 impl NodePool {
     /// 创建查询引擎实例
-    pub fn query(&self) -> QueryEngine {
+    pub fn query(&self) -> QueryEngine<'_> {
         QueryEngine::new(self)
     }
 }

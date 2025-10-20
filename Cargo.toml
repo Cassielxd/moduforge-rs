@@ -26,6 +26,7 @@ tracing = "0.1"
 futures-util = "0.3"
 yrs-warp = "0.8.0"
 yrs = "0.18.2"
+
 tokio-tungstenite = "0.21.0"
 
 ctor = "0.4.2"
@@ -56,51 +57,30 @@ lru = "0.14.0"
 # 锁
 parking_lot = "0.12"
 url = { version = "2.5", features = ["serde", "expose_internals"] }
-urlpattern = "0.3.0"
 # 哈希
 ahash = "0.8"
-rust_decimal = "1"
-rust_decimal_macros = "1"
-# 路径处理
-json_dotpath = "1"
 # 单次初始化
 once_cell = "1"
 # 图
 petgraph = "0.8"
 # 性能测试
 criterion = "0.5"
-# 内存分配
-bumpalo = "3"
-# 随机数
-fastrand = "2"
-# 时间处理
-humantime = "0.1.2"
-# 递归 处理
-recursive = "0.1"
-# 正则
-regex = "1"
-
-# 正则
-regex-lite = "0.1"
-# 枚举
-strum = "0.27"
-strum_macros = "0.27"
 
 # XML 解析依赖
 quick-xml = { version = "0.36", features = ["serialize"] }
 
 #crates 下所有的库
-moduforge-core = { version = "0.5.0", path = "crates/core" }
-moduforge-state = { version = "0.5.0", path = "crates/state" }
-moduforge-model = { version = "0.5.0", path = "crates/model" }
-moduforge-transform = { version = "0.5.0", path = "crates/transform" }
-moduforge-file = { version = "0.5.0", path = "crates/file" }
-moduforge-persistence = { version = "0.5.0", path = "crates/persistence" }
-moduforge-search = { version = "0.5.0", path = "crates/search" }
-moduforge-macros = { version = "0.5.0", path = "crates/macro" }
-moduforge-macros-derive = { version = "0.5.0", path = "crates/derive" }
-moduforge-collaboration = { version = "0.5.0", path = "crates/collaboration" }
-moduforge-collaboration-client = { version = "0.5.0", path = "crates/collaboration_client" }
+moduforge-core = { version = "0.5.2", path = "crates/core" }
+moduforge-state = { version = "0.5.2", path = "crates/state" }
+moduforge-model = { version = "0.5.2", path = "crates/model" }
+moduforge-transform = { version = "0.5.2", path = "crates/transform" }
+moduforge-file = { version = "0.5.2", path = "crates/file" }
+moduforge-persistence = { version = "0.5.2", path = "crates/persistence" }
+moduforge-search = { version = "0.5.2", path = "crates/search" }
+moduforge-macros = { version = "0.5.2", path = "crates/macro" }
+moduforge-macros-derive = { version = "0.5.2", path = "crates/derive" }
+moduforge-collaboration = { version = "0.5.2", path = "crates/collaboration" }
+moduforge-collaboration-client = { version = "0.5.2", path = "crates/collaboration_client" }
 
 
 
