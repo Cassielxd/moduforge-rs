@@ -29,9 +29,10 @@ pub mod mark;
 //属性定义
 pub mod attrs;
 //标记类型定义
-pub mod mark_type;
+pub mod mark_definition;
 //节点类型定义
-pub mod node_type;
+pub mod node_definition;
+pub mod node_factory;
 //模式定义
 pub mod schema;
 //内容匹配定义
@@ -57,6 +58,7 @@ pub use node_pool::NodePool;
 pub use ops::*;
 pub use tree::Tree;
 pub use types::*;
-pub use mark_type::MarkType;
-pub use node_type::NodeType;
+pub use mark_definition::MarkDefinition;
+pub use node_definition::NodeDefinition;
 pub use schema::Schema;
+pub use node_factory::NodeFactory;

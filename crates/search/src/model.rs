@@ -1,5 +1,5 @@
 use mf_model::{
-    mark::Mark, node::Node, node_type::NodeTree, node_pool::NodePool,
+    mark::Mark, node::Node, node_definition::NodeTree, node_pool::NodePool,
     types::NodeId,
 };
 use std::sync::Arc;

@@ -7,7 +7,9 @@ use axum::{
     Json, Router,
 };
 use mf_core::{types::NodePoolFnTrait, ForgeResult};
-use mf_model::{id_generator::IdGenerator, node::Node, node_pool::NodePool, NodeId};
+use mf_model::{
+    id_generator::IdGenerator, node::Node, node_pool::NodePool, NodeId,
+};
 use mf_state::StateConfig;
 use serde::Deserialize;
 use serde_json::Value;
@@ -60,13 +62,14 @@ impl NodePoolFnTrait for GcxmPost {
     ) -> ForgeResult<NodePool> {
         let schema = config.schema.clone().unwrap();
 
-        let res = schema.top_node_type.clone().unwrap().create_and_fill(
+        let factory = schema.factory();
+        let attrs = self.to_attr_map();
+        let res = factory.create_top_node(
             self.id.clone(),
-            Some(&self.to_attr_map()),
+            Some(&attrs),
             vec![],
             None,
-            &schema,
-        );
+        )?;
         Ok(NodePool::from(res).as_ref().clone())
     }
 }

@@ -38,7 +38,7 @@ impl ExtensionManagerBuilder {
     /// # 示例
     /// ```rust
     /// use mf_core::{ExtensionManagerBuilder, types::Extensions, node::Node};
-    /// use mf_model::node_type::NodeSpec;
+    /// use mf_model::node_definition::NodeSpec;
     ///
     /// let node = Node::create("custom_node", NodeSpec::default());
     /// let manager = ExtensionManagerBuilder::new()
@@ -469,8 +469,8 @@ mod tests {
     fn test_extension_manager_builder_mixed_sources() {
         use crate::node::Node;
         use crate::mark::Mark;
-        use mf_model::node_type::NodeSpec;
-        use mf_model::mark_type::MarkSpec;
+        use mf_model::node_definition::NodeSpec;
+        use mf_model::mark_definition::MarkSpec;
 
         // 创建代码定义的扩展
         let code_node = Node::create("code_node", NodeSpec::default());

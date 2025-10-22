@@ -2,7 +2,7 @@ use crate::backend::IndexMutation;
 use crate::model::IndexDoc;
 use crate::step_registry::{global_registry, StepIndexContext};
 use mf_model::NodeId;
-use mf_model::{node_pool::NodePool, node_type::NodeTree};
+use mf_model::{node_pool::NodePool, node_definition::NodeTree};
 use mf_transform::step::Step;
 use mf_transform::{
     attr_step::AttrStep,

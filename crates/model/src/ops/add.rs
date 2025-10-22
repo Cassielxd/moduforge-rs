@@ -7,7 +7,7 @@ use crate::{
     error::{PoolResult},
     mark::Mark,
     node::Node,
-    node_type::NodeTree,
+    node_definition::NodeTree,
 };
 
 use super::{AttrsRef, MarkRef, NodeRef};

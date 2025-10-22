@@ -5,7 +5,7 @@ use criterion::{
 use mf_model::node_pool::{
     NodePool, QueryCacheConfig, LazyQueryConfig, QueryCondition,
 };
-use mf_model::{Node, Attrs, node_type::NodeTree};
+use mf_model::{Node, Attrs, node_definition::NodeTree};
 use std::sync::Arc;
 
 /// 创建大规模节点池用于测试

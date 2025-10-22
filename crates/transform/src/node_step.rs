@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use mf_model::{node_type::NodeTree, schema::Schema, tree::Tree, types::NodeId};
+use mf_model::{
+    node_definition::NodeTree, schema::Schema, tree::Tree, types::NodeId,
+};
 
 use crate::transform_error;
 
@@ -201,7 +203,7 @@ mod tests {
     use super::*;
     use mf_model::{
         node::Node,
-        node_type::{NodeTree, NodeSpec},
+        node_definition::{NodeTree, NodeSpec},
         schema::{Schema, SchemaSpec},
         tree::Tree,
         attrs::Attrs,

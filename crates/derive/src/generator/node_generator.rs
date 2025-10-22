@@ -119,7 +119,7 @@ impl<'a> NodeGenerator<'a> {
     /// impl StructName {
     ///     pub fn node_definition() -> mf_core::node::Node {
     ///         // 导入必要的类型
-    ///         use mf_model::node_type::NodeSpec;
+    ///         use mf_model::node_definition::NodeSpec;
     ///         use std::collections::HashMap;
     ///         use serde_json::Value as JsonValue;
     ///         
@@ -260,7 +260,7 @@ impl<'a> NodeGenerator<'a> {
         let spec_code = quote! {
             #attrs_code
 
-            let spec = mf_model::node_type::NodeSpec {
+            let spec = mf_model::node_definition::NodeSpec {
                 content: #content,
                 marks: #marks,
                 attrs,

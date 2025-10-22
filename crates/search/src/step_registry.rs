@@ -121,7 +121,7 @@ where
 use mf_transform::attr_step::AttrStep;
 use mf_transform::mark_step::{AddMarkStep, RemoveMarkStep};
 use mf_transform::node_step::{AddNodeStep, RemoveNodeStep, MoveNodeStep};
-use mf_model::node_type::NodeTree;
+use mf_model::node_definition::NodeTree;
 use serde::Deserialize;
 
 #[derive(Default)]

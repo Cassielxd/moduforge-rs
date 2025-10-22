@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use mf_model::mark::Mark;
-use mf_model::node_type::NodeTree;
+use mf_model::node_definition::NodeTree;
 use mf_model::types::NodeId;
 use mf_transform::TransformResult;
 use serde_json::Value;

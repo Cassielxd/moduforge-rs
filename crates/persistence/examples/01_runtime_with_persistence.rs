@@ -50,8 +50,8 @@ async fn main() -> ForgeResult<()> {
     let mut tr = editor.get_tr();
     let schema = &tr.schema;
     // 依赖 main.xml 中定义的 <node name="dwgc" ...>
-    let dw_node =
-        schema.nodes["dwgc"].create_and_fill(None, None, vec![], None, schema);
+    let factory = schema.factory();
+    let dw_node = factory.create_tree("dwgc", None, None, vec![], None)?;
     tr.add_node(doc.root_id().clone(), vec![dw_node])?;
     editor.dispatch(tr).await?;
     // 睡眠五秒，等待持久化与快照

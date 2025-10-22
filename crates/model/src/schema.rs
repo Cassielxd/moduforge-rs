@@ -3,8 +3,9 @@ use crate::error::PoolResult;
 
 use super::attrs::Attrs;
 use super::content::ContentMatch;
-use super::mark_type::{MarkSpec, MarkType};
-use super::node_type::{NodeSpec, NodeType};
+use super::mark_definition::{MarkDefinition, MarkSpec};
+use super::node_definition::{NodeDefinition, NodeSpec};
+use crate::node_factory::NodeFactory;
 use serde::Serialize;
 use serde_json::Value;
 use std::any::Any;
@@ -39,13 +40,13 @@ pub struct Schema {
     /// Schema 的规范定义
     pub spec: SchemaSpec,
     /// 顶级节点类型
-    pub top_node_type: Option<NodeType>,
+    pub top_node_type: Option<NodeDefinition>,
     /// 全局缓存
     pub cached: Arc<Mutex<HashMap<String, Arc<dyn Any + Send + Sync>>>>,
     /// 节点类型映射表
-    pub nodes: HashMap<String, NodeType>,
+    pub nodes: HashMap<String, NodeDefinition>,
     /// 标记类型映射表
-    pub marks: HashMap<String, MarkType>,
+    pub marks: HashMap<String, MarkDefinition>,
 }
 impl PartialEq for Schema {
     fn eq(
@@ -82,13 +83,16 @@ impl Schema {
             marks: HashMap::new(),
         }
     }
+    pub fn factory(&self) -> NodeFactory<'_> {
+        NodeFactory::new(self)
+    }
     /// 编译 Schema 定义
     /// 处理节点和标记的定义，建立它们之间的关系
     pub fn compile(instance_spec: SchemaSpec) -> PoolResult<Schema> {
         let mut schema: Schema = Schema::new(instance_spec);
-        let nodes: HashMap<String, NodeType> =
-            NodeType::compile(schema.spec.nodes.clone());
-        let marks = MarkType::compile(schema.spec.marks.clone());
+        let nodes: HashMap<String, NodeDefinition> =
+            NodeDefinition::compile(schema.spec.nodes.clone());
+        let marks = MarkDefinition::compile(schema.spec.marks.clone());
         let mut content_expr_cache = HashMap::new();
         let mut updated_nodes = HashMap::new();
         for (prop, type_) in &nodes {
@@ -178,9 +182,9 @@ pub struct AttributeSpec {
 /// 收集标记类型
 /// 根据给定的标记名称列表，收集对应的标记类型
 fn gather_marks<'a>(
-    marks_map: &'a HashMap<String, MarkType>,
+    marks_map: &'a HashMap<String, MarkDefinition>,
     marks: Vec<&'a str>,
-) -> Result<Vec<&'a MarkType>, String> {
+) -> Result<Vec<&'a MarkDefinition>, String> {
     let mut found = Vec::new();
 
     for name in marks {

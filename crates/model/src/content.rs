@@ -6,18 +6,18 @@ use std::cmp::Ordering;
 use crate::error::PoolResult;
 
 use super::node::Node;
-use super::node_type::NodeType;
+use super::node_definition::NodeDefinition;
 use super::schema::Schema;
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct MatchEdge {
-    pub node_type: NodeType,
+    pub node_type: NodeDefinition,
     pub next: ContentMatch,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct ContentMatch {
     pub next: Vec<MatchEdge>,
-    pub wrap_cache: Vec<Option<NodeType>>,
+    pub wrap_cache: Vec<Option<NodeDefinition>>,
     pub valid_end: bool,
 }
 impl Ord for ContentMatch {
@@ -41,7 +41,7 @@ impl PartialOrd for ContentMatch {
 impl ContentMatch {
     pub fn parse(
         str: String,
-        nodes: &HashMap<String, NodeType>,
+        nodes: &HashMap<String, NodeDefinition>,
     ) -> ContentMatch {
         let mut stream = TokenStream::new(str, nodes.clone());
         if stream.next().is_none() {
@@ -63,7 +63,7 @@ impl ContentMatch {
 
     pub fn match_type(
         &self,
-        node_type: &NodeType,
+        node_type: &NodeDefinition,
     ) -> Option<&ContentMatch> {
         self.next
             .iter()
@@ -145,7 +145,7 @@ impl ContentMatch {
         search(&mut seen, to_end, after, self, &mut Vec::new(), schema)
     }
 
-    pub fn default_type(&self) -> Option<&NodeType> {
+    pub fn default_type(&self) -> Option<&NodeDefinition> {
         self.next
             .iter()
             .find(|edge| !edge.node_type.has_required_attrs())
@@ -230,14 +230,14 @@ impl fmt::Display for ContentMatch {
 pub struct TokenStream {
     pos: usize,
     tokens: Vec<String>,
-    node_types: HashMap<String, NodeType>,
+    node_types: HashMap<String, NodeDefinition>,
     string: String,
 }
 
 impl TokenStream {
     pub fn new(
         string: String,
-        node_types: HashMap<String, NodeType>,
+        node_types: HashMap<String, NodeDefinition>,
     ) -> Self {
         let mut tokens = Vec::new();
         let mut current_token = String::new();
@@ -301,7 +301,7 @@ enum Expr {
     Star { expr: Box<Expr> },
     Opt { expr: Box<Expr> },
     Range { min: usize, max: isize, expr: Box<Expr> },
-    Name { value: Box<NodeType> },
+    Name { value: Box<NodeDefinition> },
 }
 fn parse_expr(stream: &mut TokenStream) -> Expr {
     let mut exprs = Vec::new();
@@ -372,7 +372,7 @@ fn parse_expr_range(
 fn resolve_name(
     stream: &TokenStream,
     name: &str,
-) -> Vec<NodeType> {
+) -> Vec<NodeDefinition> {
     let types = &stream.node_types;
     if let Some(type_) = types.get(name) {
         return vec![type_.clone()];
@@ -418,7 +418,7 @@ fn parse_expr_atom(stream: &mut TokenStream) -> Expr {
 }
 #[derive(Debug, Clone)]
 pub struct Edge {
-    term: Option<NodeType>,
+    term: Option<NodeDefinition>,
     to: Option<usize>,
 }
 fn dfa(nfa: Vec<Vec<Rc<RefCell<Edge>>>>) -> ContentMatch {
@@ -429,7 +429,7 @@ fn dfa(nfa: Vec<Vec<Rc<RefCell<Edge>>>>) -> ContentMatch {
         nfa: &Vec<Vec<Rc<RefCell<Edge>>>>,
         labeled: &mut HashMap<String, ContentMatch>,
     ) -> ContentMatch {
-        let mut out: Vec<(NodeType, Vec<usize>)> = Vec::new();
+        let mut out: Vec<(NodeDefinition, Vec<usize>)> = Vec::new();
         for &node in &states {
             for edge in &nfa[node] {
                 if edge.borrow().term.is_none() {
@@ -532,7 +532,7 @@ fn node(nfa: &mut Vec<Vec<Rc<RefCell<Edge>>>>) -> usize {
 fn edge(
     from: usize,
     to: Option<usize>,
-    term: Option<NodeType>,
+    term: Option<NodeDefinition>,
     nfa: &mut [Vec<Rc<RefCell<Edge>>>],
 ) -> Rc<RefCell<Edge>> {
     let edge =
@@ -629,7 +629,7 @@ fn compile(
 mod tests {
     use super::*;
     use crate::schema::{Schema, SchemaSpec};
-    use crate::node_type::NodeSpec;
+    use crate::node_definition::NodeSpec;
     use std::collections::HashMap;
 
     #[test]

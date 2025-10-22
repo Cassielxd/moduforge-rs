@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use mf_model::{node_type::NodeSpec, schema::AttributeSpec};
+use mf_model::{node_definition::NodeSpec, schema::AttributeSpec};
 use serde_json::Value;
 #[derive(Clone, PartialEq, Debug, Eq, Default)]
 pub struct Node {

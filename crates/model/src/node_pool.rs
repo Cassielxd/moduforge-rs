@@ -1,5 +1,5 @@
 use crate::error::PoolResult;
-use crate::{node_type::NodeTree, tree::Tree};
+use crate::{node_definition::NodeTree, tree::Tree};
 
 use super::{error::error_helpers, node::Node, types::NodeId};
 use serde::{Deserialize, Serialize};

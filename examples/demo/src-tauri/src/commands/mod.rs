@@ -59,18 +59,18 @@ pub trait ShareCommand: Command {
         if tr.doc().get_node(&data.parent_id.clone()).is_none() {
             return Err(anyhow::anyhow!("目标节点不存在".to_string()));
         }
-        if let Some(node_type) = tr.schema.nodes.get(&data.r#type) {
-            let nodes = node_type.create_and_fill(
-                data.id.clone(),
-                Some(&data.attrs.clone().unwrap_or_default()),
-                vec![],
-                None,
-                &tr.schema,
-            );
-            tr.add_node(data.parent_id.clone(), vec![nodes])?;
-        } else {
+        if tr.schema.nodes.get(&data.r#type).is_none() {
             return Err(anyhow::anyhow!("节点类型不存在".to_string()));
         }
+        let factory = tr.schema.factory();
+        let nodes = factory.create_tree(
+            &data.r#type,
+            data.id.clone(),
+            data.attrs.as_ref(),
+            vec![],
+            None,
+        )?;
+        tr.add_node(data.parent_id.clone(), vec![nodes])?;
         Ok(())
     }
     /// 删除节点

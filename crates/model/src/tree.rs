@@ -10,7 +10,7 @@ use dashmap::DashMap;
 use ahash::{AHasher, RandomState};
 use std::fmt::{self, Debug};
 use crate::error::PoolResult;
-use crate::node_type::NodeTree;
+use crate::node_definition::NodeTree;
 use crate::{
     error::error_helpers,
     mark::Mark,

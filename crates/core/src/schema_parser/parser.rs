@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use mf_model::{
-    mark_type::MarkSpec,
-    node_type::NodeSpec,
+    mark_definition::MarkSpec,
+    node_definition::NodeSpec,
     schema::{AttributeSpec, SchemaSpec},
 };
 use serde_json::Value;

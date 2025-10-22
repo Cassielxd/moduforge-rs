@@ -93,20 +93,13 @@ impl State {
             Some(doc) => doc.clone(),
             None => {
                 let id = IdGenerator::get_id();
-                let nodes = config
-                    .schema
-                    .top_node_type
-                    .clone()
-                    .ok_or_else(|| {
-                        error::schema_error("顶级节点不存在".to_string())
-                    })?
-                    .create_and_fill(
-                        Some(id.clone()),
-                        None,
-                        vec![],
-                        None,
-                        &config.schema,
-                    );
+                let factory = config.schema.factory();
+                let nodes = factory.create_top_node(
+                    Some(id.clone()),
+                    None,
+                    vec![],
+                    None,
+                )?;
                 NodePool::from(nodes)
             },
         };

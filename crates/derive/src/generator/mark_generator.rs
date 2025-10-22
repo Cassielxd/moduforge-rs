@@ -88,7 +88,7 @@ impl<'a> MarkGenerator<'a> {
     /// impl StructName {
     ///     pub fn mark_definition() -> mf_core::mark::Mark {
     ///         // 导入必要的类型
-    ///         use mf_model::mark_type::MarkSpec;
+    ///         use mf_model::mark_definition::MarkSpec;
     ///         use std::collections::HashMap;
     ///         use serde_json::Value as JsonValue;
     ///         
@@ -176,7 +176,7 @@ impl<'a> MarkGenerator<'a> {
     /// impl StructName {
     ///     pub fn to_mark(&self) -> mf_core::mark::Mark {
     ///         // 导入必要的类型
-    ///         use mf_model::mark_type::MarkSpec;
+    ///         use mf_model::mark_definition::MarkSpec;
     ///         use std::collections::HashMap;
     ///         use serde_json::Value as JsonValue;
     ///         
@@ -291,8 +291,7 @@ impl<'a> MarkGenerator<'a> {
 
         let spec_code = quote! {
             #attrs_code
-
-            let spec = mf_model::mark_type::MarkSpec {
+            let spec = mf_model::mark_definition::MarkSpec {
                 attrs,
                 excludes: None,
                 group: None,

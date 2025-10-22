@@ -105,7 +105,7 @@ mod tests {
     use super::*;
     use mf_model::node::Node;
     use mf_model::attrs::Attrs;
-    use mf_model::node_type::NodeSpec;
+    use mf_model::node_definition::NodeSpec;
     use mf_model::schema::{SchemaSpec, AttributeSpec};
     use std::collections::HashMap;
     use std::sync::Arc;

@@ -24,7 +24,7 @@ use syn::{GenericArgument, PathArguments, Type, TypePath};
 pub fn generate_imports() -> TokenStream2 {
     quote! {
         // 模型类型导入 - Node 和 Mark 生成器所需的导入
-        use mf_model::node_type::NodeSpec;
+        use mf_model::node_definition::NodeSpec;
         use mf_model::schema::AttributeSpec;
         use std::collections::HashMap;
         use serde_json::Value as JsonValue;

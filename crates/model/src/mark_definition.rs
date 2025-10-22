@@ -2,29 +2,29 @@ use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
 
-use crate::attrs::Attrs;
+use crate::{attrs::Attrs, node_factory::NodeFactory};
 
 use super::mark::Mark;
 use super::schema::{Attribute, AttributeSpec, compute_attrs};
 #[derive(Clone, PartialEq, Debug, Eq)]
-pub struct MarkType {
+pub struct MarkDefinition {
     pub name: String,
     pub rank: usize,
     pub spec: MarkSpec,
     pub attrs: HashMap<String, Attribute>,
-    pub excluded: Option<Vec<MarkType>>,
+    pub excluded: Option<Vec<MarkDefinition>>,
 }
 
-impl MarkType {
+impl MarkDefinition {
     pub(crate) fn compile(
         marks: HashMap<String, MarkSpec>
-    ) -> HashMap<String, MarkType> {
+    ) -> HashMap<String, MarkDefinition> {
         let mut result = HashMap::new();
 
         for (rank, (name, spec)) in marks.into_iter().enumerate() {
             result.insert(
                 name.clone(),
-                MarkType::new(name.clone(), rank, spec.clone()),
+                MarkDefinition::new(name.clone(), rank, spec.clone()),
             );
         }
 
@@ -45,14 +45,14 @@ impl MarkType {
                 .collect()
         });
 
-        MarkType { name, rank, spec, attrs, excluded: None }
+        MarkDefinition { name, rank, spec, attrs, excluded: None }
     }
 
     pub fn create(
         &self,
         attrs: Option<&HashMap<String, Value>>,
     ) -> Mark {
-        Mark { r#type: self.name.clone(), attrs: self.compute_attrs(attrs) }
+        NodeFactory::instantiate_mark(self, attrs)
     }
     pub fn compute_attrs(
         &self,
@@ -75,3 +75,5 @@ pub struct MarkSpec {
     pub spanning: Option<bool>,
     pub desc: Option<String>,
 }
+
+

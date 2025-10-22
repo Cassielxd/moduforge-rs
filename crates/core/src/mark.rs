@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use mf_model::{mark_type::MarkSpec, schema::AttributeSpec};
+use mf_model::{mark_definition::MarkSpec, schema::AttributeSpec};
 use serde_json::Value;
 
 #[derive(Clone, PartialEq, Debug, Eq, Default)]

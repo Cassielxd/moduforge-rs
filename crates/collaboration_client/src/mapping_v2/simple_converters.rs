@@ -405,7 +405,7 @@ impl TypedStepConverter<RemoveMarkStep> for SimpleMarkRemoveConverter {
 fn insert_node_recursive(
     nodes_map: &yrs::types::map::MapRef,
     txn: &mut TransactionMut,
-    node_enum: &mf_model::node_type::NodeTree,
+    node_enum: &mf_model::node_definition::NodeTree,
 ) -> ConversionResult<()> {
     // 插入当前节点
     insert_single_node(nodes_map, txn, &node_enum.0)?;

@@ -1,8 +1,8 @@
-use super::attrs::Attrs;
+﻿use super::attrs::Attrs;
 use super::content::ContentMatch;
 use super::id_generator::IdGenerator;
 use super::mark::Mark;
-use super::mark_type::MarkType;
+use super::mark_definition::MarkDefinition;
 use super::node::Node;
 use super::schema::{compute_attrs, Attribute, AttributeSpec, Schema};
 use super::types::NodeId;
@@ -32,7 +32,7 @@ impl NodeTree {
 }
 /// 用于描述节点类型的行为规则和属性约束，通过[Schema](super::schema::Schema)进行统一管理
 #[derive(Clone, PartialEq, Eq)]
-pub struct NodeType {
+pub struct NodeDefinition {
     /// 节点类型的唯一标识符（例如："dw", "dxgc"）
     pub name: String,
     /// 节点类型的详细配置规范
@@ -48,9 +48,9 @@ pub struct NodeType {
     /// 内容匹配规则，定义允许的子节点结构
     pub content_match: Option<ContentMatch>,
     /// 允许附加的Mark类型集合
-    pub mark_set: Option<Vec<MarkType>>,
+    pub mark_set: Option<Vec<MarkDefinition>>,
 }
-impl Debug for NodeType {
+impl Debug for NodeDefinition {
     fn fmt(
         &self,
         f: &mut fmt::Formatter<'_>,
@@ -67,7 +67,7 @@ impl Debug for NodeType {
     }
 }
 
-impl NodeType {
+impl NodeDefinition {
     /// 将原始节点规范编译为可用的节点类型集合
     ///
     /// # 参数
@@ -77,14 +77,14 @@ impl NodeType {
     /// 返回[HashMap]<String, [NodeType]> 类型节点集合
     pub fn compile(
         nodes: HashMap<String, NodeSpec>
-    ) -> HashMap<String, NodeType> {
+    ) -> HashMap<String, NodeDefinition> {
         let mut result = HashMap::new();
 
         // First create all node types without content_match
         for (name, spec) in &nodes {
             result.insert(
                 name.clone(),
-                NodeType::new(name.clone(), spec.clone()),
+                NodeDefinition::new(name.clone(), spec.clone()),
             );
         }
 
@@ -130,7 +130,7 @@ impl NodeType {
             })
             .collect();
 
-        NodeType {
+        NodeDefinition {
             name,
             spec,
             desc: "".to_string(),
@@ -194,17 +194,7 @@ impl NodeType {
         self.attrs.values().any(|attr: &Attribute| attr.is_required())
     }
 
-    /// 创建节点并填充内容
-    ///
-    /// # 参数
-    /// - `id`: 可选的节点ID，如果未提供则自动生成
-    /// - `attrs`: 可选的属性映射，用于设置节点属性
-    /// - `content`: 子节点列表
-    /// - `marks`: 可选的标记列表，用于设置节点标记
-    /// - `schema`: 当前使用的文档模式
-    ///
-    /// # 返回值
-    /// 返回包含新创建的节点及其所有子节点的向量
+    /// 创建节点并填充内容（保持旧 API 兼容，内部委托给 [`crate::NodeFactory`]）。
     pub fn create_and_fill(
         &self,
         id: Option<NodeId>,
@@ -213,105 +203,12 @@ impl NodeType {
         marks: Option<Vec<Mark>>,
         schema: &Schema,
     ) -> NodeTree {
-        let id: NodeId = id.unwrap_or_else(IdGenerator::get_id);
-        let attrs = self.compute_attrs(attrs);
-
-        // 首先创建需要填充的内容
-        let mut filled_nodes = Vec::new();
-        let mut content_ids = Vec::new();
-
-        if let Some(content_match) = &self.content_match {
-            if let Some(matched) =
-                content_match.match_fragment(&content, schema)
-            {
-                if let Some(needed_type_names) =
-                    matched.fill(&content, true, schema)
-                {
-                    // 对每个需要的类型名称，从 schema 中获取完整的 NodeType 并创建节点
-                    for type_name in needed_type_names {
-                        // 从 schema 中获取完整的 NodeType
-                        let complete_node_type =
-                            match schema.nodes.get(&type_name) {
-                                Some(nt) => nt,
-                                None => panic!(
-                                    "无法在 schema 中找到节点类型: {type_name}"
-                                ),
-                            };
-
-                        // 在content中查找同类型的节点
-                        let existing_node =
-                            content.iter().find(|n| n.r#type == type_name);
-
-                        if let Some(node) = existing_node {
-                            // 复用现有节点
-                            content_ids.push(node.id.clone());
-                            // 递归创建节点及其子节点
-                            // 对于现有节点，我们需要让它重新填充其必需的子内容
-                            // 不传递现有的子节点，而是让 fill 方法重新推导需要的节点
-                            let child_nodes = complete_node_type
-                                .create_and_fill(
-                                    Some(node.id.clone()),
-                                    Some(
-                                        &node
-                                            .attrs
-                                            .attrs
-                                            .clone()
-                                            .into_iter()
-                                            .map(|(k, v)| {
-                                                (k.clone(), v.clone())
-                                            })
-                                            .collect(),
-                                    ), // 使用节点的原始属性
-                                    vec![], // 传递空内容，让 fill 方法推导需要的子节点
-                                    Some(
-                                        node.marks
-                                            .clone()
-                                            .into_iter()
-                                            .collect(),
-                                    ),
-                                    schema,
-                                );
-                            filled_nodes.push(child_nodes);
-                        } else {
-                            // 创建新节点 - 让子节点类型自己决定是否需要创建子内容
-                            let new_id = IdGenerator::get_id();
-                            content_ids.push(new_id.clone());
-                            let child_nodes = complete_node_type
-                                .create_and_fill(
-                                    Some(new_id),
-                                    None,
-                                    vec![], // 新节点从空内容开始，让递归调用处理必需的子节点
-                                    None,
-                                    schema,
-                                );
-                            filled_nodes.push(child_nodes);
-                        }
-                    }
-                }
-            }
-        }
-
-        // 重要修复：确保父节点的 content_ids 包含递归创建的所有子节点的 ID
-        // 从 filled_nodes 中提取实际创建的节点 ID，更新 content_ids
-        let mut final_content_ids = Vec::new();
-        for filled_node in &filled_nodes {
-            let (child_node, _) = filled_node.clone().into_parts();
-            final_content_ids.push(child_node.id);
-        }
-
-        NodeTree(
-            Node::new(
-                &id,
-                self.name.clone(),
-                attrs,
-                final_content_ids,
-                self.compute_marks(marks),
-            ),
-            filled_nodes,
-        )
+        schema.factory()
+            .create_tree_with_type(self, id, attrs, content, marks)
+            .expect("NodeFactory::create_tree_with_type should succeed for compiled schema")
     }
 
-    /// 创建节点
+    /// 创建节点（保持旧 API 兼容）。
     pub fn create(
         &self,
         id: Option<NodeId>,
@@ -319,7 +216,6 @@ impl NodeType {
         content: Vec<NodeId>,
         marks: Option<Vec<Mark>>,
     ) -> Node {
-        // 实现...
         let id: NodeId = id.unwrap_or_else(IdGenerator::get_id);
 
         Node::new(
@@ -331,7 +227,7 @@ impl NodeType {
         )
     }
 
-    fn compute_marks(
+    pub(crate) fn compute_marks(
         &self,
         marks: Option<Vec<Mark>>,
     ) -> Vec<Mark> {
@@ -347,7 +243,7 @@ impl NodeType {
         }
     }
 
-    fn compute_attrs(
+    pub(crate) fn compute_attrs(
         &self,
         attrs: Option<&HashMap<String, Value>>,
     ) -> Attrs {
@@ -374,3 +270,8 @@ pub struct NodeSpec {
     /// 属性规范定义（属性名 -> 属性规范）
     pub attrs: Option<HashMap<String, AttributeSpec>>,
 }
+
+
+
+
+

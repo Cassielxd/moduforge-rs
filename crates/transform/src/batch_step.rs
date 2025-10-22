@@ -105,7 +105,7 @@ mod tests {
     use mf_model::{
         attrs::Attrs,
         node::Node,
-        node_type::{NodeTree, NodeSpec},
+        node_definition::{NodeTree, NodeSpec},
         schema::{Schema, SchemaSpec},
         tree::Tree,
     };

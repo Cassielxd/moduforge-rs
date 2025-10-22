@@ -232,8 +232,8 @@ async fn main() -> ForgeResult<()> {
     let state = editor.get_state().await?;
     let mut tr: Transaction = Transaction::new(&state);
     let schema = &tr.schema;
-    let dw_node =
-        schema.nodes["dwgc"].create_and_fill(None, None, vec![], None, schema);
+    let factory = schema.factory();
+    let dw_node = factory.create_tree("dwgc", None, None, vec![], None)?;
     tr.add_node(doc.root_id().clone(), vec![dw_node])?;
 
     println!("准备分发事务...");
