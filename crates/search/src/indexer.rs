@@ -2,7 +2,7 @@ use crate::backend::IndexMutation;
 use crate::model::IndexDoc;
 use crate::step_registry::{global_registry, StepIndexContext};
 use mf_model::NodeId;
-use mf_model::{node_pool::NodePool, node_type::NodeEnum};
+use mf_model::{node_pool::NodePool, node_type::NodeTree};
 use mf_transform::step::Step;
 use mf_transform::{
     attr_step::AttrStep,
@@ -122,7 +122,7 @@ struct MoveNodeSerde {
     _position: Option<usize>,
 }
 
-fn collect_ids_from_enum(ne: &NodeEnum) -> Vec<NodeId> {
+fn collect_ids_from_enum(ne: &NodeTree) -> Vec<NodeId> {
     let mut ids = vec![ne.0.id.clone()];
     for c in &ne.1 {
         ids.extend(collect_ids_from_enum(c));
@@ -132,7 +132,7 @@ fn collect_ids_from_enum(ne: &NodeEnum) -> Vec<NodeId> {
 
 fn collect_adds_for_node_enum(
     pool: &NodePool,
-    ne: &NodeEnum,
+    ne: &NodeTree,
     out: &mut Vec<IndexMutation>,
 ) {
     let node = Arc::new(ne.0.clone());
@@ -144,7 +144,7 @@ fn collect_adds_for_node_enum(
 
 fn collect_upserts_for_enum(
     pool: &NodePool,
-    ne: &NodeEnum,
+    ne: &NodeTree,
     out: &mut Vec<IndexMutation>,
 ) {
     let node = Arc::new(ne.0.clone());

@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use mf_model::mark::Mark;
-use mf_model::node_type::NodeEnum;
+use mf_model::node_type::NodeTree;
 use mf_model::types::NodeId;
 use mf_transform::TransformResult;
 use serde_json::Value;
@@ -104,7 +104,7 @@ impl Transaction {
     pub fn add_node(
         &mut self,
         parent_id: NodeId,
-        nodes: Vec<NodeEnum>,
+        nodes: Vec<NodeTree>,
     ) -> TransformResult<()> {
         self.step(Arc::new(AddNodeStep::new(parent_id, nodes)))?;
         Ok(())

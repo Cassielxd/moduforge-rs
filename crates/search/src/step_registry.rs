@@ -121,7 +121,7 @@ where
 use mf_transform::attr_step::AttrStep;
 use mf_transform::mark_step::{AddMarkStep, RemoveMarkStep};
 use mf_transform::node_step::{AddNodeStep, RemoveNodeStep, MoveNodeStep};
-use mf_model::node_type::NodeEnum;
+use mf_model::node_type::NodeTree;
 use serde::Deserialize;
 
 #[derive(Default)]
@@ -261,7 +261,7 @@ impl TypedStepIndexer<MoveNodeStep> for MoveNodeIndexer {
     }
 }
 
-fn collect_ids_from_enum(ne: &NodeEnum) -> Vec<NodeId> {
+fn collect_ids_from_enum(ne: &NodeTree) -> Vec<NodeId> {
     let mut ids = vec![ne.0.id.clone()];
     for c in &ne.1 {
         ids.extend(collect_ids_from_enum(c));
@@ -271,7 +271,7 @@ fn collect_ids_from_enum(ne: &NodeEnum) -> Vec<NodeId> {
 
 fn collect_adds_for_node_enum(
     pool: &NodePool,
-    ne: &NodeEnum,
+    ne: &NodeTree,
     out: &mut Vec<IndexMutation>,
 ) {
     let node = std::sync::Arc::new(ne.0.clone());
@@ -283,7 +283,7 @@ fn collect_adds_for_node_enum(
 
 fn collect_upserts_for_enum(
     pool: &NodePool,
-    ne: &NodeEnum,
+    ne: &NodeTree,
     out: &mut Vec<IndexMutation>,
 ) {
     let node = std::sync::Arc::new(ne.0.clone());

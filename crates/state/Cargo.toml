@@ -1,27 +1,27 @@
 [package]
 name = "moduforge-state"
-version = {workspace=true}
-edition = {workspace=true}
+version = { workspace = true }
+edition = { workspace = true }
 description = "不可变数据结构与事务系统基础"
-authors = {workspace=true}
-license = {workspace=true}
-documentation = {workspace=true}
-homepage = {workspace=true}
-repository = {workspace=true}
+authors = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 [lib]
 name = "mf_state"
-path="src/lib.rs"
+path = "src/lib.rs"
 
 [dependencies]
 tokio = { workspace = true }
-imbl= {workspace=true}
-serde = {workspace=true}
-serde_json = {workspace=true}
-thiserror= {workspace=true}
-async-trait= {workspace=true}
+imbl = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
 uuid = { workspace = true }
 
-dashmap = {workspace=true}
+dashmap = { workspace = true }
 # 日志系统
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
@@ -39,6 +39,5 @@ moduforge-transform = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
-tempfile = { workspace = true }
 
 

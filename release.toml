@@ -1,7 +1,0 @@
-
-# 是否在发布后推送 Git 标签
-push = true
-# 是否发布到 crates.io
-publish = true
-# 自定义标签名称
-tag-name = "v{{version}}"

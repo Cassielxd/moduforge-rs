@@ -105,7 +105,7 @@ mod tests {
     use mf_model::{
         attrs::Attrs,
         node::Node,
-        node_type::{NodeEnum, NodeSpec},
+        node_type::{NodeTree, NodeSpec},
         schema::{Schema, SchemaSpec},
         tree::Tree,
     };
@@ -154,7 +154,7 @@ mod tests {
         );
         let add = Arc::new(AddNodeStep::new(
             "doc".into(),
-            vec![NodeEnum(child, vec![])],
+            vec![NodeTree(child, vec![])],
         ));
         let set = Arc::new(AttrStep::new(
             "n1".into(),

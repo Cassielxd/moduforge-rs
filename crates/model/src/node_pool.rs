@@ -1,5 +1,5 @@
 use crate::error::PoolResult;
-use crate::{node_type::NodeEnum, tree::Tree};
+use crate::{node_type::NodeTree, tree::Tree};
 
 use super::{error::error_helpers, node::Node, types::NodeId};
 use serde::{Deserialize, Serialize};
@@ -71,7 +71,7 @@ impl NodePool {
     /// # 注意
     ///
     /// 会自动构建父子关系映射表
-    pub fn from(nodes: NodeEnum) -> Arc<NodePool> {
+    pub fn from(nodes: NodeTree) -> Arc<NodePool> {
         let id = POOL_ID_COUNTER.fetch_add(1, Ordering::SeqCst);
         let pool = Self {
             inner: Arc::new(Tree::from(nodes)),

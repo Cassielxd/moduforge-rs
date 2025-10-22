@@ -12,21 +12,21 @@ use std::collections::HashMap;
 use std::fmt::{self, Debug};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct NodeEnum(pub Node, pub Vec<NodeEnum>);
+pub struct NodeTree(pub Node, pub Vec<NodeTree>);
 
-impl NodeEnum {
-    pub fn into_parts(self) -> (Node, Vec<NodeEnum>) {
+impl NodeTree {
+    pub fn into_parts(self) -> (Node, Vec<NodeTree>) {
         match self {
-            NodeEnum(node, children) => (node, children),
+            NodeTree(node, children) => (node, children),
         }
     }
     pub fn from(
         node: Node,
         childs: Vec<Node>,
     ) -> Self {
-        NodeEnum(
+        NodeTree(
             node,
-            childs.into_iter().map(|n| NodeEnum(n, vec![])).collect(),
+            childs.into_iter().map(|n| NodeTree(n, vec![])).collect(),
         )
     }
 }
@@ -212,7 +212,7 @@ impl NodeType {
         content: Vec<Node>,
         marks: Option<Vec<Mark>>,
         schema: &Schema,
-    ) -> NodeEnum {
+    ) -> NodeTree {
         let id: NodeId = id.unwrap_or_else(IdGenerator::get_id);
         let attrs = self.compute_attrs(attrs);
 
@@ -299,7 +299,7 @@ impl NodeType {
             final_content_ids.push(child_node.id);
         }
 
-        NodeEnum(
+        NodeTree(
             Node::new(
                 &id,
                 self.name.clone(),

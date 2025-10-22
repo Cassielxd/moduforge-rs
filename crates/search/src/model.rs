@@ -1,5 +1,5 @@
 use mf_model::{
-    mark::Mark, node::Node, node_type::NodeEnum, node_pool::NodePool,
+    mark::Mark, node::Node, node_type::NodeTree, node_pool::NodePool,
     types::NodeId,
 };
 use std::sync::Arc;
@@ -101,7 +101,7 @@ fn extract_i64(
 }
 
 /// 收集 NodeEnum 中所有节点 id（包含子树）
-pub fn collect_node_ids_from_enum(node_enum: &NodeEnum) -> Vec<NodeId> {
+pub fn collect_node_ids_from_enum(node_enum: &NodeTree) -> Vec<NodeId> {
     let mut ids: Vec<NodeId> = vec![node_enum.0.id.clone()];
     for child in &node_enum.1 {
         ids.extend(collect_node_ids_from_enum(child));

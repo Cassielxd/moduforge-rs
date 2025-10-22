@@ -7,7 +7,7 @@ use crate::{
     error::{PoolResult},
     mark::Mark,
     node::Node,
-    node_type::NodeEnum,
+    node_type::NodeTree,
 };
 
 use super::{AttrsRef, MarkRef, NodeRef};
@@ -49,11 +49,11 @@ impl<'a> Add<Vec<Node>> for NodeRef<'a> {
         Ok(NodeRef::new(self.tree, self.key.clone()))
     }
 }
-impl<'a> Add<NodeEnum> for NodeRef<'a> {
+impl<'a> Add<NodeTree> for NodeRef<'a> {
     type Output = PoolResult<NodeRef<'a>>;
     fn add(
         self,
-        nodes: NodeEnum,
+        nodes: NodeTree,
     ) -> Self::Output {
         self.tree.add(&self.key.clone(), vec![nodes])?;
         Ok(NodeRef::new(self.tree, self.key.clone()))

@@ -10,7 +10,7 @@ use dashmap::DashMap;
 use ahash::{AHasher, RandomState};
 use std::fmt::{self, Debug};
 use crate::error::PoolResult;
-use crate::node_type::NodeEnum;
+use crate::node_type::NodeTree;
 use crate::{
     error::error_helpers,
     mark::Mark,
@@ -191,7 +191,7 @@ impl Tree {
             self.nodes[shard_index].get(parent_id).cloned()
         })
     }
-    pub fn from(nodes: NodeEnum) -> Self {
+    pub fn from(nodes: NodeTree) -> Self {
         let num_shards = std::cmp::max(
             std::thread::available_parallelism()
                 .map(NonZeroUsize::get)
@@ -210,7 +210,7 @@ impl Tree {
             shards[shard_index].update(root_id.clone(), Arc::new(root_node));
 
         fn process_children(
-            children: Vec<NodeEnum>,
+            children: Vec<NodeTree>,
             parent_id: &NodeId,
             shards: &mut Vector<imbl::HashMap<NodeId, Arc<Node>>>,
             parent_map: &mut imbl::HashMap<NodeId, NodeId>,
@@ -302,7 +302,7 @@ impl Tree {
     pub fn add(
         &mut self,
         parent_id: &NodeId,
-        nodes: Vec<NodeEnum>,
+        nodes: Vec<NodeTree>,
     ) -> PoolResult<()> {
         // 检查父节点是否存在
         let parent_shard_index = self.get_shard_index(parent_id);
@@ -456,12 +456,12 @@ impl Tree {
         self.children(parent_id)
             .map(|ids| ids.iter().filter_map(|id| self.get_node(id)).collect())
     }
-    //递归获取所有子节点 封装成 NodeEnum 返回
+    //递归获取所有子节点 封装成 NodeTree 返回
     pub fn all_children(
         &self,
         parent_id: &NodeId,
         filter: Option<&dyn Fn(&Node) -> bool>,
-    ) -> Option<NodeEnum> {
+    ) -> Option<NodeTree> {
         if let Some(node) = self.get_node(parent_id) {
             let mut child_enums = Vec::new();
             for child_id in &node.content {
@@ -480,7 +480,7 @@ impl Tree {
                     }
                 }
             }
-            Some(NodeEnum(node.as_ref().clone(), child_enums))
+            Some(NodeTree(node.as_ref().clone(), child_enums))
         } else {
             None
         }

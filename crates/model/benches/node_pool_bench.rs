@@ -5,7 +5,7 @@ use criterion::{
 use mf_model::node_pool::{
     NodePool, QueryCacheConfig, LazyQueryConfig, QueryCondition,
 };
-use mf_model::{Node, Attrs, node_type::NodeEnum};
+use mf_model::{Node, Attrs, node_type::NodeTree};
 use std::sync::Arc;
 
 /// 创建大规模节点池用于测试
@@ -28,7 +28,7 @@ fn create_large_node_pool(node_count: usize) -> Arc<NodePool> {
             vec![],
             vec![],
         );
-        child_nodes.push(NodeEnum(node, vec![]));
+        child_nodes.push(NodeTree(node, vec![]));
     }
 
     // 创建根节点
@@ -40,7 +40,7 @@ fn create_large_node_pool(node_count: usize) -> Arc<NodePool> {
         vec![],
     );
 
-    NodePool::from(NodeEnum(root, child_nodes))
+    NodePool::from(NodeTree(root, child_nodes))
 }
 
 /// 基准测试：节点池查询性能对比

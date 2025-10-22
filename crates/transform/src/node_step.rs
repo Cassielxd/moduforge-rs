@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use mf_model::{node_type::NodeEnum, schema::Schema, tree::Tree, types::NodeId};
+use mf_model::{node_type::NodeTree, schema::Schema, tree::Tree, types::NodeId};
 
 use crate::transform_error;
 
@@ -13,17 +13,17 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AddNodeStep {
     pub parent_id: NodeId,
-    pub nodes: Vec<NodeEnum>,
+    pub nodes: Vec<NodeTree>,
 }
 impl AddNodeStep {
     pub fn new(
         parent_id: NodeId,
-        nodes: Vec<NodeEnum>,
+        nodes: Vec<NodeTree>,
     ) -> Self {
         AddNodeStep { parent_id, nodes }
     }
     // 递归收集单个节点枚举的所有子节点 id
-    pub fn collect_node_ids(node_enum: &NodeEnum) -> Vec<NodeId> {
+    pub fn collect_node_ids(node_enum: &NodeTree) -> Vec<NodeId> {
         let mut ids: Vec<NodeId> = vec![node_enum.0.id.clone()];
         for child in &node_enum.1 {
             ids.extend(Self::collect_node_ids(child));
@@ -201,7 +201,7 @@ mod tests {
     use super::*;
     use mf_model::{
         node::Node,
-        node_type::{NodeEnum, NodeSpec},
+        node_type::{NodeTree, NodeSpec},
         schema::{Schema, SchemaSpec},
         tree::Tree,
         attrs::Attrs,
@@ -248,7 +248,7 @@ mod tests {
         // Create a test node to add
         let node = create_test_node("child");
         let test = create_test_node("test");
-        let node_enum = NodeEnum(node, vec![NodeEnum(test, vec![])]);
+        let node_enum = NodeTree(node, vec![NodeTree(test, vec![])]);
         let step = AddNodeStep::new("root".into(), vec![node_enum.clone()]);
         let result = step.apply(&mut tree, schema.clone());
         assert!(result.is_ok());

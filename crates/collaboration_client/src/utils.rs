@@ -503,11 +503,11 @@ impl Utils {
         Ok(())
     }
 
-    /// 递归构建 NodeEnum
+    /// 递归构建 NodeTree
     pub fn build_node_enum_from_map(
         node: &Node,
         tree_nodes: &HashMap<NodeId, Arc<Node>>,
-    ) -> mf_model::node_type::NodeEnum {
+    ) -> mf_model::node_type::NodeTree {
         let mut children = Vec::new();
         for child_id in &node.content {
             if let Some(child_node) = tree_nodes.get(child_id) {
@@ -516,6 +516,6 @@ impl Utils {
                 ));
             }
         }
-        mf_model::node_type::NodeEnum(node.clone(), children)
+        mf_model::node_type::NodeTree(node.clone(), children)
     }
 }
