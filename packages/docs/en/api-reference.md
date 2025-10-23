@@ -107,7 +107,7 @@ server.start().await;
 
 ## 🧰 Macro crates
 
-- `moduforge-macros` offers `mf_extension!`, `mf_plugin!`, `impl_command!`, `mf_ops!`, `mf_global_attr!`, and related helpers.
+- `moduforge-macros` offers `mf_extension!`, `mf_plugin!`, `#[impl_command]`, `mf_ops!`, `mf_global_attr!`, and related helpers.
 - `moduforge-macros-derive` exposes `#[derive(Node)]`, `#[derive(Mark)]`, and `#[derive(PState)]` for declarative modelling.
 
 ```rust

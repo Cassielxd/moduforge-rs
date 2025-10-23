@@ -60,8 +60,10 @@ fn basic_schema_parsing() -> XmlSchemaResult<()> {
             "Schema编译失败: {e}"
         ))
     })?;
+    let factory = schema.factory();
+    let (nodes, _) = factory.definitions();
     println!("   ✅ Schema编译成功");
-    println!("   - 编译后节点数量: {}", schema.nodes.len());
+    println!("   - 编译后节点数量: {}", nodes.len());
 
     Ok(())
 }

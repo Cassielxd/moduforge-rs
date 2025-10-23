@@ -117,7 +117,7 @@ server.start().await;
 ## 🧰 宏系统
 
 常用方法：
-- `moduforge-macros` 提供 `mf_extension!`、`mf_plugin!`、`impl_command!`、`mf_ops!`、`mf_global_attr!` 等宏。
+- `moduforge-macros` 提供 `mf_extension!`、`mf_plugin!`、`#[impl_command]`、`mf_ops!`、`mf_global_attr!` 等宏。
 - `moduforge-macros-derive` 提供 `#[derive(Node)]`、`#[derive(Mark)]`、`#[derive(PState)]` 等派生宏。
 
 ```rust

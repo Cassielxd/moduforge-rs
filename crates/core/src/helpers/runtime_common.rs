@@ -98,14 +98,15 @@ impl ExtensionManagerHelper {
     ) -> ForgeResult<ExtensionManager> {
         let schema = xml_extension_manager.get_schema();
         let mut all_extensions = Vec::new();
-
+        let factory = schema.factory();
+        let (nodes, marks) = factory.definitions();
         // 先添加XML扩展（优先级更高）
-        for (name, node_type) in &schema.nodes {
+        for (name, node_type) in nodes {
             let node = crate::node::Node::create(name, node_type.spec.clone());
             all_extensions.push(crate::types::Extensions::N(node));
         }
 
-        for (name, mark_type) in &schema.marks {
+        for (name, mark_type) in marks {
             let mark = crate::mark::Mark::new(name, mark_type.spec.clone());
             all_extensions.push(crate::types::Extensions::M(mark));
         }
@@ -124,12 +125,8 @@ impl ExtensionManagerHelper {
 
             // 检查是否已经存在
             let exists = match &ext {
-                crate::types::Extensions::N(_) => {
-                    schema.nodes.contains_key(name)
-                },
-                crate::types::Extensions::M(_) => {
-                    schema.marks.contains_key(name)
-                },
+                crate::types::Extensions::N(_) => nodes.contains_key(name),
+                crate::types::Extensions::M(_) => marks.contains_key(name),
                 crate::types::Extensions::E(_) => false, // Extension扩展总是添加
             };
 

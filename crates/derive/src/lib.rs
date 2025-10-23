@@ -23,6 +23,7 @@ use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
 
 // 内部模块声明 - proc-macro crate 不能导出这些模块，只能内部使用
+mod command;
 mod common;
 mod converter;
 mod generator;
@@ -143,4 +144,12 @@ pub fn derive_mark(input: TokenStream) -> TokenStream {
     // 使用带错误恢复的处理函数，确保友好的编译错误消息
     let result = mark::derive_impl::process_derive_mark_with_recovery(input);
     TokenStream::from(result)
+}
+
+#[proc_macro_attribute]
+pub fn impl_command(
+    attr: TokenStream,
+    item: TokenStream,
+) -> TokenStream {
+    command::impl_command(attr, item)
 }

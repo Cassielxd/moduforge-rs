@@ -54,7 +54,7 @@ ModuForge-RS 是一个围绕不可变树形数据模型构建的 Rust 工作区�
 - `crates/search` (`moduforge-search`): 以 Tantivy 为核心实现索引后端、索引服务、State 插件与 Step 注册器，支持目录化部署与临时索引。
 - `crates/collaboration` (`moduforge-collaboration`): 提供 `YrsManager`、`SyncService`、`CollaborationServer`，实现房间生命周期、WebSocket 广播、离线处理与健康检查。
 - `crates/collaboration_client` (`moduforge-collaboration-client`): 面向客户端的连接、事务映射、Awareness 状态同步工具，帮助前端/桌面应用复用 ModuForge 事务。
-- `crates/macro` (`moduforge-macros`) 与 `crates/derive` (`moduforge-macros-derive`): 暴露 `mf_extension!`、`mf_plugin!`、`impl_command!` 等宏，以及 `#[derive(Node)]`、`#[derive(Mark)]`、`#[derive(PState)]` 等派生，减少大量模板代码。
+- `crates/macro` (`moduforge-macros`) 与 `crates/derive` (`moduforge-macros-derive`): 暴露 `mf_extension!`、`mf_plugin!`、`#[impl_command]` 等宏，以及 `#[derive(Node)]`、`#[derive(Mark)]`、`#[derive(PState)]` 等派生，减少大量模板代码。
 - `schema/`: 存放 XML Schema (`moduforge-schema.xsd`) 与示例 `main.xml`，配合 `XmlSchemaParser` 把外部结构定义注入运行时。
 - `examples/`: 提供 `demo` (Tauri + Vue 协作编辑器)、`demo2`、`snapshot_demo` 等完整应用示例。
 - `tools/benchmark-coordinator`: 基准测试调度器，按层级/单 crate 运行 Criterion，并收集与对比结果。

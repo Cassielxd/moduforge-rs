@@ -63,7 +63,7 @@ Event store and snapshot interface with the default SQLite + WAL implementation;
 Tantivy-based incremental indexing that consumes `IndexEvent` updates from Steps or Transactions.
 
 ## Developer tooling
-- **moduforge-macros**: declarative helpers such as `mf_extension!`, `mf_plugin!`, `impl_command!`, `mf_ops!`.
+- **moduforge-macros**: declarative helpers such as `mf_extension!`, `mf_plugin!`, `#[impl_command]`, `mf_ops!`.
 - **moduforge-macros-derive**: `#[derive(Node)]`, `#[derive(Mark)]`, `#[derive(PState)]` to generate conversions at compile time.
 - **Tools & examples**: `examples/`, `schema/`, `tools/benchmark-coordinator/`, and `packages/docs` cover integration, benchmarking, and documentation needs.
 

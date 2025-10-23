@@ -75,6 +75,14 @@ impl<'schema> NodeFactory<'schema> {
         self.schema.marks.get(type_name)
     }
 
+    /// 获取整个 Schema 的节点与标记定义映射，便于上层做批量/调试读取。
+    pub fn definitions(
+        &self
+    ) -> (&HashMap<String, NodeDefinition>, &HashMap<String, MarkDefinition>)
+    {
+        (&self.schema.nodes, &self.schema.marks)
+    }
+
     /// 以顶级节点为根构建整棵子树。
     pub fn create_top_node(
         &self,
@@ -220,6 +228,9 @@ impl<'schema> NodeFactory<'schema> {
         mark_def: &MarkDefinition,
         attrs: Option<&HashMap<String, Value>>,
     ) -> Mark {
-        Mark { r#type: mark_def.name.clone(), attrs: mark_def.compute_attrs(attrs) }
+        Mark {
+            r#type: mark_def.name.clone(),
+            attrs: mark_def.compute_attrs(attrs),
+        }
     }
 }

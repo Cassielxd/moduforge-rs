@@ -102,16 +102,17 @@ impl ForgeRuntime {
                 // 从ExtensionManager获取extensions并合并到现有选项中
                 let schema = extension_manager.get_schema();
                 let mut xml_extensions = Vec::new();
-
+                let factory = schema.factory();
+                let (nodes, marks) = factory.definitions();
                 // 重建节点扩展
-                for (name, node_type) in &schema.nodes {
+                for (name, node_type) in nodes {
                     let node =
                         crate::node::Node::create(name, node_type.spec.clone());
                     xml_extensions.push(crate::types::Extensions::N(node));
                 }
 
                 // 重建标记扩展
-                for (name, mark_type) in &schema.marks {
+                for (name, mark_type) in marks {
                     let mark =
                         crate::mark::Mark::new(name, mark_type.spec.clone());
                     xml_extensions.push(crate::types::Extensions::M(mark));

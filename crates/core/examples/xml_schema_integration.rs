@@ -89,17 +89,18 @@ fn schema_runtime_integration() -> XmlSchemaResult<()> {
         ))
     })?;
     println!("   ✅ Schema编译成功");
-
+    let factory = schema.factory();
+    let (nodes, marks) = factory.definitions();
     // 验证Schema结构
-    println!("   - 节点类型数量: {}", schema.nodes.len());
-    println!("   - 标记类型数量: {}", schema.marks.len());
+    println!("   - 节点类型数量: {}", nodes.len());
+    println!("   - 标记类型数量: {}", marks.len());
     println!(
         "   - 顶级节点: {:?}",
         schema.top_node_type.as_ref().map(|n| &n.name)
     );
 
     // 显示节点详细信息
-    for (name, node_type) in &schema.nodes {
+    for (name, node_type) in nodes {
         println!(
             "   - 节点 '{}': 组={:?}, 内容={:?}",
             name, node_type.spec.group, node_type.spec.content
@@ -107,7 +108,7 @@ fn schema_runtime_integration() -> XmlSchemaResult<()> {
     }
 
     // 显示标记详细信息
-    for (name, mark_type) in &schema.marks {
+    for (name, mark_type) in marks {
         println!(
             "   - 标记 '{}': 组={:?}, spanning={:?}",
             name, mark_type.spec.group, mark_type.spec.spanning

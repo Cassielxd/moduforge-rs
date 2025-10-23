@@ -39,7 +39,7 @@ graph LR
 - 浜嬩欢瀛樺偍涓庡揩鐓ф帴鍙ｏ紝榛樿瀹炵幇涓?SQLite + WAL锛沗CommitMode` 鍙皟涓€鑷存€с€?
 ### moduforge-search
 - 鍩轰簬 Tantivy 鐨勫閲忕储寮曪紝閫氳繃 `IndexEvent` 灏?Step/Transaction 鎶曞皠鍒版悳绱㈠簱銆?
-## 寮€鍙戣緟鍔?- **moduforge-macros**锛歚mf_extension!`銆乣mf_plugin!`銆乣impl_command!`銆乣mf_ops!` 绛夊０鏄庡紡瀹忋€?- **moduforge-macros-derive**锛歚#[derive(Node)]`銆乣#[derive(Mark)]`銆乣#[derive(PState)]` 鍦ㄧ紪璇戞湡鐢熸垚绫诲瀷杞崲銆?- **宸ュ叿涓庣ず渚?*锛歚examples/`銆乣schema/`銆乣tools/benchmark-coordinator/`銆乣packages/docs` 瑕嗙洊钀藉湴銆佸熀鍑嗕笌鏂囨。闇€姹傘€?
+## 寮€鍙戣緟鍔?- **moduforge-macros**锛歚mf_extension!`銆乣mf_plugin!`銆乣#[impl_command]`銆乣mf_ops!` 绛夊０鏄庡紡瀹忋€?- **moduforge-macros-derive**锛歚#[derive(Node)]`銆乣#[derive(Mark)]`銆乣#[derive(PState)]` 鍦ㄧ紪璇戞湡鐢熸垚绫诲瀷杞崲銆?- **宸ュ叿涓庣ず渚?*锛歚examples/`銆乣schema/`銆乣tools/benchmark-coordinator/`銆乣packages/docs` 瑕嗙洊钀藉湴銆佸熀鍑嗕笌鏂囨。闇€姹傘€?
 ## 鍏稿瀷鍦烘櫙
 - 鏋勫缓澶у瀷鏍戝舰/鍥惧舰鏁版嵁缂栬緫鍣ㄣ€?- 闇€瑕佷簨鍔°€佹挙閿€/閲嶅仛銆佸巻鍙插洖鏀剧殑涓氬姟杩愯鏃躲€?- 绂荤嚎浼樺厛鎴栧急缃戝悓姝ュ満鏅紝閫氳繃浜嬩欢鍥炴斁鎴?CRDT 鍚堝苟鐘舵€併€?- 闇€瑕佸崗浣溿€佸叏鏂囨绱€佹彃浠跺寲鎵╁睍鐨勪紒涓氱郴缁熴€?
 鍑€熷垎灞傛灦鏋勪笌澹版槑寮忔墿灞曪紝ModuForge-RS 鑳藉鍦ㄥ悓涓€濂楀唴鏍镐笂鏀拺妗岄潰銆乄eb銆佹湇鍔＄绛夊绉嶈繍琛屾ā寮忥紝骞朵繚鎸侀珮鍙淮鎶ゆ€т笌楂樿凯浠ｆ晥鐜囥€?

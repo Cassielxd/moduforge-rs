@@ -75,5 +75,3 @@ pub struct MarkSpec {
     pub spanning: Option<bool>,
     pub desc: Option<String>,
 }
-
-
