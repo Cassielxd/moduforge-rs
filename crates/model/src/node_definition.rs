@@ -1,11 +1,9 @@
 ﻿use super::attrs::Attrs;
 use super::content::ContentMatch;
-use super::id_generator::IdGenerator;
 use super::mark::Mark;
 use super::mark_definition::MarkDefinition;
 use super::node::Node;
 use super::schema::{compute_attrs, Attribute, AttributeSpec, Schema};
-use super::types::NodeId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
