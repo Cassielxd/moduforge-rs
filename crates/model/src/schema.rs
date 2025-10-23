@@ -44,9 +44,9 @@ pub struct Schema {
     /// 全局缓存
     pub cached: Arc<Mutex<HashMap<String, Arc<dyn Any + Send + Sync>>>>,
     /// 节点类型映射表
-    pub nodes: HashMap<String, NodeDefinition>,
+    pub(crate) nodes: HashMap<String, NodeDefinition>,
     /// 标记类型映射表
-    pub marks: HashMap<String, MarkDefinition>,
+    pub(crate) marks: HashMap<String, MarkDefinition>,
 }
 impl PartialEq for Schema {
     fn eq(

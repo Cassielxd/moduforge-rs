@@ -35,11 +35,11 @@ impl Step for AttrStep {
         dart: &mut Tree,
         schema: Arc<Schema>,
     ) -> TransformResult<StepResult> {
-        let _ = schema;
+        let factory = schema.factory();
         match dart.get_node(&self.id) {
             Some(node) => {
                 // 获取节点类型定义，若缺失则返回错误而非 panic
-                let node_type = match schema.nodes.get(&node.r#type) {
+                let node_type = match factory.node_definition(&node.r#type) {
                     Some(nt) => nt,
                     None => {
                         return Err(transform_error(format!(

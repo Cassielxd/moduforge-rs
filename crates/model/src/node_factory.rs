@@ -46,6 +46,14 @@ impl<'schema> NodeFactory<'schema> {
         Ok(Self::instantiate_node(node_type, id, attrs, content, marks))
     }
 
+    /// 获取节点类型定义引用，便于上层读取配置。
+    pub fn node_definition(
+        &self,
+        type_name: &str,
+    ) -> Option<&NodeDefinition> {
+        self.schema.nodes.get(type_name)
+    }
+
     /// 按类型名称创建标记。
     pub fn create_mark(
         &self,
@@ -57,6 +65,14 @@ impl<'schema> NodeFactory<'schema> {
         })?;
 
         Ok(Self::instantiate_mark(mark_def, attrs))
+    }
+
+    /// 获取标记类型定义引用。
+    pub fn mark_definition(
+        &self,
+        type_name: &str,
+    ) -> Option<&MarkDefinition> {
+        self.schema.marks.get(type_name)
     }
 
     /// 以顶级节点为根构建整棵子树。
