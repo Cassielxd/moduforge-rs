@@ -194,39 +194,6 @@ impl NodeDefinition {
         self.attrs.values().any(|attr: &Attribute| attr.is_required())
     }
 
-    /// 创建节点并填充内容（保持旧 API 兼容，内部委托给 [`crate::NodeFactory`]）。
-    pub fn create_and_fill(
-        &self,
-        id: Option<NodeId>,
-        attrs: Option<&HashMap<String, Value>>,
-        content: Vec<Node>,
-        marks: Option<Vec<Mark>>,
-        schema: &Schema,
-    ) -> NodeTree {
-        schema.factory()
-            .create_tree_with_type(self, id, attrs, content, marks)
-            .expect("NodeFactory::create_tree_with_type should succeed for compiled schema")
-    }
-
-    /// 创建节点（保持旧 API 兼容）。
-    pub fn create(
-        &self,
-        id: Option<NodeId>,
-        attrs: Option<&HashMap<String, Value>>,
-        content: Vec<NodeId>,
-        marks: Option<Vec<Mark>>,
-    ) -> Node {
-        let id: NodeId = id.unwrap_or_else(IdGenerator::get_id);
-
-        Node::new(
-            &id,
-            self.name.clone(),
-            self.compute_attrs(attrs),
-            content,
-            self.compute_marks(marks),
-        )
-    }
-
     pub(crate) fn compute_marks(
         &self,
         marks: Option<Vec<Mark>>,
@@ -270,8 +237,3 @@ pub struct NodeSpec {
     /// 属性规范定义（属性名 -> 属性规范）
     pub attrs: Option<HashMap<String, AttributeSpec>>,
 }
-
-
-
-
-
