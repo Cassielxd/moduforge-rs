@@ -5,10 +5,10 @@ use syn::{
     parse::{Parse, ParseStream},
     parse_macro_input,
     spanned::Spanned,
-    Error, ItemFn, LitStr, Result, Token,
+    FnArg, ItemFn, LitStr, Pat, PatIdent, Result, Token, Type, TypeReference,
 };
 
-struct CommandArgs {
+pub struct CommandArgs {
     ident: Ident,
     command_name: Option<LitStr>,
 }
@@ -32,6 +32,7 @@ impl Parse for CommandArgs {
         Ok(Self { ident, command_name })
     }
 }
+
 pub fn impl_command(
     attr: TokenStream,
     item: TokenStream,
@@ -39,9 +40,9 @@ pub fn impl_command(
     let input_fn = parse_macro_input!(item as ItemFn);
 
     if input_fn.sig.asyncness.is_none() {
-        return Error::new(
+        return syn::Error::new(
             input_fn.sig.span(),
-            "impl_command 只能用于 async fn",
+            "impl_command 只支持用于 async fn",
         )
         .to_compile_error()
         .into();
@@ -54,22 +55,59 @@ pub fn impl_command(
             Err(err) => return err.to_compile_error().into(),
         };
 
-    let fn_name = &input_fn.sig.ident;
     let vis = &input_fn.vis;
+    let fn_name = &input_fn.sig.ident;
+
+    let mut inputs = input_fn.sig.inputs.iter();
+    let first = inputs.next();
+    let mut invalid_first = true;
+    if let Some(FnArg::Typed(arg)) = first {
+        if matches!(&*arg.pat, Pat::Ident(pat) if pat.ident == "tr") {
+            if let Type::Reference(TypeReference {
+                mutability: Some(_), ..
+            }) = &*arg.ty
+            {
+                invalid_first = false;
+            }
+        }
+    }
+    if invalid_first {
+        return syn::Error::new(
+            input_fn.sig.span(),
+            "命令函数的第一个参数必须是 `tr: &mut Transaction`",
+        )
+        .to_compile_error()
+        .into();
+    }
+
+    let extra_params: Vec<_> = inputs.cloned().collect();
+    let (struct_generics, field_defs, ctor_params, ctor_inits, call_args) =
+        match build_fields(&extra_params) {
+            Ok(result) => result,
+            Err(err) => return err.to_compile_error().into(),
+        };
 
     let expanded = quote! {
         #input_fn
 
         #[derive(Debug)]
-        #vis struct #command_struct;
+        #vis struct #command_struct #struct_generics {
+            #(#field_defs),*
+        }
+
+        impl #struct_generics #command_struct #struct_generics {
+            #vis fn new(#(#ctor_params),*) -> Self {
+                Self { #(#ctor_inits),* }
+            }
+        }
 
         #[async_trait::async_trait]
-        impl Command for #command_struct {
+        impl #struct_generics Command for #command_struct #struct_generics {
             async fn execute(
                 &self,
                 tr: &mut Transaction,
             ) -> TransformResult<()> {
-                #fn_name(tr).await
+                #fn_name(tr, #(#call_args),*).await
             }
 
             fn name(&self) -> String {
@@ -119,4 +157,75 @@ fn default_struct_ident(fn_ident: &Ident) -> Ident {
 
     result.push_str("Command");
     format_ident!("{}", result)
+}
+
+fn build_fields(
+    params: &[FnArg]
+) -> Result<(
+    TokenStream2,
+    Vec<TokenStream2>,
+    Vec<TokenStream2>,
+    Vec<TokenStream2>,
+    Vec<TokenStream2>,
+)> {
+    if params.is_empty() {
+        return Ok((quote! {}, Vec::new(), Vec::new(), Vec::new(), Vec::new()));
+    }
+
+    let lifetime = syn::Lifetime::new("'a", Span::call_site());
+    let mut fields = Vec::new();
+    let mut ctor_params = Vec::new();
+    let mut ctor_inits = Vec::new();
+    let mut call_args = Vec::new();
+
+    for param in params {
+        let arg = match param {
+            FnArg::Typed(arg) => arg,
+            _ => {
+                return Err(syn::Error::new(
+                    param.span(),
+                    "命令函数的参数必须是标识符",
+                ));
+            },
+        };
+
+        let pat_ident = match &*arg.pat {
+            Pat::Ident(PatIdent { ident, .. }) => ident,
+            _ => {
+                return Err(syn::Error::new(
+                    arg.pat.span(),
+                    "命令函数的参数必须是简单标识符",
+                ));
+            },
+        };
+
+        let ty_ref = match &*arg.ty {
+            Type::Reference(TypeReference {
+                mutability: None, elem, ..
+            }) => TypeReference {
+                and_token: Default::default(),
+                lifetime: Some(lifetime.clone()),
+                mutability: None,
+                elem: elem.clone(),
+            },
+            _ => {
+                return Err(syn::Error::new(
+                    arg.ty.span(),
+                    "除 `tr` 之外的参数必须是共享引用（`&T`）",
+                ));
+            },
+        };
+
+        let field_ty = Type::Reference(ty_ref);
+        let field_def = quote! { pub #pat_ident: #field_ty };
+        fields.push(field_def);
+
+        ctor_params.push(quote! { #pat_ident: #field_ty });
+        ctor_inits.push(quote! { #pat_ident });
+        call_args.push(quote! { self.#pat_ident });
+    }
+
+    let generics = quote! { <'a> };
+
+    Ok((generics, fields, ctor_params, ctor_inits, call_args))
 }
