@@ -9,7 +9,7 @@ exclude = [
 ]
 
 [workspace.package]
-version = "0.5.2"
+version = "0.6.0"
 edition = "2024"
 authors = ["String <348040933@qq.com>"]
 license = "MIT"
@@ -70,17 +70,17 @@ criterion = "0.5"
 quick-xml = { version = "0.36", features = ["serialize"] }
 
 #crates 下所有的库
-moduforge-core = { version = "0.5.2", path = "crates/core" }
-moduforge-state = { version = "0.5.2", path = "crates/state" }
-moduforge-model = { version = "0.5.2", path = "crates/model" }
-moduforge-transform = { version = "0.5.2", path = "crates/transform" }
-moduforge-file = { version = "0.5.2", path = "crates/file" }
-moduforge-persistence = { version = "0.5.2", path = "crates/persistence" }
-moduforge-search = { version = "0.5.2", path = "crates/search" }
-moduforge-macros = { version = "0.5.2", path = "crates/macro" }
-moduforge-macros-derive = { version = "0.5.2", path = "crates/derive" }
-moduforge-collaboration = { version = "0.5.2", path = "crates/collaboration" }
-moduforge-collaboration-client = { version = "0.5.2", path = "crates/collaboration_client" }
+moduforge-core = { version = "0.6.0", path = "crates/core" }
+moduforge-state = { version = "0.6.0", path = "crates/state" }
+moduforge-model = { version = "0.6.0", path = "crates/model" }
+moduforge-transform = { version = "0.6.0", path = "crates/transform" }
+moduforge-file = { version = "0.6.0", path = "crates/file" }
+moduforge-persistence = { version = "0.6.0", path = "crates/persistence" }
+moduforge-search = { version = "0.6.0", path = "crates/search" }
+moduforge-macros = { version = "0.6.0", path = "crates/macro" }
+moduforge-macros-derive = { version = "0.6.0", path = "crates/derive" }
+moduforge-collaboration = { version = "0.6.0", path = "crates/collaboration" }
+moduforge-collaboration-client = { version = "0.6.0", path = "crates/collaboration_client" }
 
 
 
