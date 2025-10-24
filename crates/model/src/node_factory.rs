@@ -68,6 +68,98 @@ impl<'schema> NodeFactory<'schema> {
     }
 
     /// 获取标记类型定义引用。
+    /// 获取所有节点类型名称，主要用于调试或提示。
+    pub fn node_names(&self) -> Vec<&'schema str> {
+        let mut names: Vec<&'schema str> =
+            self.schema.nodes.keys().map(|key| key.as_str()).collect();
+        names.sort();
+        names
+    }
+
+    /// 获取所有标记类型名称，主要用于调试或提示。
+    pub fn mark_names(&self) -> Vec<&'schema str> {
+        let mut names: Vec<&'schema str> =
+            self.schema.marks.keys().map(|key| key.as_str()).collect();
+        names.sort();
+        names
+    }
+
+    /// 获取指定节点类型，若不存在则返回带提示的错误。
+    pub fn ensure_node(
+        &self,
+        type_name: &str,
+    ) -> PoolResult<&NodeDefinition> {
+        match self.schema.nodes.get(type_name) {
+            Some(def) => Ok(def),
+            None => {
+                let mut available: Vec<&String> =
+                    self.schema.nodes.keys().collect();
+                available.sort_by(|a, b| a.as_str().cmp(b.as_str()));
+                Err(schema_error(&self.missing_message(
+                    "节点类型",
+                    type_name,
+                    available,
+                )))
+            },
+        }
+    }
+
+    /// 获取指定标记类型，若不存在则返回带提示的错误。
+    pub fn ensure_mark(
+        &self,
+        type_name: &str,
+    ) -> PoolResult<&MarkDefinition> {
+        match self.schema.marks.get(type_name) {
+            Some(def) => Ok(def),
+            None => {
+                let mut available: Vec<&String> =
+                    self.schema.marks.keys().collect();
+                available.sort_by(|a, b| a.as_str().cmp(b.as_str()));
+                Err(schema_error(&self.missing_message(
+                    "标记类型",
+                    type_name,
+                    available,
+                )))
+            },
+        }
+    }
+
+    fn missing_message(
+        &self,
+        kind: &str,
+        name: &str,
+        available: Vec<&String>,
+    ) -> String {
+        if available.is_empty() {
+            format!(
+                concat!(
+                    "未找到 ",
+                    "{} \"{}\"。",
+                    "当前 Schema 中未声明任何 ",
+                    "{}。"
+                ),
+                kind, name, kind
+            )
+        } else {
+            let preview: Vec<&str> =
+                available.iter().take(5).map(|s| s.as_str()).collect();
+            format!(
+                concat!(
+                    "未找到 ",
+                    "{} \"{}\"。",
+                    "可用的 ",
+                    "{} ",
+                    "示例: ",
+                    "{}"
+                ),
+                kind,
+                name,
+                kind,
+                preview.join(", ")
+            )
+        }
+    }
+
     pub fn mark_definition(
         &self,
         type_name: &str,
@@ -232,5 +324,55 @@ impl<'schema> NodeFactory<'schema> {
             r#type: mark_def.name.clone(),
             attrs: mark_def.compute_attrs(attrs),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mark_definition::MarkSpec;
+    use crate::node_definition::NodeSpec;
+    use crate::schema::{Schema, SchemaSpec};
+
+    fn build_schema() -> Schema {
+        let mut spec = SchemaSpec {
+            nodes: HashMap::new(),
+            marks: HashMap::new(),
+            top_node: Some("doc".to_string()),
+        };
+        spec.nodes.insert("doc".to_string(), NodeSpec::default());
+        spec.nodes.insert("paragraph".to_string(), NodeSpec::default());
+        spec.marks.insert("bold".to_string(), MarkSpec::default());
+        Schema::compile(spec).expect("schema should compile")
+    }
+
+    #[test]
+    fn ensure_node_returns_descriptive_error() {
+        let schema = build_schema();
+        let factory = NodeFactory::new(&schema);
+        let err = factory.ensure_node("unknown").unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("未找到节点类型"), "actual: {msg}");
+        assert!(msg.contains("doc"), "actual: {msg}");
+    }
+
+    #[test]
+    fn ensure_mark_returns_descriptive_error() {
+        let schema = build_schema();
+        let factory = NodeFactory::new(&schema);
+        let err = factory.ensure_mark("italic").unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("未找到标记类型"), "actual: {msg}");
+        assert!(msg.contains("bold"), "actual: {msg}");
+    }
+
+    #[test]
+    fn node_and_mark_names_exposed() {
+        let schema = build_schema();
+        let factory = NodeFactory::new(&schema);
+        let nodes = factory.node_names();
+        assert!(nodes.contains(&"doc"));
+        let marks = factory.mark_names();
+        assert!(marks.contains(&"bold"));
     }
 }
