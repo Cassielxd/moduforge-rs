@@ -287,9 +287,28 @@ impl TokenStream {
 
     pub fn err(
         &self,
-        str: &str,
+        msg: &str,
     ) -> ! {
-        panic!("{} (约束必须是 '{}')", str, self.string);
+        let token_index = self.pos.min(self.tokens.len().saturating_sub(1));
+        let current = self
+            .tokens
+            .get(self.pos)
+            .cloned()
+            .unwrap_or_else(|| "<结束>".into());
+        let start = self.pos.saturating_sub(3);
+        let end = (self.pos + 3).min(self.tokens.len());
+        let context: Vec<String> = (start..end)
+            .map(|idx| format!(r#"{}:"{}""#, idx, self.tokens[idx]))
+            .collect();
+
+        panic!(
+            "内容表达式解析失败: {}\n  - 位置: token #{} (当前令牌: \"{}\")\n  - 上下文: [{}]\n  - 原始表达式: \"{}\"",
+            msg,
+            token_index,
+            current,
+            context.join(", "),
+            self.string.trim()
+        );
     }
 }
 
@@ -345,14 +364,24 @@ fn parse_expr_subscript(stream: &mut TokenStream) -> Expr {
 }
 
 fn parse_num(stream: &mut TokenStream) -> usize {
-    let next = stream.next().unwrap();
+    let next = match stream.next() {
+        Some(token) => token,
+        None => stream.err("需要一个数字，但内容表达式已经结束"),
+    };
+
     if !next.chars().all(|c| c.is_ascii_digit()) {
-        stream.err(&format!("Expected number, got '{next}'"));
+        stream.err(&format!(r#"需要一个数字，但遇到了 "{next}""#));
     }
-    let result = next.parse().unwrap();
-    stream.pos += 1;
-    result
+
+    match next.parse::<usize>() {
+        Ok(value) => {
+            stream.pos += 1;
+            value
+        },
+        Err(_) => stream.err(&format!(r#"无法将 "{next}" 解析为数字"#)),
+    }
 }
+
 fn parse_expr_range(
     stream: &mut TokenStream,
     expr: Expr,
@@ -364,7 +393,7 @@ fn parse_expr_range(
         min as isize
     };
     if !stream.eat("}") {
-        stream.err("Unclosed braced range");
+        stream.err(r#"范围量词缺少右大括号 "}""#);
     }
     Expr::Range { min, max, expr: Box::new(expr) }
 }
@@ -385,7 +414,19 @@ fn resolve_name(
         }
     }
     if result.is_empty() {
-        stream.err(&format!("没找到类型 '{name}'"));
+        let mut available: Vec<&String> = stream.node_types.keys().collect();
+        available.sort();
+        let preview: Vec<String> =
+            available.iter().take(5).map(|name| (*name).clone()).collect();
+        let hint = if preview.is_empty() {
+            "当前 Schema 中未声明任何节点".to_string()
+        } else {
+            format!("可用的节点/分组示例: {}", preview.join(", "))
+        };
+        stream.err(&format!(
+            r#"无法在 Schema 中找到名称为 "{name}" 的节点或分组。{}"#,
+            hint
+        ));
     }
     result
 }
@@ -394,7 +435,7 @@ fn parse_expr_atom(stream: &mut TokenStream) -> Expr {
     if stream.eat("(") {
         let expr = parse_expr(stream);
         if !stream.eat(")") {
-            stream.err("Missing closing paren");
+            stream.err(r#"缺少对应的右括号 ")""#);
         }
         expr
     } else if let Some(next) = stream.next() {
@@ -410,10 +451,10 @@ fn parse_expr_atom(stream: &mut TokenStream) -> Expr {
                 Expr::Choice { exprs }
             }
         } else {
-            stream.err(&format!("Unexpected token '{next}'"));
+            stream.err(&format!(r#"无法识别的符号 "{next}"，请检查是否书写了正确的节点名称或分组"#));
         }
     } else {
-        stream.err("Unexpected end of input");
+        stream.err("内容表达式意外结束，请检查括号与量词是否成对出现");
     }
 }
 #[derive(Debug, Clone)]
@@ -523,6 +564,62 @@ fn nfa(expr: Expr) -> Vec<Vec<Rc<RefCell<Edge>>>> {
     let mut nfa: Vec<Vec<Rc<RefCell<Edge>>>> = vec![vec![]];
     connect(&mut compile(expr, 0, &mut nfa), node(&mut nfa));
     nfa
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::node_definition::{NodeDefinition, NodeSpec};
+    use std::panic::{catch_unwind, UnwindSafe};
+
+    fn build_nodes() -> HashMap<String, NodeDefinition> {
+        let mut nodes = HashMap::new();
+        nodes.insert(
+            "doc".to_string(),
+            NodeDefinition::new("doc".to_string(), NodeSpec::default()),
+        );
+        nodes
+    }
+
+    fn panic_message<F, R>(f: F) -> String
+    where
+        F: FnOnce() -> R + UnwindSafe,
+    {
+        match catch_unwind(f) {
+            Ok(_) => panic!("expected panic"),
+            Err(err) => {
+                if let Some(s) = err.downcast_ref::<String>() {
+                    s.clone()
+                } else if let Some(s) = err.downcast_ref::<&str>() {
+                    (*s).to_string()
+                } else {
+                    panic!("unexpected panic payload");
+                }
+            },
+        }
+    }
+
+    #[test]
+    fn range_missing_brace_reports_context() {
+        let nodes = build_nodes();
+        let msg =
+            panic_message(|| ContentMatch::parse("doc{".to_string(), &nodes));
+
+        assert!(msg.contains("内容表达式解析失败"), "actual: {msg}");
+        assert!(msg.contains("token #1"), "actual: {msg}");
+        assert!(msg.contains("doc{"), "actual: {msg}");
+    }
+
+    #[test]
+    fn unknown_node_suggests_available_names() {
+        let nodes = build_nodes();
+        let msg = panic_message(|| {
+            ContentMatch::parse("unknown".to_string(), &nodes)
+        });
+
+        assert!(msg.contains("无法在 Schema 中找到名称为"), "actual: {msg}");
+        assert!(msg.contains("可用的节点/分组示例"), "actual: {msg}");
+    }
 }
 fn node(nfa: &mut Vec<Vec<Rc<RefCell<Edge>>>>) -> usize {
     nfa.push(vec![]);
