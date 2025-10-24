@@ -35,7 +35,7 @@
 //!     mf_plugin, mf_plugin_with_config, mf_plugin_metadata, mf_plugin_config,
 //!     impl_state_field, derive_plugin_state
 //! };
-//! // #[impl_command] 请从 `mf_derive` 导入
+//! use mf_derive::impl_command; // #[impl_command] 请从 `mf_derive` 导入
 //! ```
 
 pub mod extension;

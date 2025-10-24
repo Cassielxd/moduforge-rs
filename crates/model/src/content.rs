@@ -593,7 +593,7 @@ mod tests {
                 } else if let Some(s) = err.downcast_ref::<&str>() {
                     (*s).to_string()
                 } else {
-                    panic!("unexpected panic payload");
+                    panic!("未预期的 panic 消息");
                 }
             },
         }

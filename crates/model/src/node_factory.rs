@@ -40,7 +40,7 @@ impl<'schema> NodeFactory<'schema> {
         marks: Option<Vec<Mark>>,
     ) -> PoolResult<Node> {
         let node_type = self.schema.nodes.get(type_name).ok_or_else(|| {
-            schema_error(&format!("无法在 schema 中找到节点类型: {type_name}"))
+            schema_error(&format!("无法在 schema 中找到节点类型：{type_name}"))
         })?;
 
         Ok(Self::instantiate_node(node_type, id, attrs, content, marks))
@@ -61,13 +61,12 @@ impl<'schema> NodeFactory<'schema> {
         attrs: Option<&HashMap<String, Value>>,
     ) -> PoolResult<Mark> {
         let mark_def = self.schema.marks.get(type_name).ok_or_else(|| {
-            schema_error(&format!("无法在 schema 中找到标记类型: {type_name}"))
+            schema_error(&format!("无法在 schema 中找到标记类型：{type_name}"))
         })?;
 
         Ok(Self::instantiate_mark(mark_def, attrs))
     }
 
-    /// 获取标记类型定义引用。
     /// 获取所有节点类型名称，主要用于调试或提示。
     pub fn node_names(&self) -> Vec<&'schema str> {
         let mut names: Vec<&'schema str> =
@@ -132,34 +131,19 @@ impl<'schema> NodeFactory<'schema> {
     ) -> String {
         if available.is_empty() {
             format!(
-                concat!(
-                    "未找到 ",
-                    "{} \"{}\"。",
-                    "当前 Schema 中未声明任何 ",
-                    "{}。"
-                ),
-                kind, name, kind
+                "未找到{kind} \"{name}\"。当前 Schema 中未声明任何{kind}。"
             )
         } else {
             let preview: Vec<&str> =
                 available.iter().take(5).map(|s| s.as_str()).collect();
             format!(
-                concat!(
-                    "未找到 ",
-                    "{} \"{}\"。",
-                    "可用的 ",
-                    "{} ",
-                    "示例: ",
-                    "{}"
-                ),
-                kind,
-                name,
-                kind,
+                "未找到{kind} \"{name}\"。可用的{kind}示例：{}",
                 preview.join(", ")
             )
         }
     }
 
+    /// 获取标记类型定义引用，若不存在则返回 `None`。
     pub fn mark_definition(
         &self,
         type_name: &str,
@@ -202,7 +186,7 @@ impl<'schema> NodeFactory<'schema> {
         marks: Option<Vec<Mark>>,
     ) -> PoolResult<NodeTree> {
         let node_type = self.schema.nodes.get(type_name).ok_or_else(|| {
-            schema_error(&format!("无法在 schema 中找到节点类型: {type_name}"))
+            schema_error(&format!("无法在 schema 中找到节点类型：{type_name}"))
         })?;
 
         self.create_tree_with_type(node_type, id, attrs, content, marks)
@@ -250,7 +234,7 @@ impl<'schema> NodeFactory<'schema> {
                                 .get(&type_name)
                                 .ok_or_else(|| {
                                     schema_error(&format!(
-                                        "无法在 schema 中找到节点类型: {type_name}"
+                                        "无法在 schema 中找到节点类型：{type_name}"
                                     ))
                                 })?;
 
@@ -271,7 +255,7 @@ impl<'schema> NodeFactory<'schema> {
                                 .get(&type_name)
                                 .ok_or_else(|| {
                                     schema_error(&format!(
-                                        "无法在 schema 中找到节点类型: {type_name}"
+                                        "无法在 schema 中找到节点类型：{type_name}"
                                     ))
                                 })?;
 
@@ -353,7 +337,9 @@ mod tests {
         let err = factory.ensure_node("unknown").unwrap_err();
         let msg = err.to_string();
         assert!(msg.contains("未找到节点类型"), "actual: {msg}");
+        assert!(msg.contains("unknown"), "actual: {msg}");
         assert!(msg.contains("doc"), "actual: {msg}");
+        // 这里只对关键字段做断言，完整文案在运行时人工确认。
     }
 
     #[test]
@@ -363,9 +349,9 @@ mod tests {
         let err = factory.ensure_mark("italic").unwrap_err();
         let msg = err.to_string();
         assert!(msg.contains("未找到标记类型"), "actual: {msg}");
+        assert!(msg.contains("italic"), "actual: {msg}");
         assert!(msg.contains("bold"), "actual: {msg}");
     }
-
     #[test]
     fn node_and_mark_names_exposed() {
         let schema = build_schema();

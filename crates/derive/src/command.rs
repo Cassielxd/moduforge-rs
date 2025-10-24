@@ -24,9 +24,7 @@ impl Parse for CommandArgs {
         };
 
         if !input.is_empty() {
-            return Err(
-                input.error("unexpected tokens after command macro arguments")
-            );
+            return Err(input.error("命令宏参数后仍然存在无法解析的内容"));
         }
 
         Ok(Self { ident, command_name })
