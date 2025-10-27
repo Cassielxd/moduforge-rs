@@ -59,7 +59,7 @@ pub use runtime::async_runtime::ForgeAsyncRuntime;
 // 新的Actor运行时
 pub use runtime::actor_runtime::ForgeActorRuntime;
 // 运行时统一接口
-pub use runtime::runtime_trait::{RuntimeTrait, RuntimeFactory};
+pub use runtime::runtime_trait::{RuntimeTrait};
 // 运行时构建器和自适应配置
 pub use runtime::builder::ForgeRuntimeBuilder;
 pub use runtime::system_detector::{SystemResources, ResourceTier};
