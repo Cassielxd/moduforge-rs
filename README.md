@@ -82,26 +82,39 @@ cargo run -p benchmark-coordinator -- run-all --parallel 2
 ```
 
 ### 最小运行时代码
+
+#### 方式 1：最简单的用法（推荐）
 ```rust
 use anyhow::Result;
-use mf_core::{
-    ForgeAsyncRuntime, ForgeConfig, Environment, ForgeRuntimeBuilder,
-};
-use mf_core::types::RuntimeOptions;
+use mf_core::ForgeRuntimeBuilder;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // 自动检测系统资源，选择最优运行时
+    let mut runtime = ForgeRuntimeBuilder::new()
+        .build()
+        .await?;
+
+    // 获取当前状态
+    let state = runtime.get_state().await?;
+    println!("文档节点数: {}", state.doc().size());
+
+    Ok(())
+}
+```
+
+#### 方式 2：指定运行时类型
+```rust
+use mf_core::{ForgeRuntimeBuilder, RuntimeType};
 use mf_model::{Node, NodeType, Attrs};
 use mf_transform::node_step::AddNodeStep;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
-
-    let config = ForgeConfig::builder()
-        .environment(Environment::Development)
-        .build()?;
-
+    // 明确使用 Async 运行时
     let mut runtime = ForgeRuntimeBuilder::new()
-        .with_options(RuntimeOptions::default())
-        .build_async(config)
+        .runtime_type(RuntimeType::Async)
+        .build()
         .await?;
 
     // 构建文档与段落节点
@@ -113,12 +126,36 @@ async fn main() -> Result<()> {
         Some("Hello ModuForge".into()),
     );
 
-    let mut tr = runtime.get_state().tr();
+    let mut tr = runtime.get_tr().await?;
     tr.add_step(Box::new(AddNodeStep::new_single(doc, None)));
     tr.add_step(Box::new(AddNodeStep::new_single(paragraph, Some("doc".into()))));
-    runtime.dispatch_flow(tr).await?;
+    tr.commit()?;
+    runtime.dispatch(tr).await?;
 
-    println!("current nodes: {}", runtime.get_state().doc().size());
+    let state = runtime.get_state().await?;
+    println!("当前节点数: {}", state.doc().size());
+    Ok(())
+}
+```
+
+#### 方式 3：完全自定义配置
+```rust
+use mf_core::{ForgeRuntimeBuilder, RuntimeType, Environment};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // 生产环境配置
+    let mut runtime = ForgeRuntimeBuilder::new()
+        .runtime_type(RuntimeType::Actor)
+        .environment(Environment::Production)
+        .max_concurrent_tasks(20)
+        .queue_size(5000)
+        .enable_monitoring(true)
+        .history_limit(1000)
+        .build()
+        .await?;
+
+    println!("运行时类型: {:?}", runtime.runtime_type());
     Ok(())
 }
 ```

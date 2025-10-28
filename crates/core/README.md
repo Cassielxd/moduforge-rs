@@ -268,79 +268,110 @@ moduforge-transform = { version = "0.4.12", path = "../transform" }
 
 ## 🚀 快速开始
 
-### 基本使用
+### 1. 最简单的用法（推荐）
 
 ```rust
-use mf_core::{
-    ForgeRuntime, RuntimeOptions, EditorOptionsBuilder,
-    types::{Content, Extensions}
-};
+use mf_core::ForgeRuntimeBuilder;
+
+#[tokio::main]
+async fn main() -> mf_core::ForgeResult<()> {
+    // 自动检测系统资源，选择最优运行时
+    let mut runtime = ForgeRuntimeBuilder::new()
+        .build()
+        .await?;
+
+    // 获取当前状态
+    let state = runtime.get_state().await?;
+    println!("文档节点数: {}", state.doc().size());
+
+    Ok(())
+}
+```
+
+### 2. 指定运行时类型
+
+```rust
+use mf_core::{ForgeRuntimeBuilder, RuntimeType};
 use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> mf_core::ForgeResult<()> {
-    // 1. 创建运行时选项
-    let options = EditorOptionsBuilder::new()
-        .content(Content::None)
-        .extensions(vec![])
-        .history_limit(100)
-        .build();
+    // 明确使用 Async 运行时
+    let mut runtime = ForgeRuntimeBuilder::new()
+        .runtime_type(RuntimeType::Async)
+        .build()
+        .await?;
 
-    // 2. 创建运行时实例
-    let mut runtime = ForgeRuntime::create(options).await?;
-
-    // 3. 执行命令
+    // 执行命令
     let command = Arc::new(MyCommand);
     runtime.command(command).await?;
 
-    // 4. 获取文档
-    let doc = runtime.doc();
-    println!("文档节点数: {}", doc.len());
+    // 获取文档
+    let doc = runtime.doc().await?;
+    println!("文档节点数: {}", doc.size());
 
     Ok(())
 }
 ```
 
-### 异步运行时使用
+### 3. 完全自定义配置
 
 ```rust
-use mf_core::{
-    ForgeAsyncRuntime, PerformanceConfig,
-    RuntimeOptions, EditorOptionsBuilder
-};
+use mf_core::{ForgeRuntimeBuilder, RuntimeType, Environment};
 
 #[tokio::main]
 async fn main() -> mf_core::ForgeResult<()> {
-    // 1. 创建高性能配置
-    let perf_config = PerformanceConfig {
-        enable_monitoring: true,
-        middleware_timeout_ms: 1000,
-        log_threshold_ms: 100,
-        task_receive_timeout_ms: 10000,
-    };
+    // 生产环境配置
+    let mut runtime = ForgeRuntimeBuilder::new()
+        .runtime_type(RuntimeType::Actor)
+        .environment(Environment::Production)
+        .max_concurrent_tasks(20)
+        .queue_size(5000)
+        .enable_monitoring(true)
+        .history_limit(1000)
+        .build()
+        .await?;
 
-    // 2. 创建运行时选项
-    let options = EditorOptionsBuilder::new()
-        .content(Content::None)
-        .extensions(vec![])
-        .build();
+    println!("运行时类型: {:?}", runtime.runtime_type());
+    Ok(())
+}
+```
 
-    // 3. 创建异步运行时
-    let mut async_runtime = ForgeAsyncRuntime::create(options).await?;
-    async_runtime.set_performance_config(perf_config);
+### 4. 运行时类型匹配
 
-    // 4. 使用高性能分发
-    let transaction = create_test_transaction();
-    async_runtime.dispatch_flow(transaction).await?;
+```rust
+use mf_core::{ForgeRuntimeBuilder, AnyRuntime};
+
+#[tokio::main]
+async fn main() -> mf_core::ForgeResult<()> {
+    let runtime = ForgeRuntimeBuilder::new().build().await?;
+
+    // 根据运行时类型执行不同操作
+    match &runtime {
+        AnyRuntime::Sync(rt) => {
+            println!("✅ 使用同步运行时 - 适合简单场景");
+        },
+        AnyRuntime::Async(rt) => {
+            println!("✅ 使用异步运行时 - 适合中等并发");
+        },
+        AnyRuntime::Actor(rt) => {
+            println!("✅ 使用 Actor 运行时 - 适合高并发");
+        },
+    }
+
+    // 或者使用辅助方法
+    if let Some(async_rt) = runtime.as_async() {
+        println!("这是异步运行时的特定操作");
+    }
 
     Ok(())
 }
 ```
 
-### 事件系统使用
+### 5. 事件系统使用
 
 ```rust
-use mf_core::{EventBus, Event, EventHandler};
+use mf_core::{ForgeRuntimeBuilder, Event, EventHandler};
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -367,13 +398,17 @@ impl EventHandler<Event> for MyEventHandler {
     }
 }
 
-// 使用事件总线
-let event_bus = EventBus::<Event>::new();
-event_bus.add_event_handler(Arc::new(MyEventHandler))?;
-event_bus.start_event_loop();
+#[tokio::main]
+async fn main() -> mf_core::ForgeResult<()> {
+    // 在构建时添加事件处理器
+    let mut runtime = ForgeRuntimeBuilder::new()
+        .event_handler(Arc::new(MyEventHandler))
+        .build()
+        .await?;
 
-// 广播事件
-event_bus.broadcast(Event::Create(Arc::new(state))).await?;
+    // 事件会自动触发
+    Ok(())
+}
 ```
 
 ### 中间件使用
@@ -418,10 +453,8 @@ middleware_stack.add(LoggingMiddleware {
     name: "LoggingMiddleware".to_string(),
 });
 
-// 添加到运行时选项
-let options = EditorOptionsBuilder::new()
-    .middleware_stack(middleware_stack)
-    .build();
+// 注意：中间件栈目前需要通过 RuntimeOptions 配置
+// 未来版本会添加到 ForgeRuntimeBuilder
 ```
 
 ## 📊 性能监控
@@ -517,13 +550,21 @@ cargo test --release
 ```rust
 #[tokio::test]
 async fn test_runtime_creation() -> mf_core::ForgeResult<()> {
-    let options = EditorOptionsBuilder::new()
-        .content(Content::None)
-        .extensions(vec![])
-        .build();
+    let mut runtime = ForgeRuntimeBuilder::new().build().await?;
 
-    let runtime = ForgeRuntime::create(options).await?;
-    assert!(runtime.doc().len() > 0);
+    let state = runtime.get_state().await?;
+    assert!(state.doc().size() >= 0);
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_specific_runtime_type() -> mf_core::ForgeResult<()> {
+    let mut runtime = ForgeRuntimeBuilder::new()
+        .runtime_type(RuntimeType::Async)
+        .build()
+        .await?;
+
+    assert_eq!(runtime.runtime_type(), RuntimeType::Async);
     Ok(())
 }
 
@@ -549,14 +590,38 @@ async fn test_async_processor() {
 
 ### 运行时配置
 ```rust
-// 基础配置
-let options = EditorOptionsBuilder::new()
+use mf_core::{ForgeRuntimeBuilder, RuntimeType, Environment, Content, Extensions};
+
+// 完整配置示例
+let runtime = ForgeRuntimeBuilder::new()
+    // 运行时类型
+    .runtime_type(RuntimeType::Actor)
+
+    // 环境配置
+    .environment(Environment::Production)
+
+    // 内容和扩展
     .content(Content::NodePool(node_pool))
-    .extensions(vec![Extensions::N(node), Extensions::M(mark)])
+    .extension(Extensions::N(node))
+    .extension(Extensions::M(mark))
+
+    // 性能配置
+    .max_concurrent_tasks(20)
+    .queue_size(5000)
+    .enable_monitoring(true)
+    .middleware_timeout_ms(1000)
+
+    // 历史配置
     .history_limit(100)
-    .event_handlers(vec![Arc::new(MyEventHandler)])
-    .middleware_stack(middleware_stack)
-    .build();
+
+    // 事件处理
+    .event_handler(Arc::new(MyEventHandler))
+
+    // Schema 配置
+    .schema_path("schema/main.xml")
+
+    .build()
+    .await?;
 ```
 
 ### 处理器配置

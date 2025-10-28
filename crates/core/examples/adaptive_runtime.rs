@@ -101,7 +101,7 @@ async fn example_auto_runtime() -> ForgeResult<()> {
     println!("🎯 示例3: 完全自动模式（推荐）\n");
 
     println!("创建运行时（自动检测系统资源）...");
-    let mut runtime = ForgeRuntimeBuilder::auto(None).await?;
+    let mut runtime = ForgeRuntimeBuilder::new().build().await?;
 
     println!("✅ 运行时创建成功！");
     println!();
@@ -117,8 +117,11 @@ async fn example_manual_runtime_type() -> ForgeResult<()> {
 
     // 强制使用Async运行时
     println!("创建运行时（强制使用Async类型）...");
-    let mut runtime =
-        ForgeRuntimeBuilder::with_type(RuntimeType::Async, None).await?;
+    let mut runtime = ForgeRuntimeBuilder::new()
+        .runtime_type(RuntimeType::Async)
+        .build()
+        .await?;
+    //ForgeRuntimeBuilder::with_type(RuntimeType::Async, None).await?;
 
     println!("✅ Async运行时创建成功！");
     println!();
@@ -133,7 +136,7 @@ async fn example_use_runtime() -> ForgeResult<()> {
     println!("💻 示例5: 使用运行时执行操作\n");
 
     // 创建运行时
-    let mut runtime = ForgeRuntimeBuilder::auto(None).await?;
+    let mut runtime = ForgeRuntimeBuilder::new().build().await?;
 
     // 获取当前状态
     let state = runtime.get_state().await?;

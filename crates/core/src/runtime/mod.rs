@@ -15,3 +15,6 @@ pub mod actor_runtime;
 pub mod adaptive;
 pub mod builder;
 pub mod system_detector;
+
+// 重新导出常用类型
+pub use builder::{ForgeRuntimeBuilder, AnyRuntime};
