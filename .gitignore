@@ -24,3 +24,4 @@ dist
 /static
 /*.yaml
 /examples/snapshot_demo/target
+/docs

@@ -18,6 +18,11 @@ pub struct SnapshotShardMeta {
 /// 写入分片快照：
 /// - snapshot/meta.json（分片元数据，JSON）
 /// - snapshot/shard-XXX.bin.zst（每个分片的压缩数据）
+#[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(zw, meta, get_shard_bytes), fields(
+    crate_name = "file",
+    shard_count = meta.shard_count,
+    zstd_level = zstd_level
+)))]
 pub fn write_snapshot_shards<W, F>(
     zw: &mut ZipDocumentWriter<W>,
     meta: &SnapshotShardMeta,
@@ -43,6 +48,10 @@ where
 }
 
 /// 读取分片快照：返回元数据和解压后的每个分片字节
+#[cfg_attr(
+    feature = "dev-tracing",
+    tracing::instrument(skip(zr), fields(crate_name = "file"))
+)]
 pub fn read_snapshot_shards<R: Read + Seek>(
     zr: &mut ZipDocumentReader<R>
 ) -> io::Result<(SnapshotShardMeta, Vec<Vec<u8>>)> {
@@ -101,6 +110,13 @@ where
 }
 
 /// 高层接口：导出包含 meta.json、schema.xml 和分片快照的 ZIP 文档
+#[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(path, meta_json, schema_xml, shard_meta, get_shard_bytes), fields(
+    crate_name = "file",
+    file_path = %path.as_ref().display(),
+    shard_count = shard_meta.counts,
+    schema_size = schema_xml.len(),
+    zstd_level = zstd_level
+)))]
 pub fn export_zip_with_shards<P, F>(
     path: P,
     meta_json: &serde_json::Value,
@@ -123,6 +139,10 @@ where
 }
 
 /// 高层接口：导入 ZIP 文档，返回（meta.json、schema.xml、分片元数据、解码后的分片）
+#[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(path), fields(
+    crate_name = "file",
+    file_path = %path.as_ref().display()
+)))]
 pub fn import_zip_with_shards<P, T>(
     path: P
 ) -> io::Result<(serde_json::Value, Vec<u8>, SnapshotShardMeta, Vec<T>)>

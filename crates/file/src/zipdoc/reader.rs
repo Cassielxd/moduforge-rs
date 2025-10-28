@@ -107,6 +107,10 @@ impl<R: Read + Seek> ZipDocumentReader<R> {
         })
     }
     // 读取指定文件完整内容，自动选择最优策略
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self), fields(
+        crate_name = "file",
+        file_name = %name
+    )))]
     pub fn read_all(
         &mut self,
         name: &str,

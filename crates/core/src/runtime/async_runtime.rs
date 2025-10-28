@@ -100,6 +100,13 @@ impl ForgeAsyncRuntime {
     ///
     /// # 返回值
     /// * `ForgeResult<Self>` - 异步编辑器实例或错误
+    #[cfg_attr(
+        feature = "dev-tracing",
+        tracing::instrument(
+            skip(options),
+            fields(crate_name = "core", runtime_type = "async")
+        )
+    )]
     pub async fn create(options: RuntimeOptions) -> ForgeResult<Self> {
         Self::create_with_config(options, ForgeConfig::default()).await
     }
@@ -125,6 +132,11 @@ impl ForgeAsyncRuntime {
     ///     None
     /// ).await?;
     /// ```
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(options, config), fields(
+        crate_name = "core",
+        schema_path = xml_schema_path,
+        runtime_type = "async"
+    )))]
     pub async fn from_xml_schema_path(
         xml_schema_path: &str,
         options: Option<RuntimeOptions>,
@@ -144,6 +156,11 @@ impl ForgeAsyncRuntime {
     ///
     /// # 返回值
     /// * `ForgeResult<Self>` - 异步编辑器实例或错误
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(xml_schema_paths, options, config), fields(
+        crate_name = "core",
+        schema_count = xml_schema_paths.len(),
+        runtime_type = "async"
+    )))]
     pub async fn from_xml_schemas(
         xml_schema_paths: &[&str],
         options: Option<RuntimeOptions>,
@@ -164,6 +181,11 @@ impl ForgeAsyncRuntime {
     ///
     /// # 返回值
     /// * `ForgeResult<Self>` - 异步编辑器实例或错误
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(xml_content, options, config), fields(
+        crate_name = "core",
+        content_size = xml_content.len(),
+        runtime_type = "async"
+    )))]
     pub async fn from_xml_content(
         xml_content: &str,
         options: Option<RuntimeOptions>,
@@ -187,6 +209,11 @@ impl ForgeAsyncRuntime {
     ///
     /// # 返回值
     /// * `ForgeResult<Self>` - 异步编辑器实例或错误
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(options, config), fields(
+        crate_name = "core",
+        runtime_type = "async",
+        has_middleware = !options.get_middleware_stack().is_empty()
+    )))]
     pub async fn create_with_config(
         options: RuntimeOptions,
         config: ForgeConfig,
@@ -233,6 +260,11 @@ impl ForgeAsyncRuntime {
             debug!("{} 耗时: {}ms", operation, duration.as_millis());
         }
     }
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, command), fields(
+        crate_name = "core",
+        command_name = %command.name(),
+        runtime_type = "async"
+    )))]
     pub async fn command(
         &mut self,
         command: Arc<dyn Command>,
@@ -251,6 +283,12 @@ impl ForgeAsyncRuntime {
     ///
     /// # 返回值
     /// * `EditorResult<()>` - 命令执行结果
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, command, meta), fields(
+        crate_name = "core",
+        command_name = %command.name(),
+        description = %description,
+        runtime_type = "async"
+    )))]
     pub async fn command_with_meta(
         &mut self,
         command: Arc<dyn Command>,
@@ -276,6 +314,11 @@ impl ForgeAsyncRuntime {
             },
         }
     }
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, transaction), fields(
+        crate_name = "core",
+        tr_id = %transaction.id,
+        runtime_type = "async"
+    )))]
     pub async fn dispatch_flow(
         &mut self,
         transaction: Transaction,
@@ -300,6 +343,12 @@ impl ForgeAsyncRuntime {
     ///
     /// # 返回值
     /// * `EditorResult<()>` - 处理结果，成功返回Ok(()), 失败返回错误
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, transaction, meta), fields(
+        crate_name = "core",
+        tr_id = %transaction.id,
+        description = %description,
+        runtime_type = "async"
+    )))]
     pub async fn dispatch_flow_with_meta(
         &mut self,
         transaction: Transaction,
@@ -390,6 +439,12 @@ impl ForgeAsyncRuntime {
         Ok(())
     }
 
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, transaction), fields(
+        crate_name = "core",
+        tr_id = %transaction.id,
+        middleware_count = self.base.get_options().get_middleware_stack().middlewares.len(),
+        runtime_type = "async"
+    )))]
     pub async fn run_before_middleware(
         &mut self,
         transaction: &mut Transaction,
@@ -535,6 +590,13 @@ impl ForgeAsyncRuntime {
     /// 2. 等待所有正在处理的任务完成
     /// 3. 关闭底层的异步处理器
     /// 4. 清理所有资源
+    #[cfg_attr(
+        feature = "dev-tracing",
+        tracing::instrument(
+            skip(self),
+            fields(crate_name = "core", runtime_type = "async")
+        )
+    )]
     pub async fn shutdown(&mut self) -> ForgeResult<()> {
         debug!("开始关闭异步运行时");
 

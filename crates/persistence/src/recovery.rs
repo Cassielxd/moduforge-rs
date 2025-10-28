@@ -6,6 +6,11 @@ use crate::ser::{SnapshotData, TypeWrapper};
 use crate::step_factory::StepFactoryRegistry;
 
 /// 从存储恢复状态：加载最新快照，重放其后的事件
+#[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(store, configuration, step_factory), fields(
+    crate_name = "persistence",
+    doc_id = %doc_id,
+    batch = batch
+)))]
 pub async fn recover_state<E: EventStore + 'static>(
     store: &E,
     doc_id: &str,

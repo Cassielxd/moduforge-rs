@@ -19,6 +19,10 @@ impl YrsManager {
     ///
     /// 如果房间的 awareness 对象不存在，则创建一个新的 Yrs `Doc`，
     /// 将其包装在 `Awareness` 对象中，并存储供未来使用。
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self), fields(
+        crate_name = "collaboration",
+        room_id = %room_id
+    )))]
     pub fn get_or_create_awareness(
         &self,
         room_id: &str,

@@ -52,6 +52,11 @@ impl State {
     /// - 初始化基础配置
     /// - 初始化所有插件的状态
     /// - 返回完整的编辑器状态实例
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(state_config), fields(
+        crate_name = "state",
+        has_schema = state_config.schema.is_some(),
+        has_doc = state_config.doc.is_some()
+    )))]
     pub async fn create(state_config: StateConfig) -> StateResult<State> {
         tracing::info!("正在创建新的state");
         let schema: Arc<Schema> = match &state_config.schema {
@@ -135,6 +140,12 @@ impl State {
     }
 
     /// 异步应用事务到当前状态
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, transaction), fields(
+        crate_name = "state",
+        tr_id = %transaction.id,
+        step_count = transaction.steps.len(),
+        version = self.version
+    )))]
     pub async fn apply(
         self: &Arc<Self>,
         transaction: Transaction,
@@ -150,6 +161,11 @@ impl State {
         Ok(result)
     }
 
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, tr), fields(
+        crate_name = "state",
+        tr_id = %tr.id,
+        ignore_plugin = ?ignore
+    )))]
     pub async fn filter_transaction(
         self: &Arc<Self>,
         tr: &Transaction,
@@ -170,6 +186,11 @@ impl State {
 
     /// 异步应用事务到当前状态
     /// 返回新的状态实例和应用事务的步骤
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, root_tr), fields(
+        crate_name = "state",
+        tr_id = %root_tr.id,
+        step_count = root_tr.steps.len()
+    )))]
     pub async fn apply_transaction(
         self: &Arc<Self>,
         root_tr: Arc<Transaction>,
@@ -249,6 +270,12 @@ impl State {
     }
 
     /// 异步应用内部事务
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, tr), fields(
+        crate_name = "state",
+        tr_id = %tr.id,
+        step_count = tr.steps.len(),
+        current_version = self.version
+    )))]
     pub async fn apply_inner(
         self: &Arc<Self>,
         tr: &Transaction,
@@ -279,6 +306,11 @@ impl State {
         Transaction::new(self)
     }
 
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, state_config), fields(
+        crate_name = "state",
+        current_version = self.version,
+        has_plugins = state_config.plugins.is_some()
+    )))]
     pub async fn reconfigure(
         &self,
         state_config: StateConfig,
@@ -342,6 +374,11 @@ impl State {
         self.fields_instances.contains_key(name)
     }
     /// 序列化状态
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self), fields(
+        crate_name = "state",
+        version = self.version,
+        doc_size = self.node_pool.size()
+    )))]
     pub async fn serialize(&self) -> StateResult<StateSerialize> {
         let mut state_fields: HashMap<String, Vec<u8>> = HashMap::new();
         for plugin in self.plugins().await {
@@ -367,6 +404,11 @@ impl State {
         })
     }
     /// 反序列化状态
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(s, configuration), fields(
+        crate_name = "state",
+        state_fields_size = s.state_fields.len(),
+        node_pool_size = s.node_pool.len()
+    )))]
     pub async fn deserialize(
         s: &StateSerialize,
         configuration: &Configuration,
@@ -444,6 +486,11 @@ pub struct Configuration {
 }
 
 impl Configuration {
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(schema, plugins, doc, resource_manager), fields(
+        crate_name = "state",
+        plugin_count = plugins.as_ref().map(|p| p.len()).unwrap_or(0),
+        has_doc = doc.is_some()
+    )))]
     pub async fn new(
         schema: Arc<Schema>,
         plugins: Option<Vec<Arc<Plugin>>>,

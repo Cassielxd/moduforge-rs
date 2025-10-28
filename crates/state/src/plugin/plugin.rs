@@ -155,6 +155,11 @@ pub trait ErasedStateField: Send + Sync + Debug {
 /// StateField 到 ErasedStateField 的自动实现
 #[async_trait]
 impl<T: StateField + 'static> ErasedStateField for T {
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, config, instance), fields(
+        crate_name = "state",
+        state_field_type = std::any::type_name::<T>(),
+        value_type = std::any::type_name::<T::Value>()
+    )))]
     async fn init_erased(
         &self,
         config: &StateConfig,
@@ -164,6 +169,12 @@ impl<T: StateField + 'static> ErasedStateField for T {
         value as Arc<dyn Resource>
     }
 
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, tr, value, old_state, new_state), fields(
+        crate_name = "state",
+        state_field_type = std::any::type_name::<T>(),
+        value_type = std::any::type_name::<T::Value>(),
+        tr_id = %tr.id
+    )))]
     async fn apply_erased(
         &self,
         tr: &Transaction,
@@ -186,22 +197,43 @@ impl<T: StateField + 'static> ErasedStateField for T {
         }
     }
 
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, value), fields(
+        crate_name = "state",
+        state_field_type = std::any::type_name::<T>(),
+        value_type = std::any::type_name::<T::Value>()
+    )))]
     fn serialize_erased(
         &self,
         value: Arc<dyn Resource>,
     ) -> Option<Vec<u8>> {
         if let Some(typed_value) = value.downcast_arc::<T::Value>() {
-            self.serialize(typed_value)
+            let result = self.serialize(typed_value);
+            #[cfg(feature = "dev-tracing")]
+            if let Some(ref data) = result {
+                tracing::debug!(serialized_size = data.len(), "序列化成功");
+            }
+            result
         } else {
             None
         }
     }
 
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, data), fields(
+        crate_name = "state",
+        state_field_type = std::any::type_name::<T>(),
+        value_type = std::any::type_name::<T::Value>(),
+        data_size = data.len()
+    )))]
     fn deserialize_erased(
         &self,
         data: &[u8],
     ) -> Option<Arc<dyn Resource>> {
-        self.deserialize(data).map(|v| v as Arc<dyn Resource>)
+        let result = self.deserialize(data).map(|v| v as Arc<dyn Resource>);
+        #[cfg(feature = "dev-tracing")]
+        if result.is_some() {
+            tracing::debug!("反序列化成功");
+        }
+        result
     }
 }
 
@@ -217,15 +249,28 @@ pub struct PluginSpec {
 
 impl PluginSpec {
     /// 插件状态管理器
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, tr, state), fields(
+        crate_name = "state",
+        plugin_name = %self.tr.metadata().name,
+        tr_id = %tr.id
+    )))]
     async fn filter_transaction(
         &self,
         tr: &Transaction,
         state: &State,
     ) -> bool {
         let filter = &self.tr;
-        filter.filter_transaction(tr, state).await
+        let result = filter.filter_transaction(tr, state).await;
+        #[cfg(feature = "dev-tracing")]
+        tracing::debug!(allowed = result, "过滤结果");
+        result
     }
     /// 执行事务追加
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, trs, old_state, new_state), fields(
+        crate_name = "state",
+        plugin_name = %self.tr.metadata().name,
+        tr_count = trs.len()
+    )))]
     async fn append_transaction(
         &self,
         trs: &[Arc<Transaction>],
@@ -235,8 +280,12 @@ impl PluginSpec {
         let tr = self.tr.append_transaction(trs, old_state, new_state).await?;
         if let Some(mut tr) = tr {
             let _ = tr.commit(); // 在插件系统中，commit 错误可以被忽略
+            #[cfg(feature = "dev-tracing")]
+            tracing::debug!(step_count = tr.steps.len(), "追加事务成功");
             Ok(Some(tr))
         } else {
+            #[cfg(feature = "dev-tracing")]
+            tracing::debug!("无需追加事务");
             Ok(None)
         }
     }
@@ -279,6 +328,11 @@ impl Plugin {
         state.get_field(&self.key)
     }
     /// 应用事务过滤逻辑
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, tr, state), fields(
+        crate_name = "state",
+        plugin_key = %self.key,
+        tr_id = %tr.id
+    )))]
     pub async fn apply_filter_transaction(
         &self,
         tr: &Transaction,
@@ -288,6 +342,11 @@ impl Plugin {
     }
 
     /// 应用事务追加逻辑
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, trs, old_state, new_state), fields(
+        crate_name = "state",
+        plugin_key = %self.key,
+        tr_count = trs.len()
+    )))]
     pub async fn apply_append_transaction(
         &self,
         trs: &[Arc<Transaction>],

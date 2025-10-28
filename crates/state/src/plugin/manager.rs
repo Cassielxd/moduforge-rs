@@ -71,6 +71,10 @@ impl PluginManagerBuilder {
     ///
     /// - 插件名称重复
     /// - 依赖关系无效
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, plugin), fields(
+        crate_name = "state",
+        plugin_name = %plugin.spec.tr.metadata().name
+    )))]
     pub fn register_plugin(
         &mut self,
         plugin: Arc<Plugin>,
@@ -113,6 +117,10 @@ impl PluginManagerBuilder {
     /// - 依赖的插件不存在
     /// - 存在冲突的插件
     /// - 拓扑排序失败
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self), fields(
+        crate_name = "state",
+        plugin_count = self.plugins.len()
+    )))]
     pub fn build(self) -> Result<PluginManager> {
         // 1. 检查循环依赖
         if self.dependency_manager.has_circular_dependencies() {

@@ -59,6 +59,11 @@ pub struct Writer {
 
 impl Writer {
     // 创建写入器; prealloc_chunk 为预分配块大小（0 表示不预分配）
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(path), fields(
+        crate_name = "file",
+        file_path = %path.as_ref().display(),
+        prealloc_chunk = prealloc_chunk
+    )))]
     pub fn create<P: AsRef<Path>>(
         path: P,
         prealloc_chunk: u64,
@@ -98,6 +103,11 @@ impl Writer {
     }
 
     // 追加一条记录，返回该记录的起始偏移
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, payload), fields(
+        crate_name = "file",
+        payload_size = payload.len(),
+        current_offset = self.logical_end
+    )))]
     pub fn append(
         &mut self,
         payload: &[u8],
@@ -169,6 +179,10 @@ pub struct Reader {
 
 impl Reader {
     // 打开只读映射
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(path), fields(
+        crate_name = "file",
+        file_path = %path.as_ref().display()
+    )))]
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
         let mut file = OpenOptions::new().read(true).open(path)?;
         check_header(&mut file)?;

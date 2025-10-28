@@ -64,15 +64,30 @@ impl Transaction {
     /// 创建新的事务实例
     /// state: 当前状态对象
     /// 返回: Transaction 实例
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(state), fields(
+        crate_name = "state",
+        state_version = state.version,
+        doc_size = state.node_pool.size()
+    )))]
     pub fn new(state: &State) -> Self {
         let node = state.doc();
         let schema = state.schema();
-        Transaction {
+        let tr = Transaction {
             meta: imbl::HashMap::new(),
             id: Uuid::new_v4(), // ✅ 使用 UUID v4 生成唯一标识
             transform: Transform::new(node, schema),
-        }
+        };
+        #[cfg(feature = "dev-tracing")]
+        tracing::debug!(tr_id = %tr.id, "事务创建成功");
+        tr
     }
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, other), fields(
+        crate_name = "state",
+        self_tr_id = %self.id,
+        other_tr_id = %other.id,
+        self_steps = self.steps.len(),
+        other_steps = other.steps.len()
+    )))]
     pub fn merge(
         &mut self,
         other: &mut Self,
@@ -80,7 +95,12 @@ impl Transaction {
         // 使用批量应用来优化性能
         let steps_to_apply: Vec<_> = other.steps.iter().cloned().collect();
         if let Err(e) = self.apply_steps_batch(steps_to_apply) {
+            #[cfg(feature = "dev-tracing")]
+            tracing::error!(error = %e, "批量应用步骤失败");
             eprintln!("批量应用步骤失败: {e}");
+        } else {
+            #[cfg(feature = "dev-tracing")]
+            tracing::debug!(total_steps = self.steps.len(), "事务合并成功");
         }
     }
     /// 获取当前文档状态
@@ -90,6 +110,12 @@ impl Transaction {
     /// 设置节点属性
     /// id: 节点ID
     /// values: 属性键值对
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, values), fields(
+        crate_name = "state",
+        tr_id = %self.id,
+        node_id = %id,
+        attr_count = values.len()
+    )))]
     pub fn set_node_attribute(
         &mut self,
         id: NodeId,
@@ -101,6 +127,12 @@ impl Transaction {
     /// 添加新节点
     /// parent_id: 父节点ID
     /// node: 要添加的节点
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, nodes), fields(
+        crate_name = "state",
+        tr_id = %self.id,
+        parent_id = %parent_id,
+        node_count = nodes.len()
+    )))]
     pub fn add_node(
         &mut self,
         parent_id: NodeId,
@@ -112,6 +144,12 @@ impl Transaction {
     /// 删除节点
     /// id: 节点ID
     /// nodes: 要删除的节点
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, node_ids), fields(
+        crate_name = "state",
+        tr_id = %self.id,
+        parent_id = %parent_id,
+        remove_count = node_ids.len()
+    )))]
     pub fn remove_node(
         &mut self,
         parent_id: NodeId,
@@ -123,6 +161,12 @@ impl Transaction {
     /// 添加标记
     /// id: 节点ID
     /// marks: 要添加的标记
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, marks), fields(
+        crate_name = "state",
+        tr_id = %self.id,
+        node_id = %id,
+        mark_count = marks.len()
+    )))]
     pub fn add_mark(
         &mut self,
         id: NodeId,
@@ -134,6 +178,12 @@ impl Transaction {
     /// 删除标记
     /// id: 节点ID
     /// marks: 要删除的标记
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, mark_types), fields(
+        crate_name = "state",
+        tr_id = %self.id,
+        node_id = %id,
+        mark_type_count = mark_types.len()
+    )))]
     pub fn remove_mark(
         &mut self,
         id: NodeId,

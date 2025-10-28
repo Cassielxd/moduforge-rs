@@ -45,8 +45,12 @@ async-trait = "0.1"
 chrono = "0.4"
 async-channel = "2.3.1"
 # 日志系统
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "time", "chrono"] }
 tracing-appender = "0.2"
+# 追踪可视化（可选）
+tracing-chrome = { version = "0.7" }
+tracing-perfetto = { version = "0.1" }
+backtrace = { version = "0.3" }
 
 uuid = { version = "1.0", features = ["v4"] }
 futures = "0.3"
@@ -82,6 +86,25 @@ moduforge-macros-derive = { version = "0.6.2", path = "crates/derive" }
 moduforge-collaboration = { version = "0.6.2", path = "crates/collaboration" }
 moduforge-collaboration-client = { version = "0.6.2", path = "crates/collaboration_client" }
 
+
+[workspace.features]
+# 开发环境追踪 feature（仅开发时启用，生产环境零开销）
+dev-tracing = [
+    "moduforge-core/dev-tracing",
+    "moduforge-state/dev-tracing",
+    "moduforge-model/dev-tracing",
+    "moduforge-transform/dev-tracing",
+    "moduforge-file/dev-tracing",
+    "moduforge-persistence/dev-tracing",
+    "moduforge-search/dev-tracing",
+    "moduforge-collaboration/dev-tracing",
+]
+
+# 性能分析 feature（包含 Perfetto 导出）
+dev-tracing-perfetto = ["dev-tracing", "tracing-perfetto"]
+
+# 错误栈追踪 feature
+dev-tracing-backtrace = ["dev-tracing", "backtrace"]
 
 
 [profile.release]

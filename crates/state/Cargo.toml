@@ -37,6 +37,11 @@ criterion = { workspace = true }
 # 事务
 moduforge-transform = { workspace = true }
 
+[features]
+# 开发环境追踪 feature
+dev-tracing = ["tracing/max_level_trace"]
+default = []
+
 [dev-dependencies]
 criterion = { workspace = true }
 

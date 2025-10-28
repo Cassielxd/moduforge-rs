@@ -34,9 +34,26 @@ ractor = { version = "0.15.8", features = ["async-trait"] }
 sysinfo = { workspace = true }
 num_cpus = "1.16"
 
+# 追踪相关依赖
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, optional = true }
+tracing-appender = { workspace = true, optional = true }
+tracing-chrome = { workspace = true, optional = true }
+tracing-perfetto = { workspace = true, optional = true }
+backtrace = { workspace = true, optional = true }
+
 [features]
 build-tools = []
 debug-logs = []
+# 开发环境追踪 feature
+dev-tracing = [
+    "tracing/max_level_trace",
+    "tracing-subscriber",
+    "tracing-appender",
+]
+dev-tracing-chrome = ["dev-tracing", "tracing-chrome"]
+dev-tracing-perfetto = ["dev-tracing", "tracing-perfetto"]
+dev-tracing-backtrace = ["dev-tracing", "backtrace"]
 default = ["debug-logs"]
 
 [dev-dependencies]

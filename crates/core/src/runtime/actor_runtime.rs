@@ -57,6 +57,10 @@ impl ForgeActorRuntime {
     ///
     /// # 返回值
     /// * `ForgeResult<Self>` - Actor运行时实例或错误
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(options), fields(
+        crate_name = "core",
+        runtime_type = "actor"
+    )))]
     pub async fn create(options: RuntimeOptions) -> ForgeResult<Self> {
         Self::create_with_config(options, ForgeConfig::default()).await
     }
@@ -69,6 +73,11 @@ impl ForgeActorRuntime {
     ///
     /// # 返回值
     /// * `ForgeResult<Self>` - Actor运行时实例或错误
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(options, config), fields(
+        crate_name = "core",
+        runtime_type = "actor",
+        has_middleware = !options.get_middleware_stack().is_empty()
+    )))]
     pub async fn create_with_config(
         options: RuntimeOptions,
         config: ForgeConfig,
@@ -100,6 +109,11 @@ impl ForgeActorRuntime {
     /// 🎯 处理事务 - 与原始dispatch完全相同的API
     ///
     /// 保持与runtime.rs:662-672行完全相同的接口
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, transaction), fields(
+        crate_name = "core",
+        tr_id = %transaction.id,
+        runtime_type = "actor"
+    )))]
     pub async fn dispatch(
         &mut self,
         transaction: Transaction,
@@ -115,6 +129,12 @@ impl ForgeActorRuntime {
     /// 🎯 处理事务（包含元信息）- 与原始dispatch_with_meta完全相同的API
     ///
     /// 保持与runtime.rs:674-721行完全相同的接口和语义
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, transaction, meta), fields(
+        crate_name = "core",
+        tr_id = %transaction.id,
+        description = %description,
+        runtime_type = "actor"
+    )))]
     pub async fn dispatch_with_meta(
         &mut self,
         transaction: Transaction,
@@ -148,6 +168,11 @@ impl ForgeActorRuntime {
     /// 🎯 执行命令 - 与原始command完全相同的API
     ///
     /// 保持与runtime.rs:629-639行完全相同的接口
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, command), fields(
+        crate_name = "core",
+        command_name = %command.name(),
+        runtime_type = "actor"
+    )))]
     pub async fn command(
         &mut self,
         command: Arc<dyn Command>,
@@ -308,6 +333,10 @@ impl ForgeActorRuntime {
     /// 🎯 销毁运行时 - 与原始destroy完全相同的API
     ///
     /// 保持与runtime.rs:511-519行完全相同的接口
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self), fields(
+        crate_name = "core",
+        runtime_type = "actor"
+    )))]
     pub async fn destroy(&mut self) -> ForgeResult<()> {
         debug!("正在销毁Actor运行时实例");
 

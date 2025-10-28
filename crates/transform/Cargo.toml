@@ -23,4 +23,11 @@ anyhow = { workspace = true }
 moduforge-model = { workspace = true }
 criterion = { workspace = true }
 
+# 追踪系统（可选）
+tracing = { workspace = true, optional = true }
+
+[features]
+dev-tracing = ["tracing", "tracing/max_level_trace"]
+default = []
+
 

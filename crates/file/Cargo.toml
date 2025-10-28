@@ -27,6 +27,11 @@ anyhow = { workspace = true }
 rayon = { workspace = true }
 chrono = { version = "0.4", features = ["serde"], optional = true }
 tempfile = { workspace = true }
+tracing = { workspace = true, optional = true }
+
+[features]
+dev-tracing = ["tracing", "tracing/max_level_trace"]
+default = []
 
 
 

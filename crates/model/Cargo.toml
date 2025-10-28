@@ -31,6 +31,9 @@ ahash = { workspace = true }
 
 once_cell = "1.19"
 
+# 追踪系统（可选）
+tracing = { workspace = true, optional = true }
+
 [dev-dependencies]
 criterion = { workspace = true }
 tempfile = { workspace = true }
@@ -42,5 +45,6 @@ harness = false
 
 [features]
 debug-logs = []
+dev-tracing = ["tracing", "tracing/max_level_trace"]
 default = ["debug-logs"]
 

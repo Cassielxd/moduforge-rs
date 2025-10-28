@@ -26,6 +26,7 @@ tempfile = { workspace = true }
 criterion = { workspace = true }
 futures = { workspace = true }
 tokio = { workspace = true }
+tracing = { workspace = true, optional = true }
 
 # core model & ops
 moduforge-model = { workspace = true }
@@ -35,5 +36,9 @@ moduforge-state = { workspace = true }
 # tantivy backend
 tantivy = { version = "0.24.2" }
 tantivy-jieba = "0.16.0"
+
+[features]
+dev-tracing = ["tracing", "tracing/max_level_trace"]
+default = []
 
 

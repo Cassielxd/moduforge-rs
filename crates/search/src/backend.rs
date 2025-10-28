@@ -268,6 +268,10 @@ impl TantivyBackend {
         Ok(())
     }
 
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, docs), fields(
+        crate_name = "search",
+        doc_count = docs.len()
+    )))]
     pub async fn rebuild_all(
         &self,
         docs: Vec<IndexDoc>,
@@ -290,6 +294,11 @@ impl TantivyBackend {
         Ok(())
     }
 
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, query), fields(
+        crate_name = "search",
+        has_text = query.text.is_some(),
+        has_node_type = query.node_type.is_some()
+    )))]
     pub async fn search_ids(
         &self,
         query: SearchQuery,

@@ -31,6 +31,10 @@ pub struct NodePool {
 }
 
 impl NodePool {
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(inner), fields(
+        crate_name = "model",
+        node_count = inner.nodes.iter().map(|i| i.values().len()).sum::<usize>()
+    )))]
     pub fn new(inner: Arc<Tree>) -> Arc<NodePool> {
         let id = POOL_ID_COUNTER.fetch_add(1, Ordering::SeqCst);
         let pool = Self { inner, key: format!("pool_{id}") };

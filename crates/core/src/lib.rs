@@ -43,6 +43,9 @@ pub mod runtime;
 pub mod schema_parser;
 pub mod types;
 
+// 追踪初始化模块（开发环境专用）
+pub mod tracing_init;
+
 // 新的Actor系统模块
 pub mod actors;
 pub use error::{ForgeResult, error_utils};

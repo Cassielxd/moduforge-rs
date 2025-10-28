@@ -62,6 +62,11 @@ impl PartialEq for Schema {
 impl Eq for Schema {}
 impl Schema {
     /// 创建新的 Schema 实例
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(spec), fields(
+        crate_name = "model",
+        node_count = spec.nodes.len(),
+        mark_count = spec.marks.len()
+    )))]
     pub fn new(spec: SchemaSpec) -> Self {
         let mut instance_spec = SchemaSpec {
             nodes: HashMap::new(),
@@ -88,6 +93,11 @@ impl Schema {
     }
     /// 编译 Schema 定义
     /// 处理节点和标记的定义，建立它们之间的关系
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(instance_spec), fields(
+        crate_name = "model",
+        node_count = instance_spec.nodes.len(),
+        mark_count = instance_spec.marks.len()
+    )))]
     pub fn compile(instance_spec: SchemaSpec) -> PoolResult<Schema> {
         let mut schema: Schema = Schema::new(instance_spec);
         let nodes: HashMap<String, NodeDefinition> =

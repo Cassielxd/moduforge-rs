@@ -36,6 +36,10 @@ pub struct Transform {
 }
 
 impl Transform {
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(doc, schema), fields(
+        crate_name = "transform",
+        doc_size = doc.size()
+    )))]
     pub fn new(
         doc: Arc<NodePool>,
         schema: Arc<Schema>,
@@ -72,6 +76,10 @@ impl Transform {
         self.draft.as_mut().ok_or_else(|| anyhow::anyhow!("草稿状态未初始化"))
     }
 
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, step), fields(
+        crate_name = "transform",
+        step_count = self.steps.len()
+    )))]
     pub fn step(
         &mut self,
         step: Arc<dyn Step>,
@@ -133,6 +141,11 @@ impl Transform {
     }
 
     /// 批量应用步骤（优化版本）
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, steps), fields(
+        crate_name = "transform",
+        batch_size = steps.len(),
+        current_step_count = self.steps.len()
+    )))]
     pub fn apply_steps_batch(
         &mut self,
         steps: Vec<Arc<dyn Step>>,

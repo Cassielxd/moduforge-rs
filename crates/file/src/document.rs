@@ -39,6 +39,10 @@ pub struct DocumentWriter {
 }
 impl DocumentWriter {
     // 开始写入
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(path), fields(
+        crate_name = "file",
+        file_path = %path.as_ref().display()
+    )))]
     pub fn begin<P: AsRef<Path>>(path: P) -> Result<Self> {
         let p = path.as_ref().to_path_buf();
         Ok(Self { w: Writer::create(&p, 0)?, segments: Vec::new(), path: p })
@@ -61,6 +65,11 @@ impl DocumentWriter {
         Ok(())
     }
     // 完成写入：生成并写入目录，计算全文件哈希
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self), fields(
+        crate_name = "file",
+        segment_count = self.segments.len(),
+        file_path = %self.path.display()
+    )))]
     pub fn finalize(mut self) -> Result<()> {
         // 计算数据哈希
         self.w.flush()?;
@@ -101,6 +110,10 @@ pub struct DocumentReader {
 }
 impl DocumentReader {
     // 打开并读取目录
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(path), fields(
+        crate_name = "file",
+        file_path = %path.as_ref().display()
+    )))]
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
         let r = Reader::open(path)?;
         // 优先通过尾指针快速定位目录偏移
@@ -190,6 +203,11 @@ impl DocumentReader {
     }
 
     // 读取所有指定类型的段
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, callback), fields(
+        crate_name = "file",
+        segment_type = ?kind,
+        total_segments = self.dir.segments.len()
+    )))]
     pub fn read_segments<F>(
         &self,
         kind: SegmentType,

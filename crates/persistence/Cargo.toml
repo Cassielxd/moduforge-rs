@@ -36,3 +36,7 @@ moduforge-model = { workspace = true }
 moduforge-transform = { workspace = true }
 criterion = { workspace = true }
 moduforge-core = { workspace = true }
+
+[features]
+dev-tracing = ["tracing/max_level_trace"]
+default = []

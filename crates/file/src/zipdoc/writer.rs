@@ -31,6 +31,10 @@ impl<W: Write + Seek> ZipDocumentWriter<W> {
         self
     }
     // 写入 JSON 文件（deflate 压缩）
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, value), fields(
+        crate_name = "file",
+        file_name = %name
+    )))]
     pub fn add_json(
         &mut self,
         name: &str,

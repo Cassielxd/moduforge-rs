@@ -50,6 +50,13 @@ impl ForgeRuntime {
     ///
     /// # 返回值
     /// * `ForgeResult<Self>` - 编辑器实例或错误
+    #[cfg_attr(
+        feature = "dev-tracing",
+        tracing::instrument(
+            skip(options),
+            fields(crate_name = "core", runtime_type = "sync")
+        )
+    )]
     pub async fn create(options: RuntimeOptions) -> ForgeResult<Self> {
         Self::create_with_config(options, ForgeConfig::default()).await
     }
@@ -75,6 +82,10 @@ impl ForgeRuntime {
     ///     None
     /// ).await?;
     /// ```
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(options, config), fields(
+        crate_name = "core",
+        schema_path = xml_schema_path
+    )))]
     pub async fn from_xml_schema_path(
         xml_schema_path: &str,
         options: Option<RuntimeOptions>,
@@ -139,6 +150,11 @@ impl ForgeRuntime {
     ///
     /// # 返回值
     /// * `ForgeResult<Self>` - 编辑器实例或错误
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(xml_schema_paths, options, config), fields(
+        crate_name = "core",
+        schema_count = xml_schema_paths.len(),
+        runtime_type = "sync"
+    )))]
     pub async fn from_xml_schemas(
         xml_schema_paths: &[&str],
         options: Option<RuntimeOptions>,
@@ -174,6 +190,11 @@ impl ForgeRuntime {
     /// options.set_history_limit(Some(100));
     /// let runtime = ForgeRuntime::from_xml_content(xml, Some(options), None).await?;
     /// ```
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(xml_content, options, config), fields(
+        crate_name = "core",
+        content_size = xml_content.len(),
+        runtime_type = "sync"
+    )))]
     pub async fn from_xml_content(
         xml_content: &str,
         options: Option<RuntimeOptions>,
@@ -200,6 +221,11 @@ impl ForgeRuntime {
     ///
     /// # 返回值
     /// * `ForgeResult<Self>` - 编辑器实例或错误
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(options, config), fields(
+        crate_name = "core",
+        runtime_type = "sync",
+        has_middleware = !options.get_middleware_stack().is_empty()
+    )))]
     pub async fn create_with_config(
         options: RuntimeOptions,
         config: ForgeConfig,
@@ -279,6 +305,10 @@ impl ForgeRuntime {
     }
 
     /// 销毁编辑器实例
+    #[cfg_attr(
+        feature = "dev-tracing",
+        tracing::instrument(skip(self), fields(crate_name = "core"))
+    )]
     pub async fn destroy(&mut self) -> ForgeResult<()> {
         debug!("正在销毁编辑器实例");
         EventHelper::destroy_event_bus(&mut self.event_bus).await?;
@@ -286,12 +316,21 @@ impl ForgeRuntime {
         Ok(())
     }
 
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, event), fields(
+        crate_name = "core",
+        event_type = std::any::type_name_of_val(&event)
+    )))]
     pub async fn emit_event(
         &mut self,
         event: Event,
     ) -> ForgeResult<()> {
         EventHelper::emit_event(&mut self.event_bus, event).await
     }
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, transaction), fields(
+        crate_name = "core",
+        tr_id = %transaction.id,
+        middleware_count = self.options.get_middleware_stack().middlewares.len()
+    )))]
     pub async fn run_before_middleware(
         &mut self,
         transaction: &mut Transaction,
@@ -303,6 +342,12 @@ impl ForgeRuntime {
         )
         .await
     }
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, state, transactions), fields(
+        crate_name = "core",
+        has_state = state.is_some(),
+        tr_count = transactions.len(),
+        middleware_count = self.options.get_middleware_stack().middlewares.len()
+    )))]
     pub async fn run_after_middleware(
         &mut self,
         state: &mut Option<Arc<State>>,
@@ -361,6 +406,10 @@ impl ForgeRuntime {
         }
         Ok(())
     }
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, command), fields(
+        crate_name = "core",
+        command_name = %command.name()
+    )))]
     pub async fn command(
         &mut self,
         command: Arc<dyn Command>,
@@ -373,6 +422,11 @@ impl ForgeRuntime {
         self.dispatch(tr).await
     }
 
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, command, meta), fields(
+        crate_name = "core",
+        command_name = %command.name(),
+        description = %description
+    )))]
     pub async fn command_with_meta(
         &mut self,
         command: Arc<dyn Command>,
@@ -394,6 +448,11 @@ impl ForgeRuntime {
     ///
     /// # 返回值
     /// * `EditorResult<()>` - 处理结果，成功返回 Ok(()), 失败返回错误
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, transaction), fields(
+        crate_name = "core",
+        tr_id = %transaction.id,
+        runtime_type = "sync"
+    )))]
     pub async fn dispatch(
         &mut self,
         transaction: Transaction,
@@ -406,6 +465,12 @@ impl ForgeRuntime {
         .await
     }
     /// 更新编辑器状态并记录到历史记录 包含描述和元信息
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, transaction, meta), fields(
+        crate_name = "core",
+        tr_id = %transaction.id,
+        description = %description,
+        runtime_type = "sync"
+    )))]
     pub async fn dispatch_with_meta(
         &mut self,
         transaction: Transaction,

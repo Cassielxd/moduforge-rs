@@ -22,6 +22,10 @@ pub struct SqliteEventStore {
 
 impl SqliteEventStore {
     /// 打开（或创建）数据库并初始化表结构与 PRAGMA。
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(db_path), fields(
+        crate_name = "persistence",
+        commit_mode = ?commit_mode
+    )))]
     pub fn open(
         db_path: impl Into<PathBuf>,
         commit_mode: CommitMode,
@@ -69,6 +73,11 @@ impl SqliteEventStore {
 #[async_trait]
 impl EventStore for SqliteEventStore {
     /// 以独立事务追加一条事件记录。
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, ev), fields(
+        crate_name = "persistence",
+        tr_id = %ev.tr_id,
+        doc_id = %ev.doc_id
+    )))]
     async fn append(
         &self,
         ev: PersistedEvent,
@@ -98,6 +107,10 @@ impl EventStore for SqliteEventStore {
     }
 
     /// 在单事务内批量追加多条事件以提升吞吐。
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, evs), fields(
+        crate_name = "persistence",
+        batch_size = evs.len()
+    )))]
     async fn append_batch(
         &self,
         evs: Vec<PersistedEvent>,
@@ -129,6 +142,12 @@ impl EventStore for SqliteEventStore {
     }
 
     /// 读取指定文档在 `from_lsn` 之后的有序事件流。
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self), fields(
+        crate_name = "persistence",
+        doc_id = %doc_id,
+        from_lsn = from_lsn,
+        limit = limit
+    )))]
     async fn load_since(
         &self,
         doc_id: &str,
@@ -166,6 +185,10 @@ impl EventStore for SqliteEventStore {
     }
 
     /// 返回该文档的最新快照（若存在）。
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self), fields(
+        crate_name = "persistence",
+        doc_id = %doc_id
+    )))]
     async fn latest_snapshot(
         &self,
         doc_id: &str,
@@ -187,6 +210,11 @@ impl EventStore for SqliteEventStore {
     }
 
     /// 原子写入/替换快照。
+    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, snap), fields(
+        crate_name = "persistence",
+        doc_id = %snap.doc_id,
+        upto_lsn = snap.upto_lsn
+    )))]
     async fn write_snapshot(
         &self,
         snap: Snapshot,

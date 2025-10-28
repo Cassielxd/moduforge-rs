@@ -28,6 +28,10 @@ warp = "0.3.7"
 yrs-warp = { workspace=true }
 yrs = { workspace=true }
 
+[features]
+dev-tracing = ["tracing/max_level_trace"]
+default = []
+
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
 tempfile = "3.0"

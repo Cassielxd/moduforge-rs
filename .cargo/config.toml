@@ -1,0 +1,24 @@
+# Cargo 配置文件
+
+[alias]
+# 开发模式：启用追踪（控制台输出）
+dev = "run --features dev-tracing"
+
+# 性能分析模式：Chrome Tracing（推荐）
+chrome = "run --features dev-tracing-chrome"
+
+# 性能分析模式：Perfetto 导出
+perf = "run --features dev-tracing-perfetto"
+
+# 带错误栈追踪的开发模式
+dev-bt = "run --features dev-tracing-backtrace"
+
+# 生产模式：无追踪（零开销）
+prod = "run --release"
+
+# 测试（带追踪）
+test-dev = "test --features dev-tracing"
+
+# 检查（带追踪）
+check-dev = "check --features dev-tracing"
+
