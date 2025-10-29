@@ -498,6 +498,140 @@ let prod_config = PerformanceConfig {
 };
 ```
 
+## 🔍 开发调试工具
+
+### tokio-console 实时监控
+
+`tokio-console` 是一个强大的实时异步任务监控工具，可以帮助你：
+- 📊 实时查看所有异步任务的状态
+- ⏱️ 监控任务执行时间和唤醒次数
+- 🐛 检测任务阻塞和性能问题
+- 📈 查看资源使用情况
+
+#### 安装 tokio-console 客户端
+
+```bash
+cargo install tokio-console
+```
+
+#### 启用 tokio-console 监控
+
+**1. 在 Cargo.toml 中启用 feature：**
+
+```toml
+[dependencies]
+moduforge-core = { version = "0.6.2", features = ["dev-console"] }
+```
+
+**2. 在代码中初始化：**
+
+```rust
+#[cfg(feature = "dev-console")]
+use mf_core::tracing_init::tokio_console;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    // 初始化 tokio-console（仅开发环境）
+    #[cfg(feature = "dev-console")]
+    tokio_console::init()?;
+
+    // 你的应用代码
+    let runtime = ForgeRuntimeBuilder::new().build().await?;
+
+    // ...
+
+    Ok(())
+}
+```
+
+**3. 运行应用：**
+
+```bash
+# 启用 dev-console feature 运行
+cargo run --features dev-console
+```
+
+**4. 在另一个终端连接监控：**
+
+```bash
+# 连接到默认地址 127.0.0.1:6669
+tokio-console
+```
+
+#### tokio-console 界面操作
+
+在 tokio-console 界面中：
+- **`t`** - 切换到任务视图（查看所有异步任务）
+- **`r`** - 切换到资源视图（查看锁、通道等资源）
+- **`h`** - 显示帮助信息
+- **`q`** - 退出
+- **`↑/↓`** - 上下选择任务
+- **`Enter`** - 查看任务详情
+
+#### 运行示例
+
+```bash
+# 运行 tokio-console 演示示例
+cargo run --example tokio_console_demo --features dev-console
+
+# 在另一个终端运行
+tokio-console
+```
+
+#### 自定义配置
+
+```rust
+#[cfg(feature = "dev-console")]
+{
+    // 使用自定义地址
+    tokio_console::init_with_config("0.0.0.0:6669")?;
+}
+```
+
+#### 注意事项
+
+⚠️ **重要提示**：
+- tokio-console 会有一定的性能开销，**不要在生产环境启用**
+- 与其他 tracing 初始化函数（如 `init_tracing`）互斥，只能选择一个
+- 需要 tokio 启用 `tracing` feature（已在 `dev-console` feature 中自动启用）
+
+#### 对比：tokio-console vs tracing-chrome
+
+| 特性 | tokio-console | tracing-chrome |
+|------|---------------|----------------|
+| **实时监控** | ✅ 是 | ❌ 否（事后分析） |
+| **需要注解** | ❌ 否（自动） | ✅ 是（`#[instrument]`） |
+| **监控范围** | 所有 tokio 任务 | 标记的函数 |
+| **任务状态** | ✅ 显示 | ❌ 不显示 |
+| **性能开销** | 较低 | 中等 |
+| **使用场景** | 实时调试、监控 | 详细性能分析 |
+| **可视化** | TUI 界面 | Chrome DevTools |
+
+#### 推荐使用场景
+
+- **开发调试时**：使用 `tokio-console` 实时监控任务状态
+- **性能分析时**：使用 `tracing-chrome` 或 `tracing-perfetto` 进行详细分析
+- **生产环境**：不启用任何追踪 feature，保持零开销
+
+### 其他追踪工具
+
+除了 tokio-console，还支持以下追踪工具：
+
+```rust
+#[cfg(feature = "dev-tracing")]
+use mf_core::tracing_init::dev_tracing::{init_tracing, TraceConfig};
+
+// Chrome Tracing（性能分析）
+#[cfg(feature = "dev-tracing-chrome")]
+let _guard = init_tracing(TraceConfig::chrome("./logs/trace.json"))?;
+
+// Perfetto（高级性能分析）
+#[cfg(feature = "dev-tracing-perfetto")]
+let _guard = init_tracing(TraceConfig::perfetto("./logs/trace.perfetto"))?;
+```
+
+详见 [开发追踪指南](../../docs/DEV_TRACING_GUIDE.md)。
+
 ## 🔒 错误处理
 
 ### 错误类型

@@ -41,6 +41,7 @@ tracing-appender = { workspace = true, optional = true }
 tracing-chrome = { workspace = true, optional = true }
 tracing-perfetto = { workspace = true, optional = true }
 backtrace = { workspace = true, optional = true }
+console-subscriber = { workspace = true, optional = true }
 
 [features]
 build-tools = []
@@ -54,6 +55,11 @@ dev-tracing = [
 dev-tracing-chrome = ["dev-tracing", "tracing-chrome"]
 dev-tracing-perfetto = ["dev-tracing", "tracing-perfetto"]
 dev-tracing-backtrace = ["dev-tracing", "backtrace"]
+# tokio-console 实时监控 feature
+dev-console = [
+    "console-subscriber",
+    "tokio/tracing",
+]
 default = ["debug-logs"]
 
 [dev-dependencies]

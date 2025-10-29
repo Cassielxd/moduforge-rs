@@ -3,6 +3,99 @@
 //! 此模块提供统一的追踪初始化接口，仅在开发环境启用。
 //! 生产环境下所有追踪代码会被编译器完全优化掉，实现零开销。
 
+// ============================================================================
+// tokio-console 支持（实时异步任务监控）
+// ============================================================================
+
+#[cfg(feature = "dev-console")]
+pub mod tokio_console {
+    //! tokio-console 实时监控模块
+    //!
+    //! 提供实时的异步任务监控和调试功能，无需手动添加 instrument 注解。
+    //!
+    //! # 使用方法
+    //!
+    //! 1. 启用 feature：
+    //! ```bash
+    //! cargo run --features dev-console
+    //! ```
+    //!
+    //! 2. 在代码中初始化：
+    //! ```rust,ignore
+    //! #[cfg(feature = "dev-console")]
+    //! mf_core::tracing_init::tokio_console::init()?;
+    //! ```
+    //!
+    //! 3. 启动 tokio-console 客户端：
+    //! ```bash
+    //! tokio-console
+    //! ```
+    //!
+    //! # 注意事项
+    //!
+    //! - tokio-console 会监听 `127.0.0.1:6669` 端口
+    //! - 不要在生产环境启用此 feature，会有性能开销
+    //! - 与其他 tracing 初始化函数互斥，只能选择一个
+
+    /// 初始化 tokio-console 订阅者
+    ///
+    /// 这会启动一个后台服务器，监听 `127.0.0.1:6669`，
+    /// 供 tokio-console 客户端连接。
+    ///
+    /// # 返回值
+    /// * `Ok(())` - 初始化成功
+    /// * `Err(anyhow::Error)` - 初始化失败
+    ///
+    /// # 示例
+    ///
+    /// ```rust,ignore
+    /// #[cfg(feature = "dev-console")]
+    /// {
+    ///     use mf_core::tracing_init::tokio_console;
+    ///     tokio_console::init()?;
+    ///     tracing::info!("tokio-console 已启动，请运行 'tokio-console' 连接");
+    /// }
+    /// ```
+    pub fn init() -> anyhow::Result<()> {
+        console_subscriber::init();
+        tracing::info!("🔍 tokio-console 已启动");
+        tracing::info!("📡 监听地址: 127.0.0.1:6669");
+        tracing::info!("💡 运行 'tokio-console' 命令连接到监控界面");
+        tracing::info!("📚 文档: https://docs.rs/tokio-console");
+        Ok(())
+    }
+
+    /// 使用自定义配置初始化 tokio-console
+    ///
+    /// # 参数
+    /// * `server_addr` - 服务器监听地址，例如 "127.0.0.1:6669"
+    ///
+    /// # 示例
+    ///
+    /// ```rust,ignore
+    /// #[cfg(feature = "dev-console")]
+    /// {
+    ///     use mf_core::tracing_init::tokio_console;
+    ///     tokio_console::init_with_config("0.0.0.0:6669")?;
+    /// }
+    /// ```
+    pub fn init_with_config(server_addr: &str) -> anyhow::Result<()> {
+        let builder = console_subscriber::ConsoleLayer::builder()
+            .server_addr(server_addr.parse()?);
+
+        builder.init();
+
+        tracing::info!("🔍 tokio-console 已启动（自定义配置）");
+        tracing::info!("📡 监听地址: {}", server_addr);
+        tracing::info!("💡 运行 'tokio-console' 命令连接到监控界面");
+        Ok(())
+    }
+}
+
+// ============================================================================
+// 开发环境追踪（Chrome Tracing、Perfetto 等）
+// ============================================================================
+
 #[cfg(feature = "dev-tracing")]
 pub mod dev_tracing {
     use tracing_subscriber::{

@@ -9,7 +9,7 @@ exclude = [
 ]
 
 [workspace.package]
-version = "0.6.2"
+version = "0.6.3"
 edition = "2024"
 authors = ["String <348040933@qq.com>"]
 license = "MIT"
@@ -51,6 +51,8 @@ tracing-appender = "0.2"
 tracing-chrome = { version = "0.7" }
 tracing-perfetto = { version = "0.1" }
 backtrace = { version = "0.3" }
+# tokio-console 支持（实时异步任务监控）
+console-subscriber = { version = "0.4" }
 
 uuid = { version = "1.0", features = ["v4"] }
 futures = "0.3"
@@ -74,17 +76,17 @@ criterion = "0.5"
 quick-xml = { version = "0.36", features = ["serialize"] }
 
 #crates 下所有的库
-moduforge-core = { version = "0.6.2", path = "crates/core" }
-moduforge-state = { version = "0.6.2", path = "crates/state" }
-moduforge-model = { version = "0.6.2", path = "crates/model" }
-moduforge-transform = { version = "0.6.2", path = "crates/transform" }
-moduforge-file = { version = "0.6.2", path = "crates/file" }
-moduforge-persistence = { version = "0.6.2", path = "crates/persistence" }
-moduforge-search = { version = "0.6.2", path = "crates/search" }
-moduforge-macros = { version = "0.6.2", path = "crates/macro" }
-moduforge-macros-derive = { version = "0.6.2", path = "crates/derive" }
-moduforge-collaboration = { version = "0.6.2", path = "crates/collaboration" }
-moduforge-collaboration-client = { version = "0.6.2", path = "crates/collaboration_client" }
+moduforge-core = { version = "0.6.3", path = "crates/core" }
+moduforge-state = { version = "0.6.3", path = "crates/state" }
+moduforge-model = { version = "0.6.3", path = "crates/model" }
+moduforge-transform = { version = "0.6.3", path = "crates/transform" }
+moduforge-file = { version = "0.6.3", path = "crates/file" }
+moduforge-persistence = { version = "0.6.3", path = "crates/persistence" }
+moduforge-search = { version = "0.6.3", path = "crates/search" }
+moduforge-macros = { version = "0.6.3", path = "crates/macro" }
+moduforge-macros-derive = { version = "0.6.3", path = "crates/derive" }
+moduforge-collaboration = { version = "0.6.3", path = "crates/collaboration" }
+moduforge-collaboration-client = { version = "0.6.3", path = "crates/collaboration_client" }
 
 
 [workspace.features]
@@ -105,6 +107,12 @@ dev-tracing-perfetto = ["dev-tracing", "tracing-perfetto"]
 
 # 错误栈追踪 feature
 dev-tracing-backtrace = ["dev-tracing", "backtrace"]
+
+# tokio-console 实时监控 feature（用于异步任务调试）
+dev-console = [
+    "moduforge-core/dev-console",
+    "console-subscriber",
+]
 
 
 [profile.release]

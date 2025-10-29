@@ -191,10 +191,17 @@ struct ProjectNode {
 - 文档站点：`packages/docs` 以 VitePress 构建，覆盖快速入门、节点映射、性能调优、协作排错等专题，可通过 `pnpm dev` 启动本地文档。
 
 ## 文档与进一步阅读
+
+### 核心文档
 - 核心模块文档：`crates/core/README.md`、`crates/state/README.md` 等子 README 详细拆解每个组件的 API 与设计。
 - XML Schema 指南：`schema/README.md` 介绍如何通过 XSD/示例 XML 定义业务结构。
 - 快速入门与深度分析：`packages/docs/quick-start.md`、`packages/docs/README.en.md`、`packages/docs/node-budget-mapping.md` 等提供从入门到场景分析的完整资料。
 - 协作排障：`packages/docs/websocket-error-troubleshooting.md` 汇总常见错误与解决路径。
+
+### 开发调试工具
+- **[tokio-console 实时监控指南](docs/TOKIO_CONSOLE_GUIDE.md)**：实时监控异步任务状态、检测性能问题
+- **[开发追踪指南](docs/DEV_TRACING_GUIDE.md)**：Chrome Tracing、Perfetto 等性能分析工具使用说明
+- **[追踪工具对比](docs/TRACING_TOOLS_COMPARISON.md)**：各种追踪工具的对比和选择建议
 
 ## 贡献与路线
 - 工作区遵循 Rustfmt (见 `rustfmt.toml`) 与 Criterion 基准，建议在提交前执行 `cargo fmt`, `cargo clippy --workspace --all-targets`, `cargo test --workspace`。

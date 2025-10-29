@@ -3,7 +3,6 @@
 
 use app_lib::{initialize::init_contex, router::build_app, serve::AppBuilder};
 use axum::{http::StatusCode, response::IntoResponse, Router};
-use mf_state::init_logging;
 use tauri::{AppHandle, Manager, Emitter, WindowEvent};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -733,8 +732,11 @@ async fn broadcast_to_children(
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // 初始化日志系统，降低tao警告级别
-    init_logging("info", None).unwrap();
+    // 初始化日志系统（使用简单的 tracing_subscriber）
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .with_target(false)
+        .init();
 
     // 初始化上下文
     init_contex().await;

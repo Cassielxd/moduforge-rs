@@ -110,15 +110,17 @@ moduforge-transform = "0.4.12"
 ### 基本使用
 
 ```rust
-use mf_state::{State, StateConfig, Transaction, init_logging};
+use mf_state::{State, StateConfig, Transaction};
 use mf_model::{schema::Schema, node_pool::NodePool};
 use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // 初始化日志系统
-    init_logging("info", Some("logs/state.log"))?;
-    
+    // 初始化日志系统（可选）
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .init();
+
     // 创建状态配置
     let schema = Arc::new(Schema::default());
     let state_config = StateConfig {
@@ -312,21 +314,51 @@ let config = StateConfig {
 
 ### 日志配置
 
+> ⚠️ **注意**：`mf_state::init_logging` 已被弃用，请使用 `mf_core::tracing_init::dev_tracing::init_tracing` 代替。
+
+#### 推荐方式（使用 mf_core）
+
+```rust
+#[cfg(feature = "dev-tracing")]
+use mf_core::tracing_init::dev_tracing::{init_tracing, TraceConfig};
+
+// 控制台输出（开发环境）
+#[cfg(feature = "dev-tracing")]
+let _guard = init_tracing(TraceConfig::console())?;
+
+// JSON 文件输出
+#[cfg(feature = "dev-tracing")]
+let _guard = init_tracing(TraceConfig::json("./logs/trace.json"))?;
+
+// Chrome Tracing（性能分析）
+#[cfg(feature = "dev-tracing-chrome")]
+let _guard = init_tracing(TraceConfig::chrome("./logs/trace.json"))?;
+
+// Perfetto（高级性能分析）
+#[cfg(feature = "dev-tracing-perfetto")]
+let _guard = init_tracing(TraceConfig::perfetto("./logs/trace.perfetto"))?;
+```
+
+#### 简单方式（仅用于示例/测试）
+
+```rust
+// 如果只需要简单的控制台日志，可以直接使用 tracing_subscriber
+tracing_subscriber::fmt()
+    .with_max_level(tracing::Level::INFO)
+    .with_target(false)
+    .init();
+```
+
+#### 旧方式（已弃用）
+
 ```rust
 use mf_state::init_logging;
 
-// 只输出到控制台
+// ⚠️ 已弃用：只输出到控制台
 init_logging("debug", None)?;
 
-// 同时输出到文件和控制台
+// ⚠️ 已弃用：同时输出到文件和控制台
 init_logging("info", Some("logs/moduforge.log"))?;
-
-// 不同日志级别
-init_logging("trace", Some("logs/detail.log"))?;  // 最详细
-init_logging("debug", Some("logs/debug.log"))?;   // 调试信息
-init_logging("info", Some("logs/info.log"))?;     // 一般信息
-init_logging("warn", Some("logs/warn.log"))?;     // 警告信息
-init_logging("error", Some("logs/error.log"))?;   // 错误信息
 ```
 
 ## 📊 性能特性
