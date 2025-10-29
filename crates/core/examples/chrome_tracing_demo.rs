@@ -22,11 +22,11 @@ struct Transaction {
 }
 
 impl Transaction {
-    fn new(id: &str, size: usize) -> Self {
-        Self {
-            id: id.to_string(),
-            data: vec![0u8; size],
-        }
+    fn new(
+        id: &str,
+        size: usize,
+    ) -> Self {
+        Self { id: id.to_string(), data: vec![0u8; size] }
     }
 }
 
@@ -44,13 +44,16 @@ impl Runtime {
         data_size = transaction.data.len(),
         runtime = %self.name
     )))]
-    async fn dispatch(&self, transaction: Transaction) -> Result<(), String> {
+    async fn dispatch(
+        &self,
+        transaction: Transaction,
+    ) -> Result<(), String> {
         info!("开始处理事务");
-        
+
         self.validate(&transaction).await?;
         self.apply(&transaction).await?;
         self.notify(&transaction).await?;
-        
+
         info!("事务处理完成");
         Ok(())
     }
@@ -58,14 +61,17 @@ impl Runtime {
     #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, transaction), fields(
         tr_id = %transaction.id
     )))]
-    async fn validate(&self, transaction: &Transaction) -> Result<(), String> {
+    async fn validate(
+        &self,
+        transaction: &Transaction,
+    ) -> Result<(), String> {
         debug!("验证事务数据");
         sleep(Duration::from_millis(10)).await;
-        
+
         if transaction.data.is_empty() {
             return Err("数据为空".to_string());
         }
-        
+
         debug!("验证通过");
         Ok(())
     }
@@ -73,15 +79,18 @@ impl Runtime {
     #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, transaction), fields(
         tr_id = %transaction.id
     )))]
-    async fn apply(&self, transaction: &Transaction) -> Result<(), String> {
+    async fn apply(
+        &self,
+        transaction: &Transaction,
+    ) -> Result<(), String> {
         debug!("应用事务");
-        
+
         // 模拟数据库操作
         self.update_database(transaction).await?;
-        
+
         // 模拟缓存更新
         self.update_cache(transaction).await?;
-        
+
         debug!("应用完成");
         Ok(())
     }
@@ -89,7 +98,10 @@ impl Runtime {
     #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, transaction), fields(
         tr_id = %transaction.id
     )))]
-    async fn update_database(&self, transaction: &Transaction) -> Result<(), String> {
+    async fn update_database(
+        &self,
+        transaction: &Transaction,
+    ) -> Result<(), String> {
         debug!("更新数据库");
         sleep(Duration::from_millis(50)).await;
         debug!("数据库更新完成");
@@ -99,7 +111,10 @@ impl Runtime {
     #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, transaction), fields(
         tr_id = %transaction.id
     )))]
-    async fn update_cache(&self, transaction: &Transaction) -> Result<(), String> {
+    async fn update_cache(
+        &self,
+        transaction: &Transaction,
+    ) -> Result<(), String> {
         debug!("更新缓存");
         sleep(Duration::from_millis(5)).await;
         debug!("缓存更新完成");
@@ -109,7 +124,10 @@ impl Runtime {
     #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, transaction), fields(
         tr_id = %transaction.id
     )))]
-    async fn notify(&self, transaction: &Transaction) -> Result<(), String> {
+    async fn notify(
+        &self,
+        transaction: &Transaction,
+    ) -> Result<(), String> {
         debug!("发送通知");
         sleep(Duration::from_millis(15)).await;
         debug!("通知发送完成");
@@ -120,6 +138,7 @@ impl Runtime {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // 初始化 Chrome Tracing（保持 guard 直到程序结束）
+    #[cfg(feature = "dev-tracing-chrome")]
     let _guard = init_tracing(TraceConfig::chrome("./logs/trace.json"))?;
 
     info!("🚀 Chrome Tracing 演示开始");
@@ -166,4 +185,3 @@ async fn main() -> anyhow::Result<()> {
     // guard 在这里 drop，确保数据被正确写入
     Ok(())
 }
-
