@@ -10,8 +10,14 @@ pub struct IndexDoc {
     pub node_id: String,
     pub node_type: String,
     pub parent_id: Option<String>,
+    /// mark 类型列表（用于简单的 "包含某 mark" 查询）
     pub marks: Vec<String>,
+    /// 完整的 marks JSON（用于带属性的精确查询）
+    pub marks_json: String,
+    /// 扁平化的顶层属性（用于简单查询）
     pub attrs_flat: Vec<(String, String)>,
+    /// 完整的 attrs JSON（用于嵌套属性查询）
+    pub attrs_json: String,
     pub text: Option<String>,
     pub path: Vec<String>,
     // 常用 fast fields（i64）
@@ -27,12 +33,24 @@ impl IndexDoc {
         node: &Arc<Node>,
     ) -> Self {
         let parent_id = pool.parent_id(&node.id).cloned();
-        let marks =
+
+        // 提取 mark 类型列表（用于简单查询）
+        let marks: Vec<String> =
             node.marks.iter().map(|m: &Mark| m.r#type.clone()).collect();
+
+        // 序列化完整的 marks（用于带属性的查询）
+        let marks_json = serde_json::to_string(&node.marks)
+            .unwrap_or_else(|_| "[]".to_string());
+
+        // 提取扁平化的顶层属性（用于简单查询）
         let mut attrs_flat = Vec::with_capacity(node.attrs.attrs.len());
         for (k, v) in node.attrs.attrs.iter() {
             attrs_flat.push((k.clone(), flatten_value(v)));
         }
+
+        // 序列化完整的 attrs（用于嵌套属性查询）
+        let attrs_json = serde_json::to_string(&node.attrs.attrs)
+            .unwrap_or_else(|_| "{}".to_string());
 
         // 路径（根到当前）
         let path: Vec<String> = pool
@@ -53,7 +71,9 @@ impl IndexDoc {
             node_type: node.r#type.clone(),
             parent_id: parent_id.map(|id| id.to_string()),
             marks,
+            marks_json,
             attrs_flat,
+            attrs_json,
             text,
             path,
             order_i64,

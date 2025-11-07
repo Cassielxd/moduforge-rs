@@ -9,42 +9,39 @@ use mf_state::plugin::{
 use mf_state::state::State;
 use mf_state::transaction::Transaction;
 
-// TantivyBackend imported indirectly via create_tantivy_service
+use crate::backend::SqliteBackend;
 use crate::service::{IndexEvent, IndexService};
 use crate::step_registry::ensure_default_step_indexers;
-use crate::create_tantivy_service;
 
 // Resource wrappers
-pub struct TantivySearchIndexResource {
+pub struct SearchIndexResource {
     pub service: Arc<IndexService>,
 }
-impl mf_state::resource::Resource for TantivySearchIndexResource {}
+impl mf_state::resource::Resource for SearchIndexResource {}
 
-struct TantivyIndexStateField {
+struct SearchIndexStateField {
     service: Arc<IndexService>,
 }
 
-impl std::fmt::Debug for TantivyIndexStateField {
+impl std::fmt::Debug for SearchIndexStateField {
     fn fmt(
         &self,
         f: &mut std::fmt::Formatter<'_>,
     ) -> std::fmt::Result {
-        f.debug_struct("TantivyIndexStateField").finish()
+        f.debug_struct("SearchIndexStateField").finish()
     }
 }
 
-// in-memory backend removed
-
 #[async_trait]
-impl StateField for TantivyIndexStateField {
-    type Value = TantivySearchIndexResource;
+impl StateField for SearchIndexStateField {
+    type Value = SearchIndexResource;
 
     async fn init(
         &self,
         _config: &mf_state::state::StateConfig,
         _instance: &State,
     ) -> Arc<Self::Value> {
-        Arc::new(TantivySearchIndexResource { service: self.service.clone() })
+        Arc::new(SearchIndexResource { service: self.service.clone() })
     }
 
     async fn apply(
@@ -54,30 +51,35 @@ impl StateField for TantivyIndexStateField {
         old_state: &State,
         new_state: &State,
     ) -> Arc<Self::Value> {
-        // ✅ 不再需要 downcast，直接使用类型安全的 value
         let svc = value.service.clone();
         let steps: Vec<Arc<dyn mf_transform::step::Step>> =
             tr.steps.iter().cloned().collect();
         let pool_before: Arc<NodePool> = old_state.doc();
         let pool_after: Arc<NodePool> = new_state.doc();
-        drop(svc.handle(IndexEvent::TransactionCommitted {
-            pool_before: Some(pool_before),
-            pool_after,
-            steps,
-        }));
+
+        // 异步处理索引更新（不阻塞事务）
+        tokio::spawn(async move {
+            let _ = svc.handle(IndexEvent::TransactionCommitted {
+                pool_before: Some(pool_before),
+                pool_after,
+                steps,
+            }).await;
+        });
+
         value
     }
 }
-#[derive(Debug)]
-struct TantivyIndexPluginTrait {}
 
-impl PluginTrait for TantivyIndexPluginTrait {
+#[derive(Debug)]
+struct SearchIndexPluginTrait {}
+
+impl PluginTrait for SearchIndexPluginTrait {
     fn metadata(&self) -> PluginMetadata {
         PluginMetadata {
-            name: "tantivy_index".to_string(),
-            version: "1.0.0".to_string(),
-            description: "Tantivy 索引插件".to_string(),
-            author: "Tantivy".to_string(),
+            name: "search_index".to_string(),
+            version: "2.0.0".to_string(),
+            description: "SQLite 搜索索引插件".to_string(),
+            author: "ModuForge".to_string(),
             dependencies: vec![],
             conflicts: vec![],
             state_fields: vec![],
@@ -85,17 +87,36 @@ impl PluginTrait for TantivyIndexPluginTrait {
         }
     }
 }
-// Create a plugin that maintains a Tantivy index and updates it on each transaction.
-pub fn create_tantivy_index_plugin(
+
+/// 创建搜索索引插件（使用 SQLite 后端）
+pub fn create_search_index_plugin(
     index_dir: &std::path::Path
 ) -> Result<Arc<Plugin>> {
     ensure_default_step_indexers();
-    let service = Arc::new(create_tantivy_service(index_dir)?);
-    // StateField 自动实现 ErasedStateField（通过 blanket impl）
-    let field = Arc::new(TantivyIndexStateField { service });
+    let backend = Arc::new(SqliteBackend::new_in_dir(index_dir)?);
+    let service = Arc::new(IndexService::new(backend));
+
+    let field = Arc::new(SearchIndexStateField { service });
     let spec = PluginSpec {
         state_field: Some(field),
-        tr: Arc::new(TantivyIndexPluginTrait {}),
+        tr: Arc::new(SearchIndexPluginTrait {}),
     };
     Ok(Arc::new(Plugin::new(spec)))
 }
+
+/// 创建临时搜索索引插件（用于测试）
+pub fn create_temp_search_index_plugin() -> Result<Arc<Plugin>> {
+    ensure_default_step_indexers();
+    let backend = Arc::new(SqliteBackend::new_in_system_temp()?);
+    let service = Arc::new(IndexService::new(backend));
+
+    let field = Arc::new(SearchIndexStateField { service });
+    let spec = PluginSpec {
+        state_field: Some(field),
+        tr: Arc::new(SearchIndexPluginTrait {}),
+    };
+    Ok(Arc::new(Plugin::new(spec)))
+}
+
+// 向后兼容的别名
+pub use create_search_index_plugin as SearchPlugin;

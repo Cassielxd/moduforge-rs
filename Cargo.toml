@@ -75,6 +75,11 @@ criterion = "0.5"
 # XML 解析依赖
 quick-xml = { version = "0.36", features = ["serialize"] }
 
+rusqlite = { version = "0.37.0", features = ["bundled", "chrono", "serde_json"] }
+r2d2 = "0.8"
+r2d2_sqlite = "0.31.0"
+
+
 #crates 下所有的库
 moduforge-core = { version = "0.6.3", path = "crates/core" }
 moduforge-state = { version = "0.6.3", path = "crates/state" }

@@ -2,13 +2,14 @@
 
 use std::sync::Arc;
 
-use mf_search::{IndexService, SearchQuery, TantivyBackend};
+use mf_search::{IndexService, SearchQuery, SqliteBackend, SearchService};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // 1) 使用系统临时目录创建索引（程序结束自动清理）
-    let backend = Arc::new(TantivyBackend::new_in_system_temp()?);
-    let _svc = IndexService::new(backend.clone());
+    let backend = Arc::new(SqliteBackend::new_in_system_temp()?);
+    let _index_svc = IndexService::new(backend.clone());
+    let search_svc = SearchService::new(backend.clone());
 
     // 2) 准备若干文档（手动构造 IndexDoc，实际项目中可由 NodePool 转换获得）
     let docs = vec![
@@ -17,7 +18,9 @@ async fn main() -> anyhow::Result<()> {
             node_type: "paragraph".into(),
             parent_id: Some("root".into()),
             marks: vec!["bold".into()],
+            marks_json: r#"[{"type":"bold","attrs":{}}]"#.into(),
             attrs_flat: vec![("lang".into(), "zh".into())],
+            attrs_json: r#"{"lang":"zh"}"#.into(),
             text: Some("Rust 搜索引擎示例".into()),
             path: vec!["root".into(), "n1".into()],
             order_i64: Some(1),
@@ -29,8 +32,10 @@ async fn main() -> anyhow::Result<()> {
             node_type: "paragraph".into(),
             parent_id: Some("root".into()),
             marks: vec![],
+            marks_json: "[]".into(),
             attrs_flat: vec![("lang".into(), "en".into())],
-            text: Some("Tantivy backend quick demo".into()),
+            attrs_json: r#"{"lang":"en"}"#.into(),
+            text: Some("SQLite backend quick demo".into()),
             path: vec!["root".into(), "n2".into()],
             order_i64: Some(2),
             created_at_i64: Some(2_000),
@@ -42,8 +47,8 @@ async fn main() -> anyhow::Result<()> {
     backend.rebuild_all(docs).await?;
 
     // 4) 执行查询（全文 + 类型过滤）
-    let ids = backend
-        .search_ids(SearchQuery {
+    let ids = search_svc
+        .search(SearchQuery {
             text: Some("示例".into()),
             node_type: Some("paragraph".into()),
             limit: 10,
@@ -52,6 +57,10 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     println!("命中节点: {ids:?}");
+
+    // 使用便捷方法：全文搜索
+    let ids_text = search_svc.search_text("搜索", 10).await?;
+    println!("全文搜索: {ids_text:?}");
 
     // 也可以按属性/标记过滤
     let ids2 = backend
@@ -74,12 +83,12 @@ async fn main() -> anyhow::Result<()> {
         .await?;
     println!("按 created_at_i64 降序第一页: {first_page:?}");
 
-    // 6) 使用 search-after（上一页最后一条的 created_at_i64=2000）获取下一页
+    // 6) 获取第二页（使用 offset）
     let second_page = backend
         .search_ids(SearchQuery {
             sort_by: Some("created_at_i64".into()),
             sort_asc: false,
-            after_value: Some(2_000),
+            offset: 1,
             limit: 1,
             ..Default::default()
         })

@@ -1,20 +1,18 @@
 [package]
 name = "moduforge-search"
-version = {workspace=true}
-edition = {workspace=true}
-description = "moduforge 搜索服务"
-authors = {workspace=true}
-license = {workspace=true}
-documentation = {workspace=true}
-homepage = {workspace=true}
-repository = {workspace=true}
-
+version = { workspace = true }
+edition = { workspace = true }
+description = "moduforge 搜索服务 - SQLite 后端"
+authors = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
 [lib]
 name = "mf_search"
 
 [dependencies]
-
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 imbl = { workspace = true }
@@ -23,22 +21,23 @@ serde_json = { workspace = true }
 parking_lot = { workspace = true }
 uuid = { workspace = true }
 tempfile = { workspace = true }
-criterion = { workspace = true }
 futures = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true, optional = true }
 
 # core model & ops
 moduforge-model = { workspace = true }
-moduforge-transform ={ workspace = true }
+moduforge-transform = { workspace = true }
 moduforge-state = { workspace = true }
 
-# tantivy backend
-tantivy = { version = "0.24.2" }
-tantivy-jieba = "0.16.0"
+# SQLite backend
+rusqlite = { workspace = true }
+r2d2 = { workspace = true }
+r2d2_sqlite = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
 
 [features]
 dev-tracing = ["tracing", "tracing/max_level_trace"]
 default = []
-
-

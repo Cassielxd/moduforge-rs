@@ -1,4 +1,4 @@
-use crate::backend::TantivyBackend;
+use crate::backend::SqliteBackend;
 use crate::indexer::mutations_from_step;
 use crate::model::IndexDoc;
 use anyhow::Result;
@@ -33,11 +33,11 @@ pub enum RebuildScope {
 
 /// 索引服务：桥接 `Transaction/Step` 与后端
 pub struct IndexService {
-    backend: Arc<TantivyBackend>,
+    backend: Arc<SqliteBackend>,
 }
 
 impl IndexService {
-    pub fn new(backend: Arc<TantivyBackend>) -> Self {
+    pub fn new(backend: Arc<SqliteBackend>) -> Self {
         Self { backend }
     }
 
@@ -76,6 +76,71 @@ impl IndexService {
                 self.backend.rebuild_all(docs).await
             },
         }
+    }
+}
+
+/// 搜索服务：提供高层查询接口
+pub struct SearchService {
+    backend: Arc<SqliteBackend>,
+}
+
+impl SearchService {
+    pub fn new(backend: Arc<SqliteBackend>) -> Self {
+        Self { backend }
+    }
+
+    /// 简单查询：返回节点 ID 列表
+    pub async fn search(
+        &self,
+        query: crate::backend::SearchQuery,
+    ) -> Result<Vec<String>> {
+        self.backend.search_ids(query).await
+    }
+
+    /// 全文搜索
+    pub async fn search_text(
+        &self,
+        text: &str,
+        limit: usize,
+    ) -> Result<Vec<String>> {
+        self.backend
+            .search_ids(crate::backend::SearchQuery {
+                text: Some(text.to_string()),
+                limit,
+                ..Default::default()
+            })
+            .await
+    }
+
+    /// 查询子树（递归）
+    pub async fn query_descendants(
+        &self,
+        parent_id: &str,
+        limit: usize,
+    ) -> Result<Vec<String>> {
+        self.backend
+            .search_ids(crate::backend::SearchQuery {
+                parent_id: Some(parent_id.to_string()),
+                include_descendants: true,
+                limit,
+                ..Default::default()
+            })
+            .await
+    }
+
+    /// 按类型查询
+    pub async fn query_by_type(
+        &self,
+        node_type: &str,
+        limit: usize,
+    ) -> Result<Vec<String>> {
+        self.backend
+            .search_ids(crate::backend::SearchQuery {
+                node_type: Some(node_type.to_string()),
+                limit,
+                ..Default::default()
+            })
+            .await
     }
 }
 
