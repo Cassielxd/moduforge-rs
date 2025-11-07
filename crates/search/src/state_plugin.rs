@@ -39,9 +39,21 @@ impl StateField for SearchIndexStateField {
     async fn init(
         &self,
         _config: &mf_state::state::StateConfig,
-        _instance: &State,
+        instance: &State,
     ) -> Arc<Self::Value> {
-        Arc::new(SearchIndexResource { service: self.service.clone() })
+        let service =
+            Arc::new(SearchIndexResource { service: self.service.clone() });
+        let service_ref = self.service.clone();
+        let node_pool_ref = instance.node_pool.clone();
+        tokio::spawn(async move {
+            let _ = service_ref
+                .handle(IndexEvent::Rebuild {
+                    pool: node_pool_ref,
+                    scope: RebuildScope::Full,
+                })
+                .await;
+        });
+        service
     }
 
     async fn apply(
@@ -59,11 +71,13 @@ impl StateField for SearchIndexStateField {
 
         // 异步处理索引更新（不阻塞事务）
         tokio::spawn(async move {
-            let _ = svc.handle(IndexEvent::TransactionCommitted {
-                pool_before: Some(pool_before),
-                pool_after,
-                steps,
-            }).await;
+            let _ = svc
+                .handle(IndexEvent::TransactionCommitted {
+                    pool_before: Some(pool_before),
+                    pool_after,
+                    steps,
+                })
+                .await;
         });
 
         value
@@ -120,3 +134,4 @@ pub fn create_temp_search_index_plugin() -> Result<Arc<Plugin>> {
 
 // 向后兼容的别名
 pub use create_search_index_plugin as SearchPlugin;
+use crate::RebuildScope;
