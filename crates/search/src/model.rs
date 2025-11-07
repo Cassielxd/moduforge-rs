@@ -27,6 +27,32 @@ pub struct IndexDoc {
 }
 
 impl IndexDoc {
+    /// 从索引文档转换回 Node
+    ///
+    /// 注意：
+    /// - content 字段会是空的，因为 IndexDoc 不保存子节点信息
+    /// - 如果需要完整的树结构，需要从 NodePool 中重建
+    pub fn to_node(&self) -> anyhow::Result<Node> {
+        // 反序列化 marks_json
+        let marks: Vec<Mark> = serde_json::from_str(&self.marks_json)
+            .unwrap_or_default();
+
+        // 反序列化 attrs_json
+        let attrs_map: imbl::HashMap<String, serde_json::Value> =
+            serde_json::from_str(&self.attrs_json)
+                .unwrap_or_default();
+
+        let node = Node {
+            id: self.node_id.as_str().into(),
+            r#type: self.node_type.clone(),
+            attrs: mf_model::attrs::Attrs::from(attrs_map),
+            content: imbl::Vector::new(), // IndexDoc 不保存子节点信息
+            marks: marks.into(),
+        };
+
+        Ok(node)
+    }
+
     /// 从节点与池快照构建索引文档
     pub fn from_node(
         pool: &NodePool,
@@ -127,4 +153,119 @@ pub fn collect_node_ids_from_enum(node_enum: &NodeTree) -> Vec<NodeId> {
         ids.extend(collect_node_ids_from_enum(child));
     }
     ids
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_index_doc_to_node_roundtrip() {
+        // 创建一个测试用的 Node
+        let original_node = Arc::new(Node {
+            id: "test_node".into(),
+            r#type: "paragraph".into(),
+            attrs: mf_model::attrs::Attrs::from(
+                vec![
+                    ("title".to_string(), serde_json::json!("测试标题")),
+                    ("status".to_string(), serde_json::json!("published")),
+                ]
+                .into_iter()
+                .collect(),
+            ),
+            content: vec!["child1".into(), "child2".into()].into(),
+            marks: vec![
+                Mark {
+                    r#type: "bold".into(),
+                    attrs: mf_model::attrs::Attrs::default(),
+                },
+                Mark {
+                    r#type: "link".into(),
+                    attrs: mf_model::attrs::Attrs::from(
+                        vec![(
+                            "href".to_string(),
+                            serde_json::json!("https://example.com"),
+                        )]
+                        .into_iter()
+                        .collect(),
+                    ),
+                },
+            ]
+            .into(),
+        });
+
+        // 创建一个简单的 NodePool（用于测试）
+        let root = Node {
+            id: "root".into(),
+            r#type: "doc".into(),
+            attrs: mf_model::attrs::Attrs::default(),
+            content: imbl::Vector::new(),
+            marks: imbl::Vector::new(),
+        };
+        let tree = mf_model::tree::Tree::new(root);
+        let pool = NodePool::new(Arc::new(tree));
+
+        // 转换：Node -> IndexDoc
+        let index_doc = IndexDoc::from_node(&pool, &original_node);
+
+        // 验证 IndexDoc 的内容
+        assert_eq!(index_doc.node_id, "test_node");
+        assert_eq!(index_doc.node_type, "paragraph");
+        assert_eq!(index_doc.marks, vec!["bold", "link"]);
+
+        // 转换：IndexDoc -> Node
+        let converted_node = index_doc.to_node().unwrap();
+
+        // 验证转换后的 Node
+        assert_eq!(converted_node.id.as_ref(), "test_node");
+        assert_eq!(converted_node.r#type, "paragraph");
+
+        // 验证 attrs
+        assert_eq!(
+            converted_node.attrs.get("title"),
+            Some(&serde_json::json!("测试标题"))
+        );
+        assert_eq!(
+            converted_node.attrs.get("status"),
+            Some(&serde_json::json!("published"))
+        );
+
+        // 验证 marks
+        assert_eq!(converted_node.marks.len(), 2);
+        assert_eq!(converted_node.marks[0].r#type, "bold");
+        assert_eq!(converted_node.marks[1].r#type, "link");
+        assert_eq!(
+            converted_node.marks[1].attrs.get("href"),
+            Some(&serde_json::json!("https://example.com"))
+        );
+
+        // 注意：content 应该是空的，因为 IndexDoc 不保存子节点信息
+        assert_eq!(converted_node.content.len(), 0);
+    }
+
+    #[test]
+    fn test_to_node_with_empty_data() {
+        let index_doc = IndexDoc {
+            node_id: "empty_node".into(),
+            node_type: "text".into(),
+            parent_id: None,
+            marks: vec![],
+            marks_json: "[]".into(),
+            attrs_flat: vec![],
+            attrs_json: "{}".into(),
+            text: None,
+            path: vec!["empty_node".into()],
+            order_i64: None,
+            created_at_i64: None,
+            updated_at_i64: None,
+        };
+
+        let node = index_doc.to_node().unwrap();
+
+        assert_eq!(node.id.as_ref(), "empty_node");
+        assert_eq!(node.r#type, "text");
+        assert_eq!(node.marks.len(), 0);
+        assert_eq!(node.attrs.attrs.len(), 0);
+        assert_eq!(node.content.len(), 0);
+    }
 }

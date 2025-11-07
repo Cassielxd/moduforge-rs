@@ -97,6 +97,14 @@ impl SearchService {
         self.backend.search_ids(query).await
     }
 
+    /// 查询并返回完整文档
+    pub async fn search_docs(
+        &self,
+        query: crate::backend::SearchQuery,
+    ) -> Result<Vec<IndexDoc>> {
+        self.backend.search_docs(query).await
+    }
+
     /// 全文搜索
     pub async fn search_text(
         &self,
@@ -105,6 +113,21 @@ impl SearchService {
     ) -> Result<Vec<String>> {
         self.backend
             .search_ids(crate::backend::SearchQuery {
+                text: Some(text.to_string()),
+                limit,
+                ..Default::default()
+            })
+            .await
+    }
+
+    /// 全文搜索（返回完整文档）
+    pub async fn search_text_docs(
+        &self,
+        text: &str,
+        limit: usize,
+    ) -> Result<Vec<IndexDoc>> {
+        self.backend
+            .search_docs(crate::backend::SearchQuery {
                 text: Some(text.to_string()),
                 limit,
                 ..Default::default()

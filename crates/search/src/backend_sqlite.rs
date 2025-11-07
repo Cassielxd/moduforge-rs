@@ -388,6 +388,89 @@ impl SqliteBackend {
         self.search_structured(&conn, &query)
     }
 
+    /// 搜索并返回完整文档
+    pub async fn search_docs(&self, query: SearchQuery) -> Result<Vec<IndexDoc>> {
+        let ids = self.search_ids(query).await?;
+        self.get_docs_by_ids(&ids).await
+    }
+
+    /// 根据 ID 列表获取完整文档
+    pub async fn get_docs_by_ids(&self, ids: &[String]) -> Result<Vec<IndexDoc>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let conn = self.pool.get()?;
+
+        // 构建 IN 查询
+        let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+        let sql = format!(
+            "SELECT id, node_type, parent_id, path, marks, marks_json, attrs, attrs_json, text,
+                    order_i64, created_at_i64, updated_at_i64
+             FROM nodes WHERE id IN ({})",
+            placeholders
+        );
+
+        let mut stmt = conn.prepare(&sql)?;
+        let params: Vec<&dyn rusqlite::ToSql> = ids.iter()
+            .map(|id| id as &dyn rusqlite::ToSql)
+            .collect();
+
+        let docs = stmt.query_map(&params[..], |row| {
+            // 解析 marks JSON
+            let marks_json: String = row.get(5)?;
+            let marks_objects: Vec<mf_model::mark::Mark> = serde_json::from_str(&marks_json)
+                .unwrap_or_default();
+            let marks: Vec<String> = marks_objects.iter()
+                .map(|m| m.r#type.clone())
+                .collect();
+
+            // 解析 attrs JSON
+            let attrs_json: String = row.get(7)?;
+            let attrs_map: imbl::HashMap<String, serde_json::Value> = serde_json::from_str(&attrs_json)
+                .unwrap_or_default();
+            let attrs_flat: Vec<(String, String)> = attrs_map.iter()
+                .map(|(k, v)| {
+                    let value_str = match v {
+                        serde_json::Value::Null => "null".to_string(),
+                        serde_json::Value::Bool(b) => b.to_string(),
+                        serde_json::Value::Number(n) => n.to_string(),
+                        serde_json::Value::String(s) => s.clone(),
+                        _ => serde_json::to_string(v).unwrap_or_default(),
+                    };
+                    (k.clone(), value_str)
+                })
+                .collect();
+
+            // 解析 path
+            let path_str: String = row.get(3)?;
+            let path: Vec<String> = path_str
+                .trim_start_matches('/')
+                .split('/')
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string())
+                .collect();
+
+            Ok(IndexDoc {
+                node_id: row.get(0)?,
+                node_type: row.get(1)?,
+                parent_id: row.get(2)?,
+                path,
+                marks,
+                marks_json: row.get(5)?,
+                attrs_flat,
+                attrs_json: row.get(7)?,
+                text: row.get(8)?,
+                order_i64: row.get(9)?,
+                created_at_i64: row.get(10)?,
+                updated_at_i64: row.get(11)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(docs)
+    }
+
     /// 树形递归查询
     fn search_tree(
         &self,
@@ -707,5 +790,108 @@ mod tests {
             .unwrap();
 
         assert_eq!(results.len(), 3); // root + 2 children
+    }
+
+    #[tokio::test]
+    async fn test_search_docs() {
+        let backend = SqliteBackend::new_in_system_temp().unwrap();
+
+        // 插入测试文档
+        let docs = vec![
+            IndexDoc {
+                node_id: "doc1".to_string(),
+                node_type: "paragraph".to_string(),
+                parent_id: Some("root".to_string()),
+                path: vec!["root".to_string(), "doc1".to_string()],
+                marks: vec!["bold".to_string()],
+                marks_json: r#"[{"type":"bold","attrs":{}}]"#.to_string(),
+                attrs_flat: vec![("status".to_string(), "published".to_string())],
+                attrs_json: r#"{"status":"published"}"#.to_string(),
+                text: Some("第一篇文档".to_string()),
+                order_i64: Some(1),
+                created_at_i64: Some(1000),
+                updated_at_i64: Some(1500),
+            },
+            IndexDoc {
+                node_id: "doc2".to_string(),
+                node_type: "paragraph".to_string(),
+                parent_id: Some("root".to_string()),
+                path: vec!["root".to_string(), "doc2".to_string()],
+                marks: vec!["italic".to_string()],
+                marks_json: r#"[{"type":"italic","attrs":{}}]"#.to_string(),
+                attrs_flat: vec![("status".to_string(), "draft".to_string())],
+                attrs_json: r#"{"status":"draft"}"#.to_string(),
+                text: Some("第二篇文档".to_string()),
+                order_i64: Some(2),
+                created_at_i64: Some(2000),
+                updated_at_i64: Some(2500),
+            },
+        ];
+
+        backend.rebuild_all(docs).await.unwrap();
+
+        // 测试：搜索并返回完整文档
+        let results = backend
+            .search_docs(SearchQuery {
+                node_type: Some("paragraph".to_string()),
+                limit: 10,
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(results.len(), 2);
+
+        // 验证第一个文档的完整性
+        let doc1 = results.iter().find(|d| d.node_id == "doc1").unwrap();
+        assert_eq!(doc1.node_type, "paragraph");
+        assert_eq!(doc1.text, Some("第一篇文档".to_string()));
+        assert_eq!(doc1.marks, vec!["bold".to_string()]);
+        assert_eq!(doc1.attrs_flat, vec![("status".to_string(), "published".to_string())]);
+        assert_eq!(doc1.order_i64, Some(1));
+
+        // 验证第二个文档
+        let doc2 = results.iter().find(|d| d.node_id == "doc2").unwrap();
+        assert_eq!(doc2.text, Some("第二篇文档".to_string()));
+        assert_eq!(doc2.marks, vec!["italic".to_string()]);
+    }
+
+    #[tokio::test]
+    async fn test_get_docs_by_ids() {
+        let backend = SqliteBackend::new_in_system_temp().unwrap();
+
+        // 插入文档
+        let doc = IndexDoc {
+            node_id: "test123".to_string(),
+            node_type: "heading".to_string(),
+            parent_id: None,
+            path: vec!["test123".to_string()],
+            marks: vec![],
+            marks_json: "[]".to_string(),
+            attrs_flat: vec![("level".to_string(), "1".to_string())],
+            attrs_json: r#"{"level":"1"}"#.to_string(),
+            text: Some("标题文本".to_string()),
+            order_i64: None,
+            created_at_i64: None,
+            updated_at_i64: None,
+        };
+
+        backend.apply(vec![IndexMutation::Add(doc)]).await.unwrap();
+
+        // 通过 ID 获取文档
+        let docs = backend.get_docs_by_ids(&["test123".to_string()]).await.unwrap();
+
+        assert_eq!(docs.len(), 1);
+        assert_eq!(docs[0].node_id, "test123");
+        assert_eq!(docs[0].node_type, "heading");
+        assert_eq!(docs[0].text, Some("标题文本".to_string()));
+
+        // 测试空列表
+        let empty = backend.get_docs_by_ids(&[]).await.unwrap();
+        assert_eq!(empty.len(), 0);
+
+        // 测试不存在的 ID
+        let not_found = backend.get_docs_by_ids(&["nonexistent".to_string()]).await.unwrap();
+        assert_eq!(not_found.len(), 0);
     }
 }
