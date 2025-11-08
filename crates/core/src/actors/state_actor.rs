@@ -20,12 +20,19 @@ use super::ActorSystemResult;
 pub enum StateMessage {
     /// 获取当前状态
     GetState { reply: oneshot::Sender<Arc<State>> },
-    /// 更新状态（包含元信息）
-    UpdateStateWithMeta {
-        state: Arc<State>,
+    /// 应用事务（包含元信息）
+    ApplyTransaction {
+        transaction: mf_state::Transaction,
         description: String,
         meta: serde_json::Value,
-        reply: oneshot::Sender<ForgeResult<()>>,
+        reply: oneshot::Sender<ForgeResult<Arc<State>>>,
+    },
+    /// 批量应用事务
+    ApplyTransactionBatch {
+        transactions: Vec<mf_state::Transaction>,
+        description: String,
+        meta: serde_json::Value,
+        reply: oneshot::Sender<ForgeResult<Arc<State>>>,
     },
     /// 撤销操作
     Undo { reply: oneshot::Sender<ForgeResult<Arc<State>>> },
@@ -37,6 +44,14 @@ pub enum StateMessage {
     GetHistoryInfo { reply: oneshot::Sender<HistoryInfo> },
     /// 创建状态快照
     CreateSnapshot { reply: oneshot::Sender<StateSnapshot> },
+    /// 记录已应用的事务到历史（不实际应用事务）
+    RecordTransactions {
+        state: Arc<State>,
+        transactions: Vec<Arc<mf_state::Transaction>>,
+        description: String,
+        meta: serde_json::Value,
+        reply: oneshot::Sender<ForgeResult<()>>,
+    },
 }
 
 // StateMessage 自动实现 ractor::Message (Debug + Send + 'static)
@@ -102,17 +117,34 @@ impl Actor for StateActor {
                 let _ = reply.send(state.current_state.clone());
             },
 
-            StateMessage::UpdateStateWithMeta {
-                state: new_state,
+            StateMessage::ApplyTransaction {
+                transaction,
                 description,
                 meta,
                 reply,
             } => {
-                // 🎯 与原始update_state_with_meta完全相同的逻辑
                 let result = self
-                    .update_state_with_meta_logic(
+                    .apply_transaction_logic(
                         state,
-                        new_state,
+                        transaction,
+                        description,
+                        meta,
+                    )
+                    .await;
+
+                let _ = reply.send(result);
+            },
+
+            StateMessage::ApplyTransactionBatch {
+                transactions,
+                description,
+                meta,
+                reply,
+            } => {
+                let result = self
+                    .apply_transaction_batch_logic(
+                        state,
+                        transactions,
                         description,
                         meta,
                     )
@@ -149,6 +181,31 @@ impl Actor for StateActor {
                 };
                 let _ = reply.send(snapshot);
             },
+
+            StateMessage::RecordTransactions {
+                state: new_state,
+                transactions,
+                description,
+                meta,
+                reply,
+            } => {
+                if transactions.is_empty() {
+                    let _ = reply.send(Ok(()));
+                    return Ok(());
+                }
+
+                // 记录事务到历史（不应用，因为已经在外部应用过了）
+                let entry = if transactions.len() == 1 {
+                    HistoryEntryWithMeta::new(transactions[0].clone(), new_state, description, meta)
+                } else {
+                    HistoryEntryWithMeta::new_batch(transactions, new_state, description, meta)
+                };
+
+                state.history_manager.insert(entry);
+                state.version_counter += 1;
+
+                let _ = reply.send(Ok(()));
+            },
         }
 
         Ok(())
@@ -165,40 +222,79 @@ impl Actor for StateActor {
 }
 
 impl StateActor {
-    /// 🎯 与原始update_state_with_meta完全相同的逻辑
-    ///
-    /// 对应runtime.rs:735-748行的逻辑
-    async fn update_state_with_meta_logic(
+    /// 应用单个事务
+    async fn apply_transaction_logic(
         &self,
         actor_state: &mut StateActorState,
-        new_state: Arc<State>,
+        transaction: mf_state::Transaction,
         description: String,
         meta: serde_json::Value,
-    ) -> ForgeResult<()> {
-        // 更新当前状态
-        actor_state.current_state = new_state.clone();
+    ) -> ForgeResult<Arc<State>> {
+        // 应用事务
+        let result =
+            actor_state.current_state.apply(transaction.clone()).await?;
+        actor_state.current_state = result.state;
 
         // 增加版本号
         actor_state.version_counter += 1;
 
-        // 插入历史记录 - 与原代码完全相同
+        // 保存事务到历史（包含状态快照）
         actor_state.history_manager.insert(HistoryEntryWithMeta::new(
-            new_state,
+            Arc::new(transaction),
+            actor_state.current_state.clone(),
             description,
             meta,
         ));
 
-        Ok(())
+        Ok(actor_state.current_state.clone())
     }
 
-    /// 撤销逻辑 - 对应runtime.rs:838-842行
+    /// 批量应用事务
+    async fn apply_transaction_batch_logic(
+        &self,
+        actor_state: &mut StateActorState,
+        transactions: Vec<mf_state::Transaction>,
+        description: String,
+        meta: serde_json::Value,
+    ) -> ForgeResult<Arc<State>> {
+        let mut transaction_arcs = Vec::new();
+
+        // 逐个应用事务
+        for tr in transactions {
+            let result = actor_state.current_state.apply(tr.clone()).await?;
+            actor_state.current_state = result.state;
+            transaction_arcs.push(Arc::new(tr));
+        }
+
+        // 增加版本号
+        actor_state.version_counter += 1;
+
+        // 批量保存事务到历史（包含状态快照）
+        actor_state.history_manager.insert(HistoryEntryWithMeta::new_batch(
+            transaction_arcs,
+            actor_state.current_state.clone(),
+            description,
+            meta,
+        ));
+
+        Ok(actor_state.current_state.clone())
+    }
+
+    /// 撤销逻辑 - 使用状态快照直接切换 (O(1) 性能)
     async fn undo_logic(
         &self,
         actor_state: &mut StateActorState,
     ) -> ForgeResult<Arc<State>> {
+        if !actor_state.history_manager.can_undo() {
+            return Ok(actor_state.current_state.clone());
+        }
+
+        // 更新历史位置
         actor_state.history_manager.jump(-1);
-        actor_state.current_state =
-            actor_state.history_manager.get_present().state;
+
+        // 获取撤销后的状态（直接使用快照）
+        let entry = actor_state.history_manager.get_present();
+        actor_state.current_state = entry.state.clone();
 
         // 记录指标
         crate::metrics::history_operation("undo");
@@ -206,14 +302,21 @@ impl StateActor {
         Ok(actor_state.current_state.clone())
     }
 
-    /// 重做逻辑 - 对应runtime.rs:844-848行
+    /// 重做逻辑 - 使用状态快照直接切换 (O(1) 性能)
     async fn redo_logic(
         &self,
         actor_state: &mut StateActorState,
     ) -> ForgeResult<Arc<State>> {
+        if !actor_state.history_manager.can_redo() {
+            return Ok(actor_state.current_state.clone());
+        }
+
+        // 更新历史位置
         actor_state.history_manager.jump(1);
-        actor_state.current_state =
-            actor_state.history_manager.get_present().state;
+
+        // 获取重做后的状态（直接使用快照）
+        let entry = actor_state.history_manager.get_present();
+        actor_state.current_state = entry.state.clone();
 
         // 记录指标
         crate::metrics::history_operation("redo");
@@ -221,20 +324,49 @@ impl StateActor {
         Ok(actor_state.current_state.clone())
     }
 
-    /// 跳转逻辑 - 对应runtime.rs:850-856行
+    /// 跳转逻辑 - 使用状态快照直接跳转
     async fn jump_logic(
         &self,
         actor_state: &mut StateActorState,
         steps: isize,
     ) -> ForgeResult<Arc<State>> {
+        if steps == 0 {
+            return Ok(actor_state.current_state.clone());
+        }
+
+        // 更新历史位置
         actor_state.history_manager.jump(steps);
-        actor_state.current_state =
-            actor_state.history_manager.get_present().state;
+
+        // 获取跳转后的状态（直接使用快照）
+        let entry = actor_state.history_manager.get_present();
+        actor_state.current_state = entry.state.clone();
 
         // 记录指标
         crate::metrics::history_operation("jump");
 
         Ok(actor_state.current_state.clone())
+    }
+
+    /// 计算事务的逆向操作（已废弃，混合方案直接使用状态快照）
+    #[allow(dead_code)]
+    fn invert_transaction(
+        &self,
+        tr: &mf_state::Transaction,
+        current_state: &State,
+    ) -> ForgeResult<mf_state::Transaction> {
+
+        let mut inverted_tr = mf_state::Transaction::new(current_state);
+
+        // 反向遍历步骤（LIFO）
+        for step in tr.steps.iter().rev() {
+            if let Some(inverted_step) =
+                step.invert(&current_state.doc().get_inner())
+            {
+                inverted_tr.step(inverted_step)?;
+            }
+        }
+
+        Ok(inverted_tr)
     }
 
     /// 获取历史记录信息

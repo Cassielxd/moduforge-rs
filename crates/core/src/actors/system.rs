@@ -288,9 +288,13 @@ impl ForgeActorSystem {
 
         let state = Arc::new(state);
 
+        // 创建初始空事务用于历史记录
+        let initial_transaction = state.tr();
+
         // 创建历史管理器
         let history_manager = HistoryManager::with_config(
             HistoryEntryWithMeta::new(
+                Arc::new(initial_transaction),
                 state.clone(),
                 "创建工程项目".to_string(),
                 serde_json::Value::Null,

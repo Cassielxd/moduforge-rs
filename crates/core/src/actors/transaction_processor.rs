@@ -190,9 +190,9 @@ impl TransactionProcessorActor {
         // 1. 指标记录 - 与原代码完全相同
         metrics::transaction_dispatched();
 
-        // 2. 获取当前状态版本 - 通过消息获取
+        // 2. 获取当前状态 - 通过消息获取
         let current_state = self.get_current_state(&state.state_actor).await?;
-        let old_id = current_state.version;
+        let old_state = current_state.clone();
 
         // 3. 前置中间件 - 完全相同的逻辑
         let mut current_transaction = transaction;
@@ -227,9 +227,10 @@ impl TransactionProcessorActor {
 
         // 7. 状态更新和事件广播 - 通过消息传递，但逻辑相同
         if let Some(new_state) = state_update {
-            self.update_state_with_meta(
+            self.record_transactions(
                 &state.state_actor,
                 new_state.clone(),
+                transactions.clone(),
                 description,
                 meta,
             )
@@ -237,7 +238,11 @@ impl TransactionProcessorActor {
 
             self.emit_event(
                 &state.event_bus,
-                Event::TrApply(old_id, transactions, new_state),
+                Event::TrApply {
+                    old_state,
+                    new_state,
+                    transactions,
+                },
             )
             .await?;
         }
@@ -384,29 +389,31 @@ impl TransactionProcessorActor {
         Ok(())
     }
 
-    /// 状态更新 - 通过消息传递
-    async fn update_state_with_meta(
+    /// 记录事务到历史 - 通过消息传递
+    async fn record_transactions(
         &self,
         state_actor: &ActorRef<super::StateMessage>,
         state: Arc<State>,
+        transactions: Vec<Arc<mf_state::Transaction>>,
         description: String,
         meta: serde_json::Value,
     ) -> ForgeResult<()> {
         let (tx, rx) = oneshot::channel();
 
         state_actor
-            .send_message(super::StateMessage::UpdateStateWithMeta {
+            .send_message(super::StateMessage::RecordTransactions {
                 state,
+                transactions,
                 description,
                 meta,
                 reply: tx,
             })
             .map_err(|e| {
-                error_utils::state_error(format!("发送状态更新消息失败: {e}"))
+                error_utils::state_error(format!("发送记录事务消息失败: {e}"))
             })?;
 
         rx.await.map_err(|e| {
-            error_utils::state_error(format!("接收状态更新响应失败: {e}"))
+            error_utils::state_error(format!("接收记录事务响应失败: {e}"))
         })?
     }
 

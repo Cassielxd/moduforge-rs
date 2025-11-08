@@ -266,6 +266,9 @@ impl ForgeRuntime {
         )
         .await?;
 
+        // 创建初始空事务用于历史记录
+        let initial_transaction = state.tr();
+
         let runtime = ForgeRuntime {
             event_bus,
             state: state.clone(),
@@ -273,6 +276,7 @@ impl ForgeRuntime {
             extension_manager,
             history_manager: HistoryManager::with_config(
                 HistoryEntryWithMeta::new(
+                    Arc::new(initial_transaction),
                     state.clone(),
                     "创建工程项目".to_string(),
                     serde_json::Value::Null,
@@ -478,7 +482,7 @@ impl ForgeRuntime {
         meta: serde_json::Value,
     ) -> ForgeResult<()> {
         metrics::transaction_dispatched();
-        let old_id = self.get_state().version;
+        let _old_id = self.get_state().version;
         // 保存当前事务的副本，用于中间件处理
         let mut current_transaction = transaction;
         self.run_before_middleware(&mut current_transaction).await?;
@@ -507,11 +511,16 @@ impl ForgeRuntime {
         self.run_after_middleware(&mut state_update, &mut transactions).await?;
 
         // 如果有新的状态，更新编辑器状态并记录到历史记录
-        if let Some(state) = state_update {
-            self.update_state_with_meta(state.clone(), description, meta)
+        if let Some(new_state) = state_update {
+            let old_state = self.state.clone();
+            self.update_state_with_meta(new_state.clone(), transactions.clone(), description, meta)
                 .await?;
-            self.emit_event(Event::TrApply(old_id, transactions, state))
-                .await?;
+            self.emit_event(Event::TrApply {
+                old_state,
+                new_state,
+                transactions,
+            })
+            .await?;
         }
         Ok(())
     }
@@ -522,6 +531,7 @@ impl ForgeRuntime {
     ) -> ForgeResult<()> {
         self.update_state_with_meta(
             state,
+            vec![],
             "".to_string(),
             serde_json::Value::Null,
         )
@@ -531,6 +541,7 @@ impl ForgeRuntime {
     pub async fn update_state_with_meta(
         &mut self,
         state: Arc<State>,
+        transactions: Vec<Arc<mf_state::Transaction>>,
         description: String,
         meta: serde_json::Value,
     ) -> ForgeResult<()> {
@@ -538,6 +549,7 @@ impl ForgeRuntime {
         HistoryHelper::insert(
             &mut self.history_manager,
             state,
+            transactions,
             description,
             meta,
         );
@@ -632,18 +644,45 @@ impl ForgeRuntime {
     }
 
     pub fn undo(&mut self) {
-        self.state = HistoryHelper::undo(&mut self.history_manager);
+        if let Some(result) = HistoryHelper::undo(&mut self.history_manager, self.state.clone()) {
+            self.state = result.new_state.clone();
+
+            // 触发撤销事件，供其他组件（如搜索索引）使用
+            let _ = self.event_bus.broadcast_blocking(Event::Undo {
+                old_state: result.old_state,
+                new_state: result.new_state,
+                transactions: result.transactions,
+            });
+        }
     }
 
     pub fn redo(&mut self) {
-        self.state = HistoryHelper::redo(&mut self.history_manager);
+        if let Some(result) = HistoryHelper::redo(&mut self.history_manager, self.state.clone()) {
+            self.state = result.new_state.clone();
+
+            // 触发重做事件，供其他组件（如搜索索引）使用
+            let _ = self.event_bus.broadcast_blocking(Event::Redo {
+                old_state: result.old_state,
+                new_state: result.new_state,
+                transactions: result.transactions,
+            });
+        }
     }
 
     pub fn jump(
         &mut self,
         n: isize,
     ) {
-        self.state = HistoryHelper::jump(&mut self.history_manager, n);
+        if let Some(result) = HistoryHelper::jump(&mut self.history_manager, self.state.clone(), n) {
+            self.state = result.new_state.clone();
+
+            // 触发跳转事件，供其他组件（如搜索索引）使用
+            let _ = self.event_bus.broadcast_blocking(Event::Jump {
+                old_state: result.old_state,
+                new_state: result.new_state,
+                steps: n,
+            });
+        }
     }
     pub fn get_history_manager(&self) -> &HistoryManager<HistoryEntryWithMeta> {
         &self.history_manager

@@ -21,17 +21,70 @@ use crate::{
 // 事件类型定义
 #[derive(Debug, Clone)]
 pub enum Event {
+    /// 状态创建事件
     Create(Arc<State>),
-    TrApply(u64, Vec<Arc<Transaction>>, Arc<State>), // 事务应用后 + 是否成功
-    Destroy,                                         // 销毁事件
-    Stop,                                            // 停止后需要重启
+
+    /// 事务应用事件 (old_state, new_state, transactions)
+    /// 统一使用新旧状态模式，与 Undo/Redo 保持一致
+    TrApply {
+        old_state: Arc<State>,
+        new_state: Arc<State>,
+        transactions: Vec<Arc<Transaction>>,
+    },
+
+    /// 撤销事件 (old_state, new_state, undone_transactions)
+    /// 包含被撤销的事务列表，供其他组件（如搜索索引）使用
+    Undo {
+        old_state: Arc<State>,
+        new_state: Arc<State>,
+        transactions: Vec<Arc<Transaction>>,
+    },
+
+    /// 重做事件 (old_state, new_state, redone_transactions)
+    /// 包含重做的事务列表，供其他组件（如搜索索引）使用
+    Redo {
+        old_state: Arc<State>,
+        new_state: Arc<State>,
+        transactions: Vec<Arc<Transaction>>,
+    },
+
+    /// 历史跳转事件 (old_state, new_state, step_count)
+    /// 当用户跳转到历史中的特定位置时触发
+    Jump {
+        old_state: Arc<State>,
+        new_state: Arc<State>,
+        steps: isize,
+    },
+
+    /// 事务失败事件
+    /// 当事务应用失败时触发，供错误处理和日志记录使用
+    TrFailed {
+        state: Arc<State>,
+        transaction: Transaction,
+        error: String,
+    },
+
+    /// 历史清空事件
+    /// 当历史记录被清空时触发
+    HistoryCleared,
+
+    /// 销毁事件
+    Destroy,
+
+    /// 停止事件（需要重启）
+    Stop,
 }
 
 impl Event {
     pub fn name(&self) -> &'static str {
         match self {
             Event::Create(_) => "Create",
-            Event::TrApply(_, _, _) => "TrApply",
+            Event::TrApply { .. } => "TrApply",
+            Event::Undo { .. } => "Undo",
+            Event::Redo { .. } => "Redo",
+            Event::Jump { .. } => "Jump",
+            Event::TrFailed { .. } => "TrFailed",
+            Event::HistoryCleared => "HistoryCleared",
             Event::Destroy => "Destroy",
             Event::Stop => "Stop",
         }

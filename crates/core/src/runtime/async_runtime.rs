@@ -357,7 +357,7 @@ impl ForgeAsyncRuntime {
     ) -> ForgeResult<()> {
         let start_time = std::time::Instant::now();
         let mut current_transaction = transaction;
-        let old_id = self.get_state().await?.version;
+        let _old_id = self.get_state().await?.version;
         // 前置中间件处理
         let middleware_start = std::time::Instant::now();
         self.run_before_middleware(&mut current_transaction).await?;
@@ -423,14 +423,19 @@ impl ForgeAsyncRuntime {
         self.log_performance("后置中间件处理", after_start.elapsed());
 
         // 更新状态并广播事件（状态更新无需超时保护，事件广播需要）
-        if let Some(state) = current_state {
+        if let Some(new_state) = current_state {
+            let old_state = self.base.get_state().clone();
             self.base
-                .update_state_with_meta(state.clone(), description, meta)
+                .update_state_with_meta(new_state.clone(), transactions.clone(), description, meta)
                 .await?;
 
             let event_start = std::time::Instant::now();
             self.base
-                .emit_event(Event::TrApply(old_id, transactions, state))
+                .emit_event(Event::TrApply {
+                    old_state,
+                    new_state,
+                    transactions,
+                })
                 .await?;
             self.log_performance("事件广播", event_start.elapsed());
         }

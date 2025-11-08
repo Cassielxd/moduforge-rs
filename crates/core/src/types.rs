@@ -255,10 +255,13 @@ impl EditorOptionsBuilder {
     }
 }
 
-/// 带元信息的历史记录项
+/// 带元信息的历史记录项（混合方案：同时存储事务和状态）
 #[derive(Debug, Clone)]
 pub struct HistoryEntryWithMeta {
-    /// 状态快照
+    /// 事务列表（支持批量操作、协作编辑、操作追踪）
+    pub transactions: Vec<Arc<Transaction>>,
+
+    /// 状态快照（用于快速撤销/重做，每个历史点都保存）
     pub state: Arc<State>,
 
     /// 操作描述
@@ -271,12 +274,36 @@ pub struct HistoryEntryWithMeta {
 }
 
 impl HistoryEntryWithMeta {
+    /// 创建单事务历史条目
     pub fn new(
+        transaction: Arc<Transaction>,
         state: Arc<State>,
         description: String,
         meta: serde_json::Value,
     ) -> Self {
-        Self { state, description, timestamp: SystemTime::now(), meta }
+        Self {
+            transactions: vec![transaction],
+            state,
+            description,
+            timestamp: SystemTime::now(),
+            meta
+        }
+    }
+
+    /// 创建批量事务历史条目
+    pub fn new_batch(
+        transactions: Vec<Arc<Transaction>>,
+        state: Arc<State>,
+        description: String,
+        meta: serde_json::Value,
+    ) -> Self {
+        Self {
+            transactions,
+            state,
+            description,
+            timestamp: SystemTime::now(),
+            meta
+        }
     }
 }
 
