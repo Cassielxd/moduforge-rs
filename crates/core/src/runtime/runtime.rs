@@ -680,6 +680,7 @@ impl ForgeRuntime {
             let _ = self.event_bus.broadcast_blocking(Event::Jump {
                 old_state: result.old_state,
                 new_state: result.new_state,
+                transactions: result.transactions,
                 steps: n,
             });
         }

@@ -48,11 +48,13 @@ pub enum Event {
         transactions: Vec<Arc<Transaction>>,
     },
 
-    /// 历史跳转事件 (old_state, new_state, step_count)
+    /// 历史跳转事件 (old_state, new_state, transactions, steps)
     /// 当用户跳转到历史中的特定位置时触发
+    /// transactions 包含跳转过程中所有被影响的事务
     Jump {
         old_state: Arc<State>,
         new_state: Arc<State>,
+        transactions: Vec<Arc<Transaction>>,
         steps: isize,
     },
 
