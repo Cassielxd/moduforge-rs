@@ -13,7 +13,7 @@ const TAIL_MAGIC: &[u8; 8] = b"MFFTAIL1"; // 8B 魔数 + 8B 目录偏移 (LE)
 
 // 段类型：用于描述容器中存储的数据类别
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct SegmentType(String);
+pub struct SegmentType(pub String);
 // 段目录项：记录段的类型、偏移、长度与 CRC
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SegmentEntry {

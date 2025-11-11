@@ -14,4 +14,4 @@ pub enum FileError {
     CrcMismatch(u64),
 }
 
-pub type Result<T> = std::result::Result<T, FileError>;
+pub type Result<T> = anyhow::Result<T, FileError>;
