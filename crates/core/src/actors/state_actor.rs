@@ -196,9 +196,19 @@ impl Actor for StateActor {
 
                 // 记录事务到历史（不应用，因为已经在外部应用过了）
                 let entry = if transactions.len() == 1 {
-                    HistoryEntryWithMeta::new(transactions[0].clone(), new_state, description, meta)
+                    HistoryEntryWithMeta::new(
+                        transactions[0].clone(),
+                        new_state,
+                        description,
+                        meta,
+                    )
                 } else {
-                    HistoryEntryWithMeta::new_batch(transactions, new_state, description, meta)
+                    HistoryEntryWithMeta::new_batch(
+                        transactions,
+                        new_state,
+                        description,
+                        meta,
+                    )
                 };
 
                 state.history_manager.insert(entry);
@@ -354,7 +364,6 @@ impl StateActor {
         tr: &mf_state::Transaction,
         current_state: &State,
     ) -> ForgeResult<mf_state::Transaction> {
-
         let mut inverted_tr = mf_state::Transaction::new(current_state);
 
         // 反向遍历步骤（LIFO）

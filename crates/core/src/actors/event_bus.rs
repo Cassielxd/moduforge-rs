@@ -96,6 +96,15 @@ impl Actor for EventBusActor {
         })
     }
 
+    async fn post_stop(
+        &self,
+        _myself: ActorRef<Self::Msg>,
+        _state: &mut Self::State,
+    ) -> Result<(), ActorProcessingErr> {
+        debug!("停止事件总线Actor");
+        Ok(())
+    }
+
     async fn handle(
         &self,
         _myself: ActorRef<Self::Msg>,
@@ -166,15 +175,6 @@ impl Actor for EventBusActor {
             },
         }
 
-        Ok(())
-    }
-
-    async fn post_stop(
-        &self,
-        _myself: ActorRef<Self::Msg>,
-        _state: &mut Self::State,
-    ) -> Result<(), ActorProcessingErr> {
-        debug!("停止事件总线Actor");
         Ok(())
     }
 }

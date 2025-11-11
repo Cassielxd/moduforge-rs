@@ -73,23 +73,29 @@ async fn main() -> anyhow::Result<()> {
 
     // 示例 1: 查询所有已发布的文章
     println!("1. 查询所有已发布的内容:");
-    let results = search_svc.search_docs(SearchQuery {
-        attrs: vec![("status".into(), "published".into())],
-        limit: 10,
-        ..Default::default()
-    }).await?;
+    let results = search_svc
+        .search_docs(SearchQuery {
+            attrs: vec![("status".into(), "published".into())],
+            limit: 10,
+            ..Default::default()
+        })
+        .await?;
 
     for doc in &results {
-        println!("  - [{}] {}",
+        println!(
+            "  - [{}] {}",
             doc.node_id,
-            doc.attrs_flat.iter()
+            doc.attrs_flat
+                .iter()
                 .find(|(k, _)| k == "title")
                 .map(|(_, v)| v.as_str())
                 .unwrap_or("无标题")
         );
-        println!("    类型: {}, 作者: {}",
+        println!(
+            "    类型: {}, 作者: {}",
             doc.node_type,
-            doc.attrs_flat.iter()
+            doc.attrs_flat
+                .iter()
                 .find(|(k, _)| k == "author")
                 .map(|(_, v)| v.as_str())
                 .unwrap_or("未知")
@@ -110,15 +116,19 @@ async fn main() -> anyhow::Result<()> {
 
     // 示例 3: 按类型查询
     println!("3. 查询所有 'article' 类型的文档:");
-    let results = backend.search_docs(SearchQuery {
-        node_type: Some("article".into()),
-        limit: 10,
-        ..Default::default()
-    }).await?;
+    let results = backend
+        .search_docs(SearchQuery {
+            node_type: Some("article".into()),
+            limit: 10,
+            ..Default::default()
+        })
+        .await?;
 
     println!("  找到 {} 篇文章:", results.len());
     for doc in &results {
-        let title = doc.attrs_flat.iter()
+        let title = doc
+            .attrs_flat
+            .iter()
             .find(|(k, _)| k == "title")
             .map(|(_, v)| v.as_str())
             .unwrap_or("无标题");
@@ -128,14 +138,18 @@ async fn main() -> anyhow::Result<()> {
 
     // 示例 4: 查询带有 featured mark 的内容
     println!("4. 查询精选内容（带 featured mark）:");
-    let results = backend.search_docs(SearchQuery {
-        marks: vec!["featured".into()],
-        limit: 10,
-        ..Default::default()
-    }).await?;
+    let results = backend
+        .search_docs(SearchQuery {
+            marks: vec!["featured".into()],
+            limit: 10,
+            ..Default::default()
+        })
+        .await?;
 
     for doc in &results {
-        let title = doc.attrs_flat.iter()
+        let title = doc
+            .attrs_flat
+            .iter()
             .find(|(k, _)| k == "title")
             .map(|(_, v)| v.as_str())
             .unwrap_or("无标题");
@@ -145,15 +159,19 @@ async fn main() -> anyhow::Result<()> {
 
     // 示例 5: 按时间排序查询
     println!("5. 按创建时间降序查询（最新的内容）:");
-    let results = backend.search_docs(SearchQuery {
-        sort_by: Some("created_at_i64".into()),
-        sort_asc: false,
-        limit: 3,
-        ..Default::default()
-    }).await?;
+    let results = backend
+        .search_docs(SearchQuery {
+            sort_by: Some("created_at_i64".into()),
+            sort_asc: false,
+            limit: 3,
+            ..Default::default()
+        })
+        .await?;
 
     for doc in &results {
-        let title = doc.attrs_flat.iter()
+        let title = doc
+            .attrs_flat
+            .iter()
             .find(|(k, _)| k == "title")
             .map(|(_, v)| v.as_str())
             .unwrap_or("无标题");

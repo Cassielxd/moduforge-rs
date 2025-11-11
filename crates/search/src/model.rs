@@ -34,13 +34,12 @@ impl IndexDoc {
     /// - 如果需要完整的树结构，需要从 NodePool 中重建
     pub fn to_node(&self) -> anyhow::Result<Node> {
         // 反序列化 marks_json
-        let marks: Vec<Mark> = serde_json::from_str(&self.marks_json)
-            .unwrap_or_default();
+        let marks: Vec<Mark> =
+            serde_json::from_str(&self.marks_json).unwrap_or_default();
 
         // 反序列化 attrs_json
         let attrs_map: imbl::HashMap<String, serde_json::Value> =
-            serde_json::from_str(&self.attrs_json)
-                .unwrap_or_default();
+            serde_json::from_str(&self.attrs_json).unwrap_or_default();
 
         let node = Node {
             id: self.node_id.as_str().into(),

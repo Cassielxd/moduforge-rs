@@ -55,11 +55,7 @@ impl HistoryHelper {
 
         metrics::history_operation("undo");
 
-        Some(HistoryOperationResult {
-            old_state,
-            new_state,
-            transactions,
-        })
+        Some(HistoryOperationResult { old_state, new_state, transactions })
     }
 
     /// 执行重做操作 - 使用状态快照直接切换 (O(1) 性能)
@@ -90,11 +86,7 @@ impl HistoryHelper {
 
         metrics::history_operation("redo");
 
-        Some(HistoryOperationResult {
-            old_state,
-            new_state,
-            transactions,
-        })
+        Some(HistoryOperationResult { old_state, new_state, transactions })
     }
 
     /// 执行跳转操作 - 使用状态快照直接跳转
@@ -158,11 +150,7 @@ impl HistoryHelper {
 
         metrics::history_operation("jump");
 
-        Some(HistoryOperationResult {
-            old_state,
-            new_state,
-            transactions,
-        })
+        Some(HistoryOperationResult { old_state, new_state, transactions })
     }
 
     /// 插入新的历史记录
@@ -185,9 +173,19 @@ impl HistoryHelper {
         }
 
         let entry = if transactions.len() == 1 {
-            HistoryEntryWithMeta::new(transactions[0].clone(), state, description, meta)
+            HistoryEntryWithMeta::new(
+                transactions[0].clone(),
+                state,
+                description,
+                meta,
+            )
         } else {
-            HistoryEntryWithMeta::new_batch(transactions, state, description, meta)
+            HistoryEntryWithMeta::new_batch(
+                transactions,
+                state,
+                description,
+                meta,
+            )
         };
         history_manager.insert(entry);
     }

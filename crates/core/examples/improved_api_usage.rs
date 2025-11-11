@@ -3,8 +3,7 @@
 //! 展示新的统一、流畅的运行时构建 API
 
 use mf_core::{
-    ForgeRuntimeBuilder, RuntimeType, Environment,
-    types::Content, ForgeResult,
+    ForgeRuntimeBuilder, RuntimeType, Environment, types::Content, ForgeResult,
 };
 
 #[tokio::main]
@@ -41,17 +40,15 @@ async fn main() -> ForgeResult<()> {
 async fn example_1_simplest() -> ForgeResult<()> {
     println!("📝 示例 1: 最简单的用法\n");
 
-    let mut runtime = ForgeRuntimeBuilder::new()
-        .build()
-        .await?;
+    let mut runtime = ForgeRuntimeBuilder::new().build().await?;
 
     println!("✅ 运行时创建成功");
     println!("   类型: {:?}", runtime.runtime_type());
-    
+
     // 使用运行时
     let state = runtime.get_state().await?;
     println!("   文档节点数: {}", state.doc().size());
-    
+
     println!();
     Ok(())
 }
@@ -70,12 +67,12 @@ async fn example_2_specify_runtime() -> ForgeResult<()> {
 
     println!("✅ 运行时创建成功");
     println!("   类型: {:?}", runtime.runtime_type());
-    
+
     // 可以获取具体类型的引用
     if let Some(async_rt) = runtime.as_async() {
         println!("   这是一个异步运行时");
     }
-    
+
     println!();
     Ok(())
 }
@@ -98,7 +95,7 @@ async fn example_3_fluent_config() -> ForgeResult<()> {
 
     println!("✅ 运行时创建成功（自定义配置）");
     println!("   类型: {:?}", runtime.runtime_type());
-    
+
     println!();
     Ok(())
 }
@@ -118,7 +115,7 @@ async fn example_4_from_config_file() -> ForgeResult<()> {
 
     println!("✅ 从配置文件创建成功");
     println!("   类型: {:?}", runtime.runtime_type());
-    
+
     println!();
     Ok(())
 }
@@ -130,25 +127,23 @@ async fn example_5_with_schema() -> ForgeResult<()> {
     println!("📝 示例 5: 使用 XML Schema\n");
 
     // 注意：这需要实际的 schema 文件存在
-    let result = ForgeRuntimeBuilder::new()
-        .schema_path("schema/main.xml")
-        .build()
-        .await;
+    let result =
+        ForgeRuntimeBuilder::new().schema_path("schema/main.xml").build().await;
 
     match result {
         Ok(mut runtime) => {
             println!("✅ 使用 Schema 创建成功");
             println!("   类型: {:?}", runtime.runtime_type());
-            
+
             let schema = runtime.schema().await?;
             println!("   Schema 已加载");
         },
         Err(e) => {
             println!("⚠️  Schema 文件不存在或加载失败: {}", e);
             println!("   这是正常的，如果没有 schema 文件");
-        }
+        },
     }
-    
+
     println!();
     Ok(())
 }
@@ -161,14 +156,14 @@ async fn example_6_production() -> ForgeResult<()> {
 
     let mut runtime = ForgeRuntimeBuilder::new()
         .environment(Environment::Production)
-        .runtime_type(RuntimeType::Actor)  // 生产环境使用 Actor 运行时
-        .enable_monitoring(true)           // 启用监控
+        .runtime_type(RuntimeType::Actor) // 生产环境使用 Actor 运行时
+        .enable_monitoring(true) // 启用监控
         .build()
         .await?;
 
     println!("✅ 生产环境运行时创建成功");
     println!("   类型: {:?}", runtime.runtime_type());
-    
+
     println!();
     Ok(())
 }
@@ -179,9 +174,7 @@ async fn example_6_production() -> ForgeResult<()> {
 async fn example_7_runtime_matching() -> ForgeResult<()> {
     println!("📝 示例 7: 运行时类型匹配\n");
 
-    let mut runtime = ForgeRuntimeBuilder::new()
-        .build()
-        .await?;
+    let mut runtime = ForgeRuntimeBuilder::new().build().await?;
 
     // 使用 match 进行类型匹配
     match &runtime {
@@ -203,7 +196,7 @@ async fn example_7_runtime_matching() -> ForgeResult<()> {
     if let Some(_async_rt) = runtime.as_async() {
         println!("   这是异步运行时的特定操作");
     }
-    
+
     println!();
     Ok(())
 }
@@ -222,10 +215,14 @@ fn api_comparison() {
     println!("let runtime = ForgeRuntimeBuilder::auto(None).await?;");
     println!();
     println!("// 方式 3: 指定类型");
-    println!("let runtime = ForgeRuntimeBuilder::with_type(RuntimeType::Actor, None).await?;");
+    println!(
+        "let runtime = ForgeRuntimeBuilder::with_type(RuntimeType::Actor, None).await?;"
+    );
     println!();
     println!("// 方式 4: 从配置");
-    println!("let runtime = ForgeRuntimeBuilder::from_config(config, Some(options)).await?;");
+    println!(
+        "let runtime = ForgeRuntimeBuilder::from_config(config, Some(options)).await?;"
+    );
     println!("```\n");
 
     println!("新 API（统一、流畅）:");
@@ -253,4 +250,3 @@ fn api_comparison() {
     println!("✅ 返回具体的枚举类型而非 trait object");
     println!("✅ 支持渐进式配置");
 }
-

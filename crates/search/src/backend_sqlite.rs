@@ -123,21 +123,20 @@ impl SqliteBackend {
                  VALUES('delete', old.rowid, old.id, old.text);
                  INSERT INTO nodes_fts(rowid, id, text)
                  VALUES (new.rowid, new.id, new.text);
-             END;"
+             END;",
         )?;
 
         Ok(Self {
             pool,
             index_dir: dir.to_path_buf(),
-            _temp_dir: None,  // 持久化目录，不使用临时目录
+            _temp_dir: None, // 持久化目录，不使用临时目录
         })
     }
 
     /// 使用系统临时目录
     pub fn new_in_system_temp() -> Result<Self> {
-        let temp_dir = tempfile::Builder::new()
-            .prefix("mf_index_")
-            .tempdir()?;
+        let temp_dir =
+            tempfile::Builder::new().prefix("mf_index_").tempdir()?;
 
         let db_path = temp_dir.path().join("index.db");
 
@@ -201,13 +200,13 @@ impl SqliteBackend {
                  VALUES('delete', old.rowid, old.id, old.text);
                  INSERT INTO nodes_fts(rowid, id, text)
                  VALUES (new.rowid, new.id, new.text);
-             END;"
+             END;",
         )?;
 
         Ok(Self {
             pool,
             index_dir: temp_dir.path().to_path_buf(),
-            _temp_dir: Some(temp_dir),  // 保存临时目录对象，确保生命周期内不被删除
+            _temp_dir: Some(temp_dir), // 保存临时目录对象，确保生命周期内不被删除
         })
     }
 
@@ -279,13 +278,13 @@ impl SqliteBackend {
                  VALUES('delete', old.rowid, old.id, old.text);
                  INSERT INTO nodes_fts(rowid, id, text)
                  VALUES (new.rowid, new.id, new.text);
-             END;"
+             END;",
         )?;
 
         Ok(Self {
             pool,
             index_dir: temp_dir.path().to_path_buf(),
-            _temp_dir: Some(temp_dir),  // 保存临时目录对象，确保生命周期内不被删除
+            _temp_dir: Some(temp_dir), // 保存临时目录对象，确保生命周期内不被删除
         })
     }
 
@@ -295,23 +294,27 @@ impl SqliteBackend {
     }
 
     /// 应用增量变更
-    pub async fn apply(&self, mutations: Vec<IndexMutation>) -> Result<()> {
+    pub async fn apply(
+        &self,
+        mutations: Vec<IndexMutation>,
+    ) -> Result<()> {
         let mut conn = self.pool.get()?;
-        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let tx =
+            conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
 
         for mutation in mutations {
             match mutation {
                 IndexMutation::Add(doc) | IndexMutation::Upsert(doc) => {
                     self.upsert_doc(&tx, &doc)?;
-                }
+                },
                 IndexMutation::DeleteById(id) => {
                     tx.execute("DELETE FROM nodes WHERE id = ?", [&id])?;
-                }
+                },
                 IndexMutation::DeleteManyById(ids) => {
                     for id in ids {
                         tx.execute("DELETE FROM nodes WHERE id = ?", [&id])?;
                     }
-                }
+                },
             }
         }
 
@@ -354,9 +357,13 @@ impl SqliteBackend {
     }
 
     /// 重建全部索引
-    pub async fn rebuild_all(&self, docs: Vec<IndexDoc>) -> Result<()> {
+    pub async fn rebuild_all(
+        &self,
+        docs: Vec<IndexDoc>,
+    ) -> Result<()> {
         let mut conn = self.pool.get()?;
-        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let tx =
+            conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
 
         // 清空表
         tx.execute("DELETE FROM nodes", [])?;
@@ -371,7 +378,10 @@ impl SqliteBackend {
     }
 
     /// 搜索节点 ID
-    pub async fn search_ids(&self, query: SearchQuery) -> Result<Vec<String>> {
+    pub async fn search_ids(
+        &self,
+        query: SearchQuery,
+    ) -> Result<Vec<String>> {
         let conn = self.pool.get()?;
 
         // 树形查询
@@ -389,13 +399,19 @@ impl SqliteBackend {
     }
 
     /// 搜索并返回完整文档
-    pub async fn search_docs(&self, query: SearchQuery) -> Result<Vec<IndexDoc>> {
+    pub async fn search_docs(
+        &self,
+        query: SearchQuery,
+    ) -> Result<Vec<IndexDoc>> {
         let ids = self.search_ids(query).await?;
         self.get_docs_by_ids(&ids).await
     }
 
     /// 根据 ID 列表获取完整文档
-    pub async fn get_docs_by_ids(&self, ids: &[String]) -> Result<Vec<IndexDoc>> {
+    pub async fn get_docs_by_ids(
+        &self,
+        ids: &[String],
+    ) -> Result<Vec<IndexDoc>> {
         if ids.is_empty() {
             return Ok(Vec::new());
         }
@@ -403,7 +419,8 @@ impl SqliteBackend {
         let conn = self.pool.get()?;
 
         // 构建 IN 查询
-        let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+        let placeholders =
+            ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let sql = format!(
             "SELECT id, node_type, parent_id, path, marks, marks_json, attrs, attrs_json, text,
                     order_i64, created_at_i64, updated_at_i64
@@ -412,61 +429,61 @@ impl SqliteBackend {
         );
 
         let mut stmt = conn.prepare(&sql)?;
-        let params: Vec<&dyn rusqlite::ToSql> = ids.iter()
-            .map(|id| id as &dyn rusqlite::ToSql)
-            .collect();
+        let params: Vec<&dyn rusqlite::ToSql> =
+            ids.iter().map(|id| id as &dyn rusqlite::ToSql).collect();
 
-        let docs = stmt.query_map(&params[..], |row| {
-            // 解析 marks JSON
-            let marks_json: String = row.get(5)?;
-            let marks_objects: Vec<mf_model::mark::Mark> = serde_json::from_str(&marks_json)
-                .unwrap_or_default();
-            let marks: Vec<String> = marks_objects.iter()
-                .map(|m| m.r#type.clone())
-                .collect();
+        let docs = stmt
+            .query_map(&params[..], |row| {
+                // 解析 marks JSON
+                let marks_json: String = row.get(5)?;
+                let marks_objects: Vec<mf_model::mark::Mark> =
+                    serde_json::from_str(&marks_json).unwrap_or_default();
+                let marks: Vec<String> =
+                    marks_objects.iter().map(|m| m.r#type.clone()).collect();
 
-            // 解析 attrs JSON
-            let attrs_json: String = row.get(7)?;
-            let attrs_map: imbl::HashMap<String, serde_json::Value> = serde_json::from_str(&attrs_json)
-                .unwrap_or_default();
-            let attrs_flat: Vec<(String, String)> = attrs_map.iter()
-                .map(|(k, v)| {
-                    let value_str = match v {
-                        serde_json::Value::Null => "null".to_string(),
-                        serde_json::Value::Bool(b) => b.to_string(),
-                        serde_json::Value::Number(n) => n.to_string(),
-                        serde_json::Value::String(s) => s.clone(),
-                        _ => serde_json::to_string(v).unwrap_or_default(),
-                    };
-                    (k.clone(), value_str)
+                // 解析 attrs JSON
+                let attrs_json: String = row.get(7)?;
+                let attrs_map: imbl::HashMap<String, serde_json::Value> =
+                    serde_json::from_str(&attrs_json).unwrap_or_default();
+                let attrs_flat: Vec<(String, String)> = attrs_map
+                    .iter()
+                    .map(|(k, v)| {
+                        let value_str = match v {
+                            serde_json::Value::Null => "null".to_string(),
+                            serde_json::Value::Bool(b) => b.to_string(),
+                            serde_json::Value::Number(n) => n.to_string(),
+                            serde_json::Value::String(s) => s.clone(),
+                            _ => serde_json::to_string(v).unwrap_or_default(),
+                        };
+                        (k.clone(), value_str)
+                    })
+                    .collect();
+
+                // 解析 path
+                let path_str: String = row.get(3)?;
+                let path: Vec<String> = path_str
+                    .trim_start_matches('/')
+                    .split('/')
+                    .filter(|s| !s.is_empty())
+                    .map(|s| s.to_string())
+                    .collect();
+
+                Ok(IndexDoc {
+                    node_id: row.get(0)?,
+                    node_type: row.get(1)?,
+                    parent_id: row.get(2)?,
+                    path,
+                    marks,
+                    marks_json: row.get(5)?,
+                    attrs_flat,
+                    attrs_json: row.get(7)?,
+                    text: row.get(8)?,
+                    order_i64: row.get(9)?,
+                    created_at_i64: row.get(10)?,
+                    updated_at_i64: row.get(11)?,
                 })
-                .collect();
-
-            // 解析 path
-            let path_str: String = row.get(3)?;
-            let path: Vec<String> = path_str
-                .trim_start_matches('/')
-                .split('/')
-                .filter(|s| !s.is_empty())
-                .map(|s| s.to_string())
-                .collect();
-
-            Ok(IndexDoc {
-                node_id: row.get(0)?,
-                node_type: row.get(1)?,
-                parent_id: row.get(2)?,
-                path,
-                marks,
-                marks_json: row.get(5)?,
-                attrs_flat,
-                attrs_json: row.get(7)?,
-                text: row.get(8)?,
-                order_i64: row.get(9)?,
-                created_at_i64: row.get(10)?,
-                updated_at_i64: row.get(11)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(docs)
     }
@@ -488,14 +505,17 @@ impl SqliteBackend {
                 JOIN tree t ON n.parent_id = t.id
                 WHERE t.level < 100
             )
-            SELECT id FROM tree WHERE 1=1"
+            SELECT id FROM tree WHERE 1=1",
         );
 
-        let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![Box::new(parent_id.clone())];
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> =
+            vec![Box::new(parent_id.clone())];
 
         // 添加过滤条件
         if let Some(node_type) = &query.node_type {
-            sql.push_str(" AND id IN (SELECT id FROM nodes WHERE node_type = ?)");
+            sql.push_str(
+                " AND id IN (SELECT id FROM nodes WHERE node_type = ?)",
+            );
             params.push(Box::new(node_type.clone()));
         }
 
@@ -512,10 +532,8 @@ impl SqliteBackend {
         sql.push_str(&format!(" LIMIT {} OFFSET {}", limit, query.offset));
 
         let mut stmt = conn.prepare(&sql)?;
-        let params_ref: Vec<&dyn rusqlite::ToSql> = params
-            .iter()
-            .map(|p| p.as_ref() as &dyn rusqlite::ToSql)
-            .collect();
+        let params_ref: Vec<&dyn rusqlite::ToSql> =
+            params.iter().map(|p| p.as_ref() as &dyn rusqlite::ToSql).collect();
 
         let ids: Vec<String> = stmt
             .query_map(&params_ref[..], |row| row.get(0))?
@@ -535,10 +553,11 @@ impl SqliteBackend {
         let mut sql = String::from(
             "SELECT nodes.id FROM nodes_fts
              JOIN nodes ON nodes_fts.id = nodes.id
-             WHERE nodes_fts.text MATCH ?1"
+             WHERE nodes_fts.text MATCH ?1",
         );
 
-        let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![Box::new(text.clone())];
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> =
+            vec![Box::new(text.clone())];
         let mut param_index = 2;
 
         // 添加过滤条件
@@ -573,10 +592,8 @@ impl SqliteBackend {
         sql.push_str(&format!(" LIMIT {} OFFSET {}", limit, query.offset));
 
         let mut stmt = conn.prepare(&sql)?;
-        let params_ref: Vec<&dyn rusqlite::ToSql> = params
-            .iter()
-            .map(|p| p.as_ref() as &dyn rusqlite::ToSql)
-            .collect();
+        let params_ref: Vec<&dyn rusqlite::ToSql> =
+            params.iter().map(|p| p.as_ref() as &dyn rusqlite::ToSql).collect();
 
         let ids: Vec<String> = stmt
             .query_map(&params_ref[..], |row| row.get(0))?
@@ -632,7 +649,9 @@ impl SqliteBackend {
                     WHERE json_extract(value, '$.type') = ?{}
                     AND json_extract(value, '$.attrs.{}') = ?{}
                 )",
-                param_index, attr_key, param_index + 1
+                param_index,
+                attr_key,
+                param_index + 1
             ));
             params.push(Box::new(mark_type.clone()));
             params.push(Box::new(attr_value.clone()));
@@ -673,10 +692,8 @@ impl SqliteBackend {
         sql.push_str(&format!(" LIMIT {} OFFSET {}", limit, query.offset));
 
         let mut stmt = conn.prepare(&sql)?;
-        let params_ref: Vec<&dyn rusqlite::ToSql> = params
-            .iter()
-            .map(|p| p.as_ref() as &dyn rusqlite::ToSql)
-            .collect();
+        let params_ref: Vec<&dyn rusqlite::ToSql> =
+            params.iter().map(|p| p.as_ref() as &dyn rusqlite::ToSql).collect();
 
         let ids: Vec<String> = stmt
             .query_map(&params_ref[..], |row| row.get(0))?
@@ -764,7 +781,11 @@ mod tests {
                 node_id: "child2".to_string(),
                 node_type: "paragraph".to_string(),
                 parent_id: Some("child1".to_string()),
-                path: vec!["root".to_string(), "child1".to_string(), "child2".to_string()],
+                path: vec![
+                    "root".to_string(),
+                    "child1".to_string(),
+                    "child2".to_string(),
+                ],
                 marks: vec![],
                 marks_json: "[]".to_string(),
                 attrs_flat: vec![],
@@ -805,7 +826,10 @@ mod tests {
                 path: vec!["root".to_string(), "doc1".to_string()],
                 marks: vec!["bold".to_string()],
                 marks_json: r#"[{"type":"bold","attrs":{}}]"#.to_string(),
-                attrs_flat: vec![("status".to_string(), "published".to_string())],
+                attrs_flat: vec![(
+                    "status".to_string(),
+                    "published".to_string(),
+                )],
                 attrs_json: r#"{"status":"published"}"#.to_string(),
                 text: Some("第一篇文档".to_string()),
                 order_i64: Some(1),
@@ -847,7 +871,10 @@ mod tests {
         assert_eq!(doc1.node_type, "paragraph");
         assert_eq!(doc1.text, Some("第一篇文档".to_string()));
         assert_eq!(doc1.marks, vec!["bold".to_string()]);
-        assert_eq!(doc1.attrs_flat, vec![("status".to_string(), "published".to_string())]);
+        assert_eq!(
+            doc1.attrs_flat,
+            vec![("status".to_string(), "published".to_string())]
+        );
         assert_eq!(doc1.order_i64, Some(1));
 
         // 验证第二个文档
@@ -879,7 +906,8 @@ mod tests {
         backend.apply(vec![IndexMutation::Add(doc)]).await.unwrap();
 
         // 通过 ID 获取文档
-        let docs = backend.get_docs_by_ids(&["test123".to_string()]).await.unwrap();
+        let docs =
+            backend.get_docs_by_ids(&["test123".to_string()]).await.unwrap();
 
         assert_eq!(docs.len(), 1);
         assert_eq!(docs[0].node_id, "test123");
@@ -891,7 +919,10 @@ mod tests {
         assert_eq!(empty.len(), 0);
 
         // 测试不存在的 ID
-        let not_found = backend.get_docs_by_ids(&["nonexistent".to_string()]).await.unwrap();
+        let not_found = backend
+            .get_docs_by_ids(&["nonexistent".to_string()])
+            .await
+            .unwrap();
         assert_eq!(not_found.len(), 0);
     }
 }

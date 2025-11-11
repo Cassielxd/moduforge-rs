@@ -426,7 +426,12 @@ impl ForgeAsyncRuntime {
         if let Some(new_state) = current_state {
             let old_state = self.base.get_state().clone();
             self.base
-                .update_state_with_meta(new_state.clone(), transactions.clone(), description, meta)
+                .update_state_with_meta(
+                    new_state.clone(),
+                    transactions.clone(),
+                    description,
+                    meta,
+                )
                 .await?;
 
             let event_start = std::time::Instant::now();

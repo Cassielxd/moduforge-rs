@@ -286,18 +286,18 @@ pub mod dev_tracing {
             TraceFormat::Console => {
                 init_console_tracing(config)?;
                 Ok(TracingGuard::None)
-            }
+            },
             TraceFormat::Json => {
                 init_json_tracing(config)?;
                 Ok(TracingGuard::None)
-            }
+            },
             #[cfg(feature = "dev-tracing-chrome")]
             TraceFormat::Chrome => init_chrome_tracing(config),
             #[cfg(feature = "dev-tracing-perfetto")]
             TraceFormat::Perfetto => {
                 init_perfetto_tracing(config)?;
                 Ok(TracingGuard::None)
-            }
+            },
         }
     }
 
@@ -359,7 +359,9 @@ pub mod dev_tracing {
 
     /// 初始化 Chrome Tracing 追踪
     #[cfg(feature = "dev-tracing-chrome")]
-    fn init_chrome_tracing(config: TraceConfig) -> anyhow::Result<TracingGuard> {
+    fn init_chrome_tracing(
+        config: TraceConfig
+    ) -> anyhow::Result<TracingGuard> {
         let path = config
             .output_path
             .unwrap_or_else(|| PathBuf::from("./logs/trace.json"));
@@ -372,7 +374,7 @@ pub mod dev_tracing {
         // 创建 Chrome Tracing layer（传递路径而不是文件对象）
         let (chrome_layer, guard) = tracing_chrome::ChromeLayerBuilder::new()
             .file(&path)
-            .include_args(true)  // 包含 span 参数
+            .include_args(true) // 包含 span 参数
             .build();
 
         // 同时输出到控制台（简化版）
@@ -394,9 +396,13 @@ pub mod dev_tracing {
         tracing::info!("🔍 开发追踪已启用（Chrome Tracing 模式）");
         tracing::info!("📁 输出文件: {}", path.display());
         tracing::info!("📊 日志级别: {}", config.max_level);
-        tracing::info!("🌐 查看方式: 在 Chrome 浏览器中访问 chrome://tracing 并加载文件");
+        tracing::info!(
+            "🌐 查看方式: 在 Chrome 浏览器中访问 chrome://tracing 并加载文件"
+        );
         tracing::info!("📦 包含信息: Span 时序、参数、线程 ID、进程 ID");
-        tracing::info!("⚠️  重要: 请保持返回的 guard 直到程序结束，以确保数据被正确写入");
+        tracing::info!(
+            "⚠️  重要: 请保持返回的 guard 直到程序结束，以确保数据被正确写入"
+        );
 
         // 返回 guard，调用者需要保持它直到程序结束
         Ok(TracingGuard::Chrome(ChromeTracingGuard { _guard: guard }))
@@ -539,7 +545,6 @@ pub mod dev_tracing {
     }
 }
 
-
 // ============================================================================
 // 便捷宏定义
 // ============================================================================
@@ -636,6 +641,10 @@ macro_rules! trace_if_enabled {
 #[cfg(not(feature = "dev-tracing"))]
 #[macro_export]
 macro_rules! trace_if_enabled {
-    ($method:expr) => { None };
-    ($method:expr, $($field:tt)*) => { None };
+    ($method:expr) => {
+        None
+    };
+    ($method:expr, $($field:tt)*) => {
+        None
+    };
 }

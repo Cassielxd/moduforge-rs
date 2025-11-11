@@ -130,9 +130,7 @@ impl<'schema> NodeFactory<'schema> {
         available: Vec<&String>,
     ) -> String {
         if available.is_empty() {
-            format!(
-                "未找到{kind} \"{name}\"。当前 Schema 中未声明任何{kind}。"
-            )
+            format!("未找到{kind} \"{name}\"。当前 Schema 中未声明任何{kind}。")
         } else {
             let preview: Vec<&str> =
                 available.iter().take(5).map(|s| s.as_str()).collect();

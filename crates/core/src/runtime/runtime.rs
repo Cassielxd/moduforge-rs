@@ -513,8 +513,13 @@ impl ForgeRuntime {
         // 如果有新的状态，更新编辑器状态并记录到历史记录
         if let Some(new_state) = state_update {
             let old_state = self.state.clone();
-            self.update_state_with_meta(new_state.clone(), transactions.clone(), description, meta)
-                .await?;
+            self.update_state_with_meta(
+                new_state.clone(),
+                transactions.clone(),
+                description,
+                meta,
+            )
+            .await?;
             self.emit_event(Event::TrApply {
                 old_state,
                 new_state,
@@ -644,7 +649,9 @@ impl ForgeRuntime {
     }
 
     pub fn undo(&mut self) {
-        if let Some(result) = HistoryHelper::undo(&mut self.history_manager, self.state.clone()) {
+        if let Some(result) =
+            HistoryHelper::undo(&mut self.history_manager, self.state.clone())
+        {
             self.state = result.new_state.clone();
 
             // 触发撤销事件，供其他组件（如搜索索引）使用
@@ -657,7 +664,9 @@ impl ForgeRuntime {
     }
 
     pub fn redo(&mut self) {
-        if let Some(result) = HistoryHelper::redo(&mut self.history_manager, self.state.clone()) {
+        if let Some(result) =
+            HistoryHelper::redo(&mut self.history_manager, self.state.clone())
+        {
             self.state = result.new_state.clone();
 
             // 触发重做事件，供其他组件（如搜索索引）使用
@@ -673,7 +682,11 @@ impl ForgeRuntime {
         &mut self,
         n: isize,
     ) {
-        if let Some(result) = HistoryHelper::jump(&mut self.history_manager, self.state.clone(), n) {
+        if let Some(result) = HistoryHelper::jump(
+            &mut self.history_manager,
+            self.state.clone(),
+            n,
+        ) {
             self.state = result.new_state.clone();
 
             // 触发跳转事件，供其他组件（如搜索索引）使用

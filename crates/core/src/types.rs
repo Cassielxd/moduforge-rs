@@ -286,7 +286,7 @@ impl HistoryEntryWithMeta {
             state,
             description,
             timestamp: SystemTime::now(),
-            meta
+            meta,
         }
     }
 
@@ -302,7 +302,7 @@ impl HistoryEntryWithMeta {
             state,
             description,
             timestamp: SystemTime::now(),
-            meta
+            meta,
         }
     }
 }

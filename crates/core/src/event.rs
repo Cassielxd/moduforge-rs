@@ -60,11 +60,7 @@ pub enum Event {
 
     /// 事务失败事件
     /// 当事务应用失败时触发，供错误处理和日志记录使用
-    TrFailed {
-        state: Arc<State>,
-        transaction: Transaction,
-        error: String,
-    },
+    TrFailed { state: Arc<State>, transaction: Transaction, error: String },
 
     /// 历史清空事件
     /// 当历史记录被清空时触发

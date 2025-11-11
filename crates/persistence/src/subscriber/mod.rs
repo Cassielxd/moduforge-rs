@@ -213,7 +213,9 @@ impl<E: EventStore + 'static> EventHandler<Event> for SnapshotSubscriber<E> {
             if !has_snapshot {
                 self.write_snapshot(&doc_id, 0, state).await?;
             }
-        } else if let Event::TrApply { old_state: _, new_state, transactions } = event {
+        } else if let Event::TrApply { old_state: _, new_state, transactions } =
+            event
+        {
             let state = new_state;
             let trs = transactions;
             let mut touched_docs: HashSet<String> = HashSet::new();

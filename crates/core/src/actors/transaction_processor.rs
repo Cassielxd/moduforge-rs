@@ -238,11 +238,7 @@ impl TransactionProcessorActor {
 
             self.emit_event(
                 &state.event_bus,
-                Event::TrApply {
-                    old_state,
-                    new_state,
-                    transactions,
-                },
+                Event::TrApply { old_state, new_state, transactions },
             )
             .await?;
         }

@@ -57,10 +57,13 @@ impl ForgeActorRuntime {
     ///
     /// # 返回值
     /// * `ForgeResult<Self>` - Actor运行时实例或错误
-    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(options), fields(
-        crate_name = "core",
-        runtime_type = "actor"
-    )))]
+    #[cfg_attr(
+        feature = "dev-tracing",
+        tracing::instrument(
+            skip(options),
+            fields(crate_name = "core", runtime_type = "actor")
+        )
+    )]
     pub async fn create(options: RuntimeOptions) -> ForgeResult<Self> {
         Self::create_with_config(options, ForgeConfig::default()).await
     }
@@ -333,10 +336,13 @@ impl ForgeActorRuntime {
     /// 🎯 销毁运行时 - 与原始destroy完全相同的API
     ///
     /// 保持与runtime.rs:511-519行完全相同的接口
-    #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self), fields(
-        crate_name = "core",
-        runtime_type = "actor"
-    )))]
+    #[cfg_attr(
+        feature = "dev-tracing",
+        tracing::instrument(
+            skip(self),
+            fields(crate_name = "core", runtime_type = "actor")
+        )
+    )]
     pub async fn destroy(&mut self) -> ForgeResult<()> {
         debug!("正在销毁Actor运行时实例");
 

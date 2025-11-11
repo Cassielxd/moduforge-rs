@@ -56,7 +56,10 @@ async fn slow_task(id: u32) {
 }
 
 /// 模拟周期性任务
-async fn periodic_task(id: u32, interval_ms: u64) {
+async fn periodic_task(
+    id: u32,
+    interval_ms: u64,
+) {
     info!("周期性任务 {} 启动，间隔 {}ms", id, interval_ms);
     for i in 0..10 {
         sleep(Duration::from_millis(interval_ms)).await;
@@ -68,7 +71,7 @@ async fn periodic_task(id: u32, interval_ms: u64) {
 /// 模拟 CPU 密集型任务
 async fn cpu_intensive_task(id: u32) {
     info!("CPU 密集型任务 {} 开始", id);
-    
+
     // 模拟计算密集型操作
     tokio::task::spawn_blocking(move || {
         let mut sum = 0u64;
@@ -79,37 +82,37 @@ async fn cpu_intensive_task(id: u32) {
     })
     .await
     .unwrap();
-    
+
     info!("CPU 密集型任务 {} 完成", id);
 }
 
 /// 模拟有依赖关系的任务链
 async fn task_chain(id: u32) {
     info!("任务链 {} 开始", id);
-    
+
     // 第一步
     info!("任务链 {} - 步骤 1: 准备数据", id);
     sleep(Duration::from_millis(100)).await;
-    
+
     // 第二步
     info!("任务链 {} - 步骤 2: 处理数据", id);
     sleep(Duration::from_millis(200)).await;
-    
+
     // 第三步
     info!("任务链 {} - 步骤 3: 保存结果", id);
     sleep(Duration::from_millis(150)).await;
-    
+
     info!("任务链 {} 完成", id);
 }
 
 /// 模拟可能阻塞的任务
 async fn potentially_blocking_task(id: u32) {
     warn!("⚠️  潜在阻塞任务 {} 开始（这会在 tokio-console 中显示为警告）", id);
-    
+
     // 故意在异步上下文中进行同步阻塞操作（不推荐）
     // tokio-console 会检测到这个问题
     std::thread::sleep(Duration::from_millis(500));
-    
+
     warn!("⚠️  潜在阻塞任务 {} 完成", id);
 }
 
@@ -127,9 +130,7 @@ async fn main() -> anyhow::Result<()> {
     #[cfg(not(feature = "dev-console"))]
     {
         // 如果没有启用 dev-console feature，使用普通的日志
-        tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::INFO)
-            .init();
+        tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
         warn!("⚠️  未启用 dev-console feature");
         warn!("请使用以下命令运行：");
         warn!("cargo run --example tokio_console_demo --features dev-console");
@@ -139,7 +140,7 @@ async fn main() -> anyhow::Result<()> {
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     info!("第 1 阶段：快速任务（10个并发）");
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     let mut handles = vec![];
     for i in 0..10 {
         handles.push(tokio::spawn(fast_task(i)));
@@ -147,14 +148,14 @@ async fn main() -> anyhow::Result<()> {
     for handle in handles {
         handle.await?;
     }
-    
+
     sleep(Duration::from_secs(1)).await;
 
     info!("");
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     info!("第 2 阶段：慢速任务（3个并发）");
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     let mut handles = vec![];
     for i in 0..3 {
         handles.push(tokio::spawn(slow_task(i)));
@@ -169,12 +170,12 @@ async fn main() -> anyhow::Result<()> {
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     info!("第 3 阶段：周期性任务（3个不同频率）");
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     let mut handles = vec![];
     handles.push(tokio::spawn(periodic_task(1, 100)));
     handles.push(tokio::spawn(periodic_task(2, 200)));
     handles.push(tokio::spawn(periodic_task(3, 300)));
-    
+
     for handle in handles {
         handle.await?;
     }
@@ -185,7 +186,7 @@ async fn main() -> anyhow::Result<()> {
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     info!("第 4 阶段：CPU 密集型任务（2个）");
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     let mut handles = vec![];
     for i in 0..2 {
         handles.push(tokio::spawn(cpu_intensive_task(i)));
@@ -200,7 +201,7 @@ async fn main() -> anyhow::Result<()> {
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     info!("第 5 阶段：任务链（3个串行任务）");
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     let mut handles = vec![];
     for i in 0..3 {
         handles.push(tokio::spawn(task_chain(i)));
@@ -215,7 +216,7 @@ async fn main() -> anyhow::Result<()> {
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     info!("第 6 阶段：潜在阻塞任务（演示问题检测）");
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     let handle = tokio::spawn(potentially_blocking_task(1));
     handle.await?;
 
@@ -233,9 +234,8 @@ async fn main() -> anyhow::Result<()> {
     info!("  - 按 'q' 退出");
     info!("");
     info!("程序将在 10 秒后退出，请在 tokio-console 中查看统计信息...");
-    
+
     sleep(Duration::from_secs(10)).await;
 
     Ok(())
 }
-
