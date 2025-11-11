@@ -6,7 +6,7 @@ use mf_search::{SearchQuery, SqliteBackend, SearchService};
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // 创建临时索引
-    let backend = Arc::new(SqliteBackend::new_in_system_temp()?);
+    let backend = Arc::new(SqliteBackend::new_in_system_temp().await?);
     let search_svc = SearchService::new(backend.clone());
 
     // 准备测试数据：包含多种 marks 和复杂属性

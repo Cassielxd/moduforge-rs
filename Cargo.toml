@@ -75,9 +75,9 @@ criterion = "0.5"
 # XML 解析依赖
 quick-xml = { version = "0.36", features = ["serialize"] }
 
-rusqlite = { version = "0.37.0", features = ["bundled", "chrono", "serde_json"] }
-r2d2 = "0.8"
-r2d2_sqlite = "0.31.0"
+rbs = "4.6.2"
+rbatis = "4.6.12"
+rbdc-sqlite = "4.6.2"
 
 
 #crates 下所有的库

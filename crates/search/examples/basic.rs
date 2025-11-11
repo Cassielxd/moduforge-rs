@@ -7,7 +7,7 @@ use mf_search::{IndexService, SearchQuery, SqliteBackend, SearchService};
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // 1) 使用系统临时目录创建索引（程序结束自动清理）
-    let backend = Arc::new(SqliteBackend::new_in_system_temp()?);
+    let backend = Arc::new(SqliteBackend::new_in_system_temp().await?);
     let _index_svc = IndexService::new(backend.clone());
     let search_svc = SearchService::new(backend.clone());
 

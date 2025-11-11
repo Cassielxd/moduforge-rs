@@ -103,11 +103,11 @@ impl PluginTrait for SearchIndexPluginTrait {
 }
 
 /// 创建搜索索引插件（使用 SQLite 后端）
-pub fn create_search_index_plugin(
+pub async fn create_search_index_plugin(
     index_dir: &std::path::Path
 ) -> Result<Arc<Plugin>> {
     ensure_default_step_indexers();
-    let backend = Arc::new(SqliteBackend::new_in_dir(index_dir)?);
+    let backend = Arc::new(SqliteBackend::new_in_dir(index_dir).await?);
     let service = Arc::new(IndexService::new(backend));
 
     let field = Arc::new(SearchIndexStateField { service });
@@ -119,9 +119,9 @@ pub fn create_search_index_plugin(
 }
 
 /// 创建临时搜索索引插件（用于测试）
-pub fn create_temp_search_index_plugin() -> Result<Arc<Plugin>> {
+pub async fn create_temp_search_index_plugin() -> Result<Arc<Plugin>> {
     ensure_default_step_indexers();
-    let backend = Arc::new(SqliteBackend::new_in_system_temp()?);
+    let backend = Arc::new(SqliteBackend::new_in_system_temp().await?);
     let service = Arc::new(IndexService::new(backend));
 
     let field = Arc::new(SearchIndexStateField { service });

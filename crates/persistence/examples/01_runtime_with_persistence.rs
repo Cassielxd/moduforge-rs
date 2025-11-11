@@ -18,7 +18,8 @@ async fn main() -> ForgeResult<()> {
     let store = SqliteEventStore::open(
         "./data/persistence_demo.sqlite",
         CommitMode::AsyncDurable { group_window_ms: 8 },
-    )?;
+    )
+    .await?;
 
     // 2) 配置持久化选项（定期快照）
     let persist_opts = PersistOptions {

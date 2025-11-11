@@ -1,22 +1,65 @@
-//! 基于 SQLite 的 `EventStore` 实现。
+//! 基于 SQLite 的 `EventStore` 实现，使用 RBatis 异步访问。
 //!
-//! 默认使用 WAL 日志模式与 IMMEDIATE 事务以获得低延迟写入。
-//! 采用“单连接 + 互斥”顺序写，确保追加顺序并避免写锁竞争；
-//! 读取按需准备语句，受益于 SQLite 页缓存。
+//! 默认启用 WAL 模式配合 IMMEDIATE 事务，保证顺序写入与良好吞吐，
+//! 并在 `CommitMode::SyncDurable` 下触发 WAL checkpoint 以获得更强持久性。
 
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use rusqlite::{params, TransactionBehavior};
-use r2d2::Pool;
-use r2d2_sqlite::SqliteConnectionManager;
+use rbatis::{executor::Executor, RBatis};
+use rbdc_sqlite::Driver;
+use rbs::Value;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
 use crate::api::{CommitMode, EventStore, PersistedEvent, Snapshot};
+
+const INIT_SQL: &str = r#"
+    PRAGMA journal_mode = WAL;
+    PRAGMA synchronous = NORMAL;
+    PRAGMA cache_size = -64000;
+    PRAGMA temp_store = MEMORY;
+
+    CREATE TABLE IF NOT EXISTS events (
+      lsn INTEGER PRIMARY KEY AUTOINCREMENT,
+      tr_id TEXT NOT NULL,
+      doc_id TEXT NOT NULL,
+      ts INTEGER NOT NULL,
+      actor TEXT,
+      idempotency_key TEXT NOT NULL UNIQUE,
+      meta TEXT NOT NULL,
+      payload BLOB NOT NULL,
+      checksum INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS ix_events_doc_lsn ON events(doc_id, lsn);
+
+    CREATE TABLE IF NOT EXISTS snapshots (
+      doc_id TEXT NOT NULL,
+      upto_lsn INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      state_blob BLOB NOT NULL,
+      version INTEGER NOT NULL,
+      PRIMARY KEY (doc_id, upto_lsn)
+    );
+    CREATE INDEX IF NOT EXISTS ix_snapshots_doc_created
+        ON snapshots(doc_id, created_at DESC);
+"#;
+
+const INSERT_EVENT_SQL: &str = "\
+    INSERT INTO events \
+    (tr_id, doc_id, ts, actor, idempotency_key, meta, payload, checksum) \
+    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)";
+
+const UPSERT_SNAPSHOT_SQL: &str = "\
+    INSERT OR REPLACE INTO snapshots \
+    (doc_id, upto_lsn, created_at, state_blob, version) \
+    VALUES (?1, ?2, ?3, ?4, ?5)";
 
 /// `EventStore` 的 SQLite 具体实现。
 pub struct SqliteEventStore {
     _db_path: PathBuf,
-    pool: Pool<SqliteConnectionManager>,
+    pool: Arc<RBatis>,
     commit_mode: CommitMode,
 }
 
@@ -26,47 +69,62 @@ impl SqliteEventStore {
         crate_name = "persistence",
         commit_mode = ?commit_mode
     )))]
-    pub fn open(
+    pub async fn open(
         db_path: impl Into<PathBuf>,
         commit_mode: CommitMode,
     ) -> anyhow::Result<Arc<Self>> {
         let db_path = db_path.into();
-        // 确保父目录存在
         if let Some(parent) = db_path.parent() {
             if !parent.as_os_str().is_empty() {
                 std::fs::create_dir_all(parent)?;
             }
         }
-        let manager = SqliteConnectionManager::file(&db_path);
-        let pool = Pool::new(manager)?;
-        pool.get()?.execute_batch(
-            r#"
-            CREATE TABLE IF NOT EXISTS events (
-              lsn INTEGER PRIMARY KEY AUTOINCREMENT,
-              tr_id TEXT NOT NULL,
-              doc_id TEXT NOT NULL,
-              ts INTEGER NOT NULL,
-              actor TEXT,
-              idempotency_key TEXT NOT NULL UNIQUE,
-              meta TEXT NOT NULL,
-              payload BLOB NOT NULL,
-              checksum INTEGER NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS ix_events_doc_lsn ON events(doc_id, lsn);
 
-            CREATE TABLE IF NOT EXISTS snapshots (
-              doc_id TEXT NOT NULL,
-              upto_lsn INTEGER NOT NULL,
-              created_at INTEGER NOT NULL,
-              state_blob BLOB NOT NULL,
-              version INTEGER NOT NULL,
-              PRIMARY KEY (doc_id, upto_lsn)
-            );
-            CREATE INDEX IF NOT EXISTS ix_snapshots_doc_created ON snapshots(doc_id, created_at DESC);
-            "#,
-        )?;
+        let rb = RBatis::new();
+        rb.link(Driver {}, &format!("sqlite://{}", db_path.display())).await?;
+        Self::init_schema(&rb).await?;
 
-        Ok(Arc::new(Self { _db_path: db_path, pool, commit_mode }))
+        Ok(Arc::new(Self {
+            _db_path: db_path,
+            pool: Arc::new(rb),
+            commit_mode,
+        }))
+    }
+
+    async fn init_schema(rb: &RBatis) -> anyhow::Result<()> {
+        let conn = rb.acquire().await?;
+        conn.exec(INIT_SQL, vec![]).await?;
+        Ok(())
+    }
+
+    async fn insert_event<E>(
+        &self,
+        exec: &E,
+        ev: &PersistedEvent,
+    ) -> anyhow::Result<i64>
+    where
+        E: Executor + ?Sized,
+    {
+        let params = vec![
+            to_value(ev.tr_id.to_string()),
+            to_value(ev.doc_id.clone()),
+            to_value(ev.ts),
+            to_value(ev.actor.clone()),
+            to_value(ev.idempotency_key.clone()),
+            to_value(serde_json::to_string(&ev.meta)?),
+            to_value(ev.payload.clone()),
+            to_value(ev.checksum as i64),
+        ];
+        let exec_result = exec.exec(INSERT_EVENT_SQL, params).await?;
+        Ok(exec_result.last_insert_id.as_i64().unwrap_or_default())
+    }
+
+    async fn ensure_sync(&self) -> anyhow::Result<()> {
+        if matches!(self.commit_mode, CommitMode::SyncDurable) {
+            let conn = self.pool.acquire().await?;
+            conn.exec("PRAGMA wal_checkpoint(TRUNCATE)", vec![]).await.ok();
+        }
+        Ok(())
     }
 }
 
@@ -82,27 +140,10 @@ impl EventStore for SqliteEventStore {
         &self,
         ev: PersistedEvent,
     ) -> anyhow::Result<i64> {
-        let mut conn = self.pool.get()?;
-        let tx =
-            conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        tx.execute(
-            "INSERT INTO events (tr_id, doc_id, ts, actor, idempotency_key, meta, payload, checksum) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-            params![
-                ev.tr_id.to_string(), // ✅ UUID 转字符串存储
-                ev.doc_id,
-                { ev.ts },
-                ev.actor,
-                ev.idempotency_key,
-                ev.meta.to_string(),
-                ev.payload,
-                ev.checksum as i64
-            ],
-        )?;
-        tx.commit()?;
-        let lsn = conn.last_insert_rowid();
-        if let CommitMode::SyncDurable = self.commit_mode {
-            conn.pragma_update(None, "wal_checkpoint", "TRUNCATE").ok();
-        }
+        let tx = self.pool.acquire_begin().await?;
+        let lsn = self.insert_event(&tx, &ev).await?;
+        tx.commit().await?;
+        self.ensure_sync().await?;
         Ok(lsn)
     }
 
@@ -118,27 +159,14 @@ impl EventStore for SqliteEventStore {
         if evs.is_empty() {
             return Ok(0);
         }
-        let mut conn = self.pool.get()?;
-        let tx =
-            conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        {
-            let mut stmt = tx.prepare("INSERT INTO events (tr_id, doc_id, ts, actor, idempotency_key, meta, payload, checksum) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)")?;
-            for ev in evs.into_iter() {
-                stmt.execute(params![
-                    ev.tr_id.to_string(), // ✅ UUID 转字符串存储
-                    ev.doc_id,
-                    { ev.ts },
-                    ev.actor,
-                    ev.idempotency_key,
-                    ev.meta.to_string(),
-                    ev.payload,
-                    ev.checksum as i64
-                ])?;
-            }
+        let tx = self.pool.acquire_begin().await?;
+        let mut last_lsn = 0;
+        for ev in &evs {
+            last_lsn = self.insert_event(&tx, ev).await?;
         }
-        tx.commit()?;
-        let lsn = conn.last_insert_rowid();
-        Ok(lsn)
+        tx.commit().await?;
+        self.ensure_sync().await?;
+        Ok(last_lsn)
     }
 
     /// 读取指定文档在 `from_lsn` 之后的有序事件流。
@@ -154,34 +182,25 @@ impl EventStore for SqliteEventStore {
         from_lsn: i64,
         limit: u32,
     ) -> anyhow::Result<Vec<PersistedEvent>> {
-        let conn = self.pool.get()?;
-        let mut stmt = conn.prepare("SELECT lsn, tr_id, doc_id, ts, actor, idempotency_key, meta, payload, checksum FROM events WHERE doc_id = ?1 AND lsn > ?2 ORDER BY lsn ASC LIMIT ?3")?;
-        let rows =
-            stmt.query_map(params![doc_id, from_lsn, limit as i64], |row| {
-                let meta_str: String = row.get(6)?;
-                let meta: serde_json::Value = serde_json::from_str(&meta_str)
-                    .unwrap_or(serde_json::json!({}));
-                let tr_id_str: String = row.get(1)?;
-                let tr_id = uuid::Uuid::parse_str(&tr_id_str).map_err(|e| {
-                    rusqlite::Error::FromSqlConversionFailure(
-                        1,
-                        rusqlite::types::Type::Text,
-                        Box::new(e),
-                    )
-                })?;
-                Ok(PersistedEvent {
-                    lsn: row.get(0)?,
-                    tr_id, // ✅ 从字符串解析 UUID
-                    doc_id: row.get(2)?,
-                    ts: row.get(3)?,
-                    actor: row.get(4).ok(),
-                    idempotency_key: row.get(5)?,
-                    meta,
-                    payload: row.get(7)?,
-                    checksum: row.get::<_, i64>(8)? as u32,
-                })
-            })?;
-        Ok(rows.filter_map(|r| r.ok()).collect())
+        let conn = self.pool.acquire().await?;
+        let rows: Vec<EventRow> = conn
+            .query_decode(
+                "SELECT lsn, tr_id, doc_id, ts, actor, idempotency_key, \
+                 meta, payload, checksum \
+                 FROM events \
+                 WHERE doc_id = ?1 AND lsn > ?2 \
+                 ORDER BY lsn ASC LIMIT ?3",
+                vec![
+                    to_value(doc_id),
+                    to_value(from_lsn),
+                    to_value(limit as i64),
+                ],
+            )
+            .await?;
+        Ok(rows
+            .into_iter()
+            .map(PersistedEvent::try_from)
+            .collect::<anyhow::Result<Vec<_>>>()?)
     }
 
     /// 返回该文档的最新快照（若存在）。
@@ -193,20 +212,17 @@ impl EventStore for SqliteEventStore {
         &self,
         doc_id: &str,
     ) -> anyhow::Result<Option<Snapshot>> {
-        let conn = self.pool.get()?;
-        let mut stmt = conn.prepare("SELECT doc_id, upto_lsn, created_at, state_blob, version FROM snapshots WHERE doc_id = ?1 ORDER BY created_at DESC LIMIT 1")?;
-        let mut rows = stmt.query(params![doc_id])?;
-        if let Some(row) = rows.next()? {
-            Ok(Some(Snapshot {
-                doc_id: row.get(0)?,
-                upto_lsn: row.get(1)?,
-                created_at: row.get(2)?,
-                state_blob: row.get(3)?,
-                version: row.get(4)?,
-            }))
-        } else {
-            Ok(None)
-        }
+        let conn = self.pool.acquire().await?;
+        let rows: Vec<SnapshotRow> = conn
+            .query_decode(
+                "SELECT doc_id, upto_lsn, created_at, state_blob, version \
+                 FROM snapshots \
+                 WHERE doc_id = ?1 \
+                 ORDER BY created_at DESC LIMIT 1",
+                vec![to_value(doc_id)],
+            )
+            .await?;
+        Ok(rows.into_iter().next().map(Into::into))
     }
 
     /// 原子写入/替换快照。
@@ -219,14 +235,19 @@ impl EventStore for SqliteEventStore {
         &self,
         snap: Snapshot,
     ) -> anyhow::Result<()> {
-        let mut conn = self.pool.get()?;
-        let tx =
-            conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        tx.execute(
-            "INSERT OR REPLACE INTO snapshots (doc_id, upto_lsn, created_at, state_blob, version) VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![snap.doc_id, snap.upto_lsn, snap.created_at, snap.state_blob, snap.version],
-        )?;
-        tx.commit()?;
+        let tx = self.pool.acquire_begin().await?;
+        tx.exec(
+            UPSERT_SNAPSHOT_SQL,
+            vec![
+                to_value(snap.doc_id),
+                to_value(snap.upto_lsn),
+                to_value(snap.created_at),
+                to_value(snap.state_blob),
+                to_value(snap.version),
+            ],
+        )
+        .await?;
+        tx.commit().await?;
         Ok(())
     }
 
@@ -235,19 +256,83 @@ impl EventStore for SqliteEventStore {
         &self,
         doc_id: &str,
     ) -> anyhow::Result<()> {
-        let conn = self.pool.get()?;
-        // 删除最老的事件到最近快照
-        let upto: Option<i64> = conn.query_row(
-            "SELECT upto_lsn FROM snapshots WHERE doc_id = ?1 ORDER BY upto_lsn DESC LIMIT 1",
-            params![doc_id],
-            |r| r.get(0),
-        ).ok();
-        if let Some(upto_lsn) = upto {
-            conn.execute(
+        let conn = self.pool.acquire().await?;
+        let upto_rows: Vec<UptoRow> = conn
+            .query_decode(
+                "SELECT upto_lsn FROM snapshots \
+                 WHERE doc_id = ?1 \
+                 ORDER BY upto_lsn DESC LIMIT 1",
+                vec![to_value(doc_id)],
+            )
+            .await?;
+        if let Some(row) = upto_rows.into_iter().next() {
+            conn.exec(
                 "DELETE FROM events WHERE doc_id = ?1 AND lsn <= ?2",
-                params![doc_id, upto_lsn],
-            )?;
+                vec![to_value(doc_id), to_value(row.upto_lsn)],
+            )
+            .await?;
         }
         Ok(())
     }
+}
+
+fn to_value<T: serde::Serialize>(value: T) -> Value {
+    rbs::value_def(value)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct EventRow {
+    lsn: i64,
+    tr_id: String,
+    doc_id: String,
+    ts: i64,
+    actor: Option<String>,
+    idempotency_key: String,
+    meta: String,
+    payload: Vec<u8>,
+    checksum: i64,
+}
+
+impl TryFrom<EventRow> for PersistedEvent {
+    type Error = anyhow::Error;
+
+    fn try_from(row: EventRow) -> anyhow::Result<Self> {
+        Ok(Self {
+            lsn: row.lsn,
+            tr_id: Uuid::parse_str(&row.tr_id)?,
+            doc_id: row.doc_id,
+            ts: row.ts,
+            actor: row.actor,
+            idempotency_key: row.idempotency_key,
+            meta: serde_json::from_str(&row.meta)?,
+            payload: row.payload,
+            checksum: row.checksum as u32,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct SnapshotRow {
+    doc_id: String,
+    upto_lsn: i64,
+    created_at: i64,
+    state_blob: Vec<u8>,
+    version: i32,
+}
+
+impl From<SnapshotRow> for Snapshot {
+    fn from(row: SnapshotRow) -> Self {
+        Self {
+            doc_id: row.doc_id,
+            upto_lsn: row.upto_lsn,
+            created_at: row.created_at,
+            state_blob: row.state_blob,
+            version: row.version,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct UptoRow {
+    upto_lsn: i64,
 }

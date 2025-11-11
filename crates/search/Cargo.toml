@@ -31,9 +31,9 @@ moduforge-transform = { workspace = true }
 moduforge-state = { workspace = true }
 
 # SQLite backend
-rusqlite = { workspace = true }
-r2d2 = { workspace = true }
-r2d2_sqlite = { workspace = true }
+rbs = { workspace = true }
+rbatis = { workspace = true }
+rbdc-sqlite = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
