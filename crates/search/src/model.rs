@@ -3,9 +3,11 @@ use mf_model::{
     types::NodeId,
 };
 use std::sync::Arc;
+use rbatis::crud;
+use serde::Serialize;
 
 /// 扁平化后的索引文档（写入后端的基础结构）
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct IndexDoc {
     pub node_id: String,
     pub node_type: String,
@@ -25,7 +27,6 @@ pub struct IndexDoc {
     pub created_at_i64: Option<i64>,
     pub updated_at_i64: Option<i64>,
 }
-
 impl IndexDoc {
     /// 从索引文档转换回 Node
     ///

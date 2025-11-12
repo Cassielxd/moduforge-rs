@@ -4,8 +4,11 @@ use rbatis::{executor::Executor, RBatis};
 use rbdc_sqlite::Driver;
 use rbs::Value;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 const SCHEMA_SQL: &str = r#"
     PRAGMA journal_mode=WAL;
@@ -295,7 +298,20 @@ impl SqliteBackend {
 
         let conn = self.pool.acquire().await?;
         let rows: Vec<NodeRow> = conn.query_decode(&sql, params).await?;
-        rows.into_iter().map(IndexDoc::try_from).collect()
+        let mut docs_by_id: HashMap<String, IndexDoc> =
+            HashMap::with_capacity(rows.len());
+        for row in rows {
+            let doc = IndexDoc::try_from(row)?;
+            docs_by_id.insert(doc.node_id.clone(), doc);
+        }
+
+        let mut ordered = Vec::with_capacity(ids.len());
+        for id in ids {
+            if let Some(doc) = docs_by_id.remove(id.as_str()) {
+                ordered.push(doc);
+            }
+        }
+        Ok(ordered)
     }
 
     async fn search_tree(
