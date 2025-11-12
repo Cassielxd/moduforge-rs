@@ -394,12 +394,8 @@ impl State {
             serde_json::to_string(&self.doc()).map_err(|e| {
                 error::serialize_error(format!("node pool 序列化失败: {e}"))
             })?;
-        let state_fields_str =
-            serde_json::to_string(&state_fields).map_err(|e| {
-                error::serialize_error(format!("fields 序列化失败: {e}"))
-            })?;
         Ok(StateSerialize {
-            state_fields: state_fields_str.as_bytes().to_vec(),
+            state_fields: state_fields,
             node_pool: node_pool_str.as_bytes().to_vec(),
         })
     }
@@ -413,12 +409,6 @@ impl State {
         s: &StateSerialize,
         configuration: &Configuration,
     ) -> StateResult<State> {
-        let state_fields: HashMap<String, Vec<u8>> =
-            serde_json::from_slice(&s.state_fields).map_err(|e| {
-                error::deserialize_error(format!(
-                    "state fields 反序列化失败{e}"
-                ))
-            })?;
         let node_pool: Arc<NodePool> = serde_json::from_slice(&s.node_pool)
             .map_err(|e| {
                 error::deserialize_error(format!("node pool 反序列化失败: {e}"))
@@ -430,7 +420,7 @@ impl State {
         let mut map_instances = ImHashMap::new();
         for plugin in &configuration.plugin_manager.get_sorted_plugins().await {
             if let Some(state_field) = &plugin.spec.state_field {
-                if let Some(value) = state_fields.get(&plugin.key) {
+                if let Some(value) = s.state_fields.get(&plugin.key) {
                     if let Some(p_state) = state_field.deserialize_erased(value)
                     {
                         let key = plugin.key.clone();
@@ -445,7 +435,7 @@ impl State {
 }
 
 pub struct StateSerialize {
-    pub state_fields: Vec<u8>,
+    pub state_fields: HashMap<String, Vec<u8>>,
     pub node_pool: Vec<u8>,
 }
 

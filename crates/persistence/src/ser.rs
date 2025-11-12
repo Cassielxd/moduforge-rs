@@ -3,6 +3,7 @@
 //! 使用简单分帧：将各步骤的序列化字节以 `0x1E`（记录分隔符）连接。
 //! 压缩为可选，建议在分帧之后进行；校验和在压缩（或加密）后的字节上计算。
 
+use std::collections::HashMap;
 use crc32fast::Hasher as Crc32;
 use zstd::stream::encode_all;
 use mf_state::Transaction;
@@ -50,7 +51,7 @@ pub struct TypeWrapper {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SnapshotData {
     pub node_pool: Vec<u8>,
-    pub state_fields: Vec<u8>,
+    pub state_fields: HashMap<String, Vec<u8>>,
 }
 
 pub fn frame_steps(transaction: &Transaction) -> Vec<TypeWrapper> {
