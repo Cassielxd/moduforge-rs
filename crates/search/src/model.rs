@@ -3,7 +3,6 @@ use mf_model::{
     types::NodeId,
 };
 use std::sync::Arc;
-use rbatis::crud;
 use serde::Serialize;
 
 /// 扁平化后的索引文档（写入后端的基础结构）
