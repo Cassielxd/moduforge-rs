@@ -7,13 +7,13 @@ use mf_core::{
     event::{Event, EventHandler},
     ForgeResult,
 };
-use mf_state::transaction::Transaction;
+use mf_state::transaction::{get_tr_id, Transaction};
 use serde_json::json;
-use uuid::Uuid;
 
 use crate::api::{CommitMode, EventStore, PersistOptions, PersistedEvent, Snapshot};
 use crate::ser::{
-    checksum32, compress_if_needed, frame_steps, SnapshotData, TypeWrapper,
+    checksum32, compress_if_needed, frame_invert_steps, frame_steps,
+    SnapshotData, TypeWrapper,
 };
 
 #[derive(Default)]
@@ -24,13 +24,20 @@ struct SnapshotCounters {
     bytes_since: u64,
 }
 
+#[derive(Copy, Clone)]
+enum PersistAction {
+    Apply,
+    Undo,
+    Redo,
+}
+
 pub struct SnapshotSubscriber<E: EventStore + 'static> {
     store: Arc<E>,
     options: PersistOptions,
     commit_mode: CommitMode,
     default_doc_id: String,
     // 进程内已持久化的事务ID集合，避免重复写入（进程重启后靠数据库幂等键）
-    persisted: DashMap<Uuid, ()>, // ✅ 改用 UUID 作为 key
+    persisted: DashMap<u64, ()>,
     // 每个文档的快照计数器
     snap_counters: DashMap<String, SnapshotCounters>,
     // 待写快照的 upto_lsn
@@ -79,12 +86,14 @@ impl<E: EventStore + 'static> SnapshotSubscriber<E> {
 
     async fn persist_one(
         &self,
-        tr_id: Uuid, // ✅ 改用 UUID
+        tr_id: u64,
         doc_id: &str,
-        transaction: &Transaction,
+        frames: Vec<TypeWrapper>,
+        meta: serde_json::Value,
     ) -> ForgeResult<Option<(i64, usize)>> {
-        // 将每个步骤包装为 {type_id, data}
-        let frames: Vec<TypeWrapper> = frame_steps(transaction);
+        if frames.is_empty() {
+            return Ok(None);
+        }
         let framed = serde_json::to_vec(&frames).map_err(|e| {
             mf_core::error::error_utils::middleware_error(format!(
                 "步骤编码失败: {e}"
@@ -104,7 +113,7 @@ impl<E: EventStore + 'static> SnapshotSubscriber<E> {
             actor: None,
             idempotency_key: format!("tr:{tr_id}"),
             payload,
-            meta: json!({}),
+            meta,
             checksum,
         };
 
@@ -122,6 +131,21 @@ impl<E: EventStore + 'static> SnapshotSubscriber<E> {
                         )
                     })
             },
+        }
+    }
+
+    fn resolve_doc_id(
+        &self,
+        transaction: &Transaction,
+        state: &mf_state::State,
+    ) -> String {
+        let doc_id = transaction
+            .get_meta::<String>("doc_id")
+            .unwrap_or_else(|| state.doc().root_id().to_string());
+        if doc_id.is_empty() {
+            self.default_doc_id.clone()
+        } else {
+            doc_id
         }
     }
 
@@ -193,6 +217,101 @@ impl<E: EventStore + 'static> SnapshotSubscriber<E> {
         entry.bytes_since = 0;
         Ok(())
     }
+
+    async fn process_transactions(
+        &self,
+        state: &Arc<mf_state::State>,
+        transactions: &[Arc<Transaction>],
+        action: PersistAction,
+    ) -> ForgeResult<()> {
+        if transactions.is_empty() {
+            return Ok(());
+        }
+        let mut touched_docs: HashSet<String> = HashSet::new();
+
+        for tr in transactions.iter() {
+            let doc_id = self.resolve_doc_id(tr, state);
+            let (persist_id, frames, meta) = match action {
+                PersistAction::Apply => (tr.id, frame_steps(tr), json!({})),
+                PersistAction::Undo => (
+                    get_tr_id(),
+                    frame_invert_steps(tr),
+                    json!({
+                        "action": "undo",
+                        "source_tr_id": tr.id,
+                    }),
+                ),
+                PersistAction::Redo => (
+                    get_tr_id(),
+                    frame_steps(tr),
+                    json!({
+                        "action": "redo",
+                        "source_tr_id": tr.id,
+                    }),
+                ),
+            };
+
+            if frames.is_empty() {
+                continue;
+            }
+
+            if matches!(action, PersistAction::Apply)
+                && self.persisted.contains_key(&persist_id)
+            {
+                continue;
+            }
+
+            match self.persist_one(persist_id, &doc_id, frames, meta).await {
+                Ok(Some((lsn, bytes))) => {
+                    self.persisted.insert(persist_id, ());
+                    touched_docs.insert(doc_id.clone());
+                    let mut entry =
+                        self.snap_counters.entry(doc_id.clone()).or_default();
+                    entry.events_since += 1;
+                    entry.bytes_since += bytes as u64;
+                    let cur = self
+                        .pending_snapshot_lsn
+                        .get(&doc_id)
+                        .map(|v| *v.value())
+                        .unwrap_or(-1);
+                    if lsn > cur {
+                        self.pending_snapshot_lsn
+                            .insert(doc_id.clone(), lsn);
+                    }
+                },
+                Ok(None) => {},
+                Err(e) => return Err(e),
+            }
+        }
+
+        self.flush_snapshots(touched_docs, state).await
+    }
+
+    async fn flush_snapshots(
+        &self,
+        touched_docs: HashSet<String>,
+        state: &Arc<mf_state::State>,
+    ) -> ForgeResult<()> {
+        for doc_id in touched_docs.into_iter() {
+            if let Some(upto) =
+                self.pending_snapshot_lsn.get(&doc_id).map(|v| *v.value())
+            {
+                if upto >= 0 {
+                    let has_snapshot = self
+                        .store
+                        .latest_snapshot(&doc_id)
+                        .await
+                        .map(|s| s.is_some())
+                        .unwrap_or(false);
+                    if !has_snapshot || self.should_snapshot(&doc_id) {
+                        self.write_snapshot(&doc_id, upto, state).await?;
+                        self.pending_snapshot_lsn.remove(&doc_id);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -201,100 +320,29 @@ impl<E: EventStore + 'static> EventHandler<Event> for SnapshotSubscriber<E> {
         &self,
         event: &Event,
     ) -> ForgeResult<()> {
-        if let Event::Create(state) = event {
-            // 初始化时若不存在任何快照，则写入基础快照（upto_lsn = 0）
-            let doc_id = state.doc().root_id().to_string();
-            let has_snapshot = self
-                .store
-                .latest_snapshot(&doc_id)
-                .await
-                .map(|s| s.is_some())
-                .unwrap_or(false);
-            if !has_snapshot {
-                self.write_snapshot(&doc_id, 0, state).await?;
-            }
-        } else if let Event::TrApply { old_state: _, new_state, transactions } =
-            event
-        {
-            let state = new_state;
-            let trs = transactions;
-            let mut touched_docs: HashSet<String> = HashSet::new();
-            let max_lsn_by_doc: DashMap<String, i64> = DashMap::new();
-
-            for tr in trs.iter() {
-                let tr_id = tr.id;
-                if self.persisted.contains_key(&tr_id) {
-                    continue;
+        match event {
+            Event::Create(state) => {
+                let doc_id = state.doc().root_id().to_string();
+                let has_snapshot = self
+                    .store
+                    .latest_snapshot(&doc_id)
+                    .await
+                    .map(|s| s.is_some())
+                    .unwrap_or(false);
+                if !has_snapshot {
+                    self.write_snapshot(&doc_id, 0, state).await?;
                 }
-                // 选择 doc_id：优先 meta 的 doc_id，否则使用当前状态根ID
-                let doc_id = tr
-                    .get_meta::<String>("doc_id")
-                    .unwrap_or_else(|| state.doc().root_id().to_string());
-                let doc_id = if doc_id.is_empty() {
-                    self.default_doc_id.clone()
-                } else {
-                    doc_id
-                };
-
-                match self.persist_one(tr_id, &doc_id, tr).await {
-                    Ok(Some((lsn, bytes))) => {
-                        self.persisted.insert(tr_id, ());
-                        touched_docs.insert(doc_id.clone());
-                        let mut entry = self
-                            .snap_counters
-                            .entry(doc_id.clone())
-                            .or_default();
-                        entry.events_since += 1;
-                        entry.bytes_since += bytes as u64;
-                        // 更新 up-to LSN
-                        let cur = self
-                            .pending_snapshot_lsn
-                            .get(&doc_id)
-                            .map(|v| *v.value())
-                            .unwrap_or(-1);
-                        if lsn > cur {
-                            self.pending_snapshot_lsn
-                                .insert(doc_id.clone(), lsn);
-                        }
-                        // 记录每个文档的最大 LSN（备用）
-                        let m = max_lsn_by_doc
-                            .get(&doc_id)
-                            .map(|v| *v.value())
-                            .unwrap_or(-1);
-                        if lsn > m {
-                            max_lsn_by_doc.insert(doc_id.clone(), lsn);
-                        }
-                    },
-                    Ok(None) => {},
-                    Err(e) => {
-                        return Err(
-                            mf_core::error::error_utils::middleware_error(
-                                format!("持久化失败: {e}"),
-                            ),
-                        );
-                    },
-                }
-            }
-
-            // 对触达的文档执行快照策略
-            for doc_id in touched_docs.into_iter() {
-                if let Some(upto) =
-                    self.pending_snapshot_lsn.get(&doc_id).map(|v| *v.value())
-                {
-                    if upto >= 0 {
-                        let has_snapshot = self
-                            .store
-                            .latest_snapshot(&doc_id)
-                            .await
-                            .map(|s| s.is_some())
-                            .unwrap_or(false);
-                        if !has_snapshot || self.should_snapshot(&doc_id) {
-                            self.write_snapshot(&doc_id, upto, state).await?;
-                            self.pending_snapshot_lsn.remove(&doc_id);
-                        }
-                    }
-                }
-            }
+            },
+            Event::TrApply { new_state, transactions, .. } => {
+                self.process_transactions(new_state, transactions, PersistAction::Apply).await?;
+            },
+            Event::Undo { new_state, transactions, .. } => {
+                self.process_transactions(new_state, transactions, PersistAction::Undo).await?;
+            },
+            Event::Redo { new_state, transactions, .. } => {
+                self.process_transactions(new_state, transactions, PersistAction::Redo).await?;
+            },
+            _ => {},
         }
         Ok(())
     }

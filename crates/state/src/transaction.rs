@@ -17,6 +17,7 @@ use mf_transform::node_step::{AddNodeStep, RemoveNodeStep};
 use mf_transform::mark_step::{AddMarkStep, RemoveMarkStep};
 use mf_transform::transform::{Transform};
 use std::fmt::Debug;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// 定义可执行的命令接口
 /// 要求实现 Send + Sync 以支持并发操作，并实现 Debug 以支持调试
@@ -28,13 +29,17 @@ pub trait Command: Send + Sync + Debug {
     ) -> TransformResult<()>;
     fn name(&self) -> String;
 }
+static VERSION: AtomicU64 = AtomicU64::new(1);
+pub fn get_tr_id() -> u64 {
+    //生成 全局自增的版本号，用于兼容性
+    VERSION.fetch_add(1, Ordering::SeqCst)
+}
 /// 事务结构体，用于管理文档的修改操作
 #[derive(Clone)]
 pub struct Transaction {
     /// 存储元数据的哈希表，支持任意类型数据
     pub meta: imbl::HashMap<String, Arc<dyn Any + Send + Sync>>,
-    /// 事务的唯一标识符（UUID v4）
-    pub id: Uuid,
+    pub id: u64,
     transform: Transform,
 }
 impl Debug for Transaction {
@@ -74,7 +79,7 @@ impl Transaction {
         let schema = state.schema();
         let tr = Transaction {
             meta: imbl::HashMap::new(),
-            id: Uuid::new_v4(), // ✅ 使用 UUID v4 生成唯一标识
+            id: get_tr_id(), // ✅ 使用 UUID v4 生成唯一标识
             transform: Transform::new(node, schema),
         };
         #[cfg(feature = "dev-tracing")]

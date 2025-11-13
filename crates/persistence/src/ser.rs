@@ -64,3 +64,20 @@ pub fn frame_steps(transaction: &Transaction) -> Vec<TypeWrapper> {
     }
     frames
 }
+
+pub fn frame_invert_steps(transaction: &Transaction) -> Vec<TypeWrapper> {
+    if transaction.invert_steps.is_empty() {
+        return Vec::new();
+    }
+    let mut frames: Vec<TypeWrapper> =
+        Vec::with_capacity(transaction.invert_steps.len());
+    let mut invert_steps: Vec<_> =
+        transaction.invert_steps.iter().cloned().collect();
+    invert_steps.reverse();
+    for step in invert_steps {
+        if let Some(data) = step.serialize() {
+            frames.push(TypeWrapper { type_id: step.name(), data });
+        }
+    }
+    frames
+}

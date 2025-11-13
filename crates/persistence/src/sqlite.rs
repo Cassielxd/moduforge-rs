@@ -11,7 +11,6 @@ use rbatis::{executor::Executor, RBatis};
 use rbdc_sqlite::Driver;
 use rbs::Value;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::api::{CommitMode, EventStore, PersistedEvent, Snapshot};
 
@@ -23,7 +22,7 @@ const INIT_SQL: &str = r#"
 
     CREATE TABLE IF NOT EXISTS events (
       lsn INTEGER PRIMARY KEY AUTOINCREMENT,
-      tr_id TEXT NOT NULL,
+      tr_id INTEGER NOT NULL,
       doc_id TEXT NOT NULL,
       ts INTEGER NOT NULL,
       actor TEXT,
@@ -283,7 +282,7 @@ fn to_value<T: serde::Serialize>(value: T) -> Value {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct EventRow {
     lsn: i64,
-    tr_id: String,
+    tr_id: u64,
     doc_id: String,
     ts: i64,
     actor: Option<String>,
@@ -299,7 +298,7 @@ impl TryFrom<EventRow> for PersistedEvent {
     fn try_from(row: EventRow) -> anyhow::Result<Self> {
         Ok(Self {
             lsn: row.lsn,
-            tr_id: Uuid::parse_str(&row.tr_id)?,
+            tr_id: row.tr_id,
             doc_id: row.doc_id,
             ts: row.ts,
             actor: row.actor,

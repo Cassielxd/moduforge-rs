@@ -40,7 +40,7 @@ pub struct PersistOptions {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PersistedEvent {
     pub lsn: i64,
-    pub tr_id: Uuid, // ✅ 改用 UUID 作为事务唯一标识
+    pub tr_id: u64,
     pub doc_id: String,
     pub ts: i64,
     pub actor: Option<String>,
