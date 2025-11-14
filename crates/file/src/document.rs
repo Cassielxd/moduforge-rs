@@ -242,4 +242,17 @@ impl DocumentReader {
     pub fn logical_len(&self) -> u64 {
         self.r.logical_len()
     }
+
+    /// 读取指定索引的段负载（含 CRC 校验）
+    pub fn segment_payload(
+        &self,
+        index: usize,
+    ) -> Result<Vec<u8>> {
+        let entry = self.dir.entries.get(index).ok_or(FileError::BadHeader)?;
+        let bytes = self.r.get_at(entry.offset)?;
+        if crc32(bytes) != entry.crc32 {
+            return Err(FileError::CrcMismatch(entry.offset));
+        }
+        Ok(bytes.to_vec())
+    }
 }

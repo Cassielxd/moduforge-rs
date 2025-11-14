@@ -25,3 +25,4 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 moduforge-file = { workspace = true }
 zip = { version = "6.0.0", default-features = false, features = ["deflate"] }
+zstd = "0.13"

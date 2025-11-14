@@ -9,6 +9,8 @@ use serde::Serialize;
 use zip::read::ZipArchive;
 
 const MFF_MAGIC: &[u8; 8] = b"MFFILE01";
+const MFF_PREVIEW_LIMIT: usize = 64 * 1024;
+const ZIP_PREVIEW_LIMIT: u64 = 512 * 1024;
 
 #[derive(Debug)]
 enum InspectError {
@@ -71,6 +73,7 @@ struct MffSegment {
     record_length: u64,
     payload_length: u64,
     crc32: u32,
+    preview_json: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -97,6 +100,7 @@ struct ZipEntryInfo {
     compression_ratio: f64,
     crc32: u32,
     modified: Option<String>,
+    preview_json: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -134,22 +138,24 @@ fn inspect_mff(path: &Path) -> Result<MffSummary, InspectError> {
     let dir = reader.directory();
     let metadata = std::fs::metadata(path)?;
 
-    let segments = dir
-        .entries
-        .iter()
-        .enumerate()
-        .map(|(index, entry)| {
-            let payload_len = entry.length.saturating_sub(REC_HDR as u64);
-            MffSegment {
-                index,
-                kind: entry.kind.0.clone(),
-                offset: entry.offset,
-                record_length: entry.length,
-                payload_length: payload_len,
-                crc32: entry.crc32,
-            }
-        })
-        .collect();
+    let mut segments = Vec::with_capacity(dir.entries.len());
+    for (index, entry) in dir.entries.iter().enumerate() {
+        let payload_len = entry.length.saturating_sub(REC_HDR as u64);
+        let preview_json = reader
+            .segment_payload(index)
+            .ok()
+            .filter(|data| data.len() <= MFF_PREVIEW_LIMIT)
+            .and_then(|data| decode_json_preview(&data));
+        segments.push(MffSegment {
+            index,
+            kind: entry.kind.0.clone(),
+            offset: entry.offset,
+            record_length: entry.length,
+            payload_length: payload_len,
+            crc32: entry.crc32,
+            preview_json,
+        });
+    }
 
     Ok(MffSummary {
         path: path_to_string(path),
@@ -178,26 +184,36 @@ fn inspect_zip(path: &Path) -> Result<ZipSummary, InspectError> {
     let mut total_compressed = 0u64;
 
     for index in 0..total_entries {
-        let entry = archive.by_index(index)?;
+        let mut entry = archive.by_index(index)?;
         let size = entry.size();
         let compressed_size = entry.compressed_size();
         total_uncompressed += size;
         total_compressed += compressed_size;
 
-        let name = entry.name().to_string();
-        let display_name = entry
-            .name()
+        let raw_name = entry.name().to_string();
+        let display_name = raw_name
             .trim_end_matches('/')
             .rsplit_once('/')
             .map(|(_, name)| name)
-            .unwrap_or_else(|| entry.name().trim_end_matches('/'));
+            .unwrap_or_else(|| raw_name.trim_end_matches('/'))
+            .to_string();
 
         let modified = format_zip_modified(entry.last_modified());
+        let preview_json = if !entry.is_dir()
+            && size <= ZIP_PREVIEW_LIMIT
+            && size <= (usize::MAX as u64)
+        {
+            let mut buf = Vec::with_capacity(size as usize);
+            entry.read_to_end(&mut buf)?;
+            decode_json_preview(&buf)
+        } else {
+            None
+        };
 
         entries.push(ZipEntryInfo {
             index,
-            path: name,
-            name: display_name.to_string(),
+            path: raw_name,
+            name: display_name,
             is_dir: entry.is_dir(),
             size,
             compressed_size,
@@ -209,6 +225,7 @@ fn inspect_zip(path: &Path) -> Result<ZipSummary, InspectError> {
             },
             crc32: entry.crc32(),
             modified,
+            preview_json,
         });
     }
 
@@ -291,6 +308,26 @@ fn to_hex(bytes: &[u8]) -> String {
 
 fn path_to_string(path: &Path) -> String {
     path.to_string_lossy().to_string()
+}
+
+fn decode_json_preview(bytes: &[u8]) -> Option<String> {
+    fn render_json(bytes: &[u8]) -> Option<String> {
+        let text = std::str::from_utf8(bytes).ok()?;
+        let value: serde_json::Value = serde_json::from_str(text).ok()?;
+        serde_json::to_string_pretty(&value).ok()
+    }
+
+    if let Some(json) = render_json(bytes) {
+        return Some(json);
+    }
+
+    if let Ok(decoded) = zstd::stream::decode_all(bytes) {
+        if let Some(json) = render_json(&decoded) {
+            return Some(json);
+        }
+    }
+
+    None
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

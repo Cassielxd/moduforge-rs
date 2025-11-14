@@ -13,6 +13,7 @@ interface MffSegment {
   record_length: number;
   payload_length: number;
   crc32: number;
+  preview_json?: string | null;
 }
 
 interface MffSummary {
@@ -37,6 +38,7 @@ interface ZipEntry {
   compression_ratio: number;
   crc32: number;
   modified?: string | null;
+  preview_json?: string | null;
 }
 
 interface ZipSummary {
@@ -60,6 +62,14 @@ interface TreeNode {
   children?: TreeNode[];
 }
 
+interface DetailTab {
+  id: string;
+  title: string;
+  type: "segment" | "zip-entry";
+  segment?: MffSegment;
+  entry?: ZipEntry;
+}
+
 const result = ref<InspectResult | null>(null);
 const loading = ref(false);
 const treeNodes = computed<TreeNode[]>(() => {
@@ -70,12 +80,16 @@ const treeNodes = computed<TreeNode[]>(() => {
 });
 const selectedNode = ref<TreeNode | null>(null);
 const currentNodeKey = ref<string>();
+const detailTabs = ref<DetailTab[]>([]);
+const activeTab = ref<string>("");
 
 watch(
   () => result.value,
   () => {
     selectedNode.value = null;
     currentNodeKey.value = undefined;
+    detailTabs.value = [];
+    activeTab.value = "";
   }
 );
 
@@ -97,22 +111,7 @@ const mffSummary = computed(() => (result.value?.kind === "mff" ? result.value.d
 const zipSummary = computed(() => (result.value?.kind === "zip" ? result.value.data : null));
 
 const mffSegments = computed(() => mffSummary.value?.segments ?? []);
-const selectedSegment = computed<MffSegment | null>(() => {
-  if (!isMff.value) return null;
-  if (selectedNode.value?.type !== "mff-segment") return null;
-  return selectedNode.value.meta as MffSegment;
-});
-
-const selectedZipEntry = computed<ZipEntry | null>(() => {
-  if (!isZip.value) return null;
-  if (
-    selectedNode.value?.type !== "zip-file" &&
-    selectedNode.value?.type !== "zip-folder"
-  ) {
-    return null;
-  }
-  return selectedNode.value.meta as ZipEntry;
-});
+const zipEntries = computed(() => zipSummary.value?.entries ?? []);
 
 const headerInfo = computed(() => {
   if (!result.value) return null;
@@ -163,6 +162,11 @@ async function selectFile() {
 
 function handleNodeClick(data: TreeNode) {
   selectedNode.value = data;
+  if (data.type === "mff-segment" && data.meta) {
+    openSegmentTab(data.meta as MffSegment);
+  } else if (data.type === "zip-file" && data.meta) {
+    openZipEntryTab(data.meta as ZipEntry);
+  }
 }
 
 const treeProps = {
@@ -263,6 +267,68 @@ function percentage(value: number) {
   if (!Number.isFinite(value)) return "-";
   return `${(value * 100).toFixed(2)}%`;
 }
+
+function openSegmentTab(segment: MffSegment) {
+  const id = `segment-${segment.index}`;
+  const title = `段 ${segment.index.toString().padStart(3, "0")}`;
+  const existing = detailTabs.value.find((tab) => tab.id === id);
+  if (existing) {
+    existing.segment = segment;
+    activeTab.value = existing.id;
+    return;
+  }
+  detailTabs.value.push({
+    id,
+    title,
+    type: "segment",
+    segment
+  });
+  activeTab.value = id;
+}
+
+function openZipEntryTab(entry: ZipEntry) {
+  const id = `zip-entry-${entry.index}`;
+  const title = entry.name || entry.path;
+  const existing = detailTabs.value.find((tab) => tab.id === id);
+  if (existing) {
+    existing.entry = entry;
+    activeTab.value = existing.id;
+    return;
+  }
+  detailTabs.value.push({
+    id,
+    title,
+    type: "zip-entry",
+    entry
+  });
+  activeTab.value = id;
+}
+
+function removeTab(targetName: string) {
+  const tabs = detailTabs.value;
+  let active = activeTab.value;
+  if (active === targetName) {
+    const idx = tabs.findIndex((tab) => tab.id === targetName);
+    if (idx > 0) {
+      active = tabs[idx - 1].id;
+    } else if (tabs.length > 1) {
+      active = tabs[1].id;
+    } else {
+      active = "";
+    }
+  }
+  detailTabs.value = tabs.filter((tab) => tab.id !== targetName);
+  activeTab.value = active;
+}
+
+function handleSegmentRowClick(row: MffSegment) {
+  openSegmentTab(row);
+}
+
+function handleZipRowClick(row: ZipEntry) {
+  if (row.is_dir) return;
+  openZipEntryTab(row);
+}
 </script>
 
 <template>
@@ -319,130 +385,193 @@ function percentage(value: number) {
           <el-space direction="vertical" :size="16" style="width: 100%">
             <el-card shadow="never">
               <template #header>
-                <div class="panel-title">概览</div>
-              </template>
-              <el-descriptions :column="3" border size="small">
-                <el-descriptions-item label="文件名">
-                  {{ result.data.file_name || "未命名" }}
-                </el-descriptions-item>
-                <el-descriptions-item label="路径">
-                  {{ result.data.path }}
-                </el-descriptions-item>
-                <el-descriptions-item label="大小">
-                  {{ formatBytes(result.data.file_size) }}
-                </el-descriptions-item>
-                <template v-if="isMff && mffSummary">
-                  <el-descriptions-item label="段数量">
-                    {{ mffSummary.segment_count }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="逻辑长度">
-                    {{ formatBytes(mffSummary.logical_len) }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="BLAKE3 哈希">
-                    <code>{{ mffSummary.file_hash }}</code>
-                  </el-descriptions-item>
-                </template>
-                <template v-else-if="isZip && zipSummary">
-                  <el-descriptions-item label="条目数量">
-                    {{ zipSummary.total_entries }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="原始体积">
-                    {{ formatBytes(zipSummary.total_uncompressed) }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="压缩体积">
-                    {{ formatBytes(zipSummary.total_compressed) }}
-                  </el-descriptions-item>
-                </template>
-              </el-descriptions>
-            </el-card>
-
-            <el-card v-if="isMff && mffSummary" shadow="never">
-              <template #header>
                 <div class="panel-title">
-                  段列表
-                  <small>双击树节点可定位到该段</small>
+                  概览与{{ isMff ? "段列表" : "条目列表" }}
                 </div>
               </template>
-              <el-table
-                :data="mffSegments"
-                border
-                size="small"
-                height="320"
-                empty-text="当前文档没有段"
+              <div class="overview-block">
+                <el-descriptions :column="3" border size="small">
+                  <el-descriptions-item label="文件名">
+                    {{ result.data.file_name || "未命名" }}
+                  </el-descriptions-item>
+                  <el-descriptions-item label="路径">
+                    {{ result.data.path }}
+                  </el-descriptions-item>
+                  <el-descriptions-item label="大小">
+                    {{ formatBytes(result.data.file_size) }}
+                  </el-descriptions-item>
+                  <template v-if="isMff && mffSummary">
+                    <el-descriptions-item label="段数量">
+                      {{ mffSummary.segment_count }}
+                    </el-descriptions-item>
+                    <el-descriptions-item label="逻辑长度">
+                      {{ formatBytes(mffSummary.logical_len) }}
+                    </el-descriptions-item>
+                    <el-descriptions-item label="BLAKE3 哈希">
+                      <code>{{ mffSummary.file_hash }}</code>
+                    </el-descriptions-item>
+                  </template>
+                  <template v-else-if="isZip && zipSummary">
+                    <el-descriptions-item label="条目数量">
+                      {{ zipSummary.total_entries }}
+                    </el-descriptions-item>
+                    <el-descriptions-item label="原始体积">
+                      {{ formatBytes(zipSummary.total_uncompressed) }}
+                    </el-descriptions-item>
+                    <el-descriptions-item label="压缩体积">
+                      {{ formatBytes(zipSummary.total_compressed) }}
+                    </el-descriptions-item>
+                  </template>
+                </el-descriptions>
+              </div>
+
+              <div v-if="isMff" class="table-wrap">
+                <el-table
+                  :data="mffSegments"
+                  border
+                  size="small"
+                  height="320"
+                  empty-text="当前文档没有段"
+                  @row-click="handleSegmentRowClick"
+                >
+                  <el-table-column prop="index" label="#" width="60" />
+                  <el-table-column prop="kind" label="类型" min-width="140" />
+                  <el-table-column label="偏移" min-width="120">
+                    <template #default="{ row }">
+                      {{ row.offset }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="记录长度" min-width="120">
+                    <template #default="{ row }">
+                      {{ formatBytes(row.record_length) }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="有效载荷" min-width="120">
+                    <template #default="{ row }">
+                      {{ formatBytes(row.payload_length) }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="crc32" label="CRC32" width="120" />
+                </el-table>
+              </div>
+
+              <div v-else class="table-wrap">
+                <el-table
+                  :data="zipEntries"
+                  border
+                  size="small"
+                  height="320"
+                  empty-text="归档中没有条目"
+                  @row-click="handleZipRowClick"
+                >
+                  <el-table-column label="路径" min-width="200">
+                    <template #default="{ row }">
+                      <span v-if="row.is_dir">📁 {{ row.path }}</span>
+                      <span v-else>📄 {{ row.path }}</span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="原始大小" min-width="120">
+                    <template #default="{ row }">
+                      {{ formatBytes(row.size) }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="压缩后" min-width="120">
+                    <template #default="{ row }">
+                      {{ formatBytes(row.compressed_size) }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="压缩率" min-width="100">
+                    <template #default="{ row }">
+                      {{ percentage(row.compression_ratio) }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="compression" label="算法" min-width="120" />
+                </el-table>
+              </div>
+            </el-card>
+
+            <el-tabs
+              v-if="detailTabs.length"
+              v-model="activeTab"
+              type="card"
+              closable
+              @tab-remove="removeTab"
+            >
+              <el-tab-pane
+                v-for="tab in detailTabs"
+                :key="tab.id"
+                :name="tab.id"
+                :label="tab.title"
               >
-                <el-table-column prop="index" label="#" width="60" />
-                <el-table-column prop="kind" label="类型" min-width="140" />
-                <el-table-column label="偏移" min-width="120">
-                  <template #default="{ row }">
-                    {{ row.offset }}
+                <el-card shadow="never">
+                  <template #header>
+                    <div class="panel-title">
+                      {{ tab.type === "segment" ? "段详情" : "条目详情" }}
+                    </div>
                   </template>
-                </el-table-column>
-                <el-table-column label="记录长度" min-width="120">
-                  <template #default="{ row }">
-                    {{ formatBytes(row.record_length) }}
+                  <template v-if="tab.type === 'segment' && tab.segment">
+                    <el-descriptions :column="2" border size="small">
+                      <el-descriptions-item label="类型">
+                        {{ tab.segment.kind }}
+                      </el-descriptions-item>
+                      <el-descriptions-item label="偏移">
+                        {{ tab.segment.offset }}
+                      </el-descriptions-item>
+                      <el-descriptions-item label="记录长度">
+                        {{ formatBytes(tab.segment.record_length) }}
+                      </el-descriptions-item>
+                      <el-descriptions-item label="有效载荷">
+                        {{ formatBytes(tab.segment.payload_length) }}
+                      </el-descriptions-item>
+                      <el-descriptions-item label="CRC32">
+                        {{ tab.segment.crc32 }}
+                      </el-descriptions-item>
+                    </el-descriptions>
+                    <pre
+                      v-if="tab.segment.preview_json"
+                      class="json-preview"
+                    >{{ tab.segment.preview_json }}</pre>
+                    <el-empty
+                      v-else
+                      description="该段不是 JSON 或内容过大，无法预览"
+                    />
                   </template>
-                </el-table-column>
-                <el-table-column label="有效载荷" min-width="120">
-                  <template #default="{ row }">
-                    {{ formatBytes(row.payload_length) }}
+                  <template v-else-if="tab.type === 'zip-entry' && tab.entry">
+                    <el-descriptions :column="2" border size="small">
+                      <el-descriptions-item label="路径">
+                        {{ tab.entry.path }}
+                      </el-descriptions-item>
+                      <el-descriptions-item label="修改时间">
+                        {{ tab.entry.modified ?? "未知" }}
+                      </el-descriptions-item>
+                      <el-descriptions-item label="原始大小">
+                        {{ formatBytes(tab.entry.size) }}
+                      </el-descriptions-item>
+                      <el-descriptions-item label="压缩后">
+                        {{ formatBytes(tab.entry.compressed_size) }}
+                      </el-descriptions-item>
+                      <el-descriptions-item label="压缩率">
+                        {{ percentage(tab.entry.compression_ratio) }}
+                      </el-descriptions-item>
+                      <el-descriptions-item label="压缩算法">
+                        {{ tab.entry.compression }}
+                      </el-descriptions-item>
+                      <el-descriptions-item label="CRC32">
+                        {{ tab.entry.crc32 }}
+                      </el-descriptions-item>
+                    </el-descriptions>
+                    <pre
+                      v-if="tab.entry.preview_json"
+                      class="json-preview"
+                    >{{ tab.entry.preview_json }}</pre>
+                    <el-empty
+                      v-else
+                      description="该条目不是 JSON 或内容过大，无法预览"
+                    />
                   </template>
-                </el-table-column>
-                <el-table-column prop="crc32" label="CRC32" width="120" />
-              </el-table>
-            </el-card>
-
-            <el-card v-if="selectedSegment" shadow="never">
-              <template #header>
-                <div class="panel-title">
-                  段详情 · {{ selectedSegment.kind }} (#{{ selectedSegment.index }})
-                </div>
-              </template>
-              <el-descriptions :column="2" border size="small">
-                <el-descriptions-item label="偏移">
-                  {{ selectedSegment.offset }}
-                </el-descriptions-item>
-                <el-descriptions-item label="记录长度">
-                  {{ formatBytes(selectedSegment.record_length) }}
-                </el-descriptions-item>
-                <el-descriptions-item label="有效载荷">
-                  {{ formatBytes(selectedSegment.payload_length) }}
-                </el-descriptions-item>
-                <el-descriptions-item label="CRC32">
-                  {{ selectedSegment.crc32 }}
-                </el-descriptions-item>
-              </el-descriptions>
-            </el-card>
-
-            <el-card v-if="isZip && selectedZipEntry" shadow="never">
-              <template #header>
-                <div class="panel-title">
-                  条目详情 · {{ selectedZipEntry.name }}
-                </div>
-              </template>
-              <el-descriptions :column="2" border size="small">
-                <el-descriptions-item label="路径">
-                  {{ selectedZipEntry.path }}
-                </el-descriptions-item>
-                <el-descriptions-item label="修改时间">
-                  {{ selectedZipEntry.modified ?? "未知" }}
-                </el-descriptions-item>
-                <el-descriptions-item label="原始大小">
-                  {{ formatBytes(selectedZipEntry.size) }}
-                </el-descriptions-item>
-                <el-descriptions-item label="压缩后">
-                  {{ formatBytes(selectedZipEntry.compressed_size) }}
-                </el-descriptions-item>
-                <el-descriptions-item label="压缩率">
-                  {{ percentage(selectedZipEntry.compression_ratio) }}
-                </el-descriptions-item>
-                <el-descriptions-item label="压缩算法">
-                  {{ selectedZipEntry.compression }}
-                </el-descriptions-item>
-                <el-descriptions-item label="CRC32">
-                  {{ selectedZipEntry.crc32 }}
-                </el-descriptions-item>
-              </el-descriptions>
-            </el-card>
+                </el-card>
+              </el-tab-pane>
+            </el-tabs>
           </el-space>
         </template>
         <el-empty v-else description="请选择一个文件" />
@@ -566,5 +695,28 @@ code {
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 12px;
+}
+
+.json-preview {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.overview-block {
+  margin-bottom: 16px;
+}
+
+.table-wrap {
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  overflow: hidden;
 }
 </style>
