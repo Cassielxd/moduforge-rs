@@ -2,7 +2,8 @@
 resolver = "2"
 members = [
     "crates/*",
-    "tools/*"
+    "tools/benchmark-coordinator",
+    "tools/file_tools/src-tauri"
 ]
 exclude = [
     "examples/*"
