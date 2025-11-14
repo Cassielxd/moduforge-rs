@@ -206,7 +206,7 @@ impl DocumentReader {
     #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self, callback), fields(
         crate_name = "file",
         segment_type = ?kind,
-        total_segments = self.dir.segments.len()
+        total_segments = self.dir.entries.len()
     )))]
     pub fn read_segments<F>(
         &self,
@@ -226,5 +226,20 @@ impl DocumentReader {
             }
         }
         Ok(())
+    }
+
+    /// 返回完整的段目录元数据
+    pub fn directory(&self) -> &Directory {
+        &self.dir
+    }
+
+    /// 返回所有段记录，按写入顺序排列
+    pub fn segments(&self) -> &[SegmentEntry] {
+        &self.dir.entries
+    }
+
+    /// 返回文档的逻辑长度（不含尾指针）
+    pub fn logical_len(&self) -> u64 {
+        self.r.logical_len()
     }
 }
