@@ -1,5 +1,4 @@
 use crate::types::NodeId;
-use anyhow::{Result};
 
 /// Error messages for node pool operations
 pub mod error_messages {
@@ -103,4 +102,4 @@ pub mod error_helpers {
 }
 
 /// A type alias for Result that uses anyhow::Error as the error type.
-pub type PoolResult<T> = Result<T>;
+pub type PoolResult<T> = anyhow::Result<T>;

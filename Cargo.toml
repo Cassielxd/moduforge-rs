@@ -36,8 +36,7 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 tempfile = "3"
 anyhow = "1"
-# imbl 不可变数据实现
-imbl = { version = "6.0.0", features = ["serde", "rayon"] }
+rpds = { version = "1.2.0", features = ["serde"] }
 thiserror = "2.0.12"
 dashmap = "6.1.0"
 # 异步 trait

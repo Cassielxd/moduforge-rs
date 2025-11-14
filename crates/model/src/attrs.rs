@@ -1,13 +1,12 @@
 use std::ops::{Deref, DerefMut};
 use std::ops::{Index, IndexMut};
-use imbl::HashMap;
+use rpds::{HashTrieMapSync};
 use serde::{Deserialize, Serialize, Deserializer, Serializer};
 use serde_json::Value;
-//pub type Attrs = HashMap<String, Value>;
 /// 节点属性
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Attrs {
-    pub attrs: HashMap<String, Value>,
+    pub attrs: HashTrieMapSync<String, Value>,
 }
 
 impl Serialize for Attrs {
@@ -27,14 +26,14 @@ impl<'de> Deserialize<'de> for Attrs {
     where
         D: Deserializer<'de>,
     {
-        let map = HashMap::<String, Value>::deserialize(deserializer)?;
+        let map = HashTrieMapSync::<String, Value>::deserialize(deserializer)?;
         Ok(Attrs { attrs: map })
     }
 }
 
 impl Default for Attrs {
     fn default() -> Self {
-        Self { attrs: HashMap::new() }
+        Self { attrs: HashTrieMapSync::new_sync() }
     }
 }
 
@@ -56,14 +55,14 @@ impl IndexMut<&str> for Attrs {
         key: &str,
     ) -> &mut Self::Output {
         if !self.attrs.contains_key(key) {
-            self.attrs.insert(key.to_string(), Value::Null);
+            self.attrs.insert_mut(key.to_string(), Value::Null);
         }
         self.attrs.get_mut(key).expect("Key not found")
     }
 }
 
 impl Attrs {
-    pub fn from(new_values: HashMap<String, Value>) -> Self {
+    pub fn from(new_values: HashTrieMapSync<String, Value>) -> Self {
         Self { attrs: new_values }
     }
     pub fn get_value<T: serde::de::DeserializeOwned>(
@@ -74,11 +73,11 @@ impl Attrs {
     }
     pub fn update(
         &self,
-        new_values: HashMap<String, Value>,
+        new_values: HashTrieMapSync<String, Value>,
     ) -> Self {
         let mut attrs = self.attrs.clone();
-        for (key, value) in new_values {
-            attrs.insert(key, value);
+        for (key, value) in new_values.iter() {
+            attrs = attrs.insert(key.clone(), value.clone());
         }
         Attrs { attrs }
     }
@@ -91,7 +90,7 @@ impl Attrs {
 }
 
 impl Deref for Attrs {
-    type Target = HashMap<String, Value>;
+    type Target = HashTrieMapSync<String, Value>;
 
     fn deref(&self) -> &Self::Target {
         &self.attrs

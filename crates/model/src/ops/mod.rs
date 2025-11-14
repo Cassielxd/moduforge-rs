@@ -3,7 +3,6 @@ use crate::{tree::Tree, types::NodeId};
 pub mod add;
 pub mod bitand;
 pub mod bitor;
-pub mod mul;
 pub mod shl;
 pub mod shr;
 pub mod sub;

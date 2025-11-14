@@ -6,7 +6,6 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 /// 写入持久性与延迟之间的权衡。
 ///

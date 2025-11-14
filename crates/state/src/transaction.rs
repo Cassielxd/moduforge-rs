@@ -8,7 +8,6 @@ use mf_model::node_definition::NodeTree;
 use mf_model::types::NodeId;
 use mf_transform::TransformResult;
 use serde_json::Value;
-use uuid::Uuid;
 
 use super::state::State;
 use mf_model::node_pool::NodePool;
@@ -18,6 +17,7 @@ use mf_transform::mark_step::{AddMarkStep, RemoveMarkStep};
 use mf_transform::transform::{Transform};
 use std::fmt::Debug;
 use std::sync::atomic::{AtomicU64, Ordering};
+use mf_model::rpds::{HashTrieMapSync};
 
 /// 定义可执行的命令接口
 /// 要求实现 Send + Sync 以支持并发操作，并实现 Debug 以支持调试
@@ -38,7 +38,7 @@ pub fn get_tr_id() -> u64 {
 #[derive(Clone)]
 pub struct Transaction {
     /// 存储元数据的哈希表，支持任意类型数据
-    pub meta: imbl::HashMap<String, Arc<dyn Any + Send + Sync>>,
+    pub meta: HashTrieMapSync<String, Arc<dyn Any + Send + Sync>>,
     pub id: u64,
     transform: Transform,
 }
@@ -78,7 +78,7 @@ impl Transaction {
         let node = state.doc();
         let schema = state.schema();
         let tr = Transaction {
-            meta: imbl::HashMap::new(),
+            meta: HashTrieMapSync::new_sync(),
             id: get_tr_id(), // ✅ 使用 UUID v4 生成唯一标识
             transform: Transform::new(node, schema),
         };
@@ -124,7 +124,7 @@ impl Transaction {
     pub fn set_node_attribute(
         &mut self,
         id: NodeId,
-        values: imbl::HashMap<String, Value>,
+        values: HashTrieMapSync<String, Value>,
     ) -> TransformResult<()> {
         self.step(Arc::new(AttrStep::new(id, values)))?;
         Ok(())
@@ -209,7 +209,7 @@ impl Transaction {
         K: Into<String>,
     {
         let key_str = key.into();
-        self.meta.insert(key_str, Arc::new(value));
+        self.meta.insert_mut(key_str, Arc::new(value));
         self
     }
     /// 获取元数据

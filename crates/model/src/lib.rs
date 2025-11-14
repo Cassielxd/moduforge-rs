@@ -45,8 +45,8 @@ pub mod ops;
 pub mod tree;
 pub mod types;
 
-pub mod imbl {
-    pub use imbl::*;
+pub mod rpds {
+    pub use rpds::*;
 }
 
 pub use node::Node;

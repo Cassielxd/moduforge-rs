@@ -1,7 +1,6 @@
 use mf_model::{
     id_generator::IdGenerator, mark::Mark, node_pool::NodePool, schema::Schema,
 };
-use imbl::HashMap as ImHashMap;
 use std::fmt::{self, Debug};
 use std::{
     collections::HashMap,
@@ -11,7 +10,7 @@ use std::{
     },
     time::Instant,
 };
-
+use mf_model::rpds::HashTrieMapSync;
 use crate::plugin::PluginManager;
 use crate::{ops::GlobalResourceManager, resource::Resource};
 
@@ -34,7 +33,7 @@ pub fn get_state_version() -> u64 {
 #[derive(Clone)]
 pub struct State {
     pub config: Arc<Configuration>,
-    pub fields_instances: Arc<ImHashMap<String, Arc<dyn Resource>>>,
+    pub fields_instances: Arc<HashTrieMapSync<String, Arc<dyn Resource>>>,
     pub node_pool: Arc<NodePool>,
     pub version: u64,
 }
@@ -43,7 +42,11 @@ impl Debug for State {
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        write!(f, "State {{ 字段数量: {} }}", self.fields_instances.len())
+        write!(
+            f,
+            "State {{ 字段数量: {} }}",
+            self.fields_instances.keys().len()
+        )
     }
 }
 
@@ -74,7 +77,7 @@ impl State {
         .await?;
         let mut instance = State::new(Arc::new(config))?;
         let mut field_values = Vec::new();
-        let mut fields_instances = ImHashMap::new();
+        let mut fields_instances = HashTrieMapSync::new_sync();
         for plugin in instance.config.plugin_manager.get_sorted_plugins().await
         {
             if let Some(field) = &plugin.spec.state_field {
@@ -84,7 +87,7 @@ impl State {
             }
         }
         for (name, value) in field_values {
-            fields_instances.insert(name, value);
+            fields_instances.insert_mut(name, value);
         }
         instance.fields_instances = Arc::new(fields_instances);
         tracing::info!("state创建成功");
@@ -110,7 +113,7 @@ impl State {
         };
 
         Ok(State {
-            fields_instances: Arc::new(ImHashMap::new()),
+            fields_instances: Arc::new(HashTrieMapSync::new_sync()),
             config,
             node_pool: doc,
             version: get_state_version(),
@@ -283,7 +286,7 @@ impl State {
         let mut config = self.config.as_ref().clone();
         config.doc = Some(tr.doc());
         let mut new_instance = State::new(Arc::new(config))?;
-        let mut fields_instances = ImHashMap::new();
+        let mut fields_instances = HashTrieMapSync::new_sync();
         // 获取已排序的插件列表
         let sorted_plugins = self.sorted_plugins().await;
 
@@ -293,7 +296,7 @@ impl State {
                     let value = field
                         .apply_erased(tr, old_plugin_state, self, &new_instance)
                         .await;
-                    fields_instances.insert(plugin.key.clone(), value);
+                    fields_instances.insert_mut(plugin.key.clone(), value);
                 }
             }
         }
@@ -325,7 +328,7 @@ impl State {
         .await?;
         let mut instance = State::new(Arc::new(config))?;
         let mut field_values = Vec::new();
-        let mut fields_instances = ImHashMap::new();
+        let mut fields_instances = HashTrieMapSync::new_sync();
         for plugin in &instance.config.plugin_manager.get_sorted_plugins().await
         {
             if let Some(field) = &plugin.spec.state_field {
@@ -344,7 +347,7 @@ impl State {
             }
         }
         for (name, value) in field_values {
-            fields_instances.insert(name, value);
+            fields_instances.insert_mut(name, value);
         }
         instance.fields_instances = Arc::new(fields_instances);
         tracing::info!("状态重新配置完成");
@@ -417,14 +420,14 @@ impl State {
         config.doc = Some(node_pool);
         let mut state = State::new(Arc::new(config))?;
 
-        let mut map_instances = ImHashMap::new();
+        let mut map_instances = HashTrieMapSync::new_sync();
         for plugin in &configuration.plugin_manager.get_sorted_plugins().await {
             if let Some(state_field) = &plugin.spec.state_field {
                 if let Some(value) = s.state_fields.get(&plugin.key) {
                     if let Some(p_state) = state_field.deserialize_erased(value)
                     {
                         let key = plugin.key.clone();
-                        map_instances.insert(key, p_state);
+                        map_instances.insert_mut(key, p_state);
                     }
                 }
             }

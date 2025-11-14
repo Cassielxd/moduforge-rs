@@ -1,5 +1,5 @@
 use std::ops::Add;
-
+use rpds::{ht_map_sync, HashTrieMapSync};
 use serde_json::Value;
 
 use crate::{
@@ -104,19 +104,19 @@ impl<'a> Add<(String, Value)> for AttrsRef<'a> {
         self,
         (key, value): (String, Value),
     ) -> Self::Output {
-        self.tree
-            .update_attr(&self.key.clone(), imbl::hashmap! {key=>value})?;
+        let map = ht_map_sync![key=>value];
+        self.tree.update_attr(&self.key.clone(), map)?;
         Ok(AttrsRef::new(self.tree, self.key.clone()))
     }
 }
 
 /// 为 AttrsRef 实现自定义的 + 运算符，用于直接添加属性映射
 /// 当使用 + 运算符时，会直接使用提供的属性映射更新当前节点的属性
-impl<'a> Add<imbl::HashMap<String, Value>> for AttrsRef<'a> {
+impl<'a> Add<HashTrieMapSync<String, Value>> for AttrsRef<'a> {
     type Output = PoolResult<AttrsRef<'a>>;
     fn add(
         self,
-        attrs: imbl::HashMap<String, Value>,
+        attrs: HashTrieMapSync<String, Value>,
     ) -> Self::Output {
         self.tree.update_attr(&self.key.clone(), attrs)?;
         Ok(AttrsRef::new(self.tree, self.key.clone()))

@@ -220,7 +220,7 @@ impl TypedStepConverter<AttrStep> for SimpleAttrConverter {
             description: format!(
                 "更新节点 {} 的 {} 个属性",
                 step.id,
-                step.values.len()
+                step.values.keys().len()
             ),
             timestamp: context.timestamp,
             client_id: context.client_id.clone(),

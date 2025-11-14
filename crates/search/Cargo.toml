@@ -15,11 +15,9 @@ name = "mf_search"
 [dependencies]
 anyhow = { workspace = true }
 async-trait = { workspace = true }
-imbl = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 parking_lot = { workspace = true }
-uuid = { workspace = true }
 tempfile = { workspace = true }
 futures = { workspace = true }
 tokio = { workspace = true }

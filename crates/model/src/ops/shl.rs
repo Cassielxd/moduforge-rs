@@ -1,6 +1,6 @@
 use std::ops::Shl;
 
-use crate::{error::PoolResult, node::Node};
+use crate::{error::PoolResult, error_helpers, node::Node};
 
 use super::{NodeRef};
 
@@ -55,15 +55,23 @@ impl<'a> Shl<usize> for NodeRef<'a> {
                 // 如果位置有变化，执行移动
                 if new_index != current_index {
                     //这里只需要修改  content 中的顺序就行，不需要删除和添加
-                    let mut node = self
-                        .tree
-                        .get_node(&self.key.clone())
-                        .unwrap()
-                        .as_ref()
-                        .clone();
-                    let mut content = node.content.clone();
-                    content.swap(current_index, new_index);
-                    node.content = content;
+
+                    let node = {
+                        let node = {
+                            match self.tree.get_node(&self.key.clone()) {
+                                Some(n) => n,
+                                None => {
+                                    return Err(error_helpers::node_not_found(
+                                        self.key.clone(),
+                                    ));
+                                },
+                            }
+                        };
+                        match node.swap(current_index, new_index) {
+                            Some(n) => n,
+                            None => return Err(anyhow::anyhow!("下标越界了")),
+                        }
+                    };
                     self.tree.update_node(node)?;
                 }
             }

@@ -136,6 +136,7 @@ mod tests {
     use super::*;
     use mf_transform::attr_step::AttrStep;
     use std::time::Instant;
+    use rpds::HashTrieMapSync;
 
     #[test]
     fn test_api_simplicity() {
@@ -162,7 +163,7 @@ mod tests {
         let context =
             create_context("perf_client".to_string(), "perf_user".to_string());
 
-        let mut attrs = imbl::HashMap::new();
+        let mut attrs = HashTrieMapSync::new_sync();
         attrs.insert("test_attr".to_string(), serde_json::json!("test_value"));
 
         let step = AttrStep { id: "test_node".into(), values: attrs };

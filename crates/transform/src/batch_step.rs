@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use mf_model::{schema::Schema, tree::Tree};
-
+use mf_model::rpds::HashTrieMap;
 use crate::{transform_error, TransformResult};
 
 use super::step::{Step, StepResult};
@@ -44,7 +44,7 @@ impl Step for BatchStep {
                     // 占位的不可用反向步骤（不会被应用）
                     // 这里不应发生，保持对齐
                     "__invalid__".into(),
-                    imbl::hashmap! {},
+                    HashTrieMap::new_sync(),
                 )));
             }
 
@@ -111,6 +111,7 @@ mod tests {
     };
     use serde_json::json;
     use std::collections::HashMap;
+    use mf_model::rpds::ht_map_sync;
 
     fn create_schema() -> Arc<Schema> {
         let mut nodes = HashMap::new();
@@ -158,7 +159,7 @@ mod tests {
         ));
         let set = Arc::new(AttrStep::new(
             "n1".into(),
-            imbl::hashmap! {"k".into()=>json!(1)},
+            ht_map_sync! ["k".into()=>json!(1)],
         ));
 
         let batch = BatchStep::new(vec![add, set]);

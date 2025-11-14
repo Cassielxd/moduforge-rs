@@ -18,10 +18,10 @@ impl<'a> BitAnd<String> for NodeRef<'a> {
             self.tree.children(&self.key.clone()).unwrap_or_default();
         let mut nodes_to_remove = Vec::new();
 
-        for child_id in children {
+        for child_id in children.iter() {
             if let Some(node) = self.tree.get_node(&child_id) {
                 if node.r#type != node_type {
-                    nodes_to_remove.push(child_id);
+                    nodes_to_remove.push(child_id.clone());
                 }
             }
         }
@@ -47,11 +47,11 @@ impl<'a> BitAnd<Vec<String>> for NodeRef<'a> {
             self.tree.children(&self.key.clone()).unwrap_or_default();
         let mut nodes_to_remove = Vec::new();
 
-        for child_id in children {
+        for child_id in children.iter() {
             if let Some(node) = self.tree.get_node(&child_id) {
                 let node_type_str = node.r#type.to_string();
                 if !node_types.contains(&node_type_str) {
-                    nodes_to_remove.push(child_id);
+                    nodes_to_remove.push(child_id.clone());
                 }
             }
         }

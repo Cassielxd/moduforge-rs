@@ -326,7 +326,7 @@ mod tests {
         // Verify node was moved
         let target_node =
             tree.get_node(&"target".into()).expect("目标节点应该存在");
-        assert!(target_node.content.contains(&"node".into()));
+        assert!(target_node.contains(&"node".into()));
 
         // Test invert
         let inverted = step.invert(&Arc::new(tree.clone()));

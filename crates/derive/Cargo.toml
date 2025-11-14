@@ -1,13 +1,13 @@
 [package]
 name = "moduforge-macros-derive"
-version = {workspace=true}
-edition = {workspace=true}
+version = { workspace = true }
+edition = { workspace = true }
 description = "ModuForge-RS 宏扩展模块，提供 Node 和 Mark 的派生宏"
-authors = {workspace=true}
-license = {workspace=true}
-documentation = {workspace=true}
-homepage = {workspace=true}
-repository = {workspace=true}
+authors = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
 [lib]
 name = "mf_derive"
@@ -25,12 +25,11 @@ once_cell = "1.19"
 thiserror = "1.0"
 
 # DI宏所需依赖
-anyhow = {workspace=true}
+anyhow = { workspace = true }
 moduforge-model = { workspace = true }
 moduforge-state = { workspace = true }
 moduforge-transform = { workspace = true }
 moduforge-core = { workspace = true }
-imbl= { workspace = true }
 [dev-dependencies]
 # 集成测试所需依赖
 uuid = { version = "1.0", features = ["v4", "serde"] }
