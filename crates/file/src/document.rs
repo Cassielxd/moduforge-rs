@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io;
 use std::io::{Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
@@ -10,6 +11,9 @@ use crate::record::{crc32, read_u32_le, Reader, Writer, HEADER_LEN, REC_HDR};
 
 // 固定尾指针：用于在 finalize 后快速定位目录起始偏移，避免全量扫描
 const TAIL_MAGIC: &[u8; 8] = b"MFFTAIL1"; // 8B 魔数 + 8B 目录偏移 (LE)
+const DIR_FLAG_ZSTD_SEGMENTS: u32 = 0x0001;
+const DEFAULT_ZSTD_LEVEL: i32 = 1;
+const ZSTD_MAGIC_PREFIX: [u8; 4] = [0x28, 0xB5, 0x2F, 0xFD];
 
 // 段类型：用于描述容器中存储的数据类别
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -29,6 +33,30 @@ pub struct Directory {
     pub entries: Vec<SegmentEntry>,
     pub flags: u32,
     pub file_hash: [u8; 32],
+}
+
+fn encode_segment(payload: &[u8]) -> Result<Vec<u8>> {
+    zstd::stream::encode_all(payload, DEFAULT_ZSTD_LEVEL).map_err(FileError::Io)
+}
+
+fn decode_segment<'a>(
+    bytes: &'a [u8],
+    dir_flags: u32,
+) -> Result<Cow<'a, [u8]>> {
+    let has_magic = bytes.len() >= ZSTD_MAGIC_PREFIX.len()
+        && &bytes[..ZSTD_MAGIC_PREFIX.len()] == ZSTD_MAGIC_PREFIX;
+    let should_try = (dir_flags & DIR_FLAG_ZSTD_SEGMENTS != 0) || has_magic;
+    if !should_try {
+        return Ok(Cow::Borrowed(bytes));
+    }
+    match zstd::stream::decode_all(bytes) {
+        Ok(raw) => Ok(Cow::Owned(raw)),
+        Err(_err) if dir_flags & DIR_FLAG_ZSTD_SEGMENTS == 0 => {
+            // 老文件未标记压缩时，允许解压失败后回退原始数据
+            Ok(Cow::Borrowed(bytes))
+        },
+        Err(err) => Err(FileError::Io(err)),
+    }
 }
 
 // 文档写入器：基于 append-only 文件写入段，并在末尾写目录
@@ -53,13 +81,16 @@ impl DocumentWriter {
         kind: SegmentType,
         payload: &[u8],
     ) -> Result<()> {
-        let off = self.w.len();
-        let _ = self.w.append(payload)?;
-        let crc = crc32(payload);
+        if payload.is_empty() {
+            return Err(FileError::EmptyRecord);
+        }
+        let stored = encode_segment(payload)?;
+        let off = self.w.append(&stored)?;
+        let crc = crc32(&stored);
         self.segments.push(SegmentEntry {
             kind,
             offset: off,
-            length: (REC_HDR as u64) + payload.len() as u64,
+            length: (REC_HDR as u64) + stored.len() as u64,
             crc32: crc,
         });
         Ok(())
@@ -80,8 +111,8 @@ impl DocumentWriter {
         }
         let hash = *hasher.finalize().as_bytes();
         // 写入目录记录
-        let dir =
-            Directory { entries: self.segments, flags: 0, file_hash: hash };
+        let flags = DIR_FLAG_ZSTD_SEGMENTS;
+        let dir = Directory { entries: self.segments, flags, file_hash: hash };
         let bytes =
             bincode::serde::encode_to_vec(&dir, bincode::config::standard())
                 .map_err(io::Error::other)
@@ -222,7 +253,8 @@ impl DocumentReader {
                 if crc32(bytes) != entry.crc32 {
                     return Err(FileError::CrcMismatch(entry.offset));
                 }
-                callback(index, bytes)?;
+                let decoded = decode_segment(bytes, self.dir.flags)?;
+                callback(index, decoded.as_ref())?;
             }
         }
         Ok(())
@@ -253,6 +285,41 @@ impl DocumentReader {
         if crc32(bytes) != entry.crc32 {
             return Err(FileError::CrcMismatch(entry.offset));
         }
-        Ok(bytes.to_vec())
+        let decoded = decode_segment(bytes, self.dir.flags)?;
+        Ok(decoded.into_owned())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn write_and_read_zstd_segments() -> Result<()> {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("zstd_roundtrip.mff");
+
+        let mut writer = DocumentWriter::begin(&path)?;
+        writer.add_segment(SegmentType("json".to_string()), br#"{"a":1}"#)?;
+        writer.add_segment(SegmentType("bin".to_string()), &[1u8, 2, 3, 4])?;
+        writer.finalize()?;
+
+        let reader = DocumentReader::open(&path)?;
+        assert_eq!(
+            reader.directory().flags & DIR_FLAG_ZSTD_SEGMENTS,
+            DIR_FLAG_ZSTD_SEGMENTS
+        );
+        assert_eq!(reader.segments().len(), 2);
+
+        assert_eq!(reader.segment_payload(0)?, br#"{"a":1}"#);
+
+        let mut seen = Vec::new();
+        reader.read_segments(SegmentType("bin".to_string()), |_, bytes| {
+            seen.push(bytes.to_vec());
+            Ok(())
+        })?;
+        assert_eq!(seen, vec![vec![1, 2, 3, 4]]);
+        Ok(())
     }
 }

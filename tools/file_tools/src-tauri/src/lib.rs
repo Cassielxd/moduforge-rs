@@ -151,7 +151,10 @@ fn inspect_file(path: &str) -> Result<FileDescriptor, String> {
 }
 
 #[tauri::command]
-fn load_mff_segment(path: &str, index: usize) -> Result<MffSegment, String> {
+fn load_mff_segment(
+    path: &str,
+    index: usize,
+) -> Result<MffSegment, String> {
     let path = PathBuf::from(path);
     if !path.exists() {
         return Err("文件不存在".to_string());
@@ -161,14 +164,15 @@ fn load_mff_segment(path: &str, index: usize) -> Result<MffSegment, String> {
     read_mff_segment_from_reader(&reader, index).map_err(|e| e.to_string())
 }
 
-fn get_or_open_reader(path: &Path, key: &str) -> Result<Arc<DocumentReader>, InspectError> {
+fn get_or_open_reader(
+    path: &Path,
+    key: &str,
+) -> Result<Arc<DocumentReader>, InspectError> {
     if let Some(reader) = DOCUMENT_CACHE.lock().get(key).cloned() {
         return Ok(reader);
     }
     let reader = Arc::new(DocumentReader::open(path)?);
-    DOCUMENT_CACHE
-        .lock()
-        .insert(key.to_string(), Arc::clone(&reader));
+    DOCUMENT_CACHE.lock().insert(key.to_string(), Arc::clone(&reader));
     Ok(reader)
 }
 
@@ -213,10 +217,9 @@ fn read_mff_segment_from_reader(
     index: usize,
 ) -> Result<MffSegment, InspectError> {
     let dir = reader.directory();
-    let entry = dir
-        .entries
-        .get(index)
-        .ok_or_else(|| InspectError::Unsupported(format!("段索引 {index} 越界")))?;
+    let entry = dir.entries.get(index).ok_or_else(|| {
+        InspectError::Unsupported(format!("段索引 {index} 越界"))
+    })?;
     let payload_len = entry.length.saturating_sub(REC_HDR as u64);
     let preview_json = if payload_len <= MFF_PREVIEW_LIMIT as u64 {
         let mut payload: Option<Vec<u8>> = None;
@@ -226,9 +229,7 @@ fn read_mff_segment_from_reader(
             }
             Ok(())
         })?;
-        payload
-            .as_deref()
-            .and_then(decode_json_preview)
+        payload.as_deref().and_then(decode_json_preview)
     } else {
         None
     };
@@ -405,7 +406,10 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![inspect_file, load_mff_segment])
+        .invoke_handler(tauri::generate_handler![
+            inspect_file,
+            load_mff_segment
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
