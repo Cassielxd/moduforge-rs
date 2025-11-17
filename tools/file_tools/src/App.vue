@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
-import { open } from "@tauri-apps/plugin-dialog";
-import { invoke } from "@tauri-apps/api/core";
-import { ElMessage } from "element-plus";
+import {computed, ref, watch} from "vue";
+import {open} from "@tauri-apps/plugin-dialog";
+import {invoke} from "@tauri-apps/api/core";
+import {ElMessage} from "element-plus";
 
 type InspectResult = { kind: "mff"; data: MffSummary } | { kind: "zip"; data: ZipSummary };
 
@@ -66,6 +66,7 @@ interface DetailTab {
   id: string;
   title: string;
   type: "segment" | "zip-entry";
+  loading?: boolean;
   segment?: MffSegment;
   entry?: ZipEntry;
 }
@@ -75,29 +76,32 @@ const loading = ref(false);
 const treeNodes = computed<TreeNode[]>(() => {
   if (!result.value) return [];
   return result.value.kind === "zip"
-    ? buildZipTree(result.value.data)
-    : buildMffTree(result.value.data);
+      ? buildZipTree(result.value.data)
+      : buildMffTree(result.value.data);
 });
 const selectedNode = ref<TreeNode | null>(null);
 const currentNodeKey = ref<string>();
+const OVERVIEW_TAB_ID = "overview";
 const detailTabs = ref<DetailTab[]>([]);
-const activeTab = ref<string>("");
+const activeTab = ref<string>(OVERVIEW_TAB_ID);
+const segmentDetailCache = new Map<number, MffSegment>();
 
 watch(
-  () => result.value,
-  () => {
-    selectedNode.value = null;
-    currentNodeKey.value = undefined;
-    detailTabs.value = [];
-    activeTab.value = "";
-  }
+    () => result.value,
+    () => {
+      selectedNode.value = null;
+      currentNodeKey.value = undefined;
+      detailTabs.value = [];
+      activeTab.value = OVERVIEW_TAB_ID;
+      segmentDetailCache.clear();
+    }
 );
 
 watch(
-  () => selectedNode.value,
-  (node) => {
-    currentNodeKey.value = node?.id;
-  }
+    () => selectedNode.value,
+    (node) => {
+      currentNodeKey.value = node?.id;
+    }
 );
 
 const treeTitle = computed(() => {
@@ -118,7 +122,7 @@ const headerInfo = computed(() => {
   const common = {
     name: result.value.data.file_name || "未命名",
     path: result.value.data.path,
-    size: result.value.data.file_size,
+    size: result.value.data.file_size
   };
   if (result.value.kind === "mff") {
     return {
@@ -132,6 +136,11 @@ const headerInfo = computed(() => {
     typeLabel: "ZIP / YSF 容器",
     extra: `${result.value.data.total_entries} 条目`
   };
+});
+
+const overviewTabLabel = computed(() => {
+  if (!result.value) return "概览与列表";
+  return `概览与${isMff.value ? "段列表" : "条目列表"}`;
 });
 
 async function selectFile() {
@@ -150,7 +159,7 @@ async function selectFile() {
       return;
     }
     loading.value = true;
-    const data = await invoke<InspectResult>("inspect_file", { path: chosen });
+    const data = await invoke<InspectResult>("inspect_file", {path: chosen});
     result.value = data;
   } catch (error) {
     console.error(error);
@@ -162,6 +171,10 @@ async function selectFile() {
 
 function handleNodeClick(data: TreeNode) {
   selectedNode.value = data;
+  if (data.type === "mff-root" || data.type === "zip-root") {
+    activeTab.value = OVERVIEW_TAB_ID;
+    return;
+  }
   if (data.type === "mff-segment" && data.meta) {
     openSegmentTab(data.meta as MffSegment);
   } else if (data.type === "zip-file" && data.meta) {
@@ -194,7 +207,7 @@ function buildMffTree(summary: MffSummary): TreeNode[] {
 
 function buildZipTree(summary: ZipSummary): TreeNode[] {
   const normalize = (value: string) =>
-    value.replace(/\\/g, "/").replace(/\/+$/, "").trim();
+      value.replace(/\\/g, "/").replace(/\/+$/, "").trim();
   const root: TreeNode = {
     id: `zip-root-${summary.path}`,
     label: summary.file_name || summary.path,
@@ -227,7 +240,7 @@ function buildZipTree(summary: ZipSummary): TreeNode[] {
   };
 
   const sorted = [...summary.entries].sort((a, b) =>
-    a.path.localeCompare(b.path)
+      a.path.localeCompare(b.path)
   );
 
   sorted.forEach((entry) => {
@@ -270,20 +283,30 @@ function percentage(value: number) {
 
 function openSegmentTab(segment: MffSegment) {
   const id = `segment-${segment.index}`;
-  const title = `段 ${segment.index.toString().padStart(3, "0")}`;
-  const existing = detailTabs.value.find((tab) => tab.id === id);
-  if (existing) {
-    existing.segment = segment;
-    activeTab.value = existing.id;
+  const title = `段 #${segment.index.toString().padStart(3, "0")}`;
+  let tab = detailTabs.value.find((item) => item.id === id);
+  const cached = segmentDetailCache.get(segment.index);
+  if (!tab) {
+    tab = {
+      id,
+      title,
+      type: "segment",
+      loading: false,
+      segment: cached ?? segment
+    };
+    detailTabs.value.push(tab);
+  }
+  activeTab.value = id;
+  if (tab.type !== "segment") {
     return;
   }
-  detailTabs.value.push({
-    id,
-    title,
-    type: "segment",
-    segment
-  });
-  activeTab.value = id;
+  if (cached) {
+    tab.segment = cached;
+    tab.loading = false;
+    return;
+  }
+  tab.loading = true;
+  ensureSegmentDetail(id, segment.index);
 }
 
 function openZipEntryTab(entry: ZipEntry) {
@@ -305,16 +328,15 @@ function openZipEntryTab(entry: ZipEntry) {
 }
 
 function removeTab(targetName: string) {
+  if (targetName === OVERVIEW_TAB_ID) return;
   const tabs = detailTabs.value;
   let active = activeTab.value;
   if (active === targetName) {
     const idx = tabs.findIndex((tab) => tab.id === targetName);
     if (idx > 0) {
       active = tabs[idx - 1].id;
-    } else if (tabs.length > 1) {
-      active = tabs[1].id;
     } else {
-      active = "";
+      active = tabs[idx + 1]?.id ?? OVERVIEW_TAB_ID;
     }
   }
   detailTabs.value = tabs.filter((tab) => tab.id !== targetName);
@@ -329,212 +351,278 @@ function handleZipRowClick(row: ZipEntry) {
   if (row.is_dir) return;
   openZipEntryTab(row);
 }
+
+async function fetchSegmentDetail(index: number) {
+  if (segmentDetailCache.has(index)) {
+    return segmentDetailCache.get(index)!;
+  }
+  const summary = mffSummary.value;
+  if (!summary) return null;
+  try {
+    const detail = await invoke<MffSegment>("load_mff_segment", {
+      path: summary.path,
+      index
+    });
+    debugger;
+    segmentDetailCache.set(index, detail);
+    return detail;
+  } catch (error) {
+    console.error(error);
+    ElMessage.error("加载段详情失败");
+    return null;
+  }
+}
+
+async function ensureSegmentDetail(tabId: string, index: number) {
+  const detail = await fetchSegmentDetail(index);
+  if (!detail) {
+    const tab = detailTabs.value.find((t) => t.id === tabId);
+    if (tab) {
+      tab.loading = false;
+    }
+    return;
+  }
+  const tab = detailTabs.value.find((t) => t.id === tabId);
+  if (tab && tab.type === "segment") {
+    tab.segment = detail;
+    tab.loading = false;
+  }
+  if (selectedNode.value?.type === "mff-segment") {
+    const meta = selectedNode.value.meta as MffSegment | undefined;
+    if (meta?.index === index) {
+      selectedNode.value = {
+        ...selectedNode.value,
+        meta: detail
+      };
+    }
+  }
+}
 </script>
 
 <template>
-  <el-container class="app-shell">
-    <el-header class="app-header">
-      <div class="header-left">
-        <h1>ModuForge 文件管理</h1>
-        <p>查看 .mff / .ysf / .zip 文件的段与条目信息</p>
+  <div class="navicat-shell">
+    <header class="navicat-header">
+      <div class="logo-block">
+        <div class="logo-mark">MF</div>
+        <div class="logo-copy">
+          <span class="logo-title">ModuForge Inspector</span>
+          <span class="logo-desc">Navicat 风格的段与条目分析工作台</span>
+        </div>
       </div>
-      <div class="header-right">
+      <div class="header-actions">
+        <div v-if="headerInfo" class="file-pill">
+          <el-tag size="small" effect="dark">{{ headerInfo.typeLabel }}</el-tag>
+          <div class="file-pill__meta">
+            <strong>{{ headerInfo.name }}</strong>
+            <small>{{ headerInfo.path }}</small>
+            <span>{{ formatBytes(headerInfo.size) }} · {{ headerInfo.extra }}</span>
+          </div>
+        </div>
         <el-button type="primary" :loading="loading" @click="selectFile">
           打开文件
         </el-button>
-        <div v-if="headerInfo" class="current-file">
-          <el-tag effect="light">{{ headerInfo.typeLabel }}</el-tag>
-          <div class="file-meta">
-            <strong>{{ headerInfo.name }}</strong>
-            <small>{{ headerInfo.path }}</small>
-          </div>
-          <span class="file-size">
-            {{ formatBytes(headerInfo.size) }} · {{ headerInfo.extra }}
-          </span>
-        </div>
       </div>
-    </el-header>
+    </header>
 
-    <el-container class="app-body">
-      <el-aside width="280px" class="tree-pane">
-        <el-card shadow="never" class="tree-card">
-          <template #header>
-            <div class="tree-card__title">
-              <span>{{ treeTitle }}</span>
-              <el-tag size="small" v-if="loading">加载中</el-tag>
+    <div class="navicat-body">
+      <aside class="navicat-sidebar">
+        <button class="sidebar-icon active" type="button">☰</button>
+        <button class="sidebar-icon" type="button">⇪</button>
+        <button class="sidebar-icon" type="button">⛃</button>
+        <button class="sidebar-icon" type="button">⚙</button>
+      </aside>
+
+      <main class="navicat-workbench">
+        <section class="tree-pane navicat-pane">
+          <header class="pane-header">
+            <div>
+              <p class="pane-title">{{ treeTitle }}</p>
+              <small v-if="headerInfo">{{ headerInfo.path }}</small>
             </div>
-          </template>
-          <div class="tree-wrapper">
-            <el-empty v-if="!treeNodes.length" description="尚未选择文件" />
+            <el-tag v-if="loading" size="small" effect="dark">加载中</el-tag>
+          </header>
+          <div class="tree-scroll">
+            <el-empty v-if="!treeNodes.length" description="尚未选择文件"/>
             <el-tree
-              v-else
-              :data="treeNodes"
-              :props="treeProps"
-              :expand-on-click-node="false"
-              :highlight-current="true"
-              node-key="id"
-              :current-node-key="currentNodeKey"
-              default-expand-all
-              @node-click="handleNodeClick"
+                v-else
+                :data="treeNodes"
+                :props="treeProps"
+                :expand-on-click-node="false"
+                :highlight-current="true"
+                node-key="id"
+                :current-node-key="currentNodeKey"
+                default-expand-all
+                @node-click="handleNodeClick"
             />
           </div>
-        </el-card>
-      </el-aside>
-      <el-main class="content-pane">
-        <template v-if="result">
-          <el-space direction="vertical" :size="16" style="width: 100%">
-            <el-card shadow="never">
-              <template #header>
-                <div class="panel-title">
-                  概览与{{ isMff ? "段列表" : "条目列表" }}
-                </div>
-              </template>
-              <div class="overview-block">
-                <el-descriptions :column="3" border size="small">
-                  <el-descriptions-item label="文件名">
-                    {{ result.data.file_name || "未命名" }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="路径">
-                    {{ result.data.path }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="大小">
-                    {{ formatBytes(result.data.file_size) }}
-                  </el-descriptions-item>
-                  <template v-if="isMff && mffSummary">
-                    <el-descriptions-item label="段数量">
-                      {{ mffSummary.segment_count }}
-                    </el-descriptions-item>
-                    <el-descriptions-item label="逻辑长度">
-                      {{ formatBytes(mffSummary.logical_len) }}
-                    </el-descriptions-item>
-                    <el-descriptions-item label="BLAKE3 哈希">
-                      <code>{{ mffSummary.file_hash }}</code>
-                    </el-descriptions-item>
-                  </template>
-                  <template v-else-if="isZip && zipSummary">
-                    <el-descriptions-item label="条目数量">
-                      {{ zipSummary.total_entries }}
-                    </el-descriptions-item>
-                    <el-descriptions-item label="原始体积">
-                      {{ formatBytes(zipSummary.total_uncompressed) }}
-                    </el-descriptions-item>
-                    <el-descriptions-item label="压缩体积">
-                      {{ formatBytes(zipSummary.total_compressed) }}
-                    </el-descriptions-item>
-                  </template>
-                </el-descriptions>
-              </div>
+        </section>
 
-              <div v-if="isMff" class="table-wrap">
-                <el-table
-                  :data="mffSegments"
-                  border
-                  size="small"
-                  height="320"
-                  empty-text="当前文档没有段"
-                  @row-click="handleSegmentRowClick"
-                >
-                  <el-table-column prop="index" label="#" width="60" />
-                  <el-table-column prop="kind" label="类型" min-width="140" />
-                  <el-table-column label="偏移" min-width="120">
-                    <template #default="{ row }">
-                      {{ row.offset }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="记录长度" min-width="120">
-                    <template #default="{ row }">
-                      {{ formatBytes(row.record_length) }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="有效载荷" min-width="120">
-                    <template #default="{ row }">
-                      {{ formatBytes(row.payload_length) }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="crc32" label="CRC32" width="120" />
-                </el-table>
-              </div>
-
-              <div v-else class="table-wrap">
-                <el-table
-                  :data="zipEntries"
-                  border
-                  size="small"
-                  height="320"
-                  empty-text="归档中没有条目"
-                  @row-click="handleZipRowClick"
-                >
-                  <el-table-column label="路径" min-width="200">
-                    <template #default="{ row }">
-                      <span v-if="row.is_dir">📁 {{ row.path }}</span>
-                      <span v-else>📄 {{ row.path }}</span>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="原始大小" min-width="120">
-                    <template #default="{ row }">
-                      {{ formatBytes(row.size) }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="压缩后" min-width="120">
-                    <template #default="{ row }">
-                      {{ formatBytes(row.compressed_size) }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="压缩率" min-width="100">
-                    <template #default="{ row }">
-                      {{ percentage(row.compression_ratio) }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="compression" label="算法" min-width="120" />
-                </el-table>
-              </div>
-            </el-card>
-
+        <section class="detail-pane navicat-pane">
+          <template v-if="result">
             <el-tabs
-              v-if="detailTabs.length"
-              v-model="activeTab"
-              type="card"
-              closable
-              @tab-remove="removeTab"
+                v-model="activeTab"
+                type="card"
+                class="navicat-tabs"
+                @tab-remove="removeTab"
             >
               <el-tab-pane
-                v-for="tab in detailTabs"
-                :key="tab.id"
-                :name="tab.id"
-                :label="tab.title"
+                  :label="overviewTabLabel"
+                  :name="OVERVIEW_TAB_ID"
+                  :closable="false"
               >
-                <el-card shadow="never">
-                  <template #header>
-                    <div class="panel-title">
-                      {{ tab.type === "segment" ? "段详情" : "条目详情" }}
+                <div class="overview-card">
+                  <div class="overview-meta">
+                    <div>
+                      <p class="overview-label">当前文件</p>
+                      <h2>{{ result.data.file_name || "未命名" }}</h2>
+                      <span>{{ result.data.path }}</span>
                     </div>
-                  </template>
-                  <template v-if="tab.type === 'segment' && tab.segment">
-                    <el-descriptions :column="2" border size="small">
-                      <el-descriptions-item label="类型">
-                        {{ tab.segment.kind }}
-                      </el-descriptions-item>
-                      <el-descriptions-item label="偏移">
-                        {{ tab.segment.offset }}
-                      </el-descriptions-item>
-                      <el-descriptions-item label="记录长度">
-                        {{ formatBytes(tab.segment.record_length) }}
-                      </el-descriptions-item>
-                      <el-descriptions-item label="有效载荷">
-                        {{ formatBytes(tab.segment.payload_length) }}
-                      </el-descriptions-item>
-                      <el-descriptions-item label="CRC32">
-                        {{ tab.segment.crc32 }}
-                      </el-descriptions-item>
-                    </el-descriptions>
-                    <pre
-                      v-if="tab.segment.preview_json"
-                      class="json-preview"
-                    >{{ tab.segment.preview_json }}</pre>
-                    <el-empty
-                      v-else
-                      description="该段不是 JSON 或内容过大，无法预览"
+                    <div class="overview-size">
+                      <p>大小</p>
+                      <strong>{{ formatBytes(result.data.file_size) }}</strong>
+                    </div>
+                  </div>
+
+                  <div class="overview-grid" v-if="isMff && mffSummary">
+                    <div class="overview-card__item">
+                      <label>段数量</label>
+                      <strong>{{ mffSummary.segment_count }}</strong>
+                    </div>
+                    <div class="overview-card__item">
+                      <label>逻辑长度</label>
+                      <strong>{{ formatBytes(mffSummary.logical_len) }}</strong>
+                    </div>
+                    <div class="overview-card__item">
+                      <label>BLAKE3 哈希</label>
+                      <code>{{ mffSummary.file_hash }}</code>
+                    </div>
+                  </div>
+
+                  <div class="overview-grid" v-else-if="isZip && zipSummary">
+                    <div class="overview-card__item">
+                      <label>条目数量</label>
+                      <strong>{{ zipSummary.total_entries }}</strong>
+                    </div>
+                    <div class="overview-card__item">
+                      <label>原始体积</label>
+                      <strong>{{ formatBytes(zipSummary.total_uncompressed) }}</strong>
+                    </div>
+                    <div class="overview-card__item">
+                      <label>压缩体积</label>
+                      <strong>{{ formatBytes(zipSummary.total_compressed) }}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-if="isMff" class="table-wrap">
+                  <el-table
+                      :data="mffSegments"
+                      border
+                      size="small"
+                      height="380"
+                      empty-text="当前文档没有段"
+                      @row-click="handleSegmentRowClick"
+                  >
+                    <el-table-column prop="index" label="#" width="60"/>
+                    <el-table-column prop="kind" label="类型" min-width="140"/>
+                    <el-table-column label="偏移" min-width="120">
+                      <template #default="{ row }">
+                        {{ row.offset }}
+                      </template>
+                    </el-table-column>
+                    <el-table-column label="记录长度" min-width="120">
+                      <template #default="{ row }">
+                        {{ formatBytes(row.record_length) }}
+                      </template>
+                    </el-table-column>
+                    <el-table-column label="有效载荷" min-width="120">
+                      <template #default="{ row }">
+                        {{ formatBytes(row.payload_length) }}
+                      </template>
+                    </el-table-column>
+                    <el-table-column prop="crc32" label="CRC32" width="120"/>
+                  </el-table>
+                </div>
+
+                <div v-else class="table-wrap">
+                  <el-table
+                      :data="zipEntries"
+                      border
+                      size="small"
+                      height="380"
+                      empty-text="归档中没有条目"
+                      @row-click="handleZipRowClick"
+                  >
+                    <el-table-column label="路径" min-width="200">
+                      <template #default="{ row }">
+                        <span v-if="row.is_dir">📁 {{ row.path }}</span>
+                        <span v-else>📄 {{ row.path }}</span>
+                      </template>
+                    </el-table-column>
+                    <el-table-column label="原始大小" min-width="120">
+                      <template #default="{ row }">
+                        {{ formatBytes(row.size) }}
+                      </template>
+                    </el-table-column>
+                    <el-table-column label="压缩体积" min-width="120">
+                      <template #default="{ row }">
+                        {{ formatBytes(row.compressed_size) }}
+                      </template>
+                    </el-table-column>
+                    <el-table-column label="压缩率" min-width="100">
+                      <template #default="{ row }">
+                        {{ percentage(row.compression_ratio) }}
+                      </template>
+                    </el-table-column>
+                    <el-table-column prop="compression" label="算法" min-width="120"/>
+                  </el-table>
+                </div>
+              </el-tab-pane>
+
+              <el-tab-pane
+                  v-for="tab in detailTabs"
+                  :key="tab.id"
+                  :name="tab.id"
+                  :label="tab.title"
+                  closable
+              >
+                <div class="detail-card">
+                  <p class="detail-card__title">
+                    {{ tab.type === "segment" ? "段详情" : "条目详情" }}
+                  </p>
+                  <template v-if="tab.type === 'segment'">
+                    <el-skeleton
+                        v-if="tab.loading || !tab.segment"
+                        animated
+                        :rows="5"
                     />
+                    <template v-else>
+                      <el-descriptions :column="2" border size="small">
+                        <el-descriptions-item label="类型">
+                          {{ tab.segment.kind }}
+                        </el-descriptions-item>
+                        <el-descriptions-item label="偏移">
+                          {{ tab.segment.offset }}
+                        </el-descriptions-item>
+                        <el-descriptions-item label="记录长度">
+                          {{ formatBytes(tab.segment.record_length) }}
+                        </el-descriptions-item>
+                        <el-descriptions-item label="有效载荷">
+                          {{ formatBytes(tab.segment.payload_length) }}
+                        </el-descriptions-item>
+                        <el-descriptions-item label="CRC32">
+                          {{ tab.segment.crc32 }}
+                        </el-descriptions-item>
+                      </el-descriptions>
+                      <pre
+                          v-if="tab.segment.preview_json"
+                          class="json-preview"
+                      >{{ tab.segment.preview_json }}</pre>
+                      <el-empty
+                          v-else
+                          description="该段不是 JSON 或内容过大，无法预览"
+                      />
+                    </template>
                   </template>
                   <template v-else-if="tab.type === 'zip-entry' && tab.entry">
                     <el-descriptions :column="2" border size="small">
@@ -547,7 +635,7 @@ function handleZipRowClick(row: ZipEntry) {
                       <el-descriptions-item label="原始大小">
                         {{ formatBytes(tab.entry.size) }}
                       </el-descriptions-item>
-                      <el-descriptions-item label="压缩后">
+                      <el-descriptions-item label="压缩体积">
                         {{ formatBytes(tab.entry.compressed_size) }}
                       </el-descriptions-item>
                       <el-descriptions-item label="压缩率">
@@ -561,162 +649,352 @@ function handleZipRowClick(row: ZipEntry) {
                       </el-descriptions-item>
                     </el-descriptions>
                     <pre
-                      v-if="tab.entry.preview_json"
-                      class="json-preview"
+                        v-if="tab.entry.preview_json"
+                        class="json-preview"
                     >{{ tab.entry.preview_json }}</pre>
                     <el-empty
-                      v-else
-                      description="该条目不是 JSON 或内容过大，无法预览"
+                        v-else
+                        description="该条目不是 JSON 或内容过大，无法预览"
                     />
                   </template>
-                </el-card>
+                </div>
               </el-tab-pane>
             </el-tabs>
-          </el-space>
-        </template>
-        <el-empty v-else description="请选择一个文件" />
-      </el-main>
-    </el-container>
-  </el-container>
+          </template>
+          <el-empty v-else description="请选择一个文件"/>
+        </section>
+      </main>
+    </div>
+  </div>
 </template>
 
 <style scoped>
-.app-shell {
-  height: 100vh;
-  background: #f5f6fb;
+:global(body) {
+  margin: 0;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f3f6fb;
+  color: #1f2d3d;
 }
 
-.app-header {
+.navicat-shell {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.navicat-header {
+  height: 64px;
+  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 24px;
-  border-bottom: 1px solid #ebeef5;
-  background: #fff;
+  background: linear-gradient(135deg, #ffffff 0%, #eef2f7 100%);
+  border-bottom: 1px solid #e6eaf3;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
 }
 
-.header-left h1 {
-  margin: 0;
-  font-size: 20px;
+.logo-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #3da6ff 0%, #1d6bff 100%);
   font-weight: 600;
-  color: #303133;
-}
-
-.header-left p {
-  margin: 2px 0 0;
-  color: #909399;
-  font-size: 13px;
-}
-
-.header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  color: #fff;
+  letter-spacing: 0.3px;
 }
 
-.current-file {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #f9fafc;
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  padding: 8px 12px;
-}
-
-.file-meta {
+.logo-copy {
   display: flex;
   flex-direction: column;
   line-height: 1.2;
 }
 
-.file-meta strong {
+.logo-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.logo-desc {
+  font-size: 12px;
+  color: #5b6478;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.file-pill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: #f6f8fe;
+  border: 1px solid #dbe4f6;
+  max-width: 480px;
+}
+
+.file-pill__meta {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  gap: 2px;
+  color: #2f3b52;
+}
+
+.file-pill__meta strong {
   font-size: 14px;
-  color: #303133;
+  color: #1f2d3d;
 }
 
-.file-meta small {
-  color: #a0a3ad;
-  max-width: 280px;
-  text-overflow: ellipsis;
+.file-pill__meta small {
+  color: #6b7280;
+}
+
+.file-pill__meta span {
+  color: #1d6bff;
+}
+
+.navicat-body {
+  flex: 1;
+  display: flex;
+  background: linear-gradient(180deg, #f5f7fb 0%, #eef2f7 55%, #e9edf4 100%);
+}
+
+.navicat-sidebar {
+  width: 64px;
+  background: #f6f7fb;
+  border-right: 1px solid #e3e7ef;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 10px;
+}
+
+.sidebar-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  color: #5c6473;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.18s ease;
+}
+
+.sidebar-icon.active,
+.sidebar-icon:hover {
+  background: #e8f0ff;
+  color: #1d4ed8;
+}
+
+.navicat-workbench {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+  padding: 16px;
   overflow: hidden;
-  white-space: nowrap;
 }
 
-.file-size {
-  color: #606266;
-  font-size: 13px;
-}
-
-.app-body {
-  height: calc(100vh - 72px);
+.navicat-pane {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #e6eaf3;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  min-height: 0;
 }
 
 .tree-pane {
-  padding: 16px;
-  background: #f5f6fb;
-  border-right: 1px solid #ebeef5;
-}
-
-.tree-card__title {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  color: #303133;
+  flex-direction: column;
 }
 
-.tree-wrapper {
-  min-height: calc(100vh - 160px);
+.detail-pane {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px;
+  overflow: hidden;
+}
+
+.pane-header {
+  padding: 12px 14px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.pane-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f2d3d;
+}
+
+.pane-header small {
+  color: #6b7280;
+}
+
+.tree-scroll {
+  flex: 1;
+  padding: 0 12px 12px 12px;
   overflow: auto;
 }
 
-.content-pane {
-  padding: 16px 24px;
-  background: #f8f9ff;
+:deep(.el-tree) {
+  background: transparent;
+  color: #2f3b52;
 }
 
-.panel-title {
-  font-weight: 600;
-  color: #303133;
+:deep(.el-tree-node__content:hover),
+:deep(.el-tree-node.is-current > .el-tree-node__content) {
+  background: #e8f0ff;
+}
+
+.navicat-tabs {
+  --el-color-primary: #1d6bff;
+}
+
+:deep(.navicat-tabs .el-tabs__header) {
+  margin: 0 0 12px;
+}
+
+:deep(.navicat-tabs .el-tabs__item) {
+  color: #4b5563;
+}
+
+:deep(.navicat-tabs .el-tabs__item.is-active) {
+  color: #1d6bff;
+}
+
+.overview-card {
+  background: #f7f9fc;
+  border: 1px solid #e6eaf3;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.overview-meta {
   display: flex;
-  gap: 8px;
-  align-items: baseline;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 12px;
 }
 
-.panel-title small {
-  color: #c0c4cc;
-  font-weight: 400;
+.overview-label {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.overview-meta h2 {
+  margin: 4px 0;
+  font-size: 18px;
+  color: #111827;
+}
+
+.overview-meta span {
+  color: #6b7280;
+}
+
+.overview-size strong {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1d6bff;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.overview-card__item {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #e6eaf3;
+  background: #fff;
+}
+
+.overview-card__item label {
+  display: block;
+  color: #6b7280;
   font-size: 12px;
 }
 
-code {
-  background: #f2f6fc;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
+.overview-card__item strong {
+  font-size: 15px;
+  color: #1f2d3d;
+}
+
+.table-wrap {
+  border: 1px solid #e6eaf3;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+:deep(.table-wrap .el-table) {
+  --el-table-border-color: #e5e7eb;
+  --el-table-border: 1px solid #e5e7eb;
+  --el-table-text-color: #1f2937;
+  --el-table-header-text-color: #4b5563;
+  --el-table-bg-color: #fff;
+  --el-table-tr-bg-color: #fff;
+  --el-table-row-hover-bg-color: #f5f7fb;
+}
+
+.detail-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e6eaf3;
+  padding: 14px;
+}
+
+.detail-card__title {
+  margin: 0 0 10px;
+  font-weight: 700;
+  color: #1f2d3d;
 }
 
 .json-preview {
   background: #0f172a;
-  color: #e2e8f0;
-  padding: 12px;
-  border-radius: 8px;
+  color: #e8f2ff;
+  padding: 10px;
+  border-radius: 10px;
   font-size: 12px;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 360px;
+  margin-top: 10px;
   overflow: auto;
 }
 
-.overview-block {
-  margin-bottom: 16px;
+:deep(.detail-card .el-descriptions__cell) {
+  background: transparent;
+  color: #1f2937;
 }
 
-.table-wrap {
-  border: 1px solid #ebeef5;
-  border-radius: 6px;
-  overflow: hidden;
+:deep(.detail-card .el-empty__description p) {
+  color: #6b7280;
+}
+
+:deep(.el-empty__description p) {
+  color: #6b7280;
 }
 </style>

@@ -1,10 +1,14 @@
 use std::{
+    collections::HashMap,
     fs::File,
     io::{self, Read},
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use mf_file::{document::DocumentReader, error::FileError as MffError, REC_HDR};
+use once_cell::sync::Lazy;
+use parking_lot::Mutex;
 use serde::Serialize;
 use zip::read::ZipArchive;
 
@@ -57,6 +61,9 @@ enum FileKind {
     Mff,
     Zip,
 }
+
+static DOCUMENT_CACHE: Lazy<Mutex<HashMap<String, Arc<DocumentReader>>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
 
 #[derive(Serialize)]
 #[serde(tag = "kind", content = "data", rename_all = "lowercase")]
@@ -123,29 +130,57 @@ fn inspect_file(path: &str) -> Result<FileDescriptor, String> {
 
     let kind = detect_kind(&path).map_err(|e| e.to_string())?;
 
-    match kind {
+    let descriptor = match kind {
         FileKind::Mff => inspect_mff(&path)
             .map(FileDescriptor::Mff)
             .map_err(|e| e.to_string()),
         FileKind::Zip => inspect_zip(&path)
             .map(FileDescriptor::Zip)
             .map_err(|e| e.to_string()),
+    };
+
+    if descriptor.is_ok() && matches!(kind, FileKind::Mff) {
+        let mut cache = DOCUMENT_CACHE.lock();
+        cache.insert(
+            path_to_string(&path),
+            Arc::new(DocumentReader::open(&path).map_err(|e| e.to_string())?),
+        );
     }
+
+    descriptor
+}
+
+#[tauri::command]
+fn load_mff_segment(path: &str, index: usize) -> Result<MffSegment, String> {
+    let path = PathBuf::from(path);
+    if !path.exists() {
+        return Err("文件不存在".to_string());
+    }
+    let key = path_to_string(&path);
+    let reader = get_or_open_reader(&path, &key).map_err(|e| e.to_string())?;
+    read_mff_segment_from_reader(&reader, index).map_err(|e| e.to_string())
+}
+
+fn get_or_open_reader(path: &Path, key: &str) -> Result<Arc<DocumentReader>, InspectError> {
+    if let Some(reader) = DOCUMENT_CACHE.lock().get(key).cloned() {
+        return Ok(reader);
+    }
+    let reader = Arc::new(DocumentReader::open(path)?);
+    DOCUMENT_CACHE
+        .lock()
+        .insert(key.to_string(), Arc::clone(&reader));
+    Ok(reader)
 }
 
 fn inspect_mff(path: &Path) -> Result<MffSummary, InspectError> {
-    let reader = DocumentReader::open(path)?;
+    let path_str = path_to_string(path);
+    let reader = get_or_open_reader(path, &path_str)?;
     let dir = reader.directory();
     let metadata = std::fs::metadata(path)?;
 
     let mut segments = Vec::with_capacity(dir.entries.len());
     for (index, entry) in dir.entries.iter().enumerate() {
         let payload_len = entry.length.saturating_sub(REC_HDR as u64);
-        let preview_json = reader
-            .segment_payload(index)
-            .ok()
-            .filter(|data| data.len() <= MFF_PREVIEW_LIMIT)
-            .and_then(|data| decode_json_preview(&data));
         segments.push(MffSegment {
             index,
             kind: entry.kind.0.clone(),
@@ -153,12 +188,12 @@ fn inspect_mff(path: &Path) -> Result<MffSummary, InspectError> {
             record_length: entry.length,
             payload_length: payload_len,
             crc32: entry.crc32,
-            preview_json,
+            preview_json: None,
         });
     }
 
     Ok(MffSummary {
-        path: path_to_string(path),
+        path: path_str,
         file_name: path
             .file_name()
             .and_then(|f| f.to_str())
@@ -170,6 +205,41 @@ fn inspect_mff(path: &Path) -> Result<MffSummary, InspectError> {
         directory_flags: dir.flags,
         file_hash: to_hex(&dir.file_hash),
         segments,
+    })
+}
+
+fn read_mff_segment_from_reader(
+    reader: &DocumentReader,
+    index: usize,
+) -> Result<MffSegment, InspectError> {
+    let dir = reader.directory();
+    let entry = dir
+        .entries
+        .get(index)
+        .ok_or_else(|| InspectError::Unsupported(format!("段索引 {index} 越界")))?;
+    let payload_len = entry.length.saturating_sub(REC_HDR as u64);
+    let preview_json = if payload_len <= MFF_PREVIEW_LIMIT as u64 {
+        let mut payload: Option<Vec<u8>> = None;
+        reader.read_segments(entry.kind.clone(), |i, bytes| {
+            if i == index {
+                payload = Some(bytes.to_vec());
+            }
+            Ok(())
+        })?;
+        payload
+            .as_deref()
+            .and_then(decode_json_preview)
+    } else {
+        None
+    };
+    Ok(MffSegment {
+        index,
+        kind: entry.kind.0.clone(),
+        offset: entry.offset,
+        record_length: entry.length,
+        payload_length: payload_len,
+        crc32: entry.crc32,
+        preview_json,
     })
 }
 
@@ -335,7 +405,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![inspect_file])
+        .invoke_handler(tauri::generate_handler![inspect_file, load_mff_segment])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
