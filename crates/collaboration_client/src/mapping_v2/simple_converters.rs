@@ -2,12 +2,14 @@
 /// 不使用宏，直接实现 TypedStepConverter trait
 use yrs::{Array, ArrayPrelim, Map, MapPrelim, TransactionMut, WriteTxn};
 use mf_transform::{
-    step::Step,
+    step::StepGeneric,
     node_step::{AddNodeStep, RemoveNodeStep},
     attr_step::AttrStep,
     mark_step::{AddMarkStep, RemoveMarkStep},
 };
 use mf_model::node::Node;
+use mf_model::node_pool::NodePool;
+use mf_model::schema::Schema;
 
 use crate::mapping_v2::{
     typed_converter::{TypedStepConverter, ConversionContext},

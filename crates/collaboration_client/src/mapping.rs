@@ -1,6 +1,9 @@
 /// 静态分发 StepConverter 实现
 /// 使用静态分发替代动态分发，提供更好的性能和类型安全性
 use yrs::{Transact, ReadTxn, Map};
+use mf_model::node_pool::NodePool;
+use mf_model::schema::Schema;
+use mf_transform::step::StepGeneric;
 
 // 重新导出所有核心组件
 pub use crate::mapping_v2::{
@@ -32,7 +35,7 @@ pub use crate::mapping_v2::{
 
 /// 便捷函数：批量转换步骤
 pub fn convert_steps_batch(
-    steps: &[&dyn mf_transform::step::Step],
+    steps: &[&dyn StepGeneric<NodePool, Schema>],
     txn: &mut yrs::TransactionMut,
     context: &ConversionContext,
 ) -> Vec<ConversionResult<crate::types::StepResult>> {
@@ -64,7 +67,7 @@ pub fn create_context(
 /// 便捷函数：注册转换器
 pub fn register_converter<T, C>()
 where
-    T: mf_transform::step::Step + 'static,
+    T: StepGeneric<NodePool, Schema> + 'static,
     C: TypedStepConverter<T> + Default + 'static,
 {
     register_global_converter::<T, C>();

@@ -17,8 +17,8 @@ use serde_json::Value;
 /// # 示例
 ///
 /// ```
-/// use mf_rs::model::node::Node;
-/// use mf_rs::model::attrs::Attrs;
+/// use mf_model::node::Node;
+/// use mf_model::attrs::Attrs;
 ///
 /// let node = Node::new(
 ///     "node1",
@@ -259,5 +259,39 @@ impl Node {
             .collect();
         new_node.marks.extend(marks.iter().cloned());
         new_node
+    }
+}
+
+// ========================================
+// DataItem trait 实现
+// ========================================
+
+use crate::traits::DataItem;
+use std::collections::HashMap;
+
+impl DataItem for Node {
+    type Id = NodeId;
+
+    fn type_name(&self) -> &str {
+        &self.r#type
+    }
+
+    fn id(&self) -> &Self::Id {
+        &self.id
+    }
+
+    fn attributes(&self) -> Option<&HashMap<String, Value>> {
+        // Note: Node 使用 HashTrieMapSync 存储属性，不是 HashMap
+        // 这个方法返回 None，使用 Node 特定的方法访问属性
+        // 如需访问 Node 属性，请使用 node.attrs
+        None
+    }
+
+    fn with_attributes(&self, attrs: HashMap<String, Value>) -> Self {
+        let mut new_attrs = rpds::HashTrieMapSync::new_sync();
+        for (k, v) in attrs {
+            new_attrs.insert_mut(k, v);
+        }
+        self.update_attr(new_attrs)
     }
 }

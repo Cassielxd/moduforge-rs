@@ -901,3 +901,44 @@ impl NodePool {
         LazyQueryEngine::new(self)
     }
 }
+
+// ========================================
+// DataContainer trait 实现
+// ========================================
+
+use crate::traits::DataContainer;
+
+impl DataContainer for NodePool {
+    type Item = Node;
+    type InnerState = Tree;
+
+    fn get(&self, id: &NodeId) -> Option<&Self::Item> {
+        self.get_node(id)
+    }
+
+    fn contains(&self, id: &NodeId) -> bool {
+        self.contains_node(id)
+    }
+
+    fn size(&self) -> usize {
+        NodePool::size(self)
+    }
+
+    fn key(&self) -> &str {
+        NodePool::key(self)
+    }
+
+    fn items(&self) -> Vec<&Self::Item> {
+        let mut result = Vec::new();
+        for shard in &self.inner.nodes {
+            for node in shard.values() {
+                result.push(node);
+            }
+        }
+        result
+    }
+
+    fn inner(&self) -> &Self::InnerState {
+        &self.inner
+    }
+}

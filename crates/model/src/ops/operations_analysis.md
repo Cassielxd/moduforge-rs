@@ -43,7 +43,7 @@ ModuForge 通过 Rust 的操作符重载机制实现了一套直观且强大的�
 #### AttrsRef 操作
 - `AttrsRef + Attrs` - 添加属性对象
 - `AttrsRef + (String, Value)` - 添加单个键值对
-- `AttrsRef + im::HashMap<String, Value>` - 直接添加属性映射
+- `AttrsRef + rpds::HashTrieMap<String, Value>` - 直接添加属性映射
 
 **设计特点**:
 - 返回类型统一为 `PoolResult<RefType>`，支持错误处理

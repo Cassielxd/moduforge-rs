@@ -1,10 +1,12 @@
 use std::{collections::HashMap, sync::Arc};
 
+use mf_model::node_pool::NodePool;
+use mf_model::schema::Schema;
 use mf_transform::{
     attr_step::AttrStep,
     mark_step::AddMarkStep,
     node_step::{AddNodeStep, MoveNodeStep, RemoveNodeStep},
-    step::Step,
+    step::StepGeneric,
 };
 use std::fmt::Debug;
 
@@ -12,7 +14,7 @@ pub trait StepFactory: Send + Sync + Debug {
     fn create_from_bytes(
         &self,
         bytes: &[u8],
-    ) -> Arc<dyn Step>;
+    ) -> Arc<dyn StepGeneric<NodePool, Schema>>;
 }
 
 #[derive(Debug)]
@@ -54,7 +56,7 @@ impl StepFactoryRegistry {
         &self,
         type_id: &str,
         bytes: &[u8],
-    ) -> Arc<dyn Step> {
+    ) -> Arc<dyn StepGeneric<NodePool, Schema>> {
         self.factories
             .get(type_id)
             .expect("Unknown step type")
@@ -68,7 +70,7 @@ impl StepFactory for AttrStepFactory {
     fn create_from_bytes(
         &self,
         bytes: &[u8],
-    ) -> Arc<dyn Step> {
+    ) -> Arc<dyn StepGeneric<NodePool, Schema>> {
         let step: AttrStep = serde_json::from_slice(bytes).unwrap();
         Arc::new(step)
     }
@@ -80,7 +82,7 @@ impl StepFactory for AddMarkStepFactory {
     fn create_from_bytes(
         &self,
         bytes: &[u8],
-    ) -> Arc<dyn Step> {
+    ) -> Arc<dyn StepGeneric<NodePool, Schema>> {
         let step: AddMarkStep = serde_json::from_slice(bytes).unwrap();
         Arc::new(step)
     }
@@ -92,7 +94,7 @@ impl StepFactory for AddNodeStepFactory {
     fn create_from_bytes(
         &self,
         bytes: &[u8],
-    ) -> Arc<dyn Step> {
+    ) -> Arc<dyn StepGeneric<NodePool, Schema>> {
         let step: AddNodeStep = serde_json::from_slice(bytes).unwrap();
         Arc::new(step)
     }
@@ -104,7 +106,7 @@ impl StepFactory for RemoveNodeStepFactory {
     fn create_from_bytes(
         &self,
         bytes: &[u8],
-    ) -> Arc<dyn Step> {
+    ) -> Arc<dyn StepGeneric<NodePool, Schema>> {
         let step: RemoveNodeStep = serde_json::from_slice(bytes).unwrap();
         Arc::new(step)
     }
@@ -116,7 +118,7 @@ impl StepFactory for MoveNodeStepFactory {
     fn create_from_bytes(
         &self,
         bytes: &[u8],
-    ) -> Arc<dyn Step> {
+    ) -> Arc<dyn StepGeneric<NodePool, Schema>> {
         let step: MoveNodeStep = serde_json::from_slice(bytes).unwrap();
         Arc::new(step)
     }

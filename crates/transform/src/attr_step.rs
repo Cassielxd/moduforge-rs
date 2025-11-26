@@ -3,10 +3,10 @@ use std::sync::Arc;
 use crate::{transform_error, TransformResult};
 
 use super::{
-    step::{Step, StepResult},
+    step::{StepGeneric, StepResult},
 };
 
-use mf_model::{schema::Schema, tree::Tree, types::NodeId};
+use mf_model::{schema::Schema, tree::Tree, types::NodeId, node_pool::NodePool};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value};
 use mf_model::rpds::HashTrieMapSync;
@@ -27,7 +27,7 @@ impl AttrStep {
     }
 }
 
-impl Step for AttrStep {
+impl StepGeneric<NodePool, Schema> for AttrStep {
     fn name(&self) -> String {
         "attr_step".to_string()
     }
@@ -75,7 +75,7 @@ impl Step for AttrStep {
     fn invert(
         &self,
         dart: &Arc<Tree>,
-    ) -> Option<Arc<dyn Step>> {
+    ) -> Option<Arc<dyn StepGeneric<NodePool, Schema>>> {
         match dart.get_node(&self.id) {
             Some(node) => {
                 // 仅对本次修改过的键生成反向值，避免覆盖无关属性

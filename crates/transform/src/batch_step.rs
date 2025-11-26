@@ -1,26 +1,26 @@
 use std::sync::Arc;
 
-use mf_model::{schema::Schema, tree::Tree};
+use mf_model::{schema::Schema, tree::Tree, node_pool::NodePool};
 use mf_model::rpds::HashTrieMap;
 use crate::{transform_error, TransformResult};
 
-use super::step::{Step, StepResult};
+use super::step::{StepGeneric, StepResult};
 
 /// 批量步骤：将多个 Step 作为一个原子单元执行
 /// - 成功：全部子步骤成功应用
 /// - 失败：自动回滚已应用的子步骤，保证草稿一致性
 #[derive(Debug, Clone)]
 pub struct BatchStep {
-    pub steps: Vec<Arc<dyn Step>>,
+    pub steps: Vec<Arc<dyn StepGeneric<NodePool, Schema>>>,
 }
 
 impl BatchStep {
-    pub fn new(steps: Vec<Arc<dyn Step>>) -> Self {
+    pub fn new(steps: Vec<Arc<dyn StepGeneric<NodePool, Schema>>>) -> Self {
         Self { steps }
     }
 }
 
-impl Step for BatchStep {
+impl StepGeneric<NodePool, Schema> for BatchStep {
     fn name(&self) -> String {
         "batch_step".to_string()
     }
@@ -32,7 +32,7 @@ impl Step for BatchStep {
     ) -> TransformResult<StepResult> {
         // 预先为每个子步骤生成回滚步骤（基于应用前的快照）
         // 注意：为保证回滚正确性，这里在应用每个子步骤前都记录一次基线
-        let mut inverses: Vec<Arc<dyn Step>> =
+        let mut inverses: Vec<Arc<dyn StepGeneric<NodePool, Schema>>> =
             Vec::with_capacity(self.steps.len());
 
         for step in &self.steps {
@@ -80,10 +80,10 @@ impl Step for BatchStep {
     fn invert(
         &self,
         dart: &Arc<Tree>,
-    ) -> Option<Arc<dyn Step>> {
+    ) -> Option<Arc<dyn StepGeneric<NodePool, Schema>>> {
         // 简化策略：对每个子步骤都基于同一基线计算反向，并逆序封装
         // 注意：这与 Transform::apply_steps_batch 的预处理策略保持一致
-        let mut invs: Vec<Arc<dyn Step>> = Vec::new();
+        let mut invs: Vec<Arc<dyn StepGeneric<NodePool, Schema>>> = Vec::new();
         for step in &self.steps {
             if let Some(inv) = step.invert(dart) {
                 invs.push(inv);

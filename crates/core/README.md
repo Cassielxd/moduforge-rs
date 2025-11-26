@@ -235,7 +235,7 @@ tokio-util = { workspace = true }
 async-channel = { workspace = true }
 
 # 并发和同步
-im = { workspace = true }
+rpds = { workspace = true }
 lazy_static = { workspace = true }
 
 # 序列化

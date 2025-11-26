@@ -15,13 +15,30 @@ ModuForge-RS 数据转换包采用基于步骤的转换架构，确保文档变�
 - **Copy-on-Write**: 采用写时复制策略，减少不必要的内存分配
 - **事务支持**: 完整的提交和回滚机制，支持历史记录管理
 - **批量操作**: 高效的批量步骤应用，减少中间状态创建
+- **泛型架构**: 从 Phase 4 开始，完全支持自定义容器和模式系统
+
+### Phase 4 泛型架构
+
+转换系统现已完全泛型化，与状态管理系统紧密集成：
+
+- **StepGeneric<C, S>**: 泛型步骤接口，支持任意容器和模式组合
+- **TransformGeneric<C, S>**: 泛型转换器，可处理自定义数据容器
+- **与 State 层集成**: 通过 `TransactionGeneric<C, S>` 无缝集成
+- **向后兼容**: 通过类型别名保持 API 兼容性
 
 ### 核心架构组件
 
 ```
+┌────────────────────────────────────────────────────────────────┐
+│                     Generic Layer (Phase 4)                    │
+│          StepGeneric<C,S> + TransformGeneric<C,S>              │
+│          与 StateGeneric<C,S> 深度集成                         │
+├────────────────────────────────────────────────────────────────┤
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Transform     │    │   Step          │    │   Patch         │
 │   (转换系统)     │◄──►│   (步骤接口)     │◄──►│   (补丁系统)     │
+│= TransformGeneric    │= StepGeneric    │    │                 │
+│<NodePool,Schema>│    │<NodePool,Schema>│    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          ▼                       ▼                       ▼
@@ -32,6 +49,309 @@ ModuForge-RS 数据转换包采用基于步骤的转换架构，确保文档变�
 ```
 
 ## 🚀 核心功能
+
+### 0. 泛型转换系统 (Generic Transform System) ⭐ NEW
+
+从 Phase 4 开始，转换系统完全泛型化，支持任意数据容器和模式定义组合，与状态管理系统深度集成。
+
+#### StepGeneric<C, S> 接口
+
+```rust
+/// 泛型步骤接口
+pub trait StepGeneric<C, S>: Debug + Send + Sync
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    /// 步骤名称
+    fn name(&self) -> String;
+
+    /// 应用步骤到文档树
+    fn apply(
+        &self,
+        tree: &mut C::InnerState,
+        schema: Arc<S>,
+    ) -> TransformResult<StepResult>;
+
+    /// 序列化步骤
+    fn serialize(&self) -> Option<Vec<u8>> {
+        None
+    }
+
+    /// 生成反向步骤 (用于撤销)
+    fn invert(&self, tree: &Arc<C::InnerState>) -> Option<Arc<dyn StepGeneric<C, S>>> {
+        None
+    }
+
+    /// 获取步骤的 TypeId (用于类型识别)
+    fn type_id(&self) -> std::any::TypeId {
+        std::any::TypeId::of::<Self>()
+    }
+}
+```
+
+**关键特性**：
+- **容器无关**: 适用于任意实现 `DataContainer` 的容器类型
+- **模式无关**: 适用于任意实现 `SchemaDefinition` 的模式系统
+- **类型安全**: 编译时检查步骤与容器/模式的兼容性
+- **可序列化**: 支持步骤的持久化和网络传输
+
+#### TransformGeneric<C, S> 架构
+
+```rust
+pub struct TransformGeneric<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    pub base_doc: Arc<C>,
+    pub draft: LazyDoc<C>,
+    pub schema: Arc<S>,
+    pub steps: Vec<Arc<dyn StepGeneric<C, S>>>,
+    pub inverted: Vec<Arc<dyn StepGeneric<C, S>>>,
+}
+```
+
+**核心方法**：
+```rust
+impl<C, S> TransformGeneric<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    /// 创建转换器
+    pub fn new_generic(doc: Arc<C>, schema: Arc<S>) -> Self;
+
+    /// 应用单个步骤
+    pub fn step(&mut self, step: Arc<dyn StepGeneric<C, S>>) -> TransformResult<()>;
+
+    /// 批量应用步骤
+    pub fn apply_steps_batch(
+        &mut self,
+        steps: Vec<Arc<dyn StepGeneric<C, S>>>,
+    ) -> TransformResult<()>;
+
+    /// 获取当前文档状态
+    pub fn doc(&mut self) -> Arc<C>;
+
+    /// 提交更改
+    pub fn commit(&mut self);
+
+    /// 回滚更改
+    pub fn rollback(&mut self);
+
+    /// 检查文档是否已更改
+    pub fn doc_changed(&self) -> bool;
+}
+```
+
+#### 与 State 层集成
+
+Transform 层通过 `TransactionGeneric<C, S>` 与 State 层深度集成：
+
+```rust
+use mf_state::{StateGeneric, TransactionGeneric};
+use mf_transform::StepGeneric;
+
+// 1. State 创建事务
+let state: StateGeneric<C, S> = /* ... */;
+let mut transaction = state.tr_generic();
+
+// 2. 添加转换步骤到事务
+let step: Arc<dyn StepGeneric<C, S>> = /* ... */;
+transaction.add_step(step)?;
+
+// 3. 应用事务到状态
+let result = state.apply_generic(transaction).await?;
+
+// 4. 获取新状态
+let new_state = result.state;
+```
+
+#### 实现自定义步骤
+
+```rust
+use mf_transform::{StepGeneric, StepResult, TransformResult};
+use mf_model::traits::{DataContainer, SchemaDefinition};
+
+/// 自定义步骤示例
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+struct CustomStep<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    node_id: String,
+    operation: String,
+    _phantom: std::marker::PhantomData<(C, S)>,
+}
+
+impl<C, S> StepGeneric<C, S> for CustomStep<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    fn name(&self) -> String {
+        format!("custom_step_{}", self.operation)
+    }
+
+    fn apply(
+        &self,
+        tree: &mut C::InnerState,
+        schema: Arc<S>,
+    ) -> TransformResult<StepResult> {
+        // 执行自定义操作
+        match self.operation.as_str() {
+            "highlight" => {
+                // 实现高亮逻辑
+                tracing::info!("高亮节点: {}", self.node_id);
+                Ok(StepResult::ok())
+            }
+            "hide" => {
+                // 实现隐藏逻辑
+                tracing::info!("隐藏节点: {}", self.node_id);
+                Ok(StepResult::ok())
+            }
+            _ => Ok(StepResult::fail("未知操作".to_string())),
+        }
+    }
+
+    fn serialize(&self) -> Option<Vec<u8>> {
+        serde_json::to_vec(self).ok()
+    }
+
+    fn invert(&self, tree: &Arc<C::InnerState>) -> Option<Arc<dyn StepGeneric<C, S>>> {
+        let reverse_op = match self.operation.as_str() {
+            "highlight" => "unhighlight",
+            "hide" => "show",
+            _ => return None,
+        };
+
+        Some(Arc::new(CustomStep {
+            node_id: self.node_id.clone(),
+            operation: reverse_op.to_string(),
+            _phantom: std::marker::PhantomData,
+        }))
+    }
+}
+```
+
+#### 默认步骤实现
+
+所有内置步骤都已泛型化：
+
+```rust
+// 节点操作步骤
+impl<C, S> StepGeneric<C, S> for AddNodeStep
+where
+    C: DataContainer<Item = Node, InnerState = Tree> + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    fn name(&self) -> String {
+        "add_node".to_string()
+    }
+
+    fn apply(&self, tree: &mut Tree, schema: Arc<S>) -> TransformResult<StepResult> {
+        // 添加节点实现
+    }
+}
+
+impl<C, S> StepGeneric<C, S> for RemoveNodeStep { /* ... */ }
+impl<C, S> StepGeneric<C, S> for MoveNodeStep { /* ... */ }
+
+// 属性操作步骤
+impl<C, S> StepGeneric<C, S> for AttrStep { /* ... */ }
+
+// 标记操作步骤
+impl<C, S> StepGeneric<C, S> for AddMarkStep { /* ... */ }
+impl<C, S> StepGeneric<C, S> for RemoveMarkStep { /* ... */ }
+```
+
+#### 步骤工厂模式
+
+支持步骤的序列化和反序列化：
+
+```rust
+use mf_persistence::step_factory::{StepFactory, StepFactoryRegistry};
+
+// 1. 实现步骤工厂
+#[derive(Debug)]
+struct CustomStepFactory;
+
+impl StepFactory for CustomStepFactory {
+    fn create_from_bytes(
+        &self,
+        bytes: &[u8],
+    ) -> Arc<dyn StepGeneric<NodePool, Schema>> {
+        let step: CustomStep<NodePool, Schema> =
+            serde_json::from_slice(bytes).unwrap();
+        Arc::new(step)
+    }
+}
+
+// 2. 注册步骤工厂
+let mut registry = StepFactoryRegistry::new();
+registry.register("custom_step", Arc::new(CustomStepFactory));
+
+// 3. 反序列化步骤
+let step = registry.create("custom_step", serialized_bytes);
+```
+
+#### 使用示例：自定义容器转换
+
+```rust
+use mf_transform::{TransformGeneric, StepGeneric};
+use mf_model::traits::{DataContainer, SchemaDefinition};
+
+// 1. 定义自定义容器和模式
+struct MyContainer { /* ... */ }
+struct MySchema { /* ... */ }
+
+impl DataContainer for MyContainer {
+    type Item = MyItem;
+    type InnerState = MyState;
+    /* ... */
+}
+
+impl SchemaDefinition for MySchema {
+    type Container = MyContainer;
+    /* ... */
+}
+
+// 2. 创建泛型转换器
+let doc = Arc::new(MyContainer::new());
+let schema = Arc::new(MySchema::new());
+let mut transform = TransformGeneric::<MyContainer, MySchema>::new_generic(doc, schema);
+
+// 3. 应用自定义步骤
+let step: Arc<dyn StepGeneric<MyContainer, MySchema>> = Arc::new(CustomStep {
+    node_id: "test".to_string(),
+    operation: "highlight".to_string(),
+    _phantom: std::marker::PhantomData,
+});
+
+transform.step(step)?;
+
+// 4. 提交更改
+transform.commit();
+```
+
+#### 向后兼容性
+
+```rust
+// 旧代码无需修改 - 类型别名自动适配
+use mf_transform::{Transform, Step};
+use mf_model::{node_pool::NodePool, schema::Schema};
+
+// Transform 是 TransformGeneric<NodePool, Schema> 的类型别名
+pub type Transform = TransformGeneric<NodePool, Schema>;
+pub type Step = dyn StepGeneric<NodePool, Schema>;
+
+// 现有代码继续工作
+let mut transform = Transform::new(doc, schema);
+let step: Arc<dyn Step> = Arc::new(AddNodeStep::new(/* ... */));
+transform.step(step)?;
+```
 
 ### 1. 转换系统 (Transform)
 - **延迟计算**: 使用 `LazyDoc` 枚举实现智能的文档状态计算
@@ -76,7 +396,7 @@ ModuForge-RS 数据转换包采用基于步骤的转换架构，确保文档变�
 ```toml
 [dependencies]
 # 不可变数据结构
-im = { version = "15.1", features = ["serde"] }
+rpds = { workspace = true, features = ["serde"] }
 
 # 序列化
 serde = { version = "1.0", features = ["derive", "rc"] }
@@ -119,7 +439,7 @@ use mf_transform::{
 };
 use mf_model::{node_type::NodeEnum, schema::Schema, node_pool::NodePool, mark::Mark};
 use std::sync::Arc;
-use im::HashMap as ImHashMap;
+use rpds::HashTrieMap;
 use serde_json::json;
 
 #[tokio::main]
@@ -140,16 +460,16 @@ async fn main() -> anyhow::Result<()> {
     transform.step(add_step)?;
     
     // 更新属性
-    let mut attrs = ImHashMap::new();
-    attrs.insert("class".to_string(), json!("highlight"));
+    let mut attrs = HashTrieMap::new();
+    attrs = attrs.insert("class".to_string(), json!("highlight"));
     let attr_step = Arc::new(AttrStep::new(
         "test_node".to_string(),
         attrs
     ));
     transform.step(attr_step)?;
-    
+
     // 添加标记
-    let mark = Mark::new("bold".to_string(), ImHashMap::new());
+    let mark = Mark::new("bold".to_string(), HashTrieMap::new());
     let mark_step = Arc::new(AddMarkStep::new(
         "test_node".to_string(),
         vec![mark]
@@ -344,7 +664,7 @@ step.set_optimize(true);      // 启用优化
 
 ### 内存管理
 - **Copy-on-Write**: 采用写时复制策略，减少内存分配
-- **结构共享**: 利用不可变数据结构的结构共享特性
+- **结构共享**: 利用 rpds 持久化数据结构的结构共享特性
 - **批量操作**: 批量处理减少中间状态创建
 
 ### 并发性能
@@ -416,9 +736,9 @@ mod tests {
         let schema = Arc::new(Schema::default());
         let doc = Arc::new(NodePool::default());
         let mut transform = Transform::new(doc, schema);
-        
-        let mut attrs = ImHashMap::new();
-        attrs.insert("class".to_string(), json!("test"));
+
+        let mut attrs = HashTrieMap::new();
+        attrs = attrs.insert("class".to_string(), json!("test"));
         let step = Arc::new(AttrStep::new(
             "test_node".to_string(),
             attrs

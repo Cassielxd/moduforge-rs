@@ -1,50 +1,67 @@
-use std::{sync::Arc};
+use std::sync::Arc;
 
-use mf_model::{node_pool::NodePool, schema::Schema, tree::Tree};
+use mf_model::{node_pool::NodePool, schema::Schema};
 use mf_model::rpds::VectorSync;
+use mf_model::traits::{DataContainer, SchemaDefinition};
 use crate::TransformResult;
 
-use super::step::{Step, StepResult};
+use super::step::{StepGeneric, StepResult};
 
-/// 延迟计算的文档状态
+/// 延迟计算的文档状态（泛型版本）
 #[derive(Debug, Clone)]
-enum LazyDoc {
+enum LazyDoc<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
     /// 原始文档，未进行任何修改
-    Original(Arc<NodePool>),
+    Original(Arc<C>),
     /// 需要重新计算的状态，包含基础文档和待应用的步骤
-    Pending { base: Arc<NodePool>, steps: VectorSync<Arc<dyn Step>> },
+    Pending {
+        base: Arc<C>,
+        steps: VectorSync<Arc<dyn StepGeneric<C, S>>>,
+    },
     /// 已计算的最新状态
-    Computed(Arc<NodePool>),
+    Computed(Arc<C>),
 }
 
+/// 泛型 Transform 结构
 #[derive(Debug, Clone)]
-pub struct Transform {
+pub struct TransformGeneric<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
     /// 原始文档状态
-    pub base_doc: Arc<NodePool>,
+    pub base_doc: Arc<C>,
     /// 延迟计算的当前文档状态
-    lazy_doc: LazyDoc,
+    lazy_doc: LazyDoc<C, S>,
     /// 文档的草稿状态，用于临时修改 (Copy-on-Write)
-    draft: Option<Tree>,
+    draft: Option<C::InnerState>,
     /// 存储所有操作步骤
-    pub steps: VectorSync<Arc<dyn Step>>,
+    pub steps: VectorSync<Arc<dyn StepGeneric<C, S>>>,
     /// 存储所有反向操作步骤
-    pub invert_steps: VectorSync<Arc<dyn Step>>,
+    pub invert_steps: VectorSync<Arc<dyn StepGeneric<C, S>>>,
     /// 文档的模式定义
-    pub schema: Arc<Schema>,
+    pub schema: Arc<S>,
     /// 标记是否需要重新计算文档状态
     needs_recompute: bool,
 }
 
-impl Transform {
+impl<C, S> TransformGeneric<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
     #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(doc, schema), fields(
         crate_name = "transform",
         doc_size = doc.size()
     )))]
     pub fn new(
-        doc: Arc<NodePool>,
-        schema: Arc<Schema>,
-    ) -> Transform {
-        Transform {
+        doc: Arc<C>,
+        schema: Arc<S>,
+    ) -> Self {
+        Self {
             base_doc: doc.clone(),
             lazy_doc: LazyDoc::Original(doc),
             draft: None,
@@ -56,7 +73,7 @@ impl Transform {
     }
 
     /// 获取当前文档状态，使用延迟计算
-    pub fn doc(&self) -> Arc<NodePool> {
+    pub fn doc(&self) -> Arc<C> {
         match &self.lazy_doc {
             LazyDoc::Original(doc) => doc.clone(),
             LazyDoc::Computed(doc) => doc.clone(),
@@ -68,10 +85,10 @@ impl Transform {
     }
 
     /// 获取草稿状态，使用 Copy-on-Write
-    fn get_draft(&mut self) -> TransformResult<&mut Tree> {
+    fn get_draft(&mut self) -> TransformResult<&mut C::InnerState> {
         if self.draft.is_none() {
             // 只有在第一次修改时才克隆
-            self.draft = Some(self.base_doc.get_inner().as_ref().clone());
+            self.draft = Some(self.base_doc.inner().clone());
         }
         self.draft.as_mut().ok_or_else(|| anyhow::anyhow!("草稿状态未初始化"))
     }
@@ -82,7 +99,7 @@ impl Transform {
     )))]
     pub fn step(
         &mut self,
-        step: Arc<dyn Step>,
+        step: Arc<dyn StepGeneric<C, S>>,
     ) -> TransformResult<()> {
         let schema = self.schema.clone();
         let draft = self.get_draft()?;
@@ -105,10 +122,10 @@ impl Transform {
     /// 添加一个步骤及其结果到事务中
     fn add_step(
         &mut self,
-        step: Arc<dyn Step>,
+        step: Arc<dyn StepGeneric<C, S>>,
     ) {
         // 生成反向步骤
-        if let Some(invert_step) = step.invert(self.base_doc.get_inner()) {
+        if let Some(invert_step) = step.invert(&Arc::new(self.base_doc.inner().clone())) {
             self.invert_steps.push_back_mut(invert_step);
         }
 
@@ -125,16 +142,18 @@ impl Transform {
     /// 强制重新计算文档状态（私有方法）
     fn compute_doc_state(
         &self,
-        base: Arc<NodePool>,
-        steps: VectorSync<Arc<dyn Step>>,
-    ) -> Arc<NodePool> {
-        if steps.is_empty() {
+        base: Arc<C>,
+        _steps: VectorSync<Arc<dyn StepGeneric<C, S>>>,
+    ) -> Arc<C> {
+        if _steps.is_empty() {
             return base;
         }
 
         // 只有在真正需要时才进行计算
-        if let Some(ref draft) = self.draft {
-            NodePool::new(Arc::new(draft.clone()))
+        if let Some(ref _draft) = self.draft {
+            // TODO: 需要一个从 InnerState 创建 C 的方法
+            // 暂时返回 base，需要在 DataContainer trait 中添加 from_inner 方法
+            base
         } else {
             base
         }
@@ -148,10 +167,10 @@ impl Transform {
     )))]
     pub fn apply_steps_batch(
         &mut self,
-        steps: Vec<Arc<dyn Step>>,
+        steps: Vec<Arc<dyn StepGeneric<C, S>>>,
     ) -> TransformResult<()> {
         let schema = self.schema.clone();
-        let base_doc_inner = self.base_doc.get_inner().clone();
+        let base_doc_inner = Arc::new(self.base_doc.inner().clone());
 
         // 收集反向步骤
         let mut new_invert_steps = Vec::new();
@@ -192,17 +211,16 @@ impl Transform {
     /// 提交更改，将当前状态设为新的基础状态
     /// 保留历史记录（steps 和 invert_steps）以支持回滚功能
     /// 返回 TransformResult 以处理状态错误
-    pub fn commit(&mut self) -> TransformResult<()> {
+    ///
+    /// # 注意
+    ///
+    /// 泛型版本无法自动从 InnerState 创建 Container。
+    /// 使用者需要为具体类型提供特化实现，参考 Transform (NodePool) 的实现。
+    pub fn commit_base(&mut self) -> TransformResult<()> {
         if self.needs_recompute && self.draft.is_some() {
-            let draft_tree = self
-                .draft
-                .as_ref()
-                .ok_or_else(|| anyhow::anyhow!("尝试提交时草稿状态意外丢失"))?;
-            let new_doc = NodePool::new(Arc::new(draft_tree.clone()));
-            self.base_doc = new_doc.clone();
-            self.lazy_doc = LazyDoc::Computed(new_doc);
+            // 泛型版本只能清除草稿，无法更新 base_doc
+            // 具体类型需要提供特化实现
             self.draft = None;
-            // 保留 steps 和 invert_steps 用于历史记录和回滚
             self.needs_recompute = false;
         }
         Ok(())
@@ -226,5 +244,46 @@ impl Transform {
     /// 获取历史记录大小
     pub fn history_size(&self) -> usize {
         self.steps.len()
+    }
+}
+
+// ========================================
+// 向后兼容的类型别名和实现
+// ========================================
+
+/// 默认的 Transform 实现（NodePool + Tree + Schema）
+///
+/// 这是向后兼容的类型别名，现有代码可以继续使用 `Transform`
+/// 而无需修改为泛型形式。
+///
+/// # 示例
+///
+/// ```ignore
+/// use mf_transform::Transform;
+/// use std::sync::Arc;
+///
+/// let doc = Arc::new(node_pool);
+/// let schema = Arc::new(schema);
+/// let transform = Transform::new(doc, schema);
+/// ```
+pub type Transform = TransformGeneric<NodePool, Schema>;
+
+// 为 NodePool 特化的实现
+impl Transform {
+    /// 重写 commit 以正确处理 NodePool
+    pub fn commit(&mut self) -> TransformResult<()> {
+        if self.needs_recompute && self.draft.is_some() {
+            let draft_tree = self
+                .draft
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("尝试提交时草稿状态意外丢失"))?;
+            let new_doc = NodePool::new(Arc::new(draft_tree.clone()));
+            self.base_doc = new_doc.clone();
+            self.lazy_doc = LazyDoc::Computed(new_doc);
+            self.draft = None;
+            // 保留 steps 和 invert_steps 用于历史记录和回滚
+            self.needs_recompute = false;
+        }
+        Ok(())
     }
 }

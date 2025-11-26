@@ -2,21 +2,28 @@ use std::sync::Arc;
 
 use mf_model::{
     node_definition::NodeTree, schema::Schema, tree::Tree, types::NodeId,
+    node_pool::NodePool,
 };
 
 use crate::transform_error;
 
 use super::{
-    step::{Step, StepResult},
+    step::{StepGeneric, StepResult},
     TransformResult,
 };
 use serde::{Deserialize, Serialize};
+
+// ========================================
+// NodePool/Tree Step 实现
+// ========================================
+
 /// 添加节点的步骤
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AddNodeStep {
     pub parent_id: NodeId,
     pub nodes: Vec<NodeTree>,
 }
+
 impl AddNodeStep {
     pub fn new(
         parent_id: NodeId,
@@ -24,6 +31,7 @@ impl AddNodeStep {
     ) -> Self {
         AddNodeStep { parent_id, nodes }
     }
+
     // 递归收集单个节点枚举的所有子节点 id
     pub fn collect_node_ids(node_enum: &NodeTree) -> Vec<NodeId> {
         let mut ids: Vec<NodeId> = vec![node_enum.0.id.clone()];
@@ -33,10 +41,12 @@ impl AddNodeStep {
         ids
     }
 }
-impl Step for AddNodeStep {
+
+impl StepGeneric<NodePool, Schema> for AddNodeStep {
     fn name(&self) -> String {
         "add_node_step".to_string()
     }
+
     fn apply(
         &self,
         dart: &mut Tree,
@@ -49,6 +59,7 @@ impl Step for AddNodeStep {
             Err(e) => Err(transform_error(e.to_string())),
         }
     }
+
     fn serialize(&self) -> Option<Vec<u8>> {
         serde_json::to_vec(self).ok()
     }
@@ -56,28 +67,32 @@ impl Step for AddNodeStep {
     fn invert(
         &self,
         _: &Arc<Tree>,
-    ) -> Option<Arc<dyn Step>> {
-        // 收集所有节点的 id（包括顶级节点和所有子节点）
-        let mut all_node_ids = Vec::new();
-        for node_enum in &self.nodes {
-            all_node_ids.extend(Self::collect_node_ids(node_enum));
-        }
+    ) -> Option<Arc<dyn StepGeneric<NodePool, Schema>>> {
+        // 只收集顶层节点的 id，不递归收集子节点
+        // RemoveNodeStep 删除顶层节点时会自动删除其所有子树
+        let top_level_ids: Vec<NodeId> = self
+            .nodes
+            .iter()
+            .map(|node_enum| node_enum.0.id.clone())
+            .collect();
 
-        if !all_node_ids.is_empty() {
+        if !top_level_ids.is_empty() {
             return Some(Arc::new(RemoveNodeStep::new(
                 self.parent_id.clone(),
-                all_node_ids,
+                top_level_ids,
             )));
         }
         None
     }
 }
+
 /// 删除节点的步骤
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RemoveNodeStep {
     pub parent_id: NodeId,
     pub node_ids: Vec<NodeId>,
 }
+
 impl RemoveNodeStep {
     pub fn new(
         parent_id: NodeId,
@@ -86,10 +101,12 @@ impl RemoveNodeStep {
         RemoveNodeStep { parent_id, node_ids }
     }
 }
-impl Step for RemoveNodeStep {
+
+impl StepGeneric<NodePool, Schema> for RemoveNodeStep {
     fn name(&self) -> String {
         "remove_node_step".to_string()
     }
+
     fn apply(
         &self,
         dart: &mut Tree,
@@ -99,9 +116,10 @@ impl Step for RemoveNodeStep {
         let result = dart.remove_node(&self.parent_id, self.node_ids.clone());
         match result {
             Ok(_) => Ok(StepResult::ok()),
-            Err(e) => Err(transform_error(e.to_string())), // 修复：失败时返回Err保持一致性
+            Err(e) => Err(transform_error(e.to_string())),
         }
     }
+
     fn serialize(&self) -> Option<Vec<u8>> {
         serde_json::to_vec(self).ok()
     }
@@ -109,7 +127,7 @@ impl Step for RemoveNodeStep {
     fn invert(
         &self,
         dart: &Arc<Tree>,
-    ) -> Option<Arc<dyn Step>> {
+    ) -> Option<Arc<dyn StepGeneric<NodePool, Schema>>> {
         // 收集所有要删除的节点及其子树
         let mut nodes_to_restore = Vec::new();
 
@@ -149,10 +167,11 @@ impl MoveNodeStep {
     }
 }
 
-impl Step for MoveNodeStep {
+impl StepGeneric<NodePool, Schema> for MoveNodeStep {
     fn name(&self) -> String {
         "move_node_step".to_string()
     }
+
     fn apply(
         &self,
         dart: &mut Tree,
@@ -170,6 +189,7 @@ impl Step for MoveNodeStep {
             Err(err) => Err(transform_error(err.to_string())),
         }
     }
+
     fn serialize(&self) -> Option<Vec<u8>> {
         serde_json::to_vec(self).ok()
     }
@@ -177,7 +197,7 @@ impl Step for MoveNodeStep {
     fn invert(
         &self,
         dart: &Arc<Tree>,
-    ) -> Option<Arc<dyn Step>> {
+    ) -> Option<Arc<dyn StepGeneric<NodePool, Schema>>> {
         match dart.get_parent_node(&self.node_id) {
             Some(source_parent) => {
                 // 反向时需要把节点放回原父节点的原索引
@@ -252,24 +272,26 @@ mod tests {
         let test = create_test_node("test");
         let node_enum = NodeTree(node, vec![NodeTree(test, vec![])]);
         let step = AddNodeStep::new("root".into(), vec![node_enum.clone()]);
+
+        // Call invert BEFORE applying (on the original state)
+        let tree_snapshot = Arc::new(tree.clone());
+        let inverted = step.invert(&tree_snapshot);
+        assert!(inverted.is_some());
+
+        // Now apply the step
         let result = step.apply(&mut tree, schema.clone());
         assert!(result.is_ok());
 
         // Verify node was added
+        assert!(tree.get_node(&"child".into()).is_some());
         assert!(tree.get_node(&"test".into()).is_some());
 
-        // Test invert
-        let inverted = step.invert(&Arc::new(tree.clone()));
-        assert!(inverted.is_some());
-
-        // Apply inverted step
+        // Apply inverted step to restore original state
         if let Some(inverted_step) = inverted {
             let result = inverted_step.apply(&mut tree, schema);
-            if result.is_err() {
-                eprintln!("Invert step failed: {result:?}");
-            }
             assert!(result.is_ok());
-            // Verify node was removed
+            // Verify nodes were removed
+            assert!(tree.get_node(&"child".into()).is_none());
             assert!(tree.get_node(&"test".into()).is_none());
         }
     }
@@ -285,15 +307,26 @@ mod tests {
             .expect("测试中添加节点应该成功");
 
         let step = RemoveNodeStep::new("root".into(), vec!["test".into()]);
+
+        // Call invert BEFORE applying (on the tree that has the node)
+        let tree_snapshot = Arc::new(tree.clone());
+        let inverted = step.invert(&tree_snapshot);
+        assert!(inverted.is_some());
+
+        // Now apply the remove step
         let result = step.apply(&mut tree, schema.clone());
         assert!(result.is_ok());
 
         // Verify node was removed
         assert!(tree.get_node(&"test".into()).is_none());
 
-        // Test invert
-        let inverted = step.invert(&Arc::new(tree.clone()));
-        assert!(inverted.is_some());
+        // Apply inverted step to restore the node
+        if let Some(inverted_step) = inverted {
+            let result = inverted_step.apply(&mut tree, schema);
+            assert!(result.is_ok());
+            // Verify node was restored
+            assert!(tree.get_node(&"test".into()).is_some());
+        }
     }
 
     #[test]
