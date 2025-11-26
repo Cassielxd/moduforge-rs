@@ -1,5 +1,6 @@
 use async_trait::async_trait;
-use mf_state::{transaction::Command, Transaction};
+use mf_state::{transaction::CommandGeneric, Transaction};
+use mf_model::{node_pool::NodePool, schema::Schema};
 use mf_transform::TransformResult;
 use serde::{Deserialize, Serialize};
 
@@ -12,7 +13,7 @@ pub struct InsertFbfxCsxmCommand {
 }
 
 #[async_trait]
-impl Command for InsertFbfxCsxmCommand {
+impl CommandGeneric<NodePool, Schema> for InsertFbfxCsxmCommand {
     async fn execute(
         &self,
         tr: &mut Transaction,
@@ -35,7 +36,7 @@ pub struct DeleteFbfxCsxmCommand {
 }
 
 #[async_trait]
-impl Command for DeleteFbfxCsxmCommand {
+impl CommandGeneric<NodePool, Schema> for DeleteFbfxCsxmCommand {
     async fn execute(
         &self,
         tr: &mut Transaction,

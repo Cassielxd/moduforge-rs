@@ -100,10 +100,13 @@ pub fn impl_command(
         }
 
         #[async_trait::async_trait]
-        impl #struct_generics Command for #command_struct #struct_generics {
+        impl #struct_generics mf_state::transaction::CommandGeneric<
+            mf_model::node_pool::NodePool,
+            mf_model::schema::Schema
+        > for #command_struct #struct_generics {
             async fn execute(
                 &self,
-                tr: &mut Transaction,
+                tr: &mut mf_state::Transaction,
             ) -> TransformResult<()> {
                 #fn_name(tr, #(#call_args),*).await
             }

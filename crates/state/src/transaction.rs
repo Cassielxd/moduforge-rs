@@ -21,16 +21,29 @@ use std::fmt::Debug;
 use std::sync::atomic::{AtomicU64, Ordering};
 use mf_model::rpds::{HashTrieMapSync};
 
-/// 定义可执行的命令接口
+/// 定义可执行的命令接口 (泛型版本)
 /// 要求实现 Send + Sync 以支持并发操作，并实现 Debug 以支持调试
 #[async_trait]
-pub trait Command: Send + Sync + Debug {
+pub trait CommandGeneric<C, S>: Send + Sync + Debug
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
     async fn execute(
         &self,
-        tr: &mut Transaction,
+        tr: &mut TransactionGeneric<C, S>,
     ) -> TransformResult<()>;
     fn name(&self) -> String;
 }
+
+/// 默认的 Command trait (NodePool + Schema)
+///
+/// 这是一个便利别名，自动实现了 CommandGeneric<NodePool, Schema>
+/// 现有代码可以继续使用 Command trait 而无需修改
+pub trait Command: CommandGeneric<NodePool, Schema> {}
+
+/// 为所有实现了 CommandGeneric<NodePool, Schema> 的类型自动实现 Command
+impl<T> Command for T where T: CommandGeneric<NodePool, Schema> {}
 
 static VERSION: AtomicU64 = AtomicU64::new(1);
 pub fn get_tr_id() -> u64 {

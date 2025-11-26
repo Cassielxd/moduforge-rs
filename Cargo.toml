@@ -5,9 +5,7 @@ members = [
     "tools/benchmark-coordinator",
     "tools/file_tools/src-tauri"
 ]
-exclude = [
-    "examples/*"
-]
+
 
 [workspace.package]
 version = "0.7.0"
