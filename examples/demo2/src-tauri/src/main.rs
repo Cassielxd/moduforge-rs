@@ -727,9 +727,6 @@ async fn broadcast_to_children(
     Ok(())
 }
 
-// 暂时注释掉数据交互功能，先让窗口创建正常工作
-// TODO: 稍后重新实现数据交互功能
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // 初始化日志系统（使用简单的 tracing_subscriber）

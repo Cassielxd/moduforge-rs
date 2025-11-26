@@ -152,6 +152,24 @@ impl ErasedConverter {
         (self.convert_fn)(step as &dyn Any, txn, context)
     }
 
+    /// 验证步骤而不执行转换
+    pub fn validate(
+        &self,
+        step: &dyn StepGeneric<NodePool, Schema>,
+        context: &ConversionContext,
+    ) -> ConversionResult<()> {
+        // 检查类型匹配
+        if step.type_id() != self.type_id {
+            return Err(ConversionError::UnsupportedStepType {
+                step_type: step.name().to_string(),
+                type_id: step.type_id(),
+            });
+        }
+
+        // 执行验证
+        (self.validate_fn)(step as &dyn Any, context)
+    }
+
     /// 获取类型信息
     pub fn type_id(&self) -> TypeId {
         self.type_id

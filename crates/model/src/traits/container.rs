@@ -63,4 +63,20 @@ pub trait DataContainer: Send + Sync + Clone + Debug {
     ///
     /// 用于访问容器的内部数据结构
     fn inner(&self) -> &Self::InnerState;
+
+    /// 从内部状态创建新的容器实例
+    ///
+    /// # 参数
+    ///
+    /// * `inner` - 内部状态的 Arc 包装
+    ///
+    /// # 返回值
+    ///
+    /// 返回基于新内部状态的容器实例
+    ///
+    /// # 用途
+    ///
+    /// 此方法用于事务提交时，从修改后的草稿状态创建新的容器实例。
+    /// 这是实现不可变更新模式的关键方法。
+    fn from_inner(inner: Self::InnerState) -> Self;
 }

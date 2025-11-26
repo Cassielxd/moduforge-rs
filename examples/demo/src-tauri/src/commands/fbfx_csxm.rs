@@ -40,7 +40,6 @@ impl Command for DeleteFbfxCsxmCommand {
         &self,
         tr: &mut Transaction,
     ) -> TransformResult<()> {
-        // 设置 meta 高度后续删除 的是 措施项目节点 todo!()
         self.delete_node(tr, &self.data).await
     }
 

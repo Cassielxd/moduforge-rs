@@ -234,15 +234,13 @@ impl EventBusActor {
             }
         }
 
-        // 错误处理策略（与原始实现相同）
+        // 错误处理策略（根据配置决定是否抛出错误）
         if !processing_errors.is_empty() {
             let error_summary = processing_errors.join("; ");
             debug!("事件处理过程中出现错误: {}", error_summary);
 
             // 根据配置决定是否抛出错误
-            // 如果处理失败，记录错误但继续处理其他handlers
-            if false {
-                // TODO: 可以考虑添加fail_on_handler_error配置
+            if actor_state.config.fail_on_handler_error {
                 return Err(error_utils::event_error(format!(
                     "事件 {event_name} 处理失败: {error_summary}"
                 )));

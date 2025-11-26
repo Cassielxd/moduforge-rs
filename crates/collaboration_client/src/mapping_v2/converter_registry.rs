@@ -173,13 +173,13 @@ impl StaticConverterRegistry {
     pub fn validate_step(
         &self,
         step: &dyn StepGeneric<NodePool, Schema>,
-        _context: &ConversionContext,
+        context: &ConversionContext,
     ) -> ConversionResult<()> {
         let step_type_id = step.type_id();
 
-        if let Some(_converter) = self.converters.get(&step_type_id) {
-            // TODO: 实现验证逻辑
-            Ok(())
+        if let Some(converter) = self.converters.get(&step_type_id) {
+            // 调用转换器的验证方法
+            converter.validate(step, context)
         } else {
             Err(ConversionError::UnsupportedStepType {
                 step_type: step.name().to_string(),

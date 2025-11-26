@@ -941,4 +941,12 @@ impl DataContainer for NodePool {
     fn inner(&self) -> &Self::InnerState {
         &self.inner
     }
+
+    fn from_inner(inner: Self::InnerState) -> Self {
+        let id = POOL_ID_COUNTER.fetch_add(1, Ordering::SeqCst);
+        Self {
+            inner: Arc::new(inner),
+            key: format!("pool_{id}"),
+        }
+    }
 }

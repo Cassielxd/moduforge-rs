@@ -149,11 +149,10 @@ where
             return base;
         }
 
-        // 只有在真正需要时才进行计算
-        if let Some(ref _draft) = self.draft {
-            // TODO: 需要一个从 InnerState 创建 C 的方法
-            // 暂时返回 base，需要在 DataContainer trait 中添加 from_inner 方法
-            base
+        // 如果有草稿状态，从草稿创建新的容器实例
+        if let Some(ref draft) = self.draft {
+            let new_container = C::from_inner(draft.clone());
+            Arc::new(new_container)
         } else {
             base
         }
