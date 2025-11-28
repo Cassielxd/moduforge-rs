@@ -48,6 +48,10 @@ pub mod tracing_init;
 
 // 新的Actor系统模块
 pub mod actors;
+
+// 泛型运行时系统模块
+pub mod generic;
+
 pub use error::{ForgeResult, error_utils};
 pub use error_helpers::{
     UnwrapHelpers, lock_helpers, collection_helpers, schema_helpers,

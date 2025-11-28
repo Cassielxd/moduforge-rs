@@ -15,41 +15,13 @@ use crate::{
 
 use super::{ActorSystemResult, ActorMetrics};
 
-/// 事件总线消息类型
-#[derive(Debug)]
-pub enum EventBusMessage {
-    /// 发布事件
-    PublishEvent { event: Event },
-    /// 添加事件处理器
-    AddHandler {
-        handler: Arc<dyn EventHandler<Event> + Send + Sync>,
-        reply: oneshot::Sender<HandlerId>,
-    },
-    /// 移除事件处理器
-    RemoveHandler {
-        handler_id: HandlerId,
-        reply: oneshot::Sender<ForgeResult<()>>,
-    },
-    /// 获取事件总线统计信息
-    GetStats { reply: oneshot::Sender<EventBusStats> },
-    /// 更新配置
-    UpdateConfig {
-        config: EventConfig,
-        reply: oneshot::Sender<ForgeResult<()>>,
-    },
-}
+// Re-export from generic module
+pub use crate::generic::messages::{EventBusMessageGeneric, EventBusStats};
 
-// EventBusMessage 自动实现 ractor::Message (Debug + Send + 'static)
+// ==================== 向后兼容类型别名 ====================
 
-/// 事件总线统计信息
-#[derive(Debug, Clone)]
-pub struct EventBusStats {
-    pub events_published: u64,
-    pub events_processed: u64,
-    pub event_failures: u64,
-    pub active_handlers: usize,
-    pub avg_processing_time_ms: u64,
-}
+/// 默认 EventBusMessage 类型（向后兼容）
+pub type EventBusMessage = EventBusMessageGeneric<mf_model::node_pool::NodePool, mf_model::schema::Schema>;
 
 /// 事件总线Actor状态
 pub struct EventBusActorState {

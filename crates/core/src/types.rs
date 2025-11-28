@@ -1,12 +1,12 @@
-use std::{collections::HashMap, sync::Arc, time::SystemTime};
+use std::{collections::HashMap, sync::Arc};
 use async_trait::async_trait;
-use mf_state::{state::TransactionResult, State, StateConfig, Transaction};
+use mf_state::StateConfig;
 
 use crate::{
     event::{Event, EventHandler},
     extension::Extension,
     mark::Mark,
-    middleware::{Middleware, MiddlewareStack},
+    middleware::MiddlewareStack,
     node::Node,
     ForgeResult,
 };
@@ -236,10 +236,16 @@ impl EditorOptionsBuilder {
         self.middleware_stack = stack;
         self
     }
-    pub fn add_middleware<T: Middleware + 'static>(
+    pub fn add_middleware<T>(
         mut self,
         middleware: T,
-    ) -> Self {
+    ) -> Self
+    where
+        T: crate::middleware::MiddlewareGeneric<
+                mf_model::node_pool::NodePool,
+                mf_model::schema::Schema,
+            > + 'static,
+    {
         self.middleware_stack.add(middleware);
         self
     }
@@ -255,73 +261,27 @@ impl EditorOptionsBuilder {
     }
 }
 
-/// 带元信息的历史记录项（混合方案：同时存储事务和状态）
-#[derive(Debug, Clone)]
-pub struct HistoryEntryWithMeta {
-    /// 事务列表（支持批量操作、协作编辑、操作追踪）
-    pub transactions: Vec<Arc<Transaction>>,
+// Re-export from generic module
+pub use crate::generic::types::{
+    HistoryEntryWithMetaGeneric, ProcessorResultGeneric, TaskParamsGeneric, TransactionStatus,
+};
 
-    /// 状态快照（用于快速撤销/重做，每个历史点都保存）
-    pub state: Arc<State>,
+// ==================== 向后兼容类型别名 ====================
 
-    /// 操作描述
-    pub description: String,
+/// 默认 HistoryEntryWithMeta 类型（向后兼容）
+pub type HistoryEntryWithMeta = HistoryEntryWithMetaGeneric<
+    mf_model::node_pool::NodePool,
+    mf_model::schema::Schema,
+>;
 
-    /// 时间戳
-    pub timestamp: SystemTime,
+/// 默认 ProcessorResult 类型（向后兼容）
+pub type ProcessorResult = ProcessorResultGeneric<
+    mf_model::node_pool::NodePool,
+    mf_model::schema::Schema,
+>;
 
-    pub meta: serde_json::Value,
-}
-
-impl HistoryEntryWithMeta {
-    /// 创建单事务历史条目
-    pub fn new(
-        transaction: Arc<Transaction>,
-        state: Arc<State>,
-        description: String,
-        meta: serde_json::Value,
-    ) -> Self {
-        Self {
-            transactions: vec![transaction],
-            state,
-            description,
-            timestamp: SystemTime::now(),
-            meta,
-        }
-    }
-
-    /// 创建批量事务历史条目
-    pub fn new_batch(
-        transactions: Vec<Arc<Transaction>>,
-        state: Arc<State>,
-        description: String,
-        meta: serde_json::Value,
-    ) -> Self {
-        Self {
-            transactions,
-            state,
-            description,
-            timestamp: SystemTime::now(),
-            meta,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum TransactionStatus {
-    Pending,
-    Processing,
-    Completed,
-    Failed(String),
-    Rolled,
-    NotFound,
-}
-
-#[derive(Debug, Clone)]
-pub struct ProcessorResult {
-    pub status: TransactionStatus,
-    pub error: Option<String>,
-    pub result: Option<TransactionResult>,
-}
-
-pub type TaskParams = (Arc<State>, Transaction);
+/// 默认 TaskParams 类型（向后兼容）
+pub type TaskParams = TaskParamsGeneric<
+    mf_model::node_pool::NodePool,
+    mf_model::schema::Schema,
+>;

@@ -4,7 +4,6 @@
 
 use ractor::{Actor, ActorRef, ActorProcessingErr};
 use std::sync::Arc;
-use tokio::sync::oneshot;
 
 use crate::{
     debug::debug, error::ForgeResult, history_manager::HistoryManager,
@@ -15,63 +14,18 @@ use mf_state::state::State;
 
 use super::ActorSystemResult;
 
-/// 状态管理消息类型
-#[derive(Debug)]
-pub enum StateMessage {
-    /// 获取当前状态
-    GetState { reply: oneshot::Sender<Arc<State>> },
-    /// 应用事务（包含元信息）
-    ApplyTransaction {
-        transaction: mf_state::Transaction,
-        description: String,
-        meta: serde_json::Value,
-        reply: oneshot::Sender<ForgeResult<Arc<State>>>,
-    },
-    /// 批量应用事务
-    ApplyTransactionBatch {
-        transactions: Vec<mf_state::Transaction>,
-        description: String,
-        meta: serde_json::Value,
-        reply: oneshot::Sender<ForgeResult<Arc<State>>>,
-    },
-    /// 撤销操作
-    Undo { reply: oneshot::Sender<ForgeResult<Arc<State>>> },
-    /// 重做操作
-    Redo { reply: oneshot::Sender<ForgeResult<Arc<State>>> },
-    /// 跳转到指定历史位置
-    Jump { steps: isize, reply: oneshot::Sender<ForgeResult<Arc<State>>> },
-    /// 获取历史记录信息
-    GetHistoryInfo { reply: oneshot::Sender<HistoryInfo> },
-    /// 创建状态快照
-    CreateSnapshot { reply: oneshot::Sender<StateSnapshot> },
-    /// 记录已应用的事务到历史（不实际应用事务）
-    RecordTransactions {
-        state: Arc<State>,
-        transactions: Vec<Arc<mf_state::Transaction>>,
-        description: String,
-        meta: serde_json::Value,
-        reply: oneshot::Sender<ForgeResult<()>>,
-    },
-}
+// Re-export from generic module
+pub use crate::generic::messages::{
+    StateMessageGeneric, StateSnapshotGeneric, HistoryInfo,
+};
 
-// StateMessage 自动实现 ractor::Message (Debug + Send + 'static)
+// ==================== 向后兼容类型别名 ====================
 
-/// 历史记录信息
-#[derive(Debug, Clone)]
-pub struct HistoryInfo {
-    pub current_index: usize,
-    pub total_entries: usize,
-    pub can_undo: bool,
-    pub can_redo: bool,
-}
+/// 默认 StateMessage 类型（向后兼容）
+pub type StateMessage = StateMessageGeneric<mf_model::node_pool::NodePool, mf_model::schema::Schema>;
 
-/// 状态快照
-#[derive(Debug, Clone)]
-pub struct StateSnapshot {
-    pub state: Arc<State>,
-    pub timestamp: std::time::SystemTime,
-    pub version: u64,
-}
+/// 默认 StateSnapshot 类型（向后兼容）
+pub type StateSnapshot = StateSnapshotGeneric<mf_model::node_pool::NodePool, mf_model::schema::Schema>;
 
 /// 状态Actor内部状态
 pub struct StateActorState {

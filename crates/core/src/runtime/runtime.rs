@@ -15,7 +15,7 @@ use crate::{
     },
     history_manager::HistoryManager,
     metrics,
-    runtime::{runtime_trait::RuntimeTrait, sync_flow::FlowEngine},
+    runtime::sync_flow::FlowEngine,
     types::{HistoryEntryWithMeta, ProcessorResult, RuntimeOptions},
 };
 
@@ -23,7 +23,7 @@ use mf_model::{node_pool::NodePool, schema::Schema};
 use mf_state::{
     ops::GlobalResourceManager,
     state::{State, StateConfig},
-    transaction::{Command, Transaction},
+    transaction::Transaction,
 };
 
 /// Editor 结构体代表编辑器的核心功能实现
@@ -416,7 +416,10 @@ impl ForgeRuntime {
     )))]
     pub async fn command(
         &mut self,
-        command: Arc<dyn Command>,
+        command: Arc<dyn mf_state::transaction::CommandGeneric<
+            mf_model::node_pool::NodePool,
+            mf_model::schema::Schema,
+        >>,
     ) -> ForgeResult<()> {
         debug!("正在执行命令: {}", command.name());
         metrics::command_executed(command.name().as_str());
@@ -433,7 +436,10 @@ impl ForgeRuntime {
     )))]
     pub async fn command_with_meta(
         &mut self,
-        command: Arc<dyn Command>,
+        command: Arc<dyn mf_state::transaction::CommandGeneric<
+            mf_model::node_pool::NodePool,
+            mf_model::schema::Schema,
+        >>,
         description: String,
         meta: serde_json::Value,
     ) -> ForgeResult<()> {
@@ -712,7 +718,10 @@ impl Drop for ForgeRuntime {
 // ==================== RuntimeTrait 实现 ====================
 
 #[async_trait]
-impl RuntimeTrait for ForgeRuntime {
+impl crate::runtime::runtime_trait::RuntimeTraitGeneric<
+    mf_model::node_pool::NodePool,
+    mf_model::schema::Schema,
+> for ForgeRuntime {
     async fn dispatch(
         &mut self,
         transaction: Transaction,
@@ -731,14 +740,20 @@ impl RuntimeTrait for ForgeRuntime {
 
     async fn command(
         &mut self,
-        command: Arc<dyn Command>,
+        command: Arc<dyn mf_state::transaction::CommandGeneric<
+            mf_model::node_pool::NodePool,
+            mf_model::schema::Schema,
+        >>,
     ) -> ForgeResult<()> {
         self.command(command).await
     }
 
     async fn command_with_meta(
         &mut self,
-        command: Arc<dyn Command>,
+        command: Arc<dyn mf_state::transaction::CommandGeneric<
+            mf_model::node_pool::NodePool,
+            mf_model::schema::Schema,
+        >>,
         description: String,
         meta: serde_json::Value,
     ) -> ForgeResult<()> {
