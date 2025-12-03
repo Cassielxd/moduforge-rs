@@ -1,0 +1,30 @@
+[package]
+name = "file_tools"
+version = "0.1.0"
+description = "ysf 文件查看工具"
+authors = ["348040933@qq.com"]
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "file_tools_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+serde = { workspace = true }
+serde_json = { workspace = true }
+moduforge-file = { workspace = true }
+zip = { version = "6.0.0", default-features = false, features = ["deflate"] }
+zstd = "0.13"
+once_cell = { workspace = true }
+parking_lot = { workspace = true }
