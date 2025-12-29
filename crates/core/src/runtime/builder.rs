@@ -81,6 +81,7 @@ use crate::{
     ForgeResult,
 };
 use std::sync::Arc;
+use mf_model::{NodePool, Schema};
 
 /// 统一运行时构建器
 ///
@@ -665,7 +666,9 @@ impl AnyRuntime {
     /// 执行命令
     pub async fn command(
         &mut self,
-        command: Arc<dyn mf_state::transaction::Command>,
+        command: Arc<
+            dyn mf_state::transaction::CommandGeneric<NodePool, Schema>,
+        >,
     ) -> ForgeResult<()> {
         match self {
             Self::Sync(rt) => rt.command(command).await,
@@ -677,7 +680,9 @@ impl AnyRuntime {
     /// 执行命令（带元信息）
     pub async fn command_with_meta(
         &mut self,
-        command: Arc<dyn mf_state::transaction::Command>,
+        command: Arc<
+            dyn mf_state::transaction::CommandGeneric<NodePool, Schema>,
+        >,
         description: String,
         meta: serde_json::Value,
     ) -> ForgeResult<()> {

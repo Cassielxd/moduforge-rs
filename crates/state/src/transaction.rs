@@ -36,15 +36,6 @@ where
     fn name(&self) -> String;
 }
 
-/// 默认的 Command trait (NodePool + Schema)
-///
-/// 这是一个便利别名，自动实现了 CommandGeneric<NodePool, Schema>
-/// 现有代码可以继续使用 Command trait 而无需修改
-pub trait Command: CommandGeneric<NodePool, Schema> {}
-
-/// 为所有实现了 CommandGeneric<NodePool, Schema> 的类型自动实现 Command
-impl<T> Command for T where T: CommandGeneric<NodePool, Schema> {}
-
 static VERSION: AtomicU64 = AtomicU64::new(1);
 pub fn get_tr_id() -> u64 {
     //生成 全局自增的版本号，用于兼容性

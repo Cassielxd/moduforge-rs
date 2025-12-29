@@ -101,9 +101,6 @@ where
     }
 }
 
-/// 向后兼容的类型别名
-pub trait StateField: StateFieldGeneric<NodePool, Schema> {}
-
 /// 类型擦除的 StateField trait (泛型版本)
 /// 用于在 PluginSpec 中存储不同类型的 StateField
 #[async_trait]
@@ -171,13 +168,17 @@ where
         }
     }
 
-    fn serialize_erased(&self, value: &Arc<dyn Resource>) -> Option<Vec<u8>> {
-        value
-            .downcast_arc::<T::Value>()
-            .and_then(|v| self.serialize(v))
+    fn serialize_erased(
+        &self,
+        value: &Arc<dyn Resource>,
+    ) -> Option<Vec<u8>> {
+        value.downcast_arc::<T::Value>().and_then(|v| self.serialize(v))
     }
 
-    fn deserialize_erased(&self, data: &[u8]) -> Option<Arc<dyn Resource>> {
+    fn deserialize_erased(
+        &self,
+        data: &[u8],
+    ) -> Option<Arc<dyn Resource>> {
         self.deserialize(data).map(|v| v as Arc<dyn Resource>)
     }
 }
@@ -323,13 +324,17 @@ where
         if n >= trs.len() {
             return None;
         }
-        match self.spec.append_transaction(&trs[n..], old_state, new_state).await {
+        match self
+            .spec
+            .append_transaction(&trs[n..], old_state, new_state)
+            .await
+        {
             Ok(Some(tr)) => Some(Arc::new(tr)),
             Ok(None) => None,
             Err(e) => {
                 tracing::error!("插件 {} 追加事务失败: {}", self.key, e);
                 None
-            }
+            },
         }
     }
 
