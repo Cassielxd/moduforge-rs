@@ -75,7 +75,7 @@ use crate::{
     runtime::{
         adaptive::AdaptiveRuntimeSelector, actor_runtime::ForgeActorRuntime,
         async_runtime::ForgeAsyncRuntime, runtime::ForgeRuntime,
-        runtime_trait::RuntimeTrait, system_detector::SystemResources,
+        runtime_trait::RuntimeTraitGeneric, system_detector::SystemResources,
     },
     types::{RuntimeOptions, Extensions, Content, EditorOptionsBuilder},
     ForgeResult,

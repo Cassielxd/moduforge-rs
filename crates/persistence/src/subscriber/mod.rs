@@ -142,11 +142,7 @@ impl<E: EventStore + 'static> SnapshotSubscriber<E> {
         let doc_id = transaction
             .get_meta::<String>("doc_id")
             .unwrap_or_else(|| state.doc().root_id().to_string());
-        if doc_id.is_empty() {
-            self.default_doc_id.clone()
-        } else {
-            doc_id
-        }
+        if doc_id.is_empty() { self.default_doc_id.clone() } else { doc_id }
     }
 
     fn should_snapshot(
@@ -275,8 +271,7 @@ impl<E: EventStore + 'static> SnapshotSubscriber<E> {
                         .map(|v| *v.value())
                         .unwrap_or(-1);
                     if lsn > cur {
-                        self.pending_snapshot_lsn
-                            .insert(doc_id.clone(), lsn);
+                        self.pending_snapshot_lsn.insert(doc_id.clone(), lsn);
                     }
                 },
                 Ok(None) => {},
@@ -334,13 +329,28 @@ impl<E: EventStore + 'static> EventHandler<Event> for SnapshotSubscriber<E> {
                 }
             },
             Event::TrApply { new_state, transactions, .. } => {
-                self.process_transactions(new_state, transactions, PersistAction::Apply).await?;
+                self.process_transactions(
+                    new_state,
+                    transactions,
+                    PersistAction::Apply,
+                )
+                .await?;
             },
             Event::Undo { new_state, transactions, .. } => {
-                self.process_transactions(new_state, transactions, PersistAction::Undo).await?;
+                self.process_transactions(
+                    new_state,
+                    transactions,
+                    PersistAction::Undo,
+                )
+                .await?;
             },
             Event::Redo { new_state, transactions, .. } => {
-                self.process_transactions(new_state, transactions, PersistAction::Redo).await?;
+                self.process_transactions(
+                    new_state,
+                    transactions,
+                    PersistAction::Redo,
+                )
+                .await?;
             },
             _ => {},
         }

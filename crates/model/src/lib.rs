@@ -44,9 +44,11 @@ pub mod node_pool;
 pub mod ops;
 pub mod tree;
 pub mod types;
+//通用抽象层
+pub mod traits;
 
-pub mod imbl {
-    pub use imbl::*;
+pub mod rpds {
+    pub use rpds::*;
 }
 
 pub use node::Node;
@@ -62,3 +64,5 @@ pub use mark_definition::MarkDefinition;
 pub use node_definition::NodeDefinition;
 pub use schema::Schema;
 pub use node_factory::NodeFactory;
+// 导出通用抽象层
+pub use traits::{DataItem, DataContainer, SchemaDefinition};

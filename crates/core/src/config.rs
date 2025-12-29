@@ -125,6 +125,8 @@ pub struct EventConfig {
     pub batch_size: usize,
     /// 事件处理器最大并发数
     pub max_concurrent_handlers: usize,
+    /// 事件处理器出错时是否抛出错误（false 则只记录错误日志）
+    pub fail_on_handler_error: bool,
 }
 
 impl Default for EventConfig {
@@ -135,6 +137,7 @@ impl Default for EventConfig {
             enable_persistence: false,
             batch_size: 100,
             max_concurrent_handlers: 5,
+            fail_on_handler_error: false, // 默认不抛出错误，保持向后兼容
         }
     }
 }
@@ -311,6 +314,7 @@ impl ForgeConfig {
                 enable_persistence: false,
                 batch_size: 50,
                 max_concurrent_handlers: 3,
+                fail_on_handler_error: false,
             },
             history: HistoryConfig {
                 max_entries: 200,
@@ -362,6 +366,7 @@ impl ForgeConfig {
                 enable_persistence: false,
                 batch_size: 20,
                 max_concurrent_handlers: 2,
+                fail_on_handler_error: false,
             },
             history: HistoryConfig {
                 max_entries: 50,
@@ -413,6 +418,7 @@ impl ForgeConfig {
                 enable_persistence: true,
                 batch_size: 500,
                 max_concurrent_handlers: 10,
+                fail_on_handler_error: false,
             },
             history: HistoryConfig {
                 max_entries: 1000,

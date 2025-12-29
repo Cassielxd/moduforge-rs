@@ -1,6 +1,8 @@
 use std::any::{Any, TypeId};
 use yrs::TransactionMut;
-use mf_transform::step::Step;
+use mf_transform::step::StepGeneric;
+use mf_model::node_pool::NodePool;
+use mf_model::schema::Schema;
 use crate::types::StepResult;
 use super::error::{ConversionError, ConversionResult};
 
@@ -8,7 +10,7 @@ use super::error::{ConversionError, ConversionResult};
 /// 使用泛型参数确保编译时类型安全
 pub trait TypedStepConverter<T>: Send + Sync + 'static
 where
-    T: Step + 'static,
+    T: StepGeneric<NodePool, Schema> + 'static,
 {
     /// 转换具体类型的步骤到 Yrs 事务
     fn convert_typed(
@@ -102,7 +104,7 @@ impl ErasedConverter {
     /// 创建类型擦除的转换器
     pub fn new<T, C>() -> Self
     where
-        T: Step + 'static,
+        T: StepGeneric<NodePool, Schema> + 'static,
         C: TypedStepConverter<T> + Default + 'static,
     {
         Self {
@@ -131,7 +133,7 @@ impl ErasedConverter {
     /// 尝试转换步骤
     pub fn try_convert(
         &self,
-        step: &dyn Step,
+        step: &dyn StepGeneric<NodePool, Schema>,
         txn: &mut TransactionMut,
         context: &ConversionContext,
     ) -> ConversionResult<StepResult> {
@@ -148,6 +150,24 @@ impl ErasedConverter {
 
         // 然后转换
         (self.convert_fn)(step as &dyn Any, txn, context)
+    }
+
+    /// 验证步骤而不执行转换
+    pub fn validate(
+        &self,
+        step: &dyn StepGeneric<NodePool, Schema>,
+        context: &ConversionContext,
+    ) -> ConversionResult<()> {
+        // 检查类型匹配
+        if step.type_id() != self.type_id {
+            return Err(ConversionError::UnsupportedStepType {
+                step_type: step.name().to_string(),
+                type_id: step.type_id(),
+            });
+        }
+
+        // 执行验证
+        (self.validate_fn)(step as &dyn Any, context)
     }
 
     /// 获取类型信息
@@ -207,7 +227,7 @@ pub struct ConverterInfo {
 /// 具体类型的转换器工厂实现
 pub struct TypedConverterFactory<T, C>
 where
-    T: Step + 'static,
+    T: StepGeneric<NodePool, Schema> + 'static,
     C: TypedStepConverter<T> + Default + 'static,
 {
     _phantom_step: std::marker::PhantomData<T>,
@@ -216,7 +236,7 @@ where
 
 impl<T, C> TypedConverterFactory<T, C>
 where
-    T: Step + 'static,
+    T: StepGeneric<NodePool, Schema> + 'static,
     C: TypedStepConverter<T> + Default + 'static,
 {
     pub fn new() -> Self {
@@ -229,7 +249,7 @@ where
 
 impl<T, C> ConverterFactory for TypedConverterFactory<T, C>
 where
-    T: Step + 'static,
+    T: StepGeneric<NodePool, Schema> + 'static,
     C: TypedStepConverter<T> + Default + 'static,
 {
     fn create_converter(&self) -> Box<dyn Any + Send + Sync> {
@@ -253,7 +273,7 @@ where
 
 impl<T, C> Default for TypedConverterFactory<T, C>
 where
-    T: Step + 'static,
+    T: StepGeneric<NodePool, Schema> + 'static,
     C: TypedStepConverter<T> + Default + 'static,
 {
     fn default() -> Self {

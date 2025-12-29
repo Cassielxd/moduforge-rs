@@ -122,17 +122,15 @@ impl SqliteBackend {
 
     /// 使用系统临时目录
     pub async fn new_in_system_temp() -> Result<Self> {
-        let temp_dir =
-            tempfile::Builder::new().prefix("mf_index_").tempdir()?;
+        let temp_dir = tempfile::Builder::new().prefix("index").tempdir()?;
         let db_path = temp_dir.path().join("index.db");
         Self::new_with_path(db_path, Some(temp_dir)).await
     }
 
     /// 在指定临时根目录下创建临时索引
     pub async fn new_in_temp_root(temp_root: &Path) -> Result<Self> {
-        let temp_dir = tempfile::Builder::new()
-            .prefix("mf_index_")
-            .tempdir_in(temp_root)?;
+        let temp_dir =
+            tempfile::Builder::new().prefix("index").tempdir_in(temp_root)?;
         let db_path = temp_dir.path().join("index.db");
         Self::new_with_path(db_path, Some(temp_dir)).await
     }

@@ -1,63 +1,26 @@
 use std::sync::Arc;
 
-use crate::error::ForgeResult;
-use mf_state::{transaction::Transaction, state::State};
+use mf_model::{
+    node_pool::NodePool,
+    schema::Schema,
+};
 
-/// 可以用于事务处理的中间件 trait
-#[async_trait::async_trait]
-pub trait Middleware: Send + Sync {
-    /// 返回中间件的名称
-    fn name(&self) -> String;
+// ==================== 泛型中间件 Trait ====================
 
-    /// 在事务到达核心分发之前处理事务
-    async fn before_dispatch(
-        &self,
-        _transaction: &mut Transaction,
-    ) -> ForgeResult<()> {
-        Ok(())
-    }
+// Re-export from generic module
+pub use crate::generic::middleware::{MiddlewareGeneric, MiddlewareStackGeneric};
 
-    /// 在核心分发之后处理结果
-    /// 返回一个可能包含需要额外处理的事务的 MiddlewareResult
-    async fn after_dispatch(
-        &self,
-        _state: Option<Arc<State>>,
-        _transactions: &[Arc<Transaction>],
-    ) -> ForgeResult<Option<Transaction>> {
-        Ok(None)
-    }
-}
+// ==================== 向后兼容类型别名 ====================
+
+/// 默认 Middleware trait（向后兼容）
+///
+/// 使用 NodePool 作为容器，Schema 作为模式定义
+pub type Middleware = dyn MiddlewareGeneric<NodePool, Schema>;
 
 /// 用于事务处理的中间件类型别名
-pub type ArcMiddleware = Arc<dyn Middleware>;
+pub type ArcMiddleware = Arc<Middleware>;
 
-/// Middleware stack that holds multiple middleware
-#[derive(Clone)]
-pub struct MiddlewareStack {
-    pub middlewares: Vec<ArcMiddleware>,
-}
-
-impl MiddlewareStack {
-    pub fn new() -> Self {
-        Self { middlewares: Vec::new() }
-    }
-
-    pub fn add<M>(
-        &mut self,
-        middleware: M,
-    ) where
-        M: Middleware + 'static,
-    {
-        self.middlewares.push(Arc::new(middleware));
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.middlewares.is_empty()
-    }
-}
-
-impl Default for MiddlewareStack {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+/// 默认 MiddlewareStack 类型（向后兼容）
+///
+/// 使用 NodePool 作为容器，Schema 作为模式定义
+pub type MiddlewareStack = MiddlewareStackGeneric<NodePool, Schema>;

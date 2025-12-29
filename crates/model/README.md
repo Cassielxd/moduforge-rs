@@ -25,6 +25,203 @@ ModuForge 数据模型采用分层架构设计，每个组件都有明确的职�
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## 🧬 泛型架构 (Generic Architecture)
+
+从 Phase 4 开始，ModuForge 采用完全泛型的架构设计，通过 trait 抽象实现了容器和模式系统的可扩展性。
+
+### 核心 Trait 系统
+
+#### 1. DataContainer Trait
+```rust
+pub trait DataContainer: Send + Sync + Clone + Debug {
+    /// 容器中的数据单元类型
+    type Item: DataItem;
+
+    /// 内部可变状态类型（如 `Tree`），用于事务处理
+    /// 必须实现 Send + Sync 以确保线程安全
+    type InnerState: Clone + Debug + Send + Sync;
+
+    /// 获取数据单元
+    fn get(&self, id: &<Self::Item as DataItem>::Id) -> Option<&Self::Item>;
+
+    /// 检查是否包含指定的数据单元
+    fn contains(&self, id: &<Self::Item as DataItem>::Id) -> bool;
+
+    /// 获取容器中数据单元的总数
+    fn size(&self) -> usize;
+
+    /// 获取容器的唯一标识符
+    fn key(&self) -> &str;
+
+    /// 获取所有数据单元（用于迭代）
+    fn items(&self) -> Vec<&Self::Item>;
+
+    /// 获取内部状态的不可变引用
+    fn inner(&self) -> &Self::InnerState;
+}
+```
+
+**设计要点**：
+- **Send + Sync 约束**: 确保容器可以安全地在线程间传递和共享
+- **关联类型**: `Item` 和 `InnerState` 提供类型安全的数据访问
+- **InnerState 的 Send + Sync**: 必须满足线程安全要求，支持并发事务处理
+- **不可变访问**: 所有方法都是不可变引用，支持并发读取
+
+#### 2. SchemaDefinition Trait
+```rust
+pub trait SchemaDefinition: Send + Sync + Clone + Debug {
+    /// 关联的容器类型
+    type Container: DataContainer;
+
+    /// 获取节点类型定义
+    fn get_node_type(&self, name: &str) -> Option<&NodeType>;
+
+    /// 获取标记类型定义
+    fn get_mark_type(&self, name: &str) -> Option<&MarkType>;
+
+    /// 验证节点是否符合模式定义
+    fn validate_node(&self, node: &<Self::Container as DataContainer>::Item) -> bool;
+
+    /// 获取工厂方法，用于创建节点
+    fn factory(&self) -> Arc<dyn NodeFactory>;
+}
+```
+
+**设计要点**：
+- **Container 关联**: 通过关联类型将模式与特定容器类型绑定
+- **验证能力**: 提供节点和标记的验证功能
+- **工厂模式**: 支持节点创建的工厂方法
+
+#### 3. 默认实现
+
+**NodePool** 作为 `DataContainer` 的默认实现：
+```rust
+impl DataContainer for NodePool {
+    type Item = Node;
+    type InnerState = Tree;
+
+    // ... 实现方法
+}
+```
+
+**Schema** 作为 `SchemaDefinition` 的默认实现：
+```rust
+impl SchemaDefinition for Schema {
+    type Container = NodePool;
+
+    // ... 实现方法
+}
+```
+
+### 泛型架构优势
+
+1. **可扩展性**: 可以轻松实现自定义容器和模式系统
+2. **类型安全**: 编译时检查容器与模式的兼容性
+3. **向后兼容**: 通过类型别名保持现有 API 不变
+4. **高性能**: 泛型在编译时单态化，无运行时开销
+5. **并发安全**: Send + Sync 约束确保线程安全
+
+### 自定义容器示例
+
+```rust
+use mf_model::traits::{DataContainer, DataItem};
+use std::collections::HashMap;
+
+// 1. 定义自定义数据项
+#[derive(Debug, Clone)]
+struct CustomItem {
+    id: String,
+    data: Vec<u8>,
+}
+
+impl DataItem for CustomItem {
+    type Id = String;
+
+    fn id(&self) -> &Self::Id {
+        &self.id
+    }
+}
+
+// 2. 定义自定义容器
+#[derive(Clone, Debug)]
+struct CustomContainer {
+    items: HashMap<String, CustomItem>,
+    state: CustomState,
+}
+
+#[derive(Clone, Debug)]
+struct CustomState {
+    // 自定义状态数据
+}
+
+// 3. 实现 DataContainer trait
+impl DataContainer for CustomContainer {
+    type Item = CustomItem;
+    type InnerState = CustomState;
+
+    fn get(&self, id: &String) -> Option<&CustomItem> {
+        self.items.get(id)
+    }
+
+    fn contains(&self, id: &String) -> bool {
+        self.items.contains_key(id)
+    }
+
+    fn size(&self) -> usize {
+        self.items.len()
+    }
+
+    fn key(&self) -> &str {
+        "custom_container"
+    }
+
+    fn items(&self) -> Vec<&CustomItem> {
+        self.items.values().collect()
+    }
+
+    fn inner(&self) -> &CustomState {
+        &self.state
+    }
+}
+
+// 4. 在上层系统中使用
+// StateGeneric<CustomContainer, CustomSchema>
+// TransactionGeneric<CustomContainer, CustomSchema>
+// TransformGeneric<CustomContainer, CustomSchema>
+```
+
+### 与上层系统的集成
+
+泛型架构使得整个 ModuForge 生态系统都支持自定义实现：
+
+```rust
+// State 层支持任意容器和模式组合
+use mf_state::StateGeneric;
+
+let state: StateGeneric<CustomContainer, CustomSchema> =
+    StateGeneric::new_generic(config, doc)?;
+
+// Transform 层支持泛型转换
+use mf_transform::TransformGeneric;
+
+let transform: TransformGeneric<CustomContainer, CustomSchema> =
+    TransformGeneric::new_generic(doc, schema);
+
+// Transaction 层支持泛型事务
+use mf_state::TransactionGeneric;
+
+let transaction: TransactionGeneric<CustomContainer, CustomSchema> =
+    state.tr_generic();
+```
+
+**向后兼容性**：
+```rust
+// 旧代码无需修改，类型别名自动适配
+use mf_state::State; // = StateGeneric<NodePool, Schema>
+use mf_transform::Transform; // = TransformGeneric<NodePool, Schema>
+use mf_state::Transaction; // = TransactionGeneric<NodePool, Schema>
+```
+
 ## 🧩 核心组件
 
 ### 1. Tree
@@ -41,9 +238,9 @@ ModuForge 数据模型采用分层架构设计，每个组件都有明确的职�
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tree {
     pub root_id: NodeId,
-    pub nodes: Vector<im::HashMap<NodeId, Arc<Node>>>, // 分片存储
-    pub parent_map: im::HashMap<NodeId, NodeId>,       // 父子关系映射
-    num_shards: usize,                                 // 分片数量
+    pub nodes: Vector<rpds::HashTrieMap<NodeId, Arc<Node>>>, // 分片存储
+    pub parent_map: rpds::HashTrieMap<NodeId, NodeId>,       // 父子关系映射
+    num_shards: usize,                                        // 分片数量
 }
 ```
 
@@ -52,11 +249,11 @@ pub struct Tree {
 impl Tree {
     // 智能分片索引计算
     pub fn get_shard_index(&self, id: &NodeId) -> usize;
-    
+
     // 批量分片索引计算
     pub fn get_shard_index_batch<'a>(&self, ids: &'a [&'a NodeId]) -> Vec<(usize, &'a NodeId)>;
-    
-    // 节点操作
+
+    // 节点操作 (使用 rpds 不可变数据结构)
     pub fn add(&mut self, parent_id: &NodeId, nodes: Vec<NodeEnum>) -> PoolResult<()>;
     pub fn remove_node(&mut self, parent_id: &NodeId, nodes: Vec<NodeId>) -> PoolResult<()>;
     pub fn move_node(&mut self, source_parent_id: &NodeId, target_parent_id: &NodeId, node_id: &NodeId, position: Option<usize>) -> PoolResult<()>;
@@ -67,7 +264,7 @@ impl Tree {
 **文件**: `src/node.rs`  
 **职责**: 基础节点定义
 
-- **不可变设计**: 基于 `im::Vector` 的不可变数据结构
+- **不可变设计**: 基于 `rpds::Vector` 的不可变数据结构
 - **序列化优化**: 紧凑的 JSON 序列化格式
 - **类型安全**: 完整的类型定义和验证
 
@@ -82,9 +279,9 @@ pub struct Node {
     #[serde(rename = "a")]
     pub attrs: Attrs,                  // 节点属性
     #[serde(rename = "c")]
-    pub content: im::Vector<NodeId>,   // 子节点列表
+    pub content: rpds::Vector<NodeId>, // 子节点列表
     #[serde(rename = "m")]
-    pub marks: im::Vector<Mark>,       // 标记列表
+    pub marks: rpds::Vector<Mark>,     // 标记列表
 }
 ```
 
@@ -176,7 +373,7 @@ pub struct ContentMatch {
 **职责**: 属性系统
 
 - **类型安全**: 类型安全的属性访问
-- **不可变设计**: 基于 `im::HashMap` 的不可变属性
+- **不可变设计**: 基于 `rpds::HashTrieMap` 的不可变属性
 - **序列化优化**: 高效的 JSON 序列化
 - **索引支持**: 支持索引访问和修改
 
@@ -221,7 +418,7 @@ pub struct Mark {
 ```toml
 [dependencies]
 # 不可变数据结构
-im = { workspace = true }
+rpds = { workspace = true, features = ["serde"] }
 
 # 序列化
 serde = { workspace = true }
@@ -253,7 +450,7 @@ rayon = { workspace = true }
 ```
 
 ### 核心技术
-- **不可变数据结构**: 基于 im-rs 的高性能不可变集合
+- **不可变数据结构**: 基于 rpds 的高性能不可变集合（Rust Persistent Data Structures）
 - **分片存储**: 智能的哈希分片存储策略
 - **LRU 缓存**: 高效的缓存管理
 - **类型系统**: 完整的类型定义和验证
@@ -398,7 +595,8 @@ Tree::clear_shard_cache();
 ```
 
 ### 内存管理
-- **不可变数据结构**: 减少内存分配和复制
+- **不可变数据结构**: 基于 rpds 持久化数据结构减少内存分配和复制
+- **结构共享**: rpds 提供高效的结构共享，减少内存占用
 - **智能缓存**: LRU 缓存优化访问性能
 - **分片存储**: 减少锁竞争和内存碎片
 - **对象池**: 复用昂贵的对象实例
@@ -515,7 +713,8 @@ let compact_tree = tree.compact();
 ## 📈 性能优化
 
 ### 内存优化
-- **不可变数据结构**: 减少内存分配
+- **不可变数据结构**: 基于 rpds 减少内存分配
+- **结构共享**: rpds 的持久化数据结构提供高效的结构共享
 - **分片存储**: 减少内存碎片
 - **智能缓存**: 优化访问模式
 - **对象复用**: 减少 GC 压力

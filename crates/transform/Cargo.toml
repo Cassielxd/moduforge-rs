@@ -1,22 +1,21 @@
 [package]
 name = "moduforge-transform"
-version = {workspace=true}
-edition = {workspace=true}
+version = { workspace = true }
+edition = { workspace = true }
 description = "不可变数据结构与事务系统基础"
-authors = {workspace=true}
-license = {workspace=true}
-documentation = {workspace=true}
-homepage = {workspace=true}
-repository = {workspace=true}
+authors = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
-[lib]   
+[lib]
 name = "mf_transform"
-path="src/lib.rs"
+path = "src/lib.rs"
 
 [dependencies]
-imbl= {workspace=true}
-serde = {workspace=true}
-serde_json = {workspace=true}
+serde = { workspace = true }
+serde_json = { workspace = true }
 anyhow = { workspace = true }
 
 # 模型

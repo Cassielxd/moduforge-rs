@@ -20,9 +20,9 @@ impl<'a> BitOr<NodeId> for NodeRef<'a> {
             self.tree.children(&other_node_id).unwrap_or_default();
         let mut nodes_to_add = Vec::new();
 
-        for child_id in other_children {
+        for child_id in other_children.iter() {
             if let Some(child_node) = self.tree.get_node(&child_id) {
-                let mut node = child_node.as_ref().clone();
+                let mut node = child_node.clone();
                 node.id = IdGenerator::get_id();
                 nodes_to_add.push(node);
             }
@@ -47,9 +47,9 @@ impl<'a> BitOr<Vec<NodeId>> for NodeRef<'a> {
 
         for node_id in other_node_ids {
             let children = self.tree.children(&node_id).unwrap_or_default();
-            for child_id in children {
+            for child_id in children.iter() {
                 if let Some(child_node) = self.tree.get_node(&child_id) {
-                    let mut node = child_node.as_ref().clone();
+                    let mut node = child_node.clone();
                     node.id = IdGenerator::get_id();
                     all_nodes_to_add.push(node);
                 }

@@ -2,7 +2,9 @@ use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock, OnceLock};
 use yrs::TransactionMut;
-use mf_transform::step::Step;
+use mf_transform::step::StepGeneric;
+use mf_model::node_pool::NodePool;
+use mf_model::schema::Schema;
 use crate::types::StepResult;
 use super::error::{ConversionError, ConversionResult};
 use super::typed_converter::{ErasedConverter, ConversionContext, ConverterInfo};
@@ -34,7 +36,7 @@ impl StaticConverterRegistry {
     /// 注册转换器（编译时调用）
     pub fn register_converter<T, C>(&mut self) -> &mut Self
     where
-        T: Step + 'static,
+        T: StepGeneric<NodePool, Schema> + 'static,
         C: super::typed_converter::TypedStepConverter<T> + Default + 'static,
     {
         let type_id = TypeId::of::<T>();
@@ -84,7 +86,7 @@ impl StaticConverterRegistry {
     /// 查找并应用转换器 - 主要性能路径
     pub fn convert_step(
         &self,
-        step: &dyn Step,
+        step: &dyn StepGeneric<NodePool, Schema>,
         txn: &mut TransactionMut,
         context: &ConversionContext,
     ) -> ConversionResult<StepResult> {
@@ -134,14 +136,14 @@ impl StaticConverterRegistry {
     /// 批量转换步骤 - 优化的批处理路径
     pub fn convert_steps_batch(
         &self,
-        steps: &[&dyn Step],
+        steps: &[&dyn StepGeneric<NodePool, Schema>],
         txn: &mut TransactionMut,
         context: &ConversionContext,
     ) -> Vec<ConversionResult<StepResult>> {
         let mut results = Vec::with_capacity(steps.len());
 
         // 按类型对步骤进行分组以提高缓存效率
-        let mut grouped_steps: HashMap<TypeId, Vec<&dyn Step>> = HashMap::new();
+        let mut grouped_steps: HashMap<TypeId, Vec<&dyn StepGeneric<NodePool, Schema>>> = HashMap::new();
         for step in steps {
             grouped_steps.entry(step.type_id()).or_default().push(*step);
         }
@@ -170,14 +172,14 @@ impl StaticConverterRegistry {
     /// 验证步骤而不执行转换
     pub fn validate_step(
         &self,
-        step: &dyn Step,
-        _context: &ConversionContext,
+        step: &dyn StepGeneric<NodePool, Schema>,
+        context: &ConversionContext,
     ) -> ConversionResult<()> {
         let step_type_id = step.type_id();
 
-        if let Some(_converter) = self.converters.get(&step_type_id) {
-            // TODO: 实现验证逻辑
-            Ok(())
+        if let Some(converter) = self.converters.get(&step_type_id) {
+            // 调用转换器的验证方法
+            converter.validate(step, context)
         } else {
             Err(ConversionError::UnsupportedStepType {
                 step_type: step.name().to_string(),
@@ -348,7 +350,7 @@ pub fn global_registry() -> &'static RwLock<StaticConverterRegistry> {
 /// 注册转换器到全局注册表的便捷函数
 pub fn register_global_converter<T, C>()
 where
-    T: Step + 'static,
+    T: StepGeneric<NodePool, Schema> + 'static,
     C: super::typed_converter::TypedStepConverter<T> + Default + 'static,
 {
     match global_registry().write() {
@@ -364,7 +366,7 @@ where
 
 /// 使用全局注册表转换步骤的便捷函数
 pub fn convert_step_global(
-    step: &dyn Step,
+    step: &dyn StepGeneric<NodePool, Schema>,
     txn: &mut TransactionMut,
     context: &ConversionContext,
 ) -> ConversionResult<StepResult> {

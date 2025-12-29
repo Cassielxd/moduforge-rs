@@ -15,41 +15,13 @@ use crate::{
 
 use super::{ActorSystemResult, ActorMetrics};
 
-/// 事件总线消息类型
-#[derive(Debug)]
-pub enum EventBusMessage {
-    /// 发布事件
-    PublishEvent { event: Event },
-    /// 添加事件处理器
-    AddHandler {
-        handler: Arc<dyn EventHandler<Event> + Send + Sync>,
-        reply: oneshot::Sender<HandlerId>,
-    },
-    /// 移除事件处理器
-    RemoveHandler {
-        handler_id: HandlerId,
-        reply: oneshot::Sender<ForgeResult<()>>,
-    },
-    /// 获取事件总线统计信息
-    GetStats { reply: oneshot::Sender<EventBusStats> },
-    /// 更新配置
-    UpdateConfig {
-        config: EventConfig,
-        reply: oneshot::Sender<ForgeResult<()>>,
-    },
-}
+// Re-export from generic module
+pub use crate::generic::messages::{EventBusMessageGeneric, EventBusStats};
 
-// EventBusMessage 自动实现 ractor::Message (Debug + Send + 'static)
+// ==================== 向后兼容类型别名 ====================
 
-/// 事件总线统计信息
-#[derive(Debug, Clone)]
-pub struct EventBusStats {
-    pub events_published: u64,
-    pub events_processed: u64,
-    pub event_failures: u64,
-    pub active_handlers: usize,
-    pub avg_processing_time_ms: u64,
-}
+/// 默认 EventBusMessage 类型（向后兼容）
+pub type EventBusMessage = EventBusMessageGeneric<mf_model::node_pool::NodePool, mf_model::schema::Schema>;
 
 /// 事件总线Actor状态
 pub struct EventBusActorState {
@@ -234,15 +206,13 @@ impl EventBusActor {
             }
         }
 
-        // 错误处理策略（与原始实现相同）
+        // 错误处理策略（根据配置决定是否抛出错误）
         if !processing_errors.is_empty() {
             let error_summary = processing_errors.join("; ");
             debug!("事件处理过程中出现错误: {}", error_summary);
 
             // 根据配置决定是否抛出错误
-            // 如果处理失败，记录错误但继续处理其他handlers
-            if false {
-                // TODO: 可以考虑添加fail_on_handler_error配置
+            if actor_state.config.fail_on_handler_error {
                 return Err(error_utils::event_error(format!(
                     "事件 {event_name} 处理失败: {error_summary}"
                 )));

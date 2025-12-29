@@ -220,6 +220,9 @@ impl AdaptiveRuntimeSelector {
 
             // 并发处理器数：核心数的一半（至少1个）
             max_concurrent_handlers: (res.cpu_cores / 2).max(1),
+
+            // 错误处理：默认不抛出错误
+            fail_on_handler_error: false,
         }
     }
 

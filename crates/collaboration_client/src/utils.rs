@@ -15,6 +15,7 @@ use crate::ClientResult;
 use mf_model::{node::Node, attrs::Attrs, types::NodeId};
 use std::sync::Arc;
 use std::collections::HashMap;
+use rpds::VectorSync;
 
 /// 获取当前时间戳（毫秒）
 pub struct Utils;
@@ -88,7 +89,7 @@ impl Utils {
 
         tracing::info!(
             "成功初始化树，包含 {} 个节点，根节点ID: {}",
-            tree.nodes.iter().map(|shard| shard.len()).sum::<usize>(),
+            tree.nodes.iter().map(|shard| shard.keys().len()).sum::<usize>(),
             tree.root_id
         );
         Ok(())
@@ -411,26 +412,26 @@ impl Utils {
                         if let Some(json_value) =
                             Utils::yrs_any_to_json_value(&any_value)
                         {
-                            attrs.insert(key.to_string(), json_value);
+                            attrs.insert_mut(key.to_string(), json_value);
                         }
                     }
                 }
             }
 
             // 提取内容（子节点ID列表）
-            let mut content = imbl::Vector::new();
+            let mut content = VectorSync::new_sync();
             if let Some(yrs::types::Value::YArray(content_yrs_array)) =
                 node_map.get(txn, "content")
             {
                 for item in content_yrs_array.iter(txn) {
                     if let yrs::types::Value::Any(any) = item {
-                        content.push_back(NodeId::from(any.to_string()));
+                        content.push_back_mut(NodeId::from(any.to_string()));
                     }
                 }
             }
 
             // 提取标记
-            let mut marks = imbl::Vector::new();
+            let mut marks = VectorSync::new_sync();
             if let Some(yrs::types::Value::YArray(marks_yrs_array)) =
                 node_map.get(txn, "marks")
             {
@@ -456,7 +457,7 @@ impl Utils {
                                     if let Some(json_value) =
                                         Utils::yrs_any_to_json_value(&any_value)
                                     {
-                                        mark_attrs.insert(
+                                        mark_attrs.insert_mut(
                                             key.to_string(),
                                             json_value,
                                         );
@@ -465,7 +466,7 @@ impl Utils {
                             }
                         }
 
-                        marks.push_back(Mark {
+                        marks.push_back_mut(Mark {
                             r#type: mark_type,
                             attrs: mark_attrs,
                         });
@@ -474,11 +475,16 @@ impl Utils {
             }
 
             // 创建节点
-            let content_vec: Vec<NodeId> =
-                content.clone().into_iter().collect();
-            let marks_vec: Vec<Mark> = marks.clone().into_iter().collect();
-            let node =
-                Node::new(node_id, node_type, attrs, content_vec, marks_vec);
+            let content_vec = content.clone();
+            let marks_vec = marks.clone();
+            let node = Node {
+                id: node_id.into(),
+                r#type: node_type,
+                attrs,
+                content: content_vec,
+                marks: marks_vec,
+            };
+            //Node::new(node_id, node_type, attrs, content_vec, marks_vec);
 
             let node_id_typed = NodeId::from(node_id);
             tree_nodes.insert(node_id_typed.clone(), Arc::new(node));
@@ -489,7 +495,7 @@ impl Utils {
             }
 
             // 递归处理子节点
-            for child_id in content {
+            for child_id in content.iter() {
                 Utils::build_tree_nodes_from_yrs(
                     &child_id,
                     nodes_map,

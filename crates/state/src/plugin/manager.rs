@@ -4,9 +4,12 @@ use std::sync::Arc;
 use anyhow::Result;
 
 use super::dependency::DependencyManager;
-use super::plugin::Plugin;
+use super::plugin::PluginGeneric;
+use mf_model::traits::{DataContainer, SchemaDefinition};
+use mf_model::node_pool::NodePool;
+use mf_model::schema::Schema;
 
-/// 插件管理器 - 初始化后不可变
+/// 插件管理器 - 初始化后不可变 (泛型版本)
 ///
 /// # 设计理念
 ///
@@ -39,24 +42,36 @@ use super::plugin::Plugin;
 /// let plugins = manager.get_sorted_plugins_sync();
 /// ```
 #[derive(Debug, Clone)]
-pub struct PluginManager {
+pub struct PluginManagerGeneric<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
     /// 插件映射表（初始化后不可变）
-    plugins: Arc<HashMap<String, Arc<Plugin>>>,
+    plugins: Arc<HashMap<String, Arc<PluginGeneric<C, S>>>>,
     /// 排序后的插件列表（初始化后不可变，按依赖顺序）
-    sorted_plugins: Arc<Vec<Arc<Plugin>>>,
+    sorted_plugins: Arc<Vec<Arc<PluginGeneric<C, S>>>>,
     /// 初始化状态标记（使用原子操作，无锁）
     initialized: Arc<AtomicBool>,
 }
 
-/// 插件构建器 - 用于初始化阶段
+/// 插件构建器 - 用于初始化阶段 (泛型版本)
 ///
 /// 负责插件的注册、依赖分析和验证。构建完成后生成不可变的 `PluginManager`。
-pub struct PluginManagerBuilder {
-    plugins: HashMap<String, Arc<Plugin>>,
+pub struct PluginManagerBuilderGeneric<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    plugins: HashMap<String, Arc<PluginGeneric<C, S>>>,
     dependency_manager: DependencyManager,
 }
 
-impl PluginManagerBuilder {
+impl<C, S> PluginManagerBuilderGeneric<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
     /// 创建新的插件构建器
     pub fn new() -> Self {
         Self {
@@ -77,7 +92,7 @@ impl PluginManagerBuilder {
     )))]
     pub fn register_plugin(
         &mut self,
-        plugin: Arc<Plugin>,
+        plugin: Arc<PluginGeneric<C, S>>,
     ) -> Result<()> {
         let plugin_name = plugin.spec.tr.metadata().name.clone();
 
@@ -121,7 +136,7 @@ impl PluginManagerBuilder {
         crate_name = "state",
         plugin_count = self.plugins.len()
     )))]
-    pub fn build(self) -> Result<PluginManager> {
+    pub fn build(self) -> Result<PluginManagerGeneric<C, S>> {
         // 1. 检查循环依赖
         if self.dependency_manager.has_circular_dependencies() {
             let report =
@@ -162,7 +177,7 @@ impl PluginManagerBuilder {
         let plugin_order = self.dependency_manager.get_topological_order()?;
 
         // 5. 构建排序后的插件列表
-        let sorted_plugins: Vec<Arc<Plugin>> = plugin_order
+        let sorted_plugins: Vec<Arc<PluginGeneric<C, S>>> = plugin_order
             .iter()
             .filter_map(|name| self.plugins.get(name).cloned())
             .collect();
@@ -172,7 +187,7 @@ impl PluginManagerBuilder {
             self.plugins.len()
         );
 
-        Ok(PluginManager {
+        Ok(PluginManagerGeneric {
             plugins: Arc::new(self.plugins),
             sorted_plugins: Arc::new(sorted_plugins),
             initialized: Arc::new(AtomicBool::new(true)),
@@ -180,13 +195,21 @@ impl PluginManagerBuilder {
     }
 }
 
-impl Default for PluginManagerBuilder {
+impl<C, S> Default for PluginManagerBuilderGeneric<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl PluginManager {
+impl<C, S> PluginManagerGeneric<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
     /// 创建空的插件管理器（用于测试）
     pub fn new() -> Self {
         Self {
@@ -208,7 +231,7 @@ impl PluginManager {
     /// 虽然这是异步函数，但实际是纯内存操作，不会阻塞。
     /// 保留异步签名是为了兼容现有的异步调用链。
     #[inline]
-    pub async fn get_sorted_plugins(&self) -> Vec<Arc<Plugin>> {
+    pub async fn get_sorted_plugins(&self) -> Vec<Arc<PluginGeneric<C, S>>> {
         // 直接返回预计算的排序列表，零开销
         self.sorted_plugins.as_ref().clone()
     }
@@ -225,7 +248,7 @@ impl PluginManager {
     /// }
     /// ```
     #[inline]
-    pub fn get_sorted_plugins_sync(&self) -> &[Arc<Plugin>] {
+    pub fn get_sorted_plugins_sync(&self) -> &[Arc<PluginGeneric<C, S>>] {
         self.sorted_plugins.as_ref()
     }
 
@@ -258,7 +281,7 @@ impl PluginManager {
     pub fn get_plugin(
         &self,
         name: &str,
-    ) -> Option<&Arc<Plugin>> {
+    ) -> Option<&Arc<PluginGeneric<C, S>>> {
         self.plugins.get(name)
     }
 
@@ -272,8 +295,16 @@ impl PluginManager {
     }
 }
 
-impl Default for PluginManager {
+impl<C, S> Default for PluginManagerGeneric<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
     fn default() -> Self {
         Self::new()
     }
 }
+
+/// 向后兼容的类型别名
+pub type PluginManager = PluginManagerGeneric<NodePool, Schema>;
+pub type PluginManagerBuilder = PluginManagerBuilderGeneric<NodePool, Schema>;

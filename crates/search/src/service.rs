@@ -3,7 +3,8 @@ use crate::indexer::mutations_from_step;
 use crate::model::IndexDoc;
 use anyhow::Result;
 use mf_model::node_pool::NodePool;
-use mf_transform::step::Step;
+use mf_model::schema::Schema;
+use mf_transform::step::StepGeneric;
 use std::sync::Arc;
 use mf_state::transaction::Transaction;
 
@@ -14,13 +15,13 @@ pub enum IndexEvent {
     StepApplied {
         pool_before: Option<Arc<NodePool>>,
         pool_after: Arc<NodePool>,
-        step: Arc<dyn Step>,
+        step: Arc<dyn StepGeneric<NodePool, Schema>>,
     },
     /// 增量：来自一整个事务（可选地提供 before 池）
     TransactionCommitted {
         pool_before: Option<Arc<NodePool>>,
         pool_after: Arc<NodePool>,
-        steps: Vec<Arc<dyn Step>>,
+        steps: Vec<Arc<dyn StepGeneric<NodePool, Schema>>>,
     },
     /// 全量重建
     Rebuild { pool: Arc<NodePool>, scope: RebuildScope },
@@ -172,6 +173,6 @@ pub fn event_from_transaction(
     pool_after: Arc<NodePool>,
     tr: &Transaction,
 ) -> IndexEvent {
-    let steps: Vec<Arc<dyn Step>> = tr.steps.iter().cloned().collect();
+    let steps: Vec<Arc<dyn StepGeneric<NodePool, Schema>>> = tr.steps.iter().cloned().collect();
     IndexEvent::TransactionCommitted { pool_before: None, pool_after, steps }
 }

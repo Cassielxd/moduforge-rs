@@ -3,11 +3,13 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use mf_model::node_pool::NodePool;
+use mf_model::schema::Schema;
+use mf_transform::step::StepGeneric;
 use mf_state::plugin::{
-    Plugin, PluginMetadata, PluginSpec, PluginTrait, StateField,
+    Plugin, PluginMetadata, PluginSpec, PluginTraitGeneric, StateFieldGeneric,
 };
-use mf_state::state::State;
-use mf_state::transaction::Transaction;
+use mf_state::state::{State, StateGeneric, StateConfigGeneric};
+use mf_state::transaction::{Transaction, TransactionGeneric};
 
 use crate::backend::SqliteBackend;
 use crate::service::{IndexEvent, IndexService};
@@ -33,13 +35,13 @@ impl std::fmt::Debug for SearchIndexStateField {
 }
 
 #[async_trait]
-impl StateField for SearchIndexStateField {
+impl StateFieldGeneric<NodePool, Schema> for SearchIndexStateField {
     type Value = SearchIndexResource;
 
     async fn init(
         &self,
-        _config: &mf_state::state::StateConfig,
-        instance: &State,
+        _config: &StateConfigGeneric<NodePool, Schema>,
+        instance: &StateGeneric<NodePool, Schema>,
     ) -> Arc<Self::Value> {
         let service =
             Arc::new(SearchIndexResource { service: self.service.clone() });
@@ -58,13 +60,13 @@ impl StateField for SearchIndexStateField {
 
     async fn apply(
         &self,
-        tr: &Transaction,
+        tr: &TransactionGeneric<NodePool, Schema>,
         value: Arc<Self::Value>,
-        old_state: &State,
-        new_state: &State,
+        old_state: &StateGeneric<NodePool, Schema>,
+        new_state: &StateGeneric<NodePool, Schema>,
     ) -> Arc<Self::Value> {
         let svc = value.service.clone();
-        let steps: Vec<Arc<dyn mf_transform::step::Step>> =
+        let steps: Vec<Arc<dyn StepGeneric<NodePool, Schema>>> =
             tr.steps.iter().cloned().collect();
         let pool_before: Arc<NodePool> = old_state.doc();
         let pool_after: Arc<NodePool> = new_state.doc();
@@ -87,7 +89,8 @@ impl StateField for SearchIndexStateField {
 #[derive(Debug)]
 struct SearchIndexPluginTrait {}
 
-impl PluginTrait for SearchIndexPluginTrait {
+#[async_trait]
+impl PluginTraitGeneric<NodePool, Schema> for SearchIndexPluginTrait {
     fn metadata(&self) -> PluginMetadata {
         PluginMetadata {
             name: "search_index".to_string(),

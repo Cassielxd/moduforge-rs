@@ -10,18 +10,35 @@ ModuForge-RS 状态管理包提供了基于不可变数据结构的现代化状�
 
 ModuForge-RS 状态管理采用不可变数据结构范式，确保状态变更的可预测性和可追溯性。系统基于以下核心设计原则：
 
-- **不可变状态**: 使用 `im-rs` 库实现高效的不可变数据结构
+- **不可变状态**: 使用 `rpds` 库实现高效的不可变数据结构
 - **事务驱动**: 所有状态变更通过事务进行，支持 ACID 特性
 - **插件架构**: 可扩展的插件系统，支持动态功能扩展
 - **资源管理**: 全局资源表和生命周期管理
 - **事件溯源**: 完整的状态变更历史记录和重放能力
+- **泛型架构**: 从 Phase 4 开始，完全支持自定义容器和模式系统
+
+### Phase 4 泛型架构
+
+状态管理系统现已完全泛型化，支持任意 `DataContainer + SchemaDefinition` 组合：
+
+- **StateGeneric<C, S>**: 泛型状态管理，支持自定义容器和模式
+- **TransactionGeneric<C, S>**: 泛型事务处理系统
+- **PluginGeneric<C, S>**: 泛型插件系统，支持跨容器类型的插件开发
+- **向后兼容**: 通过类型别名 (如 `State = StateGeneric<NodePool, Schema>`) 保持 API 兼容性
 
 ### 核心架构组件
 
 ```
+┌────────────────────────────────────────────────────────────────┐
+│                     Generic Layer (Phase 4)                    │
+│         StateGeneric<C,S> + TransactionGeneric<C,S>            │
+│              + PluginGeneric<C,S> (完全泛型)                    │
+├────────────────────────────────────────────────────────────────┤
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   State         │    │   Transaction   │    │   Plugin        │
 │   (状态管理)     │◄──►│   (事务处理)     │◄──►│   (插件系统)     │
+│ = StateGeneric  │    │= TransGeneric   │    │= PluginGeneric  │
+│<NodePool,Schema>│    │<NodePool,Schema>│    │<NodePool,Schema>│
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          ▼                       ▼                       ▼
@@ -33,8 +50,321 @@ ModuForge-RS 状态管理采用不可变数据结构范式，确保状态变更�
 
 ## 🚀 核心功能
 
+### 0. 泛型状态系统 (Generic State System) ⭐ NEW
+
+从 Phase 4 开始，状态管理系统完全泛型化，支持任意数据容器和模式定义组合。
+
+#### StateGeneric<C, S> 架构
+
+```rust
+pub struct StateGeneric<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    pub config: Arc<ConfigurationGeneric<C, S>>,
+    // 使用 rpds 的线程安全不可变哈希表
+    pub fields_instances: Arc<HashTrieMapSync<String, Arc<dyn Resource>>>,
+    pub node_pool: Arc<C>,
+    pub version: u64,
+}
+```
+
+**核心方法**：
+```rust
+impl<C, S> StateGeneric<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    /// 创建事务 (泛型版本)
+    pub fn tr_generic(&self) -> TransactionGeneric<C, S>;
+
+    /// 应用事务 (泛型版本)
+    pub async fn apply_generic(
+        &self,
+        transaction: TransactionGeneric<C, S>,
+    ) -> StateResult<TransactionResultGeneric<C, S>>;
+
+    /// 重新配置状态 (泛型版本)
+    pub async fn reconfigure_generic(
+        &self,
+        state_config: StateConfigGeneric<C, S>,
+    ) -> StateResult<Arc<StateGeneric<C, S>>>;
+
+    /// 序列化状态 (泛型版本)
+    pub async fn serialize_generic(&self) -> StateResult<StateSerializeGeneric<C>>
+    where
+        C: serde::Serialize;
+
+    /// 反序列化状态 (泛型版本)
+    pub async fn deserialize_generic(
+        s: &StateSerializeGeneric<C>,
+        configuration: &ConfigurationGeneric<C, S>,
+    ) -> StateResult<StateGeneric<C, S>>
+    where
+        C: serde::de::DeserializeOwned;
+}
+```
+
+#### 泛型插件系统
+
+```rust
+/// 泛型插件特征
+#[async_trait]
+pub trait PluginTraitGeneric<C, S>: Send + Sync + Debug
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    fn metadata(&self) -> PluginMetadata;
+    fn config(&self) -> PluginConfig;
+
+    async fn append_transaction(
+        &self,
+        trs: &[Arc<TransactionGeneric<C, S>>],
+        old_state: &Arc<StateGeneric<C, S>>,
+        new_state: &Arc<StateGeneric<C, S>>,
+    ) -> StateResult<Option<TransactionGeneric<C, S>>>;
+
+    async fn filter_transaction(
+        &self,
+        tr: &TransactionGeneric<C, S>,
+        state: &StateGeneric<C, S>,
+    ) -> bool;
+}
+
+/// 泛型状态字段
+#[async_trait]
+pub trait StateFieldGeneric<C, S>: Send + Sync + Debug
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    type Value: Resource;
+
+    async fn init(
+        &self,
+        config: &StateConfigGeneric<C, S>,
+        instance: &StateGeneric<C, S>,
+    ) -> Arc<Self::Value>;
+
+    async fn apply(
+        &self,
+        tr: &TransactionGeneric<C, S>,
+        value: Arc<Self::Value>,
+        old_state: &StateGeneric<C, S>,
+        new_state: &StateGeneric<C, S>,
+    ) -> Arc<Self::Value>;
+}
+```
+
+**类型擦除机制**：
+```rust
+/// 类型擦除的状态字段 trait
+#[async_trait]
+pub trait ErasedStateFieldGeneric<C, S>: Send + Sync + Debug
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    async fn init_erased(
+        &self,
+        config: &StateConfigGeneric<C, S>,
+        instance: &StateGeneric<C, S>,
+    ) -> Arc<dyn Resource>;
+
+    async fn apply_erased(
+        &self,
+        tr: &TransactionGeneric<C, S>,
+        value: Arc<dyn Resource>,
+        old_state: &StateGeneric<C, S>,
+        new_state: &StateGeneric<C, S>,
+    ) -> Arc<dyn Resource>;
+}
+
+/// Blanket implementation: 自动类型擦除
+#[async_trait]
+impl<C, S, T> ErasedStateFieldGeneric<C, S> for T
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+    T: StateFieldGeneric<C, S> + Send + Sync + 'static,
+{
+    // 自动实现类型擦除方法
+}
+```
+
+#### 使用自定义容器
+
+```rust
+use mf_state::{StateGeneric, StateConfigGeneric, TransactionGeneric};
+use mf_model::traits::{DataContainer, SchemaDefinition};
+
+// 1. 定义自定义容器和模式
+struct MyContainer { /* ... */ }
+struct MySchema { /* ... */ }
+
+impl DataContainer for MyContainer { /* ... */ }
+impl SchemaDefinition for MySchema {
+    type Container = MyContainer;
+    /* ... */
+}
+
+// 2. 创建泛型状态
+let config = StateConfigGeneric::<MyContainer, MySchema> {
+    schema: Some(Arc::new(my_schema)),
+    doc: Some(Arc::new(my_container)),
+    stored_marks: None,
+    plugins: None,
+    resource_manager: None,
+};
+
+let state = StateGeneric::new_generic(Arc::new(config_gen), doc)?;
+
+// 3. 创建和应用事务
+let transaction = state.tr_generic();
+let result = state.apply_generic(transaction).await?;
+
+// 4. 序列化和反序列化 (如果容器支持 Serde)
+let serialized = state.serialize_generic().await?;
+let deserialized = StateGeneric::deserialize_generic(&serialized, &config).await?;
+```
+
+#### 开发跨容器插件
+
+```rust
+use mf_state::plugin::{PluginTraitGeneric, StateFieldGeneric, PluginSpecGeneric, PluginGeneric};
+
+// 1. 实现泛型插件状态
+#[derive(Debug)]
+struct MyPluginState<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    counter: i32,
+    _phantom: std::marker::PhantomData<(C, S)>,
+}
+
+impl<C, S> Resource for MyPluginState<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{}
+
+// 2. 实现泛型状态字段
+#[derive(Debug)]
+struct MyStateField<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    _phantom: std::marker::PhantomData<(C, S)>,
+}
+
+#[async_trait]
+impl<C, S> StateFieldGeneric<C, S> for MyStateField<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    type Value = MyPluginState<C, S>;
+
+    async fn init(
+        &self,
+        _config: &StateConfigGeneric<C, S>,
+        _instance: &StateGeneric<C, S>,
+    ) -> Arc<Self::Value> {
+        Arc::new(MyPluginState {
+            counter: 0,
+            _phantom: std::marker::PhantomData,
+        })
+    }
+
+    async fn apply(
+        &self,
+        _tr: &TransactionGeneric<C, S>,
+        value: Arc<Self::Value>,
+        _old_state: &StateGeneric<C, S>,
+        _new_state: &StateGeneric<C, S>,
+    ) -> Arc<Self::Value> {
+        Arc::new(MyPluginState {
+            counter: value.counter + 1,
+            _phantom: std::marker::PhantomData,
+        })
+    }
+}
+
+// 3. 实现泛型插件特征
+#[derive(Debug)]
+struct MyPlugin<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    _phantom: std::marker::PhantomData<(C, S)>,
+}
+
+#[async_trait]
+impl<C, S> PluginTraitGeneric<C, S> for MyPlugin<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "my_plugin".to_string(),
+            version: "1.0.0".to_string(),
+            description: "跨容器泛型插件示例".to_string(),
+        }
+    }
+
+    fn config(&self) -> PluginConfig {
+        PluginConfig::default()
+    }
+}
+
+// 4. 创建插件实例
+let plugin_spec = PluginSpecGeneric {
+    state_field: Some(Arc::new(MyStateField {
+        _phantom: std::marker::PhantomData,
+    })),
+    tr: Arc::new(MyPlugin {
+        _phantom: std::marker::PhantomData,
+    }),
+};
+
+let plugin = PluginGeneric::new(plugin_spec);
+
+// 5. 使用插件 (适用于任意容器类型)
+let plugins = vec![Arc::new(plugin)];
+let config = StateConfigGeneric::<MyContainer, MySchema> {
+    plugins: Some(plugins),
+    // ... 其他配置
+};
+```
+
+#### 向后兼容性
+
+```rust
+// 旧代码无需修改 - 类型别名自动适配
+use mf_state::{State, Transaction, StateConfig};
+use mf_model::{node_pool::NodePool, schema::Schema};
+
+// State 是 StateGeneric<NodePool, Schema> 的类型别名
+pub type State = StateGeneric<NodePool, Schema>;
+pub type Transaction = TransactionGeneric<NodePool, Schema>;
+pub type StateConfig = StateConfigGeneric<NodePool, Schema>;
+
+// 现有代码继续工作
+let state = State::create(StateConfig::default()).await?;
+let transaction = state.tr();
+let result = state.apply(transaction).await?;
+```
+
 ### 1. 状态管理 (State)
-- **不可变状态**: 基于 `im::HashMap` 的不可变状态存储
+- **不可变状态**: 基于 `rpds::HashTrieMapSync` 的不可变状态存储
 - **版本控制**: 自动版本号管理，支持状态回滚
 - **配置管理**: 灵活的状态配置和初始化
 - **序列化支持**: 完整的状态序列化和反序列化
@@ -69,7 +399,7 @@ ModuForge-RS 状态管理采用不可变数据结构范式，确保状态变更�
 ```toml
 [dependencies]
 # 不可变数据结构
-im = { version = "15.1", features = ["serde"] }
+rpds = { workspace = true, features = ["serde"] }
 
 # 序列化
 serde = { version = "1.0", features = ["derive", "rc"] }
@@ -364,7 +694,7 @@ init_logging("info", Some("logs/moduforge.log"))?;
 ## 📊 性能特性
 
 ### 不可变数据结构优化
-- **结构共享**: 利用 `im-rs` 的结构共享减少内存使用
+- **结构共享**: 利用 `rpds` 的持久化数据结构和结构共享减少内存使用
 - **延迟克隆**: 只在必要时进行数据克隆
 - **批量操作**: 支持高效的批量状态变更
 

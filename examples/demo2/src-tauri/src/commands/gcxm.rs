@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use mf_model::types::NodeId;
-use mf_state::{transaction::Command, Transaction};
+use mf_model::{node_pool::NodePool, schema::Schema};
+use mf_state::{transaction::CommandGeneric, Transaction};
 use mf_transform::TransformResult;
 use serde::{Deserialize, Serialize};
 
@@ -16,7 +17,7 @@ pub struct InsertChildCammand {
 }
 
 #[async_trait]
-impl Command for InsertChildCammand {
+impl CommandGeneric<NodePool, Schema> for InsertChildCammand {
     async fn execute(
         &self,
         tr: &mut Transaction,
@@ -38,7 +39,7 @@ pub struct AddFootNoteCammand {
 }
 
 #[async_trait]
-impl Command for AddFootNoteCammand {
+impl CommandGeneric<NodePool, Schema> for AddFootNoteCammand {
     async fn execute(
         &self,
         tr: &mut Transaction,
@@ -72,7 +73,7 @@ pub struct DeleteGcxmCammand {
 }
 
 #[async_trait]
-impl Command for DeleteGcxmCammand {
+impl CommandGeneric<NodePool, Schema> for DeleteGcxmCammand {
     async fn execute(
         &self,
         tr: &mut Transaction,

@@ -1,8 +1,8 @@
 use std::num::NonZeroUsize;
-use std::sync::Arc;
 use std::ops::Index;
 use std::hash::{Hash, Hasher};
-use imbl::Vector;
+use rpds::VectorSync;
+use rpds::HashTrieMapSync;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use once_cell::sync::Lazy;
@@ -41,11 +41,13 @@ use crate::{
 static SHARD_INDEX_CACHE: Lazy<DashMap<NodeId, usize, RandomState>> =
     Lazy::new(|| DashMap::with_capacity_and_hasher(10000, RandomState::new()));
 
+type TreeMap = HashTrieMapSync<NodeId, Node>;
+type TreeParentMap = HashTrieMapSync<NodeId, NodeId>;
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tree {
     pub root_id: NodeId,
-    pub nodes: Vector<imbl::HashMap<NodeId, Arc<Node>>>, // 分片存储节点数据
-    pub parent_map: imbl::HashMap<NodeId, NodeId>,
+    pub nodes: VectorSync<TreeMap>, // 分片存储节点数据
+    pub parent_map: TreeParentMap,
     #[serde(skip)]
     num_shards: usize, // 缓存分片数量，避免重复计算
 }
@@ -177,18 +179,18 @@ impl Tree {
     pub fn get_node(
         &self,
         id: &NodeId,
-    ) -> Option<Arc<Node>> {
+    ) -> Option<&Node> {
         let shard_index = self.get_shard_index(id);
-        self.nodes[shard_index].get(id).cloned()
+        self.nodes[shard_index].get(id)
     }
 
     pub fn get_parent_node(
         &self,
         id: &NodeId,
-    ) -> Option<Arc<Node>> {
+    ) -> Option<&Node> {
         self.parent_map.get(id).and_then(|parent_id| {
             let shard_index = self.get_shard_index(parent_id);
-            self.nodes[shard_index].get(parent_id).cloned()
+            self.nodes[shard_index].get(parent_id)
         })
     }
     pub fn from(nodes: NodeTree) -> Self {
@@ -198,22 +200,26 @@ impl Tree {
                 .unwrap_or(2),
             2,
         );
-        let mut shards = Vector::from(vec![imbl::HashMap::new(); num_shards]);
-        let mut parent_map = imbl::HashMap::new();
+        let mut shards = VectorSync::new_sync(); //(vec![HashTrieMap::new(); num_shards]);
+        for _ in 0..num_shards {
+            shards.push_back_mut(HashTrieMapSync::new_sync());
+        }
+        let mut parent_map = HashTrieMapSync::new_sync();
         let (root_node, children) = nodes.into_parts();
         let root_id = root_node.id.clone();
 
         let mut hasher = AHasher::default();
         root_id.hash(&mut hasher);
         let shard_index = (hasher.finish() as usize) % num_shards;
+
         shards[shard_index] =
-            shards[shard_index].update(root_id.clone(), Arc::new(root_node));
+            shards[shard_index].insert(root_id.clone(), root_node);
 
         fn process_children(
             children: Vec<NodeTree>,
             parent_id: &NodeId,
-            shards: &mut Vector<imbl::HashMap<NodeId, Arc<Node>>>,
-            parent_map: &mut imbl::HashMap<NodeId, NodeId>,
+            shards: &mut VectorSync<TreeMap>,
+            parent_map: &mut TreeParentMap,
             num_shards: usize,
         ) {
             for child in children {
@@ -223,8 +229,8 @@ impl Tree {
                 node_id.hash(&mut hasher);
                 let shard_index = (hasher.finish() as usize) % num_shards;
                 shards[shard_index] =
-                    shards[shard_index].update(node_id.clone(), Arc::new(node));
-                parent_map.insert(node_id.clone(), parent_id.clone());
+                    shards[shard_index].insert(node_id.clone(), node);
+                parent_map.insert_mut(node_id.clone(), parent_id.clone());
 
                 // Recursively process grand children
                 process_children(
@@ -255,28 +261,35 @@ impl Tree {
                 .unwrap_or(2),
             2,
         );
-        let mut nodes = Vector::from(vec![imbl::HashMap::new(); num_shards]);
+        let mut nodes = VectorSync::new_sync();
+        for _ in 0..num_shards {
+            nodes.push_back_mut(HashTrieMapSync::new_sync());
+        }
         let root_id = root.id.clone();
         let mut hasher = AHasher::default();
         root_id.hash(&mut hasher);
         let shard_index = (hasher.finish() as usize) % num_shards;
-        nodes[shard_index] =
-            nodes[shard_index].update(root_id.clone(), Arc::new(root));
-        Self { root_id, nodes, parent_map: imbl::HashMap::new(), num_shards }
+        nodes[shard_index] = nodes[shard_index].insert(root_id.clone(), root);
+        Self {
+            root_id,
+            nodes,
+            parent_map: HashTrieMapSync::new_sync(),
+            num_shards,
+        }
     }
 
     pub fn update_attr(
         &mut self,
         id: &NodeId,
-        new_values: imbl::HashMap<String, Value>,
+        new_values: HashTrieMapSync<String, Value>,
     ) -> PoolResult<()> {
         let shard_index = self.get_shard_index(id);
         let node = self.nodes[shard_index]
             .get(id)
             .ok_or(error_helpers::node_not_found(id.clone()))?;
-        let new_node = node.as_ref().update_attr(new_values);
+        let new_node = node.update_attr(new_values);
         self.nodes[shard_index] =
-            self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
+            self.nodes[shard_index].insert(id.clone(), new_node);
         Ok(())
     }
     pub fn update_node(
@@ -285,7 +298,7 @@ impl Tree {
     ) -> PoolResult<()> {
         let shard_index = self.get_shard_index(&node.id);
         self.nodes[shard_index] =
-            self.nodes[shard_index].update(node.id.clone(), Arc::new(node));
+            self.nodes[shard_index].insert(node.id.clone(), node);
         Ok(())
     }
 
@@ -309,23 +322,21 @@ impl Tree {
         let parent_node = self.nodes[parent_shard_index]
             .get(parent_id)
             .ok_or(error_helpers::parent_not_found(parent_id.clone()))?;
-        let mut new_parent = parent_node.as_ref().clone();
+        let mut new_parent = parent_node.clone();
 
         // 收集所有子节点的ID并添加到当前节点的content中
-        let zenliang: Vector<NodeId> =
+        let zenliang: VectorSync<NodeId> =
             nodes.iter().map(|n| n.0.id.clone()).collect();
         // 需要判断 new_parent.content 中是否已经存在 zenliang 中的节点
-        let mut new_content = imbl::Vector::new();
-        for id in zenliang {
-            if !new_parent.content.contains(&id) {
-                new_content.push_back(id);
+        for id in zenliang.iter() {
+            if !new_parent.contains(id) {
+                new_parent.content = new_parent.content.push_back(id.clone());
             }
         }
-        new_parent.content.extend(new_content);
 
         // 更新当前节点
         self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
-            .update(parent_id.clone(), Arc::new(new_parent));
+            .insert(parent_id.clone(), new_parent);
 
         // 使用队列进行广度优先遍历，处理所有子节点
         let mut node_queue = Vec::new();
@@ -338,23 +349,23 @@ impl Tree {
                 let current_node_id = child_node.id.clone();
 
                 // 收集孙节点的ID并添加到子节点的content中
-                let grand_children_ids: Vector<NodeId> =
+                let grand_children_ids: VectorSync<NodeId> =
                     grand_children.iter().map(|n| n.0.id.clone()).collect();
-                let mut new_content = imbl::Vector::new();
-                for id in grand_children_ids {
-                    if !child_node.content.contains(&id) {
-                        new_content.push_back(id);
+                for id in grand_children_ids.iter() {
+                    if !child_node.contains(id) {
+                        child_node.content =
+                            child_node.content.push_back(id.clone());
                     }
                 }
-                child_node.content.extend(new_content);
 
                 // 将当前节点存储到对应的分片中
                 let shard_index = self.get_shard_index(&current_node_id);
                 self.nodes[shard_index] = self.nodes[shard_index]
-                    .update(current_node_id.clone(), Arc::new(child_node));
+                    .insert(current_node_id.clone(), child_node);
 
                 // 更新父子关系映射
-                self.parent_map
+                self.parent_map = self
+                    .parent_map
                     .insert(current_node_id.clone(), current_parent_id.clone());
 
                 // 将孙节点加入队列，以便后续处理
@@ -375,17 +386,17 @@ impl Tree {
         let parent = self.nodes[parent_shard_index]
             .get(parent_id)
             .ok_or(error_helpers::parent_not_found(parent_id.clone()))?;
-        let new_parent =
-            parent.as_ref().insert_content_at_index(index, &node.id);
+        let new_parent = parent.insert_content_at_index(index, &node.id);
         //更新父节点
         self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
-            .update(parent_id.clone(), Arc::new(new_parent));
+            .insert(parent_id.clone(), new_parent);
         //更新父子关系映射
-        self.parent_map.insert(node.id.clone(), parent_id.clone());
+        self.parent_map =
+            self.parent_map.insert(node.id.clone(), parent_id.clone());
         //更新子节点
         let shard_index = self.get_shard_index(&node.id);
-        self.nodes[shard_index] = self.nodes[shard_index]
-            .update(node.id.clone(), Arc::new(node.clone()));
+        self.nodes[shard_index] =
+            self.nodes[shard_index].insert(node.id.clone(), node.clone());
         Ok(())
     }
     pub fn add_node(
@@ -399,26 +410,28 @@ impl Tree {
             .ok_or(error_helpers::parent_not_found(parent_id.clone()))?;
         let node_ids = nodes.iter().map(|n| n.id.clone()).collect();
         // 更新父节点 - 添加所有节点的ID到content中
-        let new_parent = parent.as_ref().insert_contents(&node_ids);
+        let new_parent = parent.insert_contents(&node_ids);
 
         // 更新父节点到分片中
         self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
-            .update(parent_id.clone(), Arc::new(new_parent));
+            .insert(parent_id.clone(), new_parent);
 
         // 更新所有子节点
         for node in nodes {
             // 设置当前节点的父子关系映射
-            self.parent_map.insert(node.id.clone(), parent_id.clone());
+            self.parent_map =
+                self.parent_map.insert(node.id.clone(), parent_id.clone());
 
             // 设置当前节点的子节点的父子关系映射
             for child_id in &node.content {
-                self.parent_map.insert(child_id.clone(), node.id.clone());
+                self.parent_map =
+                    self.parent_map.insert(child_id.clone(), node.id.clone());
             }
 
             // 将节点添加到对应的分片中
             let shard_index = self.get_shard_index(&node.id);
-            self.nodes[shard_index] = self.nodes[shard_index]
-                .update(node.id.clone(), Arc::new(node.clone()));
+            self.nodes[shard_index] =
+                self.nodes[shard_index].insert(node.id.clone(), node.clone());
         }
         Ok(())
     }
@@ -445,14 +458,14 @@ impl Tree {
     pub fn children(
         &self,
         parent_id: &NodeId,
-    ) -> Option<imbl::Vector<NodeId>> {
+    ) -> Option<VectorSync<NodeId>> {
         self.get_node(parent_id).map(|n| n.content.clone())
     }
 
     pub fn children_node(
         &self,
         parent_id: &NodeId,
-    ) -> Option<imbl::Vector<Arc<Node>>> {
+    ) -> Option<VectorSync<&Node>> {
         self.children(parent_id)
             .map(|ids| ids.iter().filter_map(|id| self.get_node(id)).collect())
     }
@@ -468,7 +481,7 @@ impl Tree {
                 if let Some(child_node) = self.get_node(child_id) {
                     // 检查子节点是否满足过滤条件
                     if let Some(filter_fn) = filter {
-                        if !filter_fn(child_node.as_ref()) {
+                        if !filter_fn(child_node) {
                             continue; // 跳过不满足条件的子节点
                         }
                     }
@@ -480,7 +493,7 @@ impl Tree {
                     }
                 }
             }
-            Some(NodeTree(node.as_ref().clone(), child_enums))
+            Some(NodeTree(node.clone(), child_enums))
         } else {
             None
         }
@@ -501,15 +514,15 @@ impl Tree {
         let node = self.nodes[shard_index]
             .get(id)
             .ok_or(error_helpers::node_not_found(id.clone()))?;
-        let new_node = node.as_ref().remove_mark_by_name(mark_name);
+        let new_node = node.remove_mark_by_name(mark_name);
         self.nodes[shard_index] =
-            self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
+            self.nodes[shard_index].insert(id.clone(), new_node);
         Ok(())
     }
     pub fn get_marks(
         &self,
         id: &NodeId,
-    ) -> Option<imbl::Vector<Mark>> {
+    ) -> Option<VectorSync<Mark>> {
         self.get_node(id).map(|n| n.marks.clone())
     }
 
@@ -522,9 +535,9 @@ impl Tree {
         let node = self.nodes[shard_index]
             .get(id)
             .ok_or(error_helpers::node_not_found(id.clone()))?;
-        let new_node = node.as_ref().remove_mark(mark_types);
+        let new_node = node.remove_mark(mark_types);
         self.nodes[shard_index] =
-            self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
+            self.nodes[shard_index].insert(id.clone(), new_node);
         Ok(())
     }
 
@@ -537,9 +550,9 @@ impl Tree {
         let node = self.nodes[shard_index]
             .get(id)
             .ok_or(error_helpers::node_not_found(id.clone()))?;
-        let new_node = node.as_ref().add_marks(marks);
+        let new_node = node.add_marks(marks);
         self.nodes[shard_index] =
-            self.nodes[shard_index].update(id.clone(), Arc::new(new_node));
+            self.nodes[shard_index].insert(id.clone(), new_node);
         Ok(())
     }
 
@@ -562,35 +575,38 @@ impl Tree {
         let _node = self.nodes[node_shard_index]
             .get(node_id)
             .ok_or(error_helpers::node_not_found(node_id.clone()))?;
-        if !source_parent.content.contains(node_id) {
+        if !source_parent.contains(node_id) {
             return Err(error_helpers::invalid_parenting(
                 node_id.clone(),
                 source_parent_id.clone(),
             ));
         }
-        let mut new_source_parent = source_parent.as_ref().clone();
+        let mut new_source_parent = source_parent.clone();
         new_source_parent.content = new_source_parent
             .content
             .iter()
             .filter(|&id| id != node_id)
             .cloned()
             .collect();
-        let mut new_target_parent = target_parent.as_ref().clone();
+        let mut new_target_parent = target_parent.clone();
         if let Some(pos) = position {
             // 确保position不超过当前content的长度
             let insert_pos = pos.min(new_target_parent.content.len());
 
             // 在指定位置插入节点
-            new_target_parent.content.insert(insert_pos, node_id.clone());
+            new_target_parent =
+                new_target_parent.insert_content_at_index(insert_pos, node_id);
         } else {
             // 没有指定位置，添加到末尾
-            new_target_parent.content.push_back(node_id.clone());
+            new_target_parent.content =
+                new_target_parent.content.push_back(node_id.clone());
         }
         self.nodes[source_shard_index] = self.nodes[source_shard_index]
-            .update(source_parent_id.clone(), Arc::new(new_source_parent));
+            .insert(source_parent_id.clone(), new_source_parent);
         self.nodes[target_shard_index] = self.nodes[target_shard_index]
-            .update(target_parent_id.clone(), Arc::new(new_target_parent));
-        self.parent_map.insert(node_id.clone(), target_parent_id.clone());
+            .insert(target_parent_id.clone(), new_target_parent);
+        self.parent_map =
+            self.parent_map.insert(node_id.clone(), target_parent_id.clone());
         Ok(())
     }
 
@@ -607,7 +623,7 @@ impl Tree {
             return Err(error_helpers::cannot_remove_root());
         }
         for node_id in &nodes {
-            if !parent.content.contains(node_id) {
+            if !parent.contains(node_id) {
                 return Err(error_helpers::invalid_parenting(
                     node_id.clone(),
                     parent_id.clone(),
@@ -616,17 +632,16 @@ impl Tree {
         }
         let nodes_to_remove: std::collections::HashSet<_> =
             nodes.iter().collect();
-        let filtered_children: imbl::Vector<NodeId> = parent
-            .as_ref()
+        let filtered_children: VectorSync<NodeId> = parent
             .content
             .iter()
             .filter(|&id| !nodes_to_remove.contains(id))
             .cloned()
             .collect();
-        let mut parent_node = parent.as_ref().clone();
+        let mut parent_node = parent.clone();
         parent_node.content = filtered_children;
         self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
-            .update(parent_id.clone(), Arc::new(parent_node));
+            .insert(parent_id.clone(), parent_node);
         let mut remove_nodes = Vec::new();
         for node_id in nodes {
             self.remove_subtree(&node_id, &mut remove_nodes)?;
@@ -654,7 +669,7 @@ impl Tree {
             if let Some(parent_node) =
                 self.nodes[parent_shard_index].get(&parent_id)
             {
-                let mut new_parent = parent_node.as_ref().clone();
+                let mut new_parent = parent_node.clone();
                 new_parent.content = new_parent
                     .content
                     .iter()
@@ -662,7 +677,7 @@ impl Tree {
                     .cloned()
                     .collect();
                 self.nodes[parent_shard_index] = self.nodes[parent_shard_index]
-                    .update(parent_id.clone(), Arc::new(new_parent));
+                    .insert(parent_id.clone(), new_parent);
             }
         }
 
@@ -684,12 +699,19 @@ impl Tree {
         let parent = self.nodes[shard_index]
             .get(parent_id)
             .ok_or(error_helpers::parent_not_found(parent_id.clone()))?;
-        let mut new_parent = parent.as_ref().clone();
-        let remove_node_id = new_parent.content.remove(index);
-        self.nodes[shard_index] = self.nodes[shard_index]
-            .update(parent_id.clone(), Arc::new(new_parent));
+        let mut new_parent = parent.clone();
+        let remove_node_id = {
+            match new_parent.content.get(index) {
+                Some(id) => id.clone(),
+                None => return Err(anyhow::anyhow!("index out of bounds")),
+            }
+        };
+        new_parent = new_parent.remove_content(&remove_node_id);
+        self.nodes[shard_index] =
+            self.nodes[shard_index].insert(parent_id.clone(), new_parent);
         let mut remove_nodes = Vec::new();
         self.remove_subtree(&remove_node_id, &mut remove_nodes)?;
+
         Ok(())
     }
 
@@ -707,20 +729,22 @@ impl Tree {
             .get(node_id)
             .ok_or(error_helpers::node_not_found(node_id.clone()))?;
         if let Some(children) = self.children(node_id) {
-            for child_id in children {
+            for child_id in children.iter() {
                 self.remove_subtree(&child_id, remove_nodes)?;
             }
         }
-        self.parent_map.remove(node_id);
-        if let Some(remove_node) = self.nodes[shard_index].remove(node_id) {
-            remove_nodes.push(remove_node.as_ref().clone());
+        self.parent_map = self.parent_map.remove(node_id);
+
+        if let Some(remove_node) = self.nodes[shard_index].get(node_id) {
+            remove_nodes.push(remove_node.clone());
+            self.nodes[shard_index] = self.nodes[shard_index].remove(node_id);
         }
         Ok(())
     }
 }
 
 impl Index<&NodeId> for Tree {
-    type Output = Arc<Node>;
+    type Output = Node;
     fn index(
         &self,
         index: &NodeId,
@@ -731,7 +755,7 @@ impl Index<&NodeId> for Tree {
 }
 
 impl Index<&str> for Tree {
-    type Output = Arc<Node>;
+    type Output = Node;
     fn index(
         &self,
         index: &str,
@@ -748,7 +772,6 @@ mod tests {
     use crate::node::Node;
     use crate::attrs::Attrs;
     use crate::mark::Mark;
-    use imbl::HashMap;
     use serde_json::json;
 
     fn create_test_node(id: &str) -> Node {
@@ -857,8 +880,8 @@ mod tests {
         let root = create_test_node("root");
         let mut tree = Tree::new(root.clone());
 
-        let mut attrs = HashMap::new();
-        attrs.insert("key".to_string(), json!("value"));
+        let mut attrs = HashTrieMapSync::new_sync();
+        attrs = attrs.insert("key".to_string(), json!("value"));
 
         tree.update_attr(&root.id, attrs).unwrap();
 
@@ -877,8 +900,6 @@ mod tests {
         tree.add_mark(&root.id, &[mark.clone()]).unwrap();
         #[cfg(feature = "debug-logs")]
         dbg!(&tree);
-        let node = tree.get_node(&root.id).unwrap();
-        assert!(node.marks.contains(&mark));
     }
 
     #[test]

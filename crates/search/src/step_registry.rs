@@ -3,8 +3,9 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock, OnceLock};
 
 use mf_model::node_pool::NodePool;
+use mf_model::schema::Schema;
 use mf_model::NodeId;
-use mf_transform::step::Step;
+use mf_transform::step::StepGeneric;
 
 use crate::backend::IndexMutation;
 use crate::model::IndexDoc;
@@ -18,7 +19,7 @@ pub struct StepIndexContext<'a> {
 /// 类型安全的 Step→索引增量 转换器
 pub trait TypedStepIndexer<T>: Send + Sync + 'static
 where
-    T: Step + 'static,
+    T: StepGeneric<NodePool, Schema> + 'static,
 {
     fn index_step(
         &self,
@@ -42,7 +43,7 @@ struct ErasedIndexer {
 impl ErasedIndexer {
     fn new<T, C>() -> Self
     where
-        T: Step + 'static,
+        T: StepGeneric<NodePool, Schema> + 'static,
         C: TypedStepIndexer<T> + Default + 'static,
     {
         Self {
@@ -59,7 +60,7 @@ impl ErasedIndexer {
 
     fn try_index(
         &self,
-        step: &dyn Step,
+        step: &dyn StepGeneric<NodePool, Schema>,
         ctx: &StepIndexContext,
     ) -> Option<Vec<IndexMutation>> {
         if step.type_id() != self.type_id {
@@ -82,7 +83,7 @@ impl StepIndexerRegistry {
 
     pub fn register<T, C>(&mut self) -> &mut Self
     where
-        T: Step + 'static,
+        T: StepGeneric<NodePool, Schema> + 'static,
         C: TypedStepIndexer<T> + Default + 'static,
     {
         let type_id = TypeId::of::<T>();
@@ -94,7 +95,7 @@ impl StepIndexerRegistry {
 
     pub fn index_step(
         &self,
-        step: &dyn Step,
+        step: &dyn StepGeneric<NodePool, Schema>,
         ctx: &StepIndexContext,
     ) -> Option<Vec<IndexMutation>> {
         let type_id = step.type_id();
@@ -110,7 +111,7 @@ pub fn global_registry() -> &'static RwLock<StepIndexerRegistry> {
 
 pub fn register_step_indexer<T, C>()
 where
-    T: Step + 'static,
+    T: StepGeneric<NodePool, Schema> + 'static,
     C: TypedStepIndexer<T> + Default + 'static,
 {
     let mut reg = global_registry().write().unwrap();
@@ -236,7 +237,7 @@ impl TypedStepIndexer<MoveNodeStep> for MoveNodeIndexer {
         struct MoveNodeSerde {
             node_id: NodeId,
         }
-        if let Some(bytes) = Step::serialize(step) {
+        if let Some(bytes) = step.serialize() {
             if let Ok(ms) = serde_json::from_slice::<MoveNodeSerde>(&bytes) {
                 let mut muts = Vec::new();
                 if let Some(enum_subtree) =

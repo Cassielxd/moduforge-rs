@@ -294,9 +294,9 @@ macro_rules! mf_plugin {
                 mf_state::plugin::PluginSpec {
                     state_field: {
                         #[allow(unused_mut)]
-                        let mut field: Option<std::sync::Arc<dyn mf_state::plugin::ErasedStateField>> = None;
+                        let mut field: Option<std::sync::Arc<dyn mf_state::plugin::ErasedStateFieldGeneric<mf_model::node_pool::NodePool, mf_model::schema::Schema>>> = None;
                         $(
-                            field = Some(std::sync::Arc::new($state_field) as std::sync::Arc<dyn mf_state::plugin::ErasedStateField>);
+                            field = Some(std::sync::Arc::new($state_field) as std::sync::Arc<dyn mf_state::plugin::ErasedStateFieldGeneric<mf_model::node_pool::NodePool, mf_model::schema::Schema>>);
                         )?
                         field
                     },
@@ -306,7 +306,7 @@ macro_rules! mf_plugin {
         }
 
         #[async_trait::async_trait]
-        impl mf_state::plugin::PluginTrait for $name {
+        impl mf_state::plugin::PluginTraitGeneric<mf_model::node_pool::NodePool, mf_model::schema::Schema> for $name {
             fn metadata(&self) -> mf_state::plugin::PluginMetadata {
                 #[allow(unreachable_code)]
                 {
@@ -337,10 +337,10 @@ macro_rules! mf_plugin {
             $(
                 async fn append_transaction(
                     &self,
-                    trs: &[std::sync::Arc<mf_state::transaction::Transaction>],
-                    old_state: &std::sync::Arc<mf_state::state::State>,
-                    new_state: &std::sync::Arc<mf_state::state::State>,
-                ) -> mf_state::error::StateResult<Option<mf_state::transaction::Transaction>> {
+                    trs: &[std::sync::Arc<mf_state::transaction::TransactionGeneric<mf_model::node_pool::NodePool, mf_model::schema::Schema>>],
+                    old_state: &std::sync::Arc<mf_state::state::StateGeneric<mf_model::node_pool::NodePool, mf_model::schema::Schema>>,
+                    new_state: &std::sync::Arc<mf_state::state::StateGeneric<mf_model::node_pool::NodePool, mf_model::schema::Schema>>,
+                ) -> mf_state::error::StateResult<Option<mf_state::transaction::TransactionGeneric<mf_model::node_pool::NodePool, mf_model::schema::Schema>>> {
                     ($append_fn)(trs, old_state, new_state).await
                 }
             )?
@@ -348,8 +348,8 @@ macro_rules! mf_plugin {
             $(
                 async fn filter_transaction(
                     &self,
-                    tr: &mf_state::transaction::Transaction,
-                    state: &mf_state::state::State,
+                    tr: &mf_state::transaction::TransactionGeneric<mf_model::node_pool::NodePool, mf_model::schema::Schema>,
+                    state: &mf_state::state::StateGeneric<mf_model::node_pool::NodePool, mf_model::schema::Schema>,
                 ) -> bool {
                     ($filter_fn)(tr, state).await
                 }

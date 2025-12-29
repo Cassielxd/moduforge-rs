@@ -1,72 +1,30 @@
-use std::sync::Arc;
+// Re-export from generic module
+pub use crate::generic::extension::{
+    ExtensionGeneric, OpFnGeneric, OpFnItemGeneric, NodeTransformFnGeneric,
+};
 
-use mf_state::{ops::GlobalResourceManager, plugin::Plugin};
+// ==================== 向后兼容类型别名 ====================
 
-use crate::{types::GlobalAttributeItem, ForgeResult};
-use crate::node::Node;
+/// 默认 Extension 类型（向后兼容）
+pub type Extension = ExtensionGeneric<
+    mf_model::node_pool::NodePool,
+    mf_model::schema::Schema,
+>;
 
-pub type OpFnItem =
-    Arc<dyn Fn(&GlobalResourceManager) -> ForgeResult<()> + Send + Sync>;
-pub type OpFn = Vec<OpFnItem>;
-pub type NodeTransformFn =
-    Arc<dyn Fn(&mut Node) -> ForgeResult<()> + Send + Sync>;
-///扩展实现
-/// 组装全局属性和插件
-#[derive(Clone, Default)]
-pub struct Extension {
-    global_attributes: Vec<GlobalAttributeItem>,
-    plugins: Vec<Arc<Plugin>>,
-    op_fn: Option<OpFn>,
-    node_transform: Option<NodeTransformFn>,
-}
+/// 默认 OpFn 类型（向后兼容）
+pub type OpFn = OpFnGeneric<
+    mf_model::node_pool::NodePool,
+    mf_model::schema::Schema,
+>;
 
-impl Extension {
-    pub fn new() -> Self {
-        Extension {
-            global_attributes: vec![],
-            plugins: vec![],
-            op_fn: Some(vec![]),
-            node_transform: None,
-        }
-    }
-    pub fn add_node_transform(
-        &mut self,
-        node_fn: NodeTransformFn,
-    ) -> &mut Self {
-        self.node_transform = Some(node_fn);
-        self
-    }
-    pub fn get_node_transform(&self) -> Option<NodeTransformFn> {
-        self.node_transform.clone()
-    }
-    pub fn add_op_fn(
-        &mut self,
-        op_fn: OpFnItem,
-    ) -> &mut Self {
-        self.op_fn.get_or_insert(vec![]).push(op_fn);
-        self
-    }
-    pub fn get_op_fns(&self) -> OpFn {
-        self.op_fn.clone().unwrap_or_default()
-    }
-    pub fn add_global_attribute(
-        &mut self,
-        item: GlobalAttributeItem,
-    ) -> &mut Self {
-        self.global_attributes.push(item);
-        self
-    }
-    pub fn get_global_attributes(&self) -> &Vec<GlobalAttributeItem> {
-        &self.global_attributes
-    }
-    pub fn add_plugin(
-        &mut self,
-        plugin: Arc<Plugin>,
-    ) -> &mut Self {
-        self.plugins.push(plugin);
-        self
-    }
-    pub fn get_plugins(&self) -> &Vec<Arc<Plugin>> {
-        &self.plugins
-    }
-}
+/// 默认 OpFnItem 类型（向后兼容）
+pub type OpFnItem = OpFnItemGeneric<
+    mf_model::node_pool::NodePool,
+    mf_model::schema::Schema,
+>;
+
+/// 默认 NodeTransformFn 类型（向后兼容）
+pub type NodeTransformFn = NodeTransformFnGeneric<
+    mf_model::node_pool::NodePool,
+    mf_model::schema::Schema,
+>;

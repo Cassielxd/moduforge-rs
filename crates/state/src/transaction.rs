@@ -6,43 +6,69 @@ use async_trait::async_trait;
 use mf_model::mark::Mark;
 use mf_model::node_definition::NodeTree;
 use mf_model::types::NodeId;
+use mf_model::traits::{DataContainer, SchemaDefinition};
 use mf_transform::TransformResult;
 use serde_json::Value;
-use uuid::Uuid;
 
 use super::state::State;
 use mf_model::node_pool::NodePool;
+use mf_model::schema::Schema;
 use mf_transform::attr_step::AttrStep;
 use mf_transform::node_step::{AddNodeStep, RemoveNodeStep};
 use mf_transform::mark_step::{AddMarkStep, RemoveMarkStep};
-use mf_transform::transform::{Transform};
+use mf_transform::transform::{Transform, TransformGeneric};
 use std::fmt::Debug;
 use std::sync::atomic::{AtomicU64, Ordering};
+use mf_model::rpds::{HashTrieMapSync};
 
-/// 定义可执行的命令接口
+/// 定义可执行的命令接口 (泛型版本)
 /// 要求实现 Send + Sync 以支持并发操作，并实现 Debug 以支持调试
 #[async_trait]
-pub trait Command: Send + Sync + Debug {
+pub trait CommandGeneric<C, S>: Send + Sync + Debug
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
     async fn execute(
         &self,
-        tr: &mut Transaction,
+        tr: &mut TransactionGeneric<C, S>,
     ) -> TransformResult<()>;
     fn name(&self) -> String;
 }
+
+/// 默认的 Command trait (NodePool + Schema)
+///
+/// 这是一个便利别名，自动实现了 CommandGeneric<NodePool, Schema>
+/// 现有代码可以继续使用 Command trait 而无需修改
+pub trait Command: CommandGeneric<NodePool, Schema> {}
+
+/// 为所有实现了 CommandGeneric<NodePool, Schema> 的类型自动实现 Command
+impl<T> Command for T where T: CommandGeneric<NodePool, Schema> {}
+
 static VERSION: AtomicU64 = AtomicU64::new(1);
 pub fn get_tr_id() -> u64 {
     //生成 全局自增的版本号，用于兼容性
     VERSION.fetch_add(1, Ordering::SeqCst)
 }
-/// 事务结构体，用于管理文档的修改操作
+
+/// 事务结构体，用于管理文档的修改操作 (泛型版本)
 #[derive(Clone)]
-pub struct Transaction {
+pub struct TransactionGeneric<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
     /// 存储元数据的哈希表，支持任意类型数据
-    pub meta: imbl::HashMap<String, Arc<dyn Any + Send + Sync>>,
+    pub meta: HashTrieMapSync<String, Arc<dyn Any + Send + Sync>>,
     pub id: u64,
-    transform: Transform,
+    transform: TransformGeneric<C, S>,
 }
-impl Debug for Transaction {
+
+impl<C, S> Debug for TransactionGeneric<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
     fn fmt(
         &self,
         f: &mut std::fmt::Formatter<'_>,
@@ -51,19 +77,85 @@ impl Debug for Transaction {
     }
 }
 
-impl Deref for Transaction {
-    type Target = Transform;
+impl<C, S> Deref for TransactionGeneric<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    type Target = TransformGeneric<C, S>;
 
     fn deref(&self) -> &Self::Target {
         &self.transform
     }
 }
 
-impl DerefMut for Transaction {
+impl<C, S> DerefMut for TransactionGeneric<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.transform
     }
 }
+
+impl<C, S> TransactionGeneric<C, S>
+where
+    C: DataContainer + 'static,
+    S: SchemaDefinition<Container = C> + 'static,
+{
+    /// 创建新的事务实例 (泛型版本)
+    pub fn new_generic(
+        node: Arc<C>,
+        schema: Arc<S>,
+    ) -> Self {
+        TransactionGeneric {
+            meta: HashTrieMapSync::new_sync(),
+            id: get_tr_id(),
+            transform: TransformGeneric::new(node, schema),
+        }
+    }
+
+    /// 获取当前文档状态
+    pub fn doc(&self) -> Arc<C> {
+        self.transform.doc()
+    }
+
+    /// 设置元数据
+    /// key: 键
+    /// value: 值（支持任意类型）
+    pub fn set_meta<K, T: Send + Sync + 'static>(
+        &mut self,
+        key: K,
+        value: T,
+    ) -> &mut Self
+    where
+        K: Into<String>,
+    {
+        let key_str = key.into();
+        self.meta.insert_mut(key_str, Arc::new(value));
+        self
+    }
+
+    /// 获取元数据
+    /// key: 键
+    /// 返回: Option<&T>，如果存在且类型匹配则返回Some，否则返回None
+    pub fn get_meta<T: Clone + 'static>(
+        &self,
+        key: &str,
+    ) -> Option<T> {
+        let value = self.meta.get(key)?;
+
+        value.downcast_ref::<T>().cloned()
+    }
+}
+
+// ========================================
+// NodePool 特化实现
+// ========================================
+
+/// 默认的 Transaction 实现（NodePool + Schema）
+pub type Transaction = TransactionGeneric<NodePool, Schema>;
 
 impl Transaction {
     /// 创建新的事务实例
@@ -78,7 +170,7 @@ impl Transaction {
         let node = state.doc();
         let schema = state.schema();
         let tr = Transaction {
-            meta: imbl::HashMap::new(),
+            meta: HashTrieMapSync::new_sync(),
             id: get_tr_id(), // ✅ 使用 UUID v4 生成唯一标识
             transform: Transform::new(node, schema),
         };
@@ -108,10 +200,7 @@ impl Transaction {
             tracing::debug!(total_steps = self.steps.len(), "事务合并成功");
         }
     }
-    /// 获取当前文档状态
-    pub fn doc(&self) -> Arc<NodePool> {
-        self.transform.doc()
-    }
+
     /// 设置节点属性
     /// id: 节点ID
     /// values: 属性键值对
@@ -124,7 +213,7 @@ impl Transaction {
     pub fn set_node_attribute(
         &mut self,
         id: NodeId,
-        values: imbl::HashMap<String, Value>,
+        values: HashTrieMapSync<String, Value>,
     ) -> TransformResult<()> {
         self.step(Arc::new(AttrStep::new(id, values)))?;
         Ok(())
@@ -196,31 +285,5 @@ impl Transaction {
     ) -> TransformResult<()> {
         self.step(Arc::new(RemoveMarkStep::new(id, mark_types)))?;
         Ok(())
-    }
-    /// 设置元数据
-    /// key: 键
-    /// value: 值（支持任意类型）
-    pub fn set_meta<K, T: Send + Sync + 'static>(
-        &mut self,
-        key: K,
-        value: T,
-    ) -> &mut Self
-    where
-        K: Into<String>,
-    {
-        let key_str = key.into();
-        self.meta.insert(key_str, Arc::new(value));
-        self
-    }
-    /// 获取元数据
-    /// key: 键
-    /// 返回: Option<&T>，如果存在且类型匹配则返回Some，否则返回None
-    pub fn get_meta<T: Clone + 'static>(
-        &self,
-        key: &str,
-    ) -> Option<T> {
-        let value = self.meta.get(key)?;
-
-        value.downcast_ref::<T>().cloned()
     }
 }

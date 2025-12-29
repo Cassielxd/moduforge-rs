@@ -2,14 +2,13 @@
 resolver = "2"
 members = [
     "crates/*",
-    "tools/*"
-]
-exclude = [
-    "examples/*"
+    "tools/benchmark-coordinator",
+    "tools/file_tools/src-tauri"
 ]
 
+
 [workspace.package]
-version = "0.6.5"
+version = "0.7.0"
 edition = "2024"
 authors = ["String <348040933@qq.com>"]
 license = "MIT"
@@ -36,8 +35,7 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 tempfile = "3"
 anyhow = "1"
-# imbl 不可变数据实现
-imbl = { version = "6.0.0", features = ["serde", "rayon"] }
+rpds = { version = "1.2.0", features = ["serde"] }
 thiserror = "2.0.12"
 dashmap = "6.1.0"
 # 异步 trait
@@ -81,17 +79,17 @@ rbdc-sqlite = "4.6.2"
 
 
 #crates 下所有的库
-moduforge-core = { version = "0.6.5", path = "crates/core" }
-moduforge-state = { version = "0.6.5", path = "crates/state" }
-moduforge-model = { version = "0.6.5", path = "crates/model" }
-moduforge-transform = { version = "0.6.5", path = "crates/transform" }
-moduforge-file = { version = "0.6.5", path = "crates/file" }
-moduforge-persistence = { version = "0.6.5", path = "crates/persistence" }
-moduforge-search = { version = "0.6.5", path = "crates/search" }
-moduforge-macros = { version = "0.6.5", path = "crates/macro" }
-moduforge-macros-derive = { version = "0.6.5", path = "crates/derive" }
-moduforge-collaboration = { version = "0.6.5", path = "crates/collaboration" }
-moduforge-collaboration-client = { version = "0.6.5", path = "crates/collaboration_client" }
+moduforge-core = { version = "0.7.0", path = "crates/core" }
+moduforge-state = { version = "0.7.0", path = "crates/state" }
+moduforge-model = { version = "0.7.0", path = "crates/model" }
+moduforge-transform = { version = "0.7.0", path = "crates/transform" }
+moduforge-file = { version = "0.7.0", path = "crates/file" }
+moduforge-persistence = { version = "0.7.0", path = "crates/persistence" }
+moduforge-search = { version = "0.7.0", path = "crates/search" }
+moduforge-macros = { version = "0.7.0", path = "crates/macro" }
+moduforge-macros-derive = { version = "0.7.0", path = "crates/derive" }
+moduforge-collaboration = { version = "0.7.0", path = "crates/collaboration" }
+moduforge-collaboration-client = { version = "0.7.0", path = "crates/collaboration_client" }
 
 
 [workspace.features]

@@ -2,8 +2,8 @@ use crate::backend::IndexMutation;
 use crate::model::IndexDoc;
 use crate::step_registry::{global_registry, StepIndexContext};
 use mf_model::NodeId;
-use mf_model::{node_pool::NodePool, node_definition::NodeTree};
-use mf_transform::step::Step;
+use mf_model::{node_pool::NodePool, node_definition::NodeTree, schema::Schema};
+use mf_transform::step::StepGeneric;
 use mf_transform::{
     attr_step::AttrStep,
     mark_step::{AddMarkStep, RemoveMarkStep},
@@ -18,7 +18,7 @@ use serde::Deserialize;
 pub fn mutations_from_step(
     pool_before: &NodePool,
     pool_after: &NodePool,
-    step: &Arc<dyn Step>,
+    step: &Arc<dyn StepGeneric<NodePool, Schema>>,
 ) -> Vec<IndexMutation> {
     // 1) 先用注册表（支持扩展 Step 类型）
     if let Some(reg) = Some(global_registry().read().unwrap()) {
@@ -85,7 +85,7 @@ pub fn mutations_from_step(
 
     if step.downcast_ref::<MoveNodeStep>().is_some() {
         // MoveNodeStep 字段为私有，改为通过序列化结果读取
-        if let Some(bytes) = Step::serialize(step.as_ref()) {
+        if let Some(bytes) = step.serialize() {
             if let Ok(ms) = serde_json::from_slice::<MoveNodeSerde>(&bytes) {
                 let mut muts = Vec::new();
                 if let Some(enum_subtree) = pool_after

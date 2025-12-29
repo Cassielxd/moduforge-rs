@@ -69,18 +69,14 @@ impl SqliteEventStore {
         commit_mode = ?commit_mode
     )))]
     pub async fn open(
-        db_path: impl Into<PathBuf>,
+        root_path: impl Into<PathBuf>,
         commit_mode: CommitMode,
     ) -> anyhow::Result<Arc<Self>> {
-        let db_path = db_path.into();
-        if let Some(parent) = db_path.parent() {
-            if !parent.as_os_str().is_empty() {
-                std::fs::create_dir_all(parent)?;
-            }
-        }
-
+        let db_path = root_path.into().join("persistence");
+        let _ = tokio::fs::create_dir_all(db_path.clone()).await;
+        let path = db_path.join("persistence.sqlite");
         let rb = RBatis::new();
-        rb.link(Driver {}, &format!("sqlite://{}", db_path.display())).await?;
+        rb.link(Driver {}, &format!("sqlite://{}", path.display())).await?;
         Self::init_schema(&rb).await?;
 
         Ok(Arc::new(Self {

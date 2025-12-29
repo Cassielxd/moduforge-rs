@@ -1,3 +1,4 @@
+use rpds::VectorSync;
 use super::attrs::Attrs;
 use super::mark::Mark;
 use super::types::NodeId;
@@ -16,8 +17,8 @@ use serde_json::Value;
 /// # 示例
 ///
 /// ```
-/// use mf_rs::model::node::Node;
-/// use mf_rs::model::attrs::Attrs;
+/// use mf_model::node::Node;
+/// use mf_model::attrs::Attrs;
 ///
 /// let node = Node::new(
 ///     "node1",
@@ -37,9 +38,9 @@ pub struct Node {
     #[serde(rename = "a")]
     pub attrs: Attrs,
     #[serde(rename = "c")]
-    pub content: imbl::Vector<NodeId>, // 使用im::Vector替代Arc<Vec>
+    pub content: VectorSync<NodeId>, // 使用im::Vector替代Arc<Vec>
     #[serde(rename = "m")]
-    pub marks: imbl::Vector<Mark>,
+    pub marks: VectorSync<Mark>,
 }
 
 impl Node {
@@ -63,12 +64,20 @@ impl Node {
         content: Vec<NodeId>,
         marks: Vec<Mark>,
     ) -> Self {
+        let mut vector = rpds::VectorSync::new_sync();
+        for c in content {
+            vector = vector.push_back(c);
+        }
+        let mut mks = rpds::VectorSync::new_sync();
+        for m in marks {
+            mks = mks.push_back(m);
+        }
         Node {
             id: id.into(), // 转换为Arc<str>
             r#type,
             attrs,
-            content: content.into(),
-            marks: marks.into(),
+            content: vector,
+            marks: mks,
         }
     }
     /// 获取子节点数量
@@ -88,7 +97,7 @@ impl Node {
     /// # 返回值
     pub fn update_attr(
         &self,
-        new_values: imbl::HashMap<String, Value>,
+        new_values: rpds::HashTrieMapSync<String, Value>,
     ) -> Self {
         let mut new_node = self.clone();
         let new_attrs = self.attrs.update(new_values);
@@ -107,8 +116,16 @@ impl Node {
         index: usize,
         node_id: &str,
     ) -> Self {
-        let mut new_node = self.clone();
-        new_node.content.insert(index, node_id.into());
+        let mut new_node = self.clone(); // 通过迭代器重建 Vector，在指定位置插入新元素
+        new_node.content = self
+            .content
+            .iter()
+            .take(index)
+            .cloned()
+            .chain(std::iter::once(node_id.into()))
+            .chain(self.content.iter().skip(index).cloned())
+            .collect();
+
         new_node
     }
     /// 在末尾插入多个子节点
@@ -123,9 +140,49 @@ impl Node {
     ) -> Self {
         let mut new_node = self.clone();
         for node_id in node_ids {
-            new_node.content.push_back(node_id.clone());
+            new_node.content = new_node.content.push_back(node_id.clone());
         }
         new_node
+    }
+    pub fn contains(
+        &self,
+        id: &NodeId,
+    ) -> bool {
+        self.content.iter().any(|x| x.eq(id))
+    }
+    pub fn remove_content(
+        &mut self,
+        id: &NodeId,
+    ) -> Self {
+        let mut new_node = self.clone();
+        let mut new_vector = VectorSync::new_sync();
+        for c in self.content.iter() {
+            if !c.eq(id) {
+                new_vector.push_back_mut(c.clone());
+            }
+        }
+        new_node.content = new_vector;
+        new_node
+    }
+
+    pub fn swap(
+        &self,
+        i: usize,
+        j: usize,
+    ) -> Option<Node> {
+        if i >= self.content.len() || j >= self.content.len() {
+            return None;
+        }
+
+        let value_i = self.content.get(i)?;
+        let value_j = self.content.get(j)?;
+
+        let mut new_vector = self.content.clone();
+        new_vector.set_mut(i, value_j.clone());
+        new_vector.set_mut(j, value_i.clone());
+        let mut new_node = self.clone();
+        new_node.content = new_vector;
+        Some(new_node)
     }
     /// 在末尾插入一个子节点
     ///
@@ -138,7 +195,7 @@ impl Node {
         node_id: &str,
     ) -> Self {
         let mut new_node = self.clone();
-        new_node.content.push_back(node_id.into());
+        new_node.content = new_node.content.push_back(node_id.into());
         new_node
     }
 
@@ -202,5 +259,39 @@ impl Node {
             .collect();
         new_node.marks.extend(marks.iter().cloned());
         new_node
+    }
+}
+
+// ========================================
+// DataItem trait 实现
+// ========================================
+
+use crate::traits::DataItem;
+use std::collections::HashMap;
+
+impl DataItem for Node {
+    type Id = NodeId;
+
+    fn type_name(&self) -> &str {
+        &self.r#type
+    }
+
+    fn id(&self) -> &Self::Id {
+        &self.id
+    }
+
+    fn attributes(&self) -> Option<&HashMap<String, Value>> {
+        // Note: Node 使用 HashTrieMapSync 存储属性，不是 HashMap
+        // 这个方法返回 None，使用 Node 特定的方法访问属性
+        // 如需访问 Node 属性，请使用 node.attrs
+        None
+    }
+
+    fn with_attributes(&self, attrs: HashMap<String, Value>) -> Self {
+        let mut new_attrs = rpds::HashTrieMapSync::new_sync();
+        for (k, v) in attrs {
+            new_attrs.insert_mut(k, v);
+        }
+        self.update_attr(new_attrs)
     }
 }

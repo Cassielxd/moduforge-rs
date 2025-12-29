@@ -1216,7 +1216,7 @@ impl<'a> NodeGenerator<'a> {
             /// - 其他字段不会包含在生成的 Node 中
             pub fn to_node(&self) -> mf_model::node::Node {
                 use mf_model::attrs::Attrs;
-                use mf_model::imbl;
+                use mf_model::rpds;
                 use serde_json::Value as JsonValue;
 
                 #id_code
@@ -1264,7 +1264,7 @@ impl<'a> NodeGenerator<'a> {
 
         // 生成完整的属性构建代码
         let attrs_code = quote! {
-            let mut attrs_map = imbl::HashMap::new();
+            let mut attrs_map = rpds::HashTrieMapSync::new_sync();
             #(#field_setters)*
             let attrs = Attrs::from(attrs_map);
         };

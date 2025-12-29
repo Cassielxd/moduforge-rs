@@ -251,3 +251,76 @@ pub fn compute_attrs(
 
     built
 }
+
+// ========================================
+// SchemaDefinition trait 实现
+// ========================================
+
+use crate::traits::{SchemaDefinition, DataContainer};
+use crate::{NodePool, Node};
+
+impl SchemaDefinition for Schema {
+    type Container = NodePool;
+    type ItemDefinition = NodeDefinition;
+
+    fn name(&self) -> &str {
+        self.spec.top_node.as_deref().unwrap_or("doc")
+    }
+
+    fn get_definition(&self, type_name: &str) -> Option<&Self::ItemDefinition> {
+        self.nodes.get(type_name)
+    }
+
+    fn definitions(&self) -> Vec<&Self::ItemDefinition> {
+        self.nodes.values().collect()
+    }
+
+    fn validate(&self, container: &Self::Container) -> Result<(), Vec<String>> {
+        let mut errors = Vec::new();
+
+        // 遍历所有节点验证
+        for node in container.items() {
+            if let Some(def) = self.get_definition(&node.r#type) {
+                if let Err(e) = self.validate_item(node, def) {
+                    errors.push(e);
+                }
+            } else {
+                errors.push(format!("未知节点类型: {}", node.r#type));
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+
+    fn validate_item(
+        &self,
+        item: &Node,
+        definition: &Self::ItemDefinition,
+    ) -> Result<(), String> {
+        // 验证属性
+        for (key, _) in item.attrs.attrs.iter() {
+            if !definition.attrs.contains_key(key) {
+                return Err(format!(
+                    "节点 {} 包含未定义的属性: {}",
+                    definition.name, key
+                ));
+            }
+        }
+
+        // 验证必填属性
+        for (key, attr) in &definition.attrs {
+            if attr.is_required() && !item.attrs.contains_key(key) {
+                return Err(format!(
+                    "节点 {} 缺少必填属性: {}",
+                    definition.name, key
+                ));
+            }
+        }
+
+        Ok(())
+    }
+}

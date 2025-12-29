@@ -1,11 +1,11 @@
 use std::{sync::Arc};
 
-use mf_model::{mark::Mark, schema::Schema, tree::Tree, types::NodeId};
+use mf_model::{mark::Mark, schema::Schema, tree::Tree, types::NodeId, node_pool::NodePool};
 
 use crate::{transform_error, TransformResult};
 
 use super::{
-    step::{Step, StepResult},
+    step::{StepGeneric, StepResult},
 };
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -21,7 +21,7 @@ impl AddMarkStep {
         AddMarkStep { id, marks }
     }
 }
-impl Step for AddMarkStep {
+impl StepGeneric<NodePool, Schema> for AddMarkStep {
     fn name(&self) -> String {
         "add_mark_step".to_string()
     }
@@ -44,7 +44,7 @@ impl Step for AddMarkStep {
     fn invert(
         &self,
         dart: &Arc<Tree>,
-    ) -> Option<Arc<dyn Step>> {
+    ) -> Option<Arc<dyn StepGeneric<NodePool, Schema>>> {
         match dart.get_node(&self.id) {
             Some(_) => Some(Arc::new(RemoveMarkStep::new(
                 self.id.clone(),
@@ -68,7 +68,7 @@ impl RemoveMarkStep {
         RemoveMarkStep { id, mark_types }
     }
 }
-impl Step for RemoveMarkStep {
+impl StepGeneric<NodePool, Schema> for RemoveMarkStep {
     fn name(&self) -> String {
         "remove_mark_step".to_string()
     }
@@ -91,7 +91,7 @@ impl Step for RemoveMarkStep {
     fn invert(
         &self,
         dart: &Arc<Tree>,
-    ) -> Option<Arc<dyn Step>> {
+    ) -> Option<Arc<dyn StepGeneric<NodePool, Schema>>> {
         match dart.get_node(&self.id) {
             Some(node) => {
                 // 仅恢复被移除的 mark 类型，避免把未移除的也加回

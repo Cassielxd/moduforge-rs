@@ -1,37 +1,37 @@
 [package]
 name = "moduforge-collaboration-client"
-version =  {workspace=true}
-edition = {workspace=true}
+version = { workspace = true }
+edition = { workspace = true }
 description = "moduforge 协作系统"
-authors = {workspace=true}
-license = {workspace=true}
-documentation = {workspace=true}
-homepage = {workspace=true}
-repository = {workspace=true}
+authors = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
 [lib]
 name = "mf_collab_client"
 path = "src/lib.rs"
 
 [dependencies]
-tokio =  { workspace=true }
-serde = { workspace=true }
-serde_json = { workspace=true }
-tracing =  { workspace=true }
-tracing-subscriber = { workspace=true }
-futures-util = { workspace=true }
-yrs =  { workspace=true }
-tokio-tungstenite = { workspace=true }
-url =  { workspace=true }
-uuid = { workspace=true }
-anyhow = { workspace=true }
-thiserror = { workspace=true }
-reqwest = { workspace=true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+futures-util = { workspace = true }
+yrs = { workspace = true }
+tokio-tungstenite = { workspace = true }
+url = { workspace = true }
+uuid = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+reqwest = { workspace = true }
 chrono = "0.4"
-imbl =  { workspace=true }
+rpds = { workspace = true }
 moduforge-model = { workspace = true }
 moduforge-state = { workspace = true }
 moduforge-transform = { workspace = true }
 
 # 新增依赖用于静态分发 StepConverter
-ctor = { workspace=true }
+ctor = { workspace = true }

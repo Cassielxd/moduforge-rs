@@ -347,4 +347,21 @@ impl ExtensionManager {
         self.plugins.extend(plugins);
         Ok(())
     }
+
+    /// 转换为泛型版本
+    ///
+    /// 将具体的 ExtensionManager 转换为 ExtensionManagerGeneric<NodePool, Schema>
+    pub fn to_generic(
+        &self,
+    ) -> crate::generic::ExtensionManagerGeneric<
+        mf_model::node_pool::NodePool,
+        mf_model::schema::Schema,
+    > {
+        // 由于 OpFn 已经是 OpFnGeneric<NodePool, Schema> 的类型别名，直接克隆即可
+        crate::generic::ExtensionManagerGeneric::new(
+            self.plugins.clone(),
+            self.schema.clone(),
+            self.op_fns.clone(),
+        )
+    }
 }

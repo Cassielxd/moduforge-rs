@@ -18,39 +18,20 @@ use crate::{
     metrics,
 };
 
-use mf_state::{state::State, transaction::Transaction};
+use mf_state::{
+    state::State,
+    transaction::Transaction,
+};
 
 use super::{ActorMetrics, ActorSystemResult};
 
-/// 事务处理消息类型
-#[derive(Debug)]
-pub enum TransactionMessage {
-    /// 处理事务（保持与原始dispatch_with_meta完全相同的逻辑）
-    ProcessTransaction {
-        transaction: Transaction,
-        description: String,
-        meta: serde_json::Value,
-        reply: oneshot::Sender<ForgeResult<()>>,
-    },
-    /// 获取处理统计信息
-    GetStats { reply: oneshot::Sender<TransactionStats> },
-    /// 更新配置
-    UpdateConfig {
-        config: ForgeConfig,
-        reply: oneshot::Sender<ForgeResult<()>>,
-    },
-}
+// Re-export from generic module
+pub use crate::generic::messages::{TransactionMessageGeneric, TransactionStats};
 
-// TransactionMessage 自动实现 ractor::Message (Debug + Send + 'static)
+// ==================== 向后兼容类型别名 ====================
 
-/// 事务处理统计信息
-#[derive(Debug, Clone)]
-pub struct TransactionStats {
-    pub transactions_processed: u64,
-    pub transaction_failures: u64,
-    pub avg_processing_time_ms: u64,
-    pub middleware_timeouts: u64,
-}
+/// 默认 TransactionMessage 类型（向后兼容）
+pub type TransactionMessage = TransactionMessageGeneric<mf_model::node_pool::NodePool, mf_model::schema::Schema>;
 
 /// 事务处理Actor状态
 pub struct TransactionProcessorState {

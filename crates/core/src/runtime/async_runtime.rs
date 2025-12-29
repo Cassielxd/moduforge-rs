@@ -42,7 +42,6 @@ use std::{
 };
 use async_trait::async_trait;
 use crate::runtime::runtime::ForgeRuntime;
-use crate::runtime::runtime_trait::RuntimeTrait;
 use crate::types::ProcessorResult;
 use crate::{
     config::{ForgeConfig, PerformanceConfig},
@@ -56,7 +55,7 @@ use crate::{
 use mf_model::schema::Schema;
 use mf_state::{
     state::TransactionResult,
-    transaction::{Command, Transaction},
+    transaction::Transaction,
     State,
 };
 
@@ -267,7 +266,10 @@ impl ForgeAsyncRuntime {
     )))]
     pub async fn command(
         &mut self,
-        command: Arc<dyn Command>,
+        command: Arc<dyn mf_state::transaction::CommandGeneric<
+            mf_model::node_pool::NodePool,
+            mf_model::schema::Schema,
+        >>,
     ) -> ForgeResult<()> {
         self.command_with_meta(command, "".to_string(), serde_json::Value::Null)
             .await
@@ -291,7 +293,10 @@ impl ForgeAsyncRuntime {
     )))]
     pub async fn command_with_meta(
         &mut self,
-        command: Arc<dyn Command>,
+        command: Arc<dyn mf_state::transaction::CommandGeneric<
+            mf_model::node_pool::NodePool,
+            mf_model::schema::Schema,
+        >>,
         description: String,
         meta: serde_json::Value,
     ) -> ForgeResult<()> {
@@ -357,7 +362,7 @@ impl ForgeAsyncRuntime {
     ) -> ForgeResult<()> {
         let start_time = std::time::Instant::now();
         let mut current_transaction = transaction;
-        let _old_id = self.get_state().await?.version;
+        let _old_id = self.get_state().version;
         // 前置中间件处理
         let middleware_start = std::time::Instant::now();
         self.run_before_middleware(&mut current_transaction).await?;
@@ -626,7 +631,10 @@ impl ForgeAsyncRuntime {
 // ==================== RuntimeTrait 实现 ====================
 
 #[async_trait]
-impl RuntimeTrait for ForgeAsyncRuntime {
+impl crate::runtime::runtime_trait::RuntimeTraitGeneric<
+    mf_model::node_pool::NodePool,
+    mf_model::schema::Schema,
+> for ForgeAsyncRuntime {
     async fn dispatch(
         &mut self,
         transaction: Transaction,
@@ -647,14 +655,20 @@ impl RuntimeTrait for ForgeAsyncRuntime {
 
     async fn command(
         &mut self,
-        command: Arc<dyn Command>,
+        command: Arc<dyn mf_state::transaction::CommandGeneric<
+            mf_model::node_pool::NodePool,
+            mf_model::schema::Schema,
+        >>,
     ) -> ForgeResult<()> {
         self.command(command).await
     }
 
     async fn command_with_meta(
         &mut self,
-        command: Arc<dyn Command>,
+        command: Arc<dyn mf_state::transaction::CommandGeneric<
+            mf_model::node_pool::NodePool,
+            mf_model::schema::Schema,
+        >>,
         description: String,
         meta: serde_json::Value,
     ) -> ForgeResult<()> {

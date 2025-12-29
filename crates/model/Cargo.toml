@@ -1,32 +1,32 @@
 [package]
 name = "moduforge-model"
-version = {workspace=true}
-edition = {workspace=true}
+version = { workspace = true }
+edition = { workspace = true }
 description = "不可变数据结构与事务系统基础"
-authors = {workspace=true}
-license = {workspace=true}
-documentation = {workspace=true}
-homepage = {workspace=true}
-repository = {workspace=true}
+authors = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
 [lib]
 name = "mf_model"
-path="src/lib.rs"
+path = "src/lib.rs"
 
 [dependencies]
-imbl= {workspace=true}
-serde = {workspace=true}
-serde_json = {workspace=true}
+rpds = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
-uuid= {workspace=true}
-base62= "2.2.1"
+uuid = { workspace = true }
+base62 = "2.2.1"
 anyhow = { workspace = true }
 
 rayon = { workspace = true }
 lru = { workspace = true }
 dashmap = { workspace = true }
 
-parking_lot ={ workspace = true }
+parking_lot = { workspace = true }
 ahash = { workspace = true }
 
 once_cell = "1.19"
