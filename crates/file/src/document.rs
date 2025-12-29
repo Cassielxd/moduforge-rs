@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::io;
 use std::io::{Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
@@ -6,67 +5,49 @@ use std::path::{Path, PathBuf};
 use blake3::Hasher as Blake3;
 use serde::{Deserialize, Serialize};
 
+use crate::common::{
+    encode_segment, decode_segment,
+    create_tail_pointer, parse_tail_pointer, validate_tail_offset,
+    validate_payload,
+    DIR_FLAG_ZSTD_SEGMENTS, TAIL_MAGIC, TAIL_POINTER_SIZE,
+};
 use crate::error::{FileError, Result};
 use crate::record::{crc32, read_u32_le, Reader, Writer, HEADER_LEN, REC_HDR};
 
-// 固定尾指针：用于在 finalize 后快速定位目录起始偏移，避免全量扫描
-const TAIL_MAGIC: &[u8; 8] = b"MFFTAIL1"; // 8B 魔数 + 8B 目录偏移 (LE)
-const DIR_FLAG_ZSTD_SEGMENTS: u32 = 0x0001;
-const DEFAULT_ZSTD_LEVEL: i32 = 1;
-const ZSTD_MAGIC_PREFIX: [u8; 4] = [0x28, 0xB5, 0x2F, 0xFD];
-
-// 段类型：用于描述容器中存储的数据类别
+/// 段类型：用于描述容器中存储的数据类别
+/// Segment type: describes the category of data stored in the container
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SegmentType(pub String);
-// 段目录项：记录段的类型、偏移、长度与 CRC
+
+/// 段目录项：记录段的类型、偏移、长度与CRC
+/// Segment entry: records the type, offset, length and CRC of a segment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SegmentEntry {
-    pub kind: SegmentType,
-    pub offset: u64,
-    pub length: u64,
-    pub crc32: u32,
+    pub kind: SegmentType,      // 段类型
+    pub offset: u64,             // 文件中的偏移位置
+    pub length: u64,             // 段长度（包含头部）
+    pub crc32: u32,              // CRC32校验和
 }
 
-// 总目录：包含所有段的索引及文件级哈希
+/// 总目录：包含所有段的索引及文件级哈希
+/// Directory: contains index of all segments and file-level hash
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Directory {
-    pub entries: Vec<SegmentEntry>,
-    pub flags: u32,
-    pub file_hash: [u8; 32],
+    pub entries: Vec<SegmentEntry>,  // 所有段的条目列表
+    pub flags: u32,                  // 目录标志（压缩等）
+    pub file_hash: [u8; 32],         // 文件内容的Blake3哈希
 }
 
-fn encode_segment(payload: &[u8]) -> Result<Vec<u8>> {
-    zstd::stream::encode_all(payload, DEFAULT_ZSTD_LEVEL).map_err(FileError::Io)
-}
-
-fn decode_segment<'a>(
-    bytes: &'a [u8],
-    dir_flags: u32,
-) -> Result<Cow<'a, [u8]>> {
-    let has_magic = bytes.len() >= ZSTD_MAGIC_PREFIX.len()
-        && &bytes[..ZSTD_MAGIC_PREFIX.len()] == ZSTD_MAGIC_PREFIX;
-    let should_try = (dir_flags & DIR_FLAG_ZSTD_SEGMENTS != 0) || has_magic;
-    if !should_try {
-        return Ok(Cow::Borrowed(bytes));
-    }
-    match zstd::stream::decode_all(bytes) {
-        Ok(raw) => Ok(Cow::Owned(raw)),
-        Err(_err) if dir_flags & DIR_FLAG_ZSTD_SEGMENTS == 0 => {
-            // 老文件未标记压缩时，允许解压失败后回退原始数据
-            Ok(Cow::Borrowed(bytes))
-        },
-        Err(err) => Err(FileError::Io(err)),
-    }
-}
-
-// 文档写入器：基于 append-only 文件写入段，并在末尾写目录
+/// 文档写入器：基于append-only模式写入段，并在末尾写入目录
+/// Document writer: writes segments in append-only mode and writes directory at the end
 pub struct DocumentWriter {
-    w: Writer,
-    segments: Vec<SegmentEntry>,
-    path: PathBuf,
+    w: Writer,                    // 底层记录写入器
+    segments: Vec<SegmentEntry>,  // 已写入段的列表
+    path: PathBuf,                // 文件路径
 }
 impl DocumentWriter {
-    // 开始写入
+    /// 开始写入新文档
+    /// Begin writing a new document
     #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(path), fields(
         crate_name = "file",
         file_path = %path.as_ref().display()
@@ -75,18 +56,25 @@ impl DocumentWriter {
         let p = path.as_ref().to_path_buf();
         Ok(Self { w: Writer::create(&p, 0)?, segments: Vec::new(), path: p })
     }
-    // 追加一个段
+
+    /// 追加一个段到文档
+    /// Add a segment to the document
     pub fn add_segment(
         &mut self,
         kind: SegmentType,
         payload: &[u8],
     ) -> Result<()> {
-        if payload.is_empty() {
-            return Err(FileError::EmptyRecord);
-        }
+        // 验证负载不为空
+        validate_payload(payload)?;
+
+        // 压缩数据
         let stored = encode_segment(payload)?;
+
+        // 写入压缩数据并记录偏移
         let off = self.w.append(&stored)?;
         let crc = crc32(&stored);
+
+        // 记录段信息
         self.segments.push(SegmentEntry {
             kind,
             offset: off,
@@ -95,14 +83,17 @@ impl DocumentWriter {
         });
         Ok(())
     }
-    // 完成写入：生成并写入目录，计算全文件哈希
+
+    /// 完成写入：生成并写入目录，计算全文件哈希
+    /// Finalize writing: generate and write directory, calculate file hash
     #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(self), fields(
         crate_name = "file",
         segment_count = self.segments.len(),
         file_path = %self.path.display()
     )))]
     pub fn finalize(mut self) -> Result<()> {
-        // 计算数据哈希
+        // 刷新缓冲区并计算数据哈希
+        // Flush buffer and calculate data hash
         self.w.flush()?;
         let mut hasher = Blake3::new();
         let r = Reader::open(&self.path)?;
@@ -110,7 +101,9 @@ impl DocumentWriter {
             hasher.update(bytes);
         }
         let hash = *hasher.finalize().as_bytes();
-        // 写入目录记录
+
+        // 创建并序列化目录
+        // Create and serialize directory
         let flags = DIR_FLAG_ZSTD_SEGMENTS;
         let dir = Directory { entries: self.segments, flags, file_hash: hash };
         let bytes =
@@ -120,55 +113,56 @@ impl DocumentWriter {
         let dir_off = self.w.append(&bytes)?;
         self.w.flush()?;
 
-        // 写入尾指针，不计入逻辑长度：MAGIC(8) + dir_off(8)
-        // 这样 Reader 扫描逻辑结尾仍停在目录记录处，但可通过物理文件尾部快速读取目录偏移
+        // 写入尾指针，不计入逻辑长度
+        // Write tail pointer without updating logical length
+        // 这样Reader扫描逻辑结尾仍停在目录记录处，但可通过物理文件尾部快速读取目录偏移
+        // This way Reader's logical end stops at directory record, but can quickly read directory offset from physical file end
         {
-            // 直接使用底层文件写入尾部，不更新 logical_end
+            let tail_pointer = create_tail_pointer(dir_off);
             let file = &mut self.w.file;
             file.seek(SeekFrom::Start(self.w.logical_end))?;
-            file.write_all(TAIL_MAGIC)?;
-            file.write_all(&dir_off.to_le_bytes())?;
+            file.write_all(&tail_pointer)?;
             file.sync_data()?;
         }
         Ok(())
     }
 }
 
-// 文档读取器：读取末尾目录并提供段访问
+/// 文档读取器：读取末尾目录并提供段访问
+/// Document reader: reads directory at the end and provides segment access
 pub struct DocumentReader {
-    r: Reader,
-    dir: Directory,
+    r: Reader,      // 底层记录读取器
+    dir: Directory, // 文档目录
 }
+
 impl DocumentReader {
-    // 打开并读取目录
+    /// 打开文档并读取目录
+    /// Open document and read directory
     #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(path), fields(
         crate_name = "file",
         file_path = %path.as_ref().display()
     )))]
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
         let r = Reader::open(path)?;
+
         // 优先通过尾指针快速定位目录偏移
+        // Try to quickly locate directory offset through tail pointer first
         let mut last_off = HEADER_LEN as u64;
         let phys_len = r.mmap.len();
-        if phys_len >= 16 {
-            let tail = &r.mmap[phys_len - 16..phys_len];
-            if &tail[..8] == TAIL_MAGIC {
-                let mut off_bytes = [0u8; 8];
-                off_bytes.copy_from_slice(&tail[8..16]);
-                let off = u64::from_le_bytes(off_bytes);
+        if phys_len >= TAIL_POINTER_SIZE {
+            let tail = &r.mmap[phys_len - TAIL_POINTER_SIZE..phys_len];
+            if let Some(off) = parse_tail_pointer(tail) {
                 // 基本校验：offset 落在逻辑区间内且指向一条有效记录
-                if (off as usize) + REC_HDR <= r.logical_end as usize {
-                    let len =
-                        read_u32_le(&r.mmap[off as usize..off as usize + 4])
-                            as usize;
-                    let s = off as usize + REC_HDR;
-                    let e = s + len;
-                    if e <= r.logical_end as usize {
-                        let stored_crc = read_u32_le(
-                            &r.mmap[off as usize + 4..off as usize + 8],
-                        );
-                        if crc32(&r.mmap[s..e]) == stored_crc {
-                            last_off = off;
+                if validate_tail_offset(off, HEADER_LEN as u64, phys_len as u64) {
+                    if (off as usize) + REC_HDR <= r.logical_end as usize {
+                        let len = read_u32_le(&r.mmap[off as usize..off as usize + 4]) as usize;
+                        let s = off as usize + REC_HDR;
+                        let e = s + len;
+                        if e <= r.logical_end as usize {
+                            let stored_crc = read_u32_le(&r.mmap[off as usize + 4..off as usize + 8]);
+                            if crc32(&r.mmap[s..e]) == stored_crc {
+                                last_off = off;
+                            }
                         }
                     }
                 }

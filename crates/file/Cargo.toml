@@ -25,9 +25,16 @@ rmp-serde = "1.3"
 serde_cbor = "0.11"
 anyhow = { workspace = true }
 rayon = { workspace = true }
-chrono = { version = "0.4", features = ["serde"], optional = true }
+chrono = { workspace = true, features = ["serde"], optional = true }
 tempfile = { workspace = true }
 tracing = { workspace = true, optional = true }
+
+# Async dependencies (now always included)
+tokio = { workspace = true, features = ["fs", "io-util", "rt", "sync"] }
+async-compression = { version = "0.4", features = ["tokio", "zstd"] }
+futures = { workspace = true }
+bytes = { version = "1.5" }
+async-trait = { workspace = true }
 
 [features]
 dev-tracing = ["tracing", "tracing/max_level_trace"]

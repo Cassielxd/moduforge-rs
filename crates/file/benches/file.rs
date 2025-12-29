@@ -202,10 +202,55 @@ fn bench_zip_cache_performance(c: &mut Criterion) {
     group.finish();
 }
 
+/// Parallel compression performance benchmark
+fn bench_parallel_compression(c: &mut Criterion) {
+    use mf_file::parallel_compression::*;
+
+    let mut group = c.benchmark_group("并行压缩性能");
+
+    let config = ParallelCompressionConfig::default();
+    let compressor = ParallelCompressor::new(config);
+
+    // Test different data sizes
+    for size_mb in [1, 5, 10, 20].iter() {
+        let size_bytes = size_mb * 1024 * 1024;
+        let test_data = vec![42u8; size_bytes];
+
+        // Standard compression
+        group.bench_with_input(
+            BenchmarkId::new("标准压缩", format!("{size_mb}MB")),
+            &test_data,
+            |b, data| {
+                b.iter(|| {
+                    let result =
+                        zstd::stream::encode_all(&data[..], 3).unwrap();
+                    criterion::black_box(result)
+                })
+            },
+        );
+
+        // Parallel compression
+        group.bench_with_input(
+            BenchmarkId::new("并行压缩", format!("{size_mb}MB")),
+            &test_data,
+            |b, data| {
+                b.iter(|| {
+                    let result = compressor.compress(data).unwrap();
+                    criterion::black_box(result)
+                })
+            },
+        );
+    }
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_file_operations,
     bench_zip_mmap_performance,
-    bench_zip_cache_performance
+    bench_zip_cache_performance,
+    bench_parallel_compression,
 );
+
 criterion_main!(benches);

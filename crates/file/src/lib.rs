@@ -1,8 +1,16 @@
+pub mod common;
 pub mod document;
 pub mod error;
 pub mod history;
 pub mod record;
 pub mod zipdoc;
+
+// Parallel compression module
+pub mod parallel_compression;
+
+// Async modules
+pub mod async_record;
+pub mod async_document;
 pub use error::{FileError, Result};
 pub use record::{Writer, Reader, Iter, HEADER_LEN, REC_HDR};
 pub use document::{
@@ -18,6 +26,14 @@ pub use zipdoc::{
         has_plugin_states, list_zip_plugins,
     },
 };
+
+pub use parallel_compression::{
+    ParallelCompressor, ParallelCompressionConfig,
+    AsyncParallelCompressor,
+};
+
+pub use async_record::{AsyncWriter, AsyncReader};
+pub use async_document::{AsyncDocumentWriter, AsyncDocumentReader};
 
 #[cfg(test)]
 mod tests {

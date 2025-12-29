@@ -10,6 +10,7 @@ use mf_file::{document::DocumentReader, error::FileError as MffError, REC_HDR};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use serde::Serialize;
+use tauri::Manager;
 use zip::read::ZipArchive;
 
 const MFF_MAGIC: &[u8; 8] = b"MFFILE01";
@@ -410,6 +411,15 @@ pub fn run() {
             inspect_file,
             load_mff_segment
         ])
+        .setup(move |app| {
+            #[cfg(debug_assertions)] //仅在调试时自动打开开发者工具
+            {
+                if let Some(window) = app.get_webview_window("main") {
+                    window.open_devtools();
+                }
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -163,7 +163,7 @@ async function selectFile() {
     result.value = data;
   } catch (error) {
     console.error(error);
-    ElMessage.error("加载文件失败");
+    ElMessage.error(error);
   } finally {
     loading.value = false;
   }
@@ -363,7 +363,6 @@ async function fetchSegmentDetail(index: number) {
       path: summary.path,
       index
     });
-    debugger;
     segmentDetailCache.set(index, detail);
     return detail;
   } catch (error) {

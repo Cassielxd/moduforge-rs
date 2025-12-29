@@ -6,9 +6,12 @@ use std::path::Path;
 
 use crate::error::{FileError, Result};
 
+/// 文件魔数标识 / File magic identifier
 pub const MAGIC: &[u8; 8] = b"MFFILE01";
-pub const HEADER_LEN: usize = 16; // 8 字节魔数 + 8 字节预留区
-pub const REC_HDR: usize = 8; // 记录头: u32 负载长度 + u32 CRC32
+/// 文件头长度：8字节魔数 + 8字节预留区 / Header length: 8-byte magic + 8-byte reserved
+pub const HEADER_LEN: usize = 16;
+/// 记录头长度：u32负载长度 + u32 CRC32 / Record header: u32 payload length + u32 CRC32
+pub const REC_HDR: usize = 8;
 
 #[inline]
 pub fn crc32(data: &[u8]) -> u32 {
@@ -28,7 +31,8 @@ pub fn write_u32_le(
     out.copy_from_slice(&v.to_le_bytes());
 }
 
-// 写入文件头（包含魔数）
+/// 写入文件头（包含魔数）
+/// Write file header (including magic)
 fn write_header(file: &mut File) -> Result<()> {
     file.seek(SeekFrom::Start(0))?;
     let mut buf = [0u8; HEADER_LEN];
@@ -37,7 +41,8 @@ fn write_header(file: &mut File) -> Result<()> {
     Ok(())
 }
 
-// 校验文件头（校验魔数）
+/// 校验文件头（校验魔数）
+/// Check file header (verify magic)
 fn check_header(file: &mut File) -> Result<()> {
     file.seek(SeekFrom::Start(0))?;
     let mut hdr = [0u8; HEADER_LEN];
@@ -48,17 +53,20 @@ fn check_header(file: &mut File) -> Result<()> {
     Ok(())
 }
 
+/// 记录写入器：支持append-only模式和预分配
+/// Record writer: supports append-only mode and pre-allocation
 #[derive(Debug)]
 pub struct Writer {
     pub(crate) file: File,
     buf: BufWriter<File>,
-    pub(crate) logical_end: u64,
-    prealloc_until: u64,
-    prealloc_chunk: u64,
+    pub(crate) logical_end: u64,  // 逻辑文件末尾 / Logical end of file
+    prealloc_until: u64,           // 预分配到的位置 / Pre-allocated until
+    prealloc_chunk: u64,           // 预分配块大小 / Pre-allocation chunk size
 }
 
 impl Writer {
-    // 创建写入器; prealloc_chunk 为预分配块大小（0 表示不预分配）
+    /// 创建写入器; prealloc_chunk为预分配块大小（0表示不预分配）
+    /// Create writer; prealloc_chunk is pre-allocation chunk size (0 means no pre-allocation)
     #[cfg_attr(feature = "dev-tracing", tracing::instrument(skip(path), fields(
         crate_name = "file",
         file_path = %path.as_ref().display(),
