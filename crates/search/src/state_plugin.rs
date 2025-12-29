@@ -8,8 +8,8 @@ use mf_transform::step::StepGeneric;
 use mf_state::plugin::{
     Plugin, PluginMetadata, PluginSpec, PluginTraitGeneric, StateFieldGeneric,
 };
-use mf_state::state::{State, StateGeneric, StateConfigGeneric};
-use mf_state::transaction::{Transaction, TransactionGeneric};
+use mf_state::state::{StateGeneric, StateConfigGeneric};
+use mf_state::transaction::{TransactionGeneric};
 
 use crate::backend::SqliteBackend;
 use crate::service::{IndexEvent, IndexService};

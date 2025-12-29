@@ -20,7 +20,7 @@ use crate::{ops::GlobalResourceManager, resource::Resource};
 
 use super::{
     error::{error, StateResult},
-    plugin::{Plugin, PluginGeneric},
+    plugin::{PluginGeneric},
     transaction::{Transaction, TransactionGeneric},
 };
 
@@ -160,10 +160,12 @@ where
             state_config.resource_manager.clone(),
         )
         .await?;
-        let mut instance = Self::new_generic(Arc::new(config), self.node_pool.clone())?;
+        let mut instance =
+            Self::new_generic(Arc::new(config), self.node_pool.clone())?;
         let mut field_values = Vec::new();
         let mut fields_instances = HashTrieMapSync::new_sync();
-        for plugin in instance.config.plugin_manager.get_sorted_plugins().await {
+        for plugin in instance.config.plugin_manager.get_sorted_plugins().await
+        {
             if let Some(field) = &plugin.spec.state_field {
                 let key = plugin.key.clone();
                 tracing::debug!("正在重新配置插件: {}", key);
@@ -202,7 +204,8 @@ where
         let initial_step_count = transaction.steps.len();
         tracing::info!("开始应用事务，初始步骤数: {}", initial_step_count);
         // 应用事务并获取结果
-        let result = self.apply_transaction_generic(Arc::new(transaction)).await?;
+        let result =
+            self.apply_transaction_generic(Arc::new(transaction)).await?;
         // 检查是否需要重新应用事务
         let duration = start_time.elapsed();
         tracing::debug!("事务应用成功，步骤数保持不变，耗时: {:?}", duration);
@@ -354,7 +357,9 @@ where
         version = self.version,
         doc_size = self.node_pool.size()
     )))]
-    pub async fn serialize_generic(&self) -> StateResult<StateSerializeGeneric<C>>
+    pub async fn serialize_generic(
+        &self
+    ) -> StateResult<StateSerializeGeneric<C>>
     where
         C: serde::Serialize,
     {
@@ -393,8 +398,8 @@ where
     where
         C: serde::de::DeserializeOwned,
     {
-        let container: Arc<C> = serde_json::from_slice(&s.container)
-            .map_err(|e| {
+        let container: Arc<C> =
+            serde_json::from_slice(&s.container).map_err(|e| {
                 error::deserialize_error(format!("容器反序列化失败: {e}"))
             })?;
         let mut config = configuration.clone();
@@ -593,11 +598,6 @@ where
     S: SchemaDefinition<Container = C> + 'static,
 {
     state: Arc<StateGeneric<C, S>>,
-    n: usize,
-}
-
-pub struct SeenState {
-    state: Arc<State>,
     n: usize,
 }
 
