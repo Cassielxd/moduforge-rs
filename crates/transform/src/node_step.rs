@@ -70,11 +70,8 @@ impl StepGeneric<NodePool, Schema> for AddNodeStep {
     ) -> Option<Arc<dyn StepGeneric<NodePool, Schema>>> {
         // 只收集顶层节点的 id，不递归收集子节点
         // RemoveNodeStep 删除顶层节点时会自动删除其所有子树
-        let top_level_ids: Vec<NodeId> = self
-            .nodes
-            .iter()
-            .map(|node_enum| node_enum.0.id.clone())
-            .collect();
+        let top_level_ids: Vec<NodeId> =
+            self.nodes.iter().map(|node_enum| node_enum.0.id.clone()).collect();
 
         if !top_level_ids.is_empty() {
             return Some(Arc::new(RemoveNodeStep::new(
@@ -113,7 +110,7 @@ impl StepGeneric<NodePool, Schema> for RemoveNodeStep {
         schema: Arc<Schema>,
     ) -> TransformResult<StepResult> {
         let _ = schema;
-        let result = dart.remove_node(&self.parent_id, self.node_ids.clone());
+        let result = dart.node(&self.parent_id) - self.node_ids.clone();
         match result {
             Ok(_) => Ok(StepResult::ok()),
             Err(e) => Err(transform_error(e.to_string())),

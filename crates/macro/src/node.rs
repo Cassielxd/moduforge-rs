@@ -23,12 +23,13 @@ macro_rules! node {
     };
     ($name:expr, $desc:expr, $content:expr, $($key:expr => $value:expr),*) => {
         {
+            use serde_json::Value;
             let mut node = mf_core::node::Node::default();
             node.set_name($name)
                 .set_desc($desc)
                 .set_content($content);
             $(
-                node.set_attr($key, Some($value));
+                node.set_attr($key, Some(Value::String($value.to_string())));
             )*
             node
         }

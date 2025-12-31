@@ -141,10 +141,6 @@ where
     }
 }
 
-// ========================================
-// NodePool 特化实现
-// ========================================
-
 /// 默认的 Transaction 实现（NodePool + Schema）
 pub type Transaction = TransactionGeneric<NodePool, Schema>;
 

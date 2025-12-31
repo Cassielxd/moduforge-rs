@@ -104,12 +104,18 @@ macro_rules! mf_ops {
 /// 定义具有声明式语法的 ModuForge 扩展，类似于 Deno 的 extension! 宏。
 /// 此宏创建结构体和扩展的相关初始化方法。
 ///
+/// # 返回值
+///
+/// `init()` 方法返回 `Vec<mf_core::types::Extensions>`，这是一个包含所有扩展组件的数组：
+/// - `Extensions::E(Extension)` - 扩展主体，包含操作函数、插件、全局属性等
+/// - `Extensions::N(Node)` - 节点定义
+/// - `Extensions::M(Mark)` - 标记定义
+///
 /// # 示例
 ///
 /// ```rust
-/// use mf_macro::mf_extension;
-/// use mf_core::types::GlobalAttributeItem;
-/// use std::sync::Arc;
+/// use mf_macro::{mf_extension, node, mark};
+/// use mf_core::types::Extensions;
 ///
 /// // 定义操作函数
 /// fn setup_logging(_manager: &mf_state::ops::GlobalResourceManager) -> mf_core::ForgeResult<()> {
@@ -117,34 +123,44 @@ macro_rules! mf_ops {
 ///     Ok(())
 /// }
 ///
-/// fn cleanup_resources(_manager: &mf_state::ops::GlobalResourceManager) -> mf_core::ForgeResult<()> {
-///     println!("资源清理完成");
-///     Ok(())
-/// }
-///
 /// // 定义节点转换函数
 /// fn node_transformer(node: &mf_core::node::Node) -> Option<mf_core::node::Node> {
-///     // 对特定节点类型进行二次修改
-///     if node.name() == "paragraph" {
+///     if node.name() == "paragraph" && node.content().is_empty() {
 ///         let mut new_node = node.clone();
-///         // 添加默认样式或属性
-///         new_node.add_attribute("class", "enhanced-paragraph");
+///         new_node.set_attr("placeholder", Some("输入文本..."));
 ///         Some(new_node)
 ///     } else {
-///         Some(node.clone())  // 其他节点保持不变
+///         Some(node.clone())
 ///     }
 /// }
 ///
-/// // 创建包含操作和节点禁用的扩展
+/// // 创建扩展
 /// mf_extension!(
-///     logging_extension,
-///     ops = [ setup_logging, cleanup_resources ],
+///     text_editor,
+///     ops = [ setup_logging ],
 ///     node_transform = node_transformer,
-///     docs = "用于日志记录、资源管理和节点转换的扩展"
+///     nodes = [
+///         node!("paragraph", "段落节点"),
+///         node!("heading", "标题节点", "", "level" => "1")
+///     ],
+///     marks = [
+///         mark!("bold", "粗体标记"),
+///         mark!("italic", "斜体标记")
+///     ],
+///     docs = "文本编辑器扩展"
 /// );
 ///
 /// // 使用方法
-/// let ext = logging_extension::init();
+/// let extensions = text_editor::init();
+///
+/// // 遍历所有扩展组件
+/// for ext in &extensions {
+///     match ext {
+///         Extensions::E(extension) => println!("Extension 已加载"),
+///         Extensions::N(node) => println!("节点: {}", node.name()),
+///         Extensions::M(mark) => println!("标记: {}", mark.name()),
+///     }
+/// }
 /// ```
 ///
 /// ## 可用选项：
@@ -153,6 +169,8 @@ macro_rules! mf_ops {
 /// - `plugins`: 要包含的插件实例列表
 /// - `global_attributes`: 全局属性项列表
 /// - `node_transform`: 节点转换函数，签名为 `fn(&Node) -> Option<Node>`
+/// - `nodes`: 节点定义列表，使用 node! 宏创建
+/// - `marks`: 标记定义列表，使用 mark! 宏创建
 /// - `docs`: 扩展的文档字符串
 #[macro_export]
 macro_rules! mf_extension {
@@ -162,18 +180,20 @@ macro_rules! mf_extension {
         $(, plugins = [ $( $plugin:expr ),+ $(,)? ] )?
         $(, global_attributes = [ $( $attr:expr ),+ $(,)? ] )?
         $(, node_transform = $node_transform_fn:expr )?
+        $(, nodes = [ $( $node:expr ),+ $(,)? ] )?
+        $(, marks = [ $( $mark:expr ),+ $(,)? ] )?
         $(, docs = $docs:expr )?
         $(,)?
     ) => {
         $( #[doc = $docs] )?
         ///
         /// 用于框架的 ModuForge 扩展。
-        /// 要使用它，请调用 init() 方法获取 Extension 实例：
+        /// 要使用它，请调用 init() 方法获取 Extensions 数组：
         ///
         /// ```rust,ignore
-        /// use mf_core::extension::Extension;
+        /// use mf_core::types::Extensions;
         ///
-        #[doc = concat!("let extension = ", stringify!($name), "::init();")]
+        #[doc = concat!("let extensions = ", stringify!($name), "::init();")]
         /// ```
         #[allow(non_camel_case_types)]
         pub struct $name;
@@ -182,20 +202,19 @@ macro_rules! mf_extension {
             /// 初始化此扩展以供 ModuForge 运行时使用。
             ///
             /// # 返回
-            /// 可在框架初始化期间使用的 Extension 对象
-            pub fn init() -> mf_core::extension::Extension {
+            /// 返回一个 Extensions 枚举数组，包含：
+            /// - Extension (作为 Extensions::E)
+            /// - Node 定义 (作为 Extensions::N)
+            /// - Mark 定义 (作为 Extensions::M)
+            pub fn init() -> Vec<mf_core::types::Extensions> {
                 let mut ext = mf_core::extension::Extension::new();
 
                 // 添加操作函数
                 $(
-                    let ops: mf_core::extension::OpFn = vec![
-                        $(
-                            std::sync::Arc::new($op),
-                        )+
-                    ];
-                    for op in ops {
-                        ext.add_op_fn(op);
-                    }
+                    $(
+                        let op_item = mf_core::extension::OpFnItem::new(std::sync::Arc::new($op));
+                        ext.add_op_fn(op_item);
+                    )+
                 )?
 
                 // 添加插件
@@ -214,10 +233,32 @@ macro_rules! mf_extension {
 
                 // 添加节点转换函数
                 $(
-                    ext.add_node_transform(std::sync::Arc::new($node_transform_fn));
+                    let transform_fn = mf_core::extension::NodeTransformFn::new(
+                        std::sync::Arc::new($node_transform_fn)
+                    );
+                    ext.add_node_transform(transform_fn);
                 )?
 
-                ext
+                let mut extensions = Vec::new();
+
+                // 添加 Extension 到数组
+                extensions.push(mf_core::types::Extensions::E(ext));
+
+                // 添加节点定义到数组
+                $(
+                    $(
+                        extensions.push(mf_core::types::Extensions::N($node));
+                    )+
+                )?
+
+                // 添加标记定义到数组
+                $(
+                    $(
+                        extensions.push(mf_core::types::Extensions::M($mark));
+                    )+
+                )?
+
+                extensions
             }
         }
     };
@@ -230,6 +271,8 @@ macro_rules! mf_extension_with_config {
         $name:ident,
         config = { $( $config_field:ident : $config_type:ty ),+ $(,)? },
         init_fn = $init_fn:expr
+        $(, nodes = [ $( $node:expr ),+ $(,)? ] )?
+        $(, marks = [ $( $mark:expr ),+ $(,)? ] )?
         $(, docs = $docs:expr )?
         $(,)?
     ) => {
@@ -241,10 +284,36 @@ macro_rules! mf_extension_with_config {
 
         impl $name {
             /// 使用配置初始化此扩展。
-            pub fn init( $( $config_field: $config_type ),+ ) -> mf_core::extension::Extension {
+            ///
+            /// # 返回
+            /// 返回一个 Extensions 枚举数组，包含：
+            /// - Extension (作为 Extensions::E)
+            /// - Node 定义 (作为 Extensions::N)
+            /// - Mark 定义 (作为 Extensions::M)
+            pub fn init( $( $config_field: $config_type ),+ ) -> Vec<mf_core::types::Extensions> {
                 let mut ext = mf_core::extension::Extension::new();
                 ($init_fn)(&mut ext, $( $config_field ),+ );
-                ext
+
+                let mut extensions = Vec::new();
+
+                // 添加 Extension 到数组
+                extensions.push(mf_core::types::Extensions::E(ext));
+
+                // 添加节点定义到数组
+                $(
+                    $(
+                        extensions.push(mf_core::types::Extensions::N($node));
+                    )+
+                )?
+
+                // 添加标记定义到数组
+                $(
+                    $(
+                        extensions.push(mf_core::types::Extensions::M($mark));
+                    )+
+                )?
+
+                extensions
             }
         }
     };
