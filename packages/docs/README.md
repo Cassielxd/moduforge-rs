@@ -45,8 +45,6 @@ docs/
 │   ├── quick-start.md   # 快速开始
 │   ├── core-concepts.md # 核心概念
 │   └── architecture.md  # 架构设计
-├── api/                 # API 文档
-│   └── overview.md      # API 概览
 ├── examples/            # 示例代码
 │   ├── basic-editor.md  # 基础编辑器
 │   ├── rich-text.md     # 富文本编辑器

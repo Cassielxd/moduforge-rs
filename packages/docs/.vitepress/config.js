@@ -9,7 +9,7 @@ export default withMermaid(defineConfig({
   base: '/moduforge-rs/',
 
   head: [
-    ['link', { rel: 'icon', href: '/favicon.ico' }],
+    ['link', { rel: 'icon', href: '/favicon.svg' }],
     ['meta', { name: 'theme-color', content: '#3c8772' }]
   ],
 
@@ -19,7 +19,6 @@ export default withMermaid(defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: '指南', link: '/guide/introduction' },
-      { text: 'API 参考', link: '/api/overview' },
       { text: '示例', link: '/examples/price-rs-complete-project' },
       {
         text: '核心库',
@@ -36,7 +35,7 @@ export default withMermaid(defineConfig({
       {
         text: 'v0.7.0',
         items: [
-          { text: '更新日志', link: '/changelog' },
+          // { text: '更新日志', link: '/changelog' },
           { text: 'v0.6.x', link: 'https://github.com/moduforge/moduforge-rs/tree/v0.6' }
         ]
       }
@@ -76,40 +75,23 @@ export default withMermaid(defineConfig({
             { text: '事件系统', link: '/guide/events' }
           ]
         },
-        {
-          text: '协作',
-          collapsed: false,
-          items: [
-            { text: '实时协作', link: '/guide/collaboration' },
-            { text: 'CRDT 原理', link: '/guide/crdt' },
-            { text: '冲突解决', link: '/guide/conflict-resolution' },
-            { text: '部署指南', link: '/guide/deployment' }
-          ]
-        },
+        // {
+        //   text: '协作',
+        //   collapsed: false,
+        //   items: [
+        //     { text: '实时协作', link: '/guide/collaboration' },
+        //     { text: 'CRDT 原理', link: '/guide/crdt' },
+        //     { text: '冲突解决', link: '/guide/conflict-resolution' },
+        //     { text: '部署指南', link: '/guide/deployment' }
+        //   ]
+        // },
         {
           text: '性能',
           collapsed: false,
           items: [
-            { text: '性能优化', link: '/guide/performance' },
-            { text: '内存管理', link: '/guide/memory' },
-            { text: '基准测试', link: '/guide/benchmarks' }
-          ]
-        }
-      ],
-
-      '/api/': [
-        {
-          text: 'API 参考',
-          items: [
-            { text: '概览', link: '/api/overview' },
-            { text: 'ForgeRuntime', link: '/api/runtime' },
-            { text: 'State', link: '/api/state' },
-            { text: 'Transaction', link: '/api/transaction' },
-            { text: 'Transform', link: '/api/transform' },
-            { text: 'Node', link: '/api/node' },
-            { text: 'Schema', link: '/api/schema' },
-            { text: 'Plugin', link: '/api/plugin' },
-            { text: 'Command', link: '/api/command' }
+            { text: '性能优化', link: '/guide/performance' }
+            // { text: '内存管理', link: '/guide/memory' },
+            // { text: '基准测试', link: '/guide/benchmarks' }
           ]
         }
       ],

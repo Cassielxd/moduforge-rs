@@ -867,7 +867,7 @@ npm run tauri build -- --target x86_64-unknown-linux-gnu
 ## 相关资源
 
 - [Tauri 官方文档](https://tauri.app)
-- [ModuForge-RS API 文档](../api/overview.md)
+- [ModuForge-RS 核心库文档](../crates/core.md)
 - [示例项目](../examples/tauri-desktop-app.md)
 - [协作编辑指南](./collaborative-editing.md)
 

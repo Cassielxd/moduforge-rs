@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Background -->
+  <rect width="32" height="32" rx="4" fill="#ffffff"/>
+
+  <!-- Simplified hexagon logo -->
+  <g transform="translate(16, 16)">
+    <!-- Outer hexagon -->
+    <path d="M -8,0 L -4,-7 L 4,-7 L 8,0 L 4,7 L -4,7 Z"
+          fill="none"
+          stroke="#FF6B6B"
+          stroke-width="2"/>
+
+    <!-- Inner hexagon -->
+    <path d="M -4,0 L -2,-3.5 L 2,-3.5 L 4,0 L 2,3.5 L -2,3.5 Z"
+          fill="#4ECDC4"/>
+
+    <!-- Center dot -->
+    <circle cx="0" cy="0" r="1.5" fill="#45B7D1"/>
+  </g>
+</svg>

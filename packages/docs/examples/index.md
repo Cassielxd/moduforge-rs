@@ -58,4 +58,4 @@ cargo test export_with_progress --lib
 
 - [ModuForge-RS 核心概念](/guide/core-concepts)
 - [插件系统设计](/guide/plugins)
-- [API 参考文档](/api/overview)
+- [核心库文档](/crates/core)
