@@ -6,7 +6,6 @@
 use mf_macro::{mf_extension, mf_op, mf_global_attr, node, mark};
 use mf_core::{ForgeResult, node::Node, types::Extensions};
 use mf_state::ops::GlobalResourceManager;
-use mf_model::schema::AttributeSpec;
 use serde_json::Value;
 
 // ==================== 操作函数定义 ====================
@@ -54,27 +53,42 @@ fn transform_nodes(node: &mut Node) -> ForgeResult<()> {
         "paragraph" => {
             // 空段落显示占位符 - 检查 content 属性
             if node.r#type.content.as_ref().map_or(true, |c| c.is_empty()) {
-                node.set_attr("placeholder", Some(Value::String("输入文本...".to_string())));
+                node.set_attr(
+                    "placeholder",
+                    Some(Value::String("输入文本...".to_string())),
+                );
             }
         },
         "code_block" => {
             // 代码块添加默认语言
-            let needs_language = node.r#type.attrs.as_ref()
+            let needs_language = node
+                .r#type
+                .attrs
+                .as_ref()
                 .and_then(|attrs| attrs.get("language"))
                 .and_then(|spec| spec.default.as_ref())
                 .is_none();
 
             if needs_language {
-                node.set_attr("language", Some(Value::String("plaintext".to_string())));
+                node.set_attr(
+                    "language",
+                    Some(Value::String("plaintext".to_string())),
+                );
             }
             // 添加行号支持
-            node.set_attr("line_numbers", Some(Value::String("true".to_string())));
+            node.set_attr(
+                "line_numbers",
+                Some(Value::String("true".to_string())),
+            );
         },
         "image" => {
             // 图片节点添加懒加载
             node.set_attr("loading", Some(Value::String("lazy".to_string())));
 
-            let needs_alt = node.r#type.attrs.as_ref()
+            let needs_alt = node
+                .r#type
+                .attrs
+                .as_ref()
                 .and_then(|attrs| attrs.get("alt"))
                 .and_then(|spec| spec.default.as_ref())
                 .is_none();
@@ -83,7 +97,7 @@ fn transform_nodes(node: &mut Node) -> ForgeResult<()> {
                 node.set_attr("alt", Some(Value::String("图片".to_string())));
             }
         },
-        _ => {}
+        _ => {},
     }
     Ok(())
 }
@@ -93,69 +107,68 @@ fn transform_nodes(node: &mut Node) -> ForgeResult<()> {
 mf_extension!(
     rich_text_editor,
     // 操作函数列表
-    ops = [
-        init_toolbar,
-        register_shortcuts,
-        init_spellcheck,
-        setup_autosave
-    ],
-
+    ops = [init_toolbar, register_shortcuts, init_spellcheck, setup_autosave],
     // 全局属性配置
     global_attributes = [
         // 编辑器配置
         mf_global_attr!(
             vec!["editor"],
             vec![
-                ("theme", AttributeSpec { default: Some(Value::String("light".to_string())) }),
-                ("font_size", AttributeSpec { default: Some(Value::Number(14.into())) }),
-                ("line_height", AttributeSpec { default: Some(Value::String("1.5".to_string())) })
+                (
+                    "theme",
+                    AttributeSpec {
+                        default: Some(Value::String("light".to_string()))
+                    }
+                ),
+                (
+                    "font_size",
+                    AttributeSpec { default: Some(Value::Number(14.into())) }
+                ),
+                (
+                    "line_height",
+                    AttributeSpec {
+                        default: Some(Value::String("1.5".to_string()))
+                    }
+                )
             ]
         ),
         // 工具栏配置
         mf_global_attr!("toolbar", "visible", "true"),
         mf_global_attr!("toolbar", "position", "top")
     ],
-
     // 节点转换函数
     node_transform = transform_nodes,
-
     // 节点定义
     nodes = [
         // 基础文本节点
         node!("paragraph", "段落节点"),
         node!("heading", "标题节点", "", "level" => "1"),
         node!("text", "纯文本节点", ""),
-
         // 列表节点
         node!("bullet_list", "无序列表"),
         node!("ordered_list", "有序列表"),
         node!("list_item", "列表项"),
         node!("task_list", "任务列表"),
         node!("task_item", "任务项", "", "checked" => "false"),
-
         // 块级节点
         node!("blockquote", "引用块"),
         node!("code_block", "代码块", "", "language" => "plaintext", "line_numbers" => "false"),
         node!("horizontal_rule", "水平分割线"),
-
         // 媒体节点
         node!("image", "图片", "", "src" => "", "alt" => "", "width" => "", "height" => ""),
         node!("video", "视频", "", "src" => "", "poster" => "", "controls" => "true"),
         node!("audio", "音频", "", "src" => "", "controls" => "true"),
-
         // 表格节点
         node!("table", "表格"),
         node!("table_row", "表格行"),
         node!("table_cell", "表格单元格", "", "colspan" => "1", "rowspan" => "1"),
         node!("table_header", "表格头", "", "colspan" => "1", "rowspan" => "1"),
-
         // 特殊节点
         node!("math_inline", "内联数学公式", ""),
         node!("math_block", "块级数学公式", ""),
         node!("footnote", "脚注", "", "id" => ""),
         node!("toc", "目录", "", "max_depth" => "3")
     ],
-
     // 标记定义
     marks = [
         // 基础文本标记
@@ -164,32 +177,27 @@ mf_extension!(
         mark!("underline", "下划线"),
         mark!("strike", "删除线"),
         mark!("code", "内联代码"),
-
         // 高级标记
         mark!("link", "超链接", "href" => "", "title" => "", "target" => "_blank"),
         mark!("highlight", "高亮", "color" => "yellow"),
         mark!("comment", "批注", "author" => "", "timestamp" => ""),
-
         // 语义标记
         mark!("em", "强调"),
         mark!("strong", "重要"),
         mark!("mark", "标记"),
         mark!("abbr", "缩写", "title" => ""),
         mark!("cite", "引用"),
-
         // 格式标记
         mark!("subscript", "下标"),
         mark!("superscript", "上标"),
         mark!("small", "小字"),
         mark!("kbd", "键盘按键"),
         mark!("var", "变量"),
-
         // 自定义标记
         mark!("tooltip", "工具提示", "content" => "", "position" => "top"),
         mark!("spoiler", "剧透遮罩", "revealed" => "false"),
         mark!("emoji", "表情符号", "name" => "", "unicode" => "")
     ],
-
     docs = "功能完整的富文本编辑器扩展，提供丰富的节点类型和标记类型，支持现代编辑器的所有基础功能"
 );
 
@@ -241,38 +249,63 @@ fn main() -> ForgeResult<()> {
     println!("\n=== 节点转换演示 ===");
 
     let mut test_paragraph = node!("paragraph", "测试段落", "");
-    let placeholder_before = test_paragraph.r#type.attrs.as_ref()
+    let placeholder_before = test_paragraph
+        .r#type
+        .attrs
+        .as_ref()
         .and_then(|attrs| attrs.get("placeholder"))
         .and_then(|spec| spec.default.as_ref());
     println!("空段落转换前 placeholder: {:?}", placeholder_before);
 
     transform_nodes(&mut test_paragraph).unwrap();
 
-    let placeholder_after = test_paragraph.r#type.attrs.as_ref()
+    let placeholder_after = test_paragraph
+        .r#type
+        .attrs
+        .as_ref()
         .and_then(|attrs| attrs.get("placeholder"))
         .and_then(|spec| spec.default.as_ref());
     println!("空段落转换后 placeholder: {:?}", placeholder_after);
 
-    let mut test_code_block = node!("code_block", "代码块", "console.log('Hello');");
-    let lang_before = test_code_block.r#type.attrs.as_ref()
+    let mut test_code_block =
+        node!("code_block", "代码块", "console.log('Hello');");
+    let lang_before = test_code_block
+        .r#type
+        .attrs
+        .as_ref()
         .and_then(|attrs| attrs.get("language"))
         .and_then(|spec| spec.default.as_ref());
-    let line_nums_before = test_code_block.r#type.attrs.as_ref()
+    let line_nums_before = test_code_block
+        .r#type
+        .attrs
+        .as_ref()
         .and_then(|attrs| attrs.get("line_numbers"))
         .and_then(|spec| spec.default.as_ref());
 
-    println!("\n代码块转换前 - 语言: {:?}, 行号: {:?}", lang_before, line_nums_before);
+    println!(
+        "\n代码块转换前 - 语言: {:?}, 行号: {:?}",
+        lang_before, line_nums_before
+    );
 
     transform_nodes(&mut test_code_block).unwrap();
 
-    let lang_after = test_code_block.r#type.attrs.as_ref()
+    let lang_after = test_code_block
+        .r#type
+        .attrs
+        .as_ref()
         .and_then(|attrs| attrs.get("language"))
         .and_then(|spec| spec.default.as_ref());
-    let line_nums_after = test_code_block.r#type.attrs.as_ref()
+    let line_nums_after = test_code_block
+        .r#type
+        .attrs
+        .as_ref()
         .and_then(|attrs| attrs.get("line_numbers"))
         .and_then(|spec| spec.default.as_ref());
 
-    println!("代码块转换后 - 语言: {:?}, 行号: {:?}", lang_after, line_nums_after);
+    println!(
+        "代码块转换后 - 语言: {:?}, 行号: {:?}",
+        lang_after, line_nums_after
+    );
 
     println!("\n=== 扩展使用场景 ===");
     println!("1. 可以将这些扩展注册到编辑器框架");
@@ -293,15 +326,18 @@ mod tests {
         let extensions = rich_text_editor::init();
 
         // 验证至少有一个 Extension
-        let has_extension = extensions.iter().any(|e| matches!(e, Extensions::E(_)));
+        let has_extension =
+            extensions.iter().any(|e| matches!(e, Extensions::E(_)));
         assert!(has_extension, "应该至少有一个 Extension");
 
         // 验证有节点定义
-        let node_count = extensions.iter().filter(|e| matches!(e, Extensions::N(_))).count();
+        let node_count =
+            extensions.iter().filter(|e| matches!(e, Extensions::N(_))).count();
         assert!(node_count > 0, "应该有节点定义");
 
         // 验证有标记定义
-        let mark_count = extensions.iter().filter(|e| matches!(e, Extensions::M(_))).count();
+        let mark_count =
+            extensions.iter().filter(|e| matches!(e, Extensions::M(_))).count();
         assert!(mark_count > 0, "应该有标记定义");
     }
 
@@ -310,7 +346,10 @@ mod tests {
         // 测试空段落转换
         let mut empty_para = node!("paragraph", "段落", "");
         transform_nodes(&mut empty_para).unwrap();
-        let placeholder = empty_para.r#type.attrs.as_ref()
+        let placeholder = empty_para
+            .r#type
+            .attrs
+            .as_ref()
             .and_then(|attrs| attrs.get("placeholder"))
             .and_then(|spec| spec.default.as_ref())
             .and_then(|v| v.as_str());
@@ -319,11 +358,17 @@ mod tests {
         // 测试代码块转换
         let mut code_block = node!("code_block", "代码", "let x = 1;");
         transform_nodes(&mut code_block).unwrap();
-        let language = code_block.r#type.attrs.as_ref()
+        let language = code_block
+            .r#type
+            .attrs
+            .as_ref()
             .and_then(|attrs| attrs.get("language"))
             .and_then(|spec| spec.default.as_ref())
             .and_then(|v| v.as_str());
-        let line_numbers = code_block.r#type.attrs.as_ref()
+        let line_numbers = code_block
+            .r#type
+            .attrs
+            .as_ref()
             .and_then(|attrs| attrs.get("line_numbers"))
             .and_then(|spec| spec.default.as_ref())
             .and_then(|v| v.as_str());
@@ -348,7 +393,7 @@ mod tests {
                 Extensions::M(m) => {
                     // 验证标记有名称
                     assert!(!m.name.is_empty());
-                }
+                },
             }
         }
     }
