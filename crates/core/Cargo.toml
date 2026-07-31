@@ -30,7 +30,7 @@ arc-swap = "1.6"
 dashmap = { workspace = true }
 quick-xml = { workspace = true }
 
-ractor = { version = "0.15.8", features = ["async-trait"] }
+ractor = { version = "0.16.2", features = ["async-trait"] }
 sysinfo = { workspace = true }
 num_cpus = "1.16"
 
